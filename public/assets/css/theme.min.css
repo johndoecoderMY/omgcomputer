@@ -305,7 +305,7 @@
   --falcon-navbar-vertical-inverted-hr-color: rgba(255, 255, 255, 0.08);
   --falcon-navbar-vertical-inverted-scrollbar-color: #b6c1d2;
   --falcon-navbar-vertical-inverted-label-color: #5e6e82;
-  --falcon-navbar-vertical-vibrant-bg-image: linear-gradient(-45deg, rgba(0, 160, 255, 0.86), #0048a2), url(../img/generic/bg-navbar.png);
+  --falcon-navbar-vertical-vibrant-bg-image: linear-gradient(-45deg, rgba(255, 181, 27, 0.86), #f34303), url(../img/generic/bg-navbar.png);
   --falcon-navbar-vertical-vibrant-link-color: rgba(255, 255, 255, 0.75);
   --falcon-navbar-vertical-vibrant-link-hover-color: #fff;
   --falcon-navbar-vertical-vibrant-link-active-color: #fff;

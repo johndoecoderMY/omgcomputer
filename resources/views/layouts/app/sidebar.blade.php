@@ -4,10 +4,10 @@
                         aria-controls="navbarVerticalCollapse" aria-expanded="false"
                         aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span
                                 class="toggle-line"></span></span></button>
-                    <a class="navbar-brand me-1 me-sm-3" href="../index.html">
-                        <div class="d-flex align-items-center"><img class="me-2"
-                                src="../assets/img/icons/spot-illustrations/falcon.png" alt="" width="40" /><span
-                                class="font-sans-serif text-primary">falcon</span></div>
+                    <a class="navbar-brand me-1 me-sm-3" href="{{ route('dashboard') }}">
+                        <div class="d-flex align-items-center"><img class="me-2 brand-logo"
+                                src="{{ asset('assets/img/omg/logo.png') }}" alt="OMG Computer logo" width="40" /><span
+                                class="font-sans-serif brand-wordmark">OMG</span></div>
                     </a>
                     <ul class="navbar-nav align-items-center d-none d-lg-block">
                         <li class="nav-item">
