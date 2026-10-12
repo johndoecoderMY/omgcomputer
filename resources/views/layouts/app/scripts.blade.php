@@ -1,0 +1,11 @@
+   <!-- ===============================================--><!--    JavaScripts--><!-- ===============================================-->
+    <script src="{{ assets('vendors/popper/popper.min.js') }}"></script>
+    <script src="{{ assets('vendors/bootstrap/bootstrap.min.js') }}"></script>
+    <script src="{{ assets('vendors/anchorjs/anchor.min.js') }}"></script>
+    <script src="{{ assets('vendors/is/is.min.js') }}"></script>
+    <script src="{{ assets('vendors/echarts/echarts.min.js') }}"></script>
+    <script src="{{ assets('vendors/prism/prism.js') }}"></script>
+    <script src="{{ assets('vendors/fontawesome/all.min.js') }}"></script>
+    <script src="{{ assets('vendors/lodash/lodash.min.js') }}"></script>
+    <script src="{{ assets('vendors/list.js/list.min.js') }}"></script>
+    <script src="{{ assets('assets/js/theme.js') }}"></script>
