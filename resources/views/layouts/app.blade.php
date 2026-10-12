@@ -7,7 +7,7 @@
 <body>
     <!-- ===============================================--><!--    Main Content--><!-- ===============================================-->
     <main class="main" id="top">
-        <div class="container" data-layout="container">
+        <div class="container-fluid" data-layout="container">
 
             @include('layouts.app.navbar')
 
