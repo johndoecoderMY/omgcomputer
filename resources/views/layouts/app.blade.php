@@ -8,15 +8,15 @@
     <!-- ===============================================--><!--    Main Content--><!-- ===============================================-->
     <main class="main" id="top">
         <div class="container" data-layout="container">
-    
+
             @include('layouts.app.navbar')
 
             <div class="content">
 
                 @include('layouts.app.sidebar')
-@yield('content')
+                @yield('content')
 
-         
+
                 @include('layouts.app.footer')
 
 
