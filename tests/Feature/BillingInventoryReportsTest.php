@@ -1,0 +1,172 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\BillingDocument;
+use App\Models\InventoryMovement;
+use App\Models\InventoryPart;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class BillingInventoryReportsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
+    {
+        $user = User::factory()->create();
+        $part = $this->createPart($user, 5);
+
+        $response = $this->actingAs($user)->post(route('billing.store'), $this->documentData('invoice', $part, 2));
+
+        $document = BillingDocument::query()->firstOrFail();
+        $response->assertRedirect(route('billing.documents.show', $document));
+        $this->assertSame(3, $part->fresh()->stock_quantity);
+        $this->assertDatabaseHas('inventory_movements', [
+            'inventory_part_id' => $part->id,
+            'type' => 'used',
+            'quantity_change' => -2,
+            'quantity_after' => 3,
+            'reference' => $document->document_number,
+        ]);
+        $this->assertSame(20.0, (float) $document->total);
+    }
+
+    public function test_failed_invoice_stock_deduction_rolls_back_the_document_and_stock_changes(): void
+    {
+        $user = User::factory()->create();
+        $part = $this->createPart($user, 1);
+
+        $response = $this->actingAs($user)
+            ->from(route('billing.create', ['type' => 'invoice']))
+            ->post(route('billing.store'), $this->documentData('invoice', $part, 2));
+
+        $response->assertRedirect(route('billing.create', ['type' => 'invoice']))
+            ->assertSessionHasErrors('quantity');
+        $this->assertDatabaseCount('billing_documents', 0);
+        $this->assertSame(1, $part->fresh()->stock_quantity);
+        $this->assertDatabaseCount('inventory_movements', 0);
+    }
+
+    public function test_quote_conversion_deducts_stock_and_payments_update_invoice_balance(): void
+    {
+        $user = User::factory()->create();
+        $part = $this->createPart($user, 5);
+        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quote', $part, 2));
+        $quote = BillingDocument::query()->firstOrFail();
+
+        $this->actingAs($user)->post(route('billing.documents.convert', $quote))
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $quote->refresh();
+        $this->assertSame('invoice', $quote->type);
+        $this->assertSame('issued', $quote->status);
+        $this->assertSame(3, $part->fresh()->stock_quantity);
+
+        $paymentData = [
+            'amount' => 10,
+            'method' => 'cash',
+            'received_at' => now()->toDateString(),
+        ];
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->assertSame('partial', $quote->fresh()->status);
+        $this->assertSame(10.0, $quote->fresh()->balance_due);
+
+        $paymentData['amount'] = 10;
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData);
+        $this->assertSame('paid', $quote->fresh()->status);
+        $this->assertSame(0.0, $quote->fresh()->balance_due);
+        $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
+    }
+
+    public function test_invoice_pdf_and_date_filtered_reports_are_available(): void
+    {
+        $user = User::factory()->create();
+        $data = $this->documentData('invoice', null, 1);
+        $data['customer_name'] = '=HYPERLINK("https://example.test","open")';
+        $this->actingAs($user)->post(route('billing.store'), $data);
+        $document = BillingDocument::query()->firstOrFail();
+        $period = [
+            'from' => now()->startOfMonth()->toDateString(),
+            'to' => now()->endOfMonth()->toDateString(),
+        ];
+
+        $this->actingAs($user)->get(route('billing.documents.pdf', $document))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertSee('%PDF', false);
+        $this->actingAs($user)->get(route('reports.index', $period))
+            ->assertOk()
+            ->assertViewHas('invoiceCount', 1)
+            ->assertViewHas('billed', 10.0);
+
+        $export = $this->actingAs($user)->get(route('reports.export', $period));
+        $export->assertOk()->assertDownload();
+        $this->assertStringContainsString('Invoice,Customer,Issued,Status', $export->streamedContent());
+        $this->assertStringContainsString("'=HYPERLINK", $export->streamedContent());
+    }
+
+    public function test_inventory_opening_and_manual_movements_are_logged_and_low_stock_is_filterable(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('inventory.store'), [
+            'sku' => 'SSD-001',
+            'name' => 'Solid state drive',
+            'opening_stock' => 2,
+            'reorder_level' => 2,
+            'unit_cost' => 80,
+            'sale_price' => 100,
+        ])->assertRedirect(route('inventory.index'));
+
+        $part = InventoryPart::query()->firstOrFail();
+        $this->assertDatabaseHas('inventory_movements', [
+            'inventory_part_id' => $part->id,
+            'type' => 'received',
+            'quantity_change' => 2,
+            'quantity_after' => 2,
+        ]);
+
+        $this->actingAs($user)->post(route('inventory.movements.store', $part), [
+            'type' => 'used',
+            'quantity' => 1,
+            'note' => 'Test usage',
+        ])->assertRedirect(route('inventory.index'));
+
+        $this->assertSame(1, $part->fresh()->stock_quantity);
+        $this->actingAs($user)->get(route('inventory.index', ['low_stock' => 1]))
+            ->assertOk()
+            ->assertSee('Solid state drive');
+    }
+
+    private function createPart(User $user, int $stock): InventoryPart
+    {
+        return InventoryPart::query()->create([
+            'user_id' => $user->id,
+            'sku' => 'PART-'.uniqid(),
+            'name' => 'Test SSD',
+            'stock_quantity' => $stock,
+            'reorder_level' => 1,
+            'unit_cost' => 5,
+            'sale_price' => 10,
+            'is_active' => true,
+        ]);
+    }
+
+    private function documentData(string $type, ?InventoryPart $part, int $quantity): array
+    {
+        return [
+            'type' => $type,
+            'customer_name' => 'Customer Example',
+            'issued_at' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'inventory_part_id' => $part?->id,
+                'description' => $part?->name ?? 'Cleaning service',
+                'quantity' => $quantity,
+                'unit_price' => 10,
+            ]],
+        ];
+    }
+}

@@ -42,7 +42,7 @@
                        href="#repairTicketsMenu"
                        role="button"
                        data-bs-toggle="collapse"
-                       aria-expanded="true"
+                       aria-expanded="{{ request()->routeIs('tickets.*') ? 'true' : 'false' }}"
                        aria-controls="repairTicketsMenu">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
@@ -50,44 +50,44 @@
                         </div>
                     </a>
 
-                    <ul class="nav collapse show" id="repairTicketsMenu">
+                    <ul class="nav collapse {{ request()->routeIs('tickets.*') ? 'show' : '' }}" id="repairTicketsMenu">
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link {{ request()->routeIs('tickets.index') ? 'active' : '' }}" href="{{ route('tickets.index') }}">
                                 <span class="nav-link-text ps-1">All Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link {{ request()->routeIs('tickets.create') ? 'active' : '' }}" href="{{ route('tickets.create') }}">
                                 <span class="nav-link-text ps-1">Create Ticket</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'unassigned']) }}">
                                 <span class="nav-link-text ps-1">Unassigned Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'mine']) }}">
                                 <span class="nav-link-text ps-1">My Assigned Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_customer']) }}">
                                 <span class="nav-link-text ps-1">Awaiting Customer</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_parts']) }}">
                                 <span class="nav-link-text ps-1">Waiting for Parts</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'ready_for_pickup']) }}">
                                 <span class="nav-link-text ps-1">Ready for Pickup</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'closed']) }}">
                                 <span class="nav-link-text ps-1">Closed Tickets</span>
                             </a>
                         </li>
@@ -115,54 +115,40 @@
                     </ul>
                 </li>
 
-                {{-- Kanban-style planning for internal work and feature development --}}
+                {{-- Main project workspace --}}
                 <li class="nav-item">
                     <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
-                        <div class="col-auto navbar-vertical-label">Planning & Progress</div>
+                        <div class="col-auto navbar-vertical-label">This project</div>
                         <div class="col ps-0"><hr class="mb-0 navbar-vertical-divider"></div>
                     </div>
-
-                    <a class="nav-link dropdown-indicator"
-                       href="#plannerMenu"
-                       role="button"
-                       data-bs-toggle="collapse"
-                       aria-expanded="false"
-                       aria-controls="plannerMenu">
+                    <a class="nav-link {{ request()->routeIs('planner.projects') ? 'active' : '' }}" href="{{ route('planner.projects') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-columns"></span></span>
-                            <span class="nav-link-text ps-1">Project Planner</span>
+                            <span class="nav-link-icon"><span class="fas fa-home"></span></span>
+                            <span class="nav-link-text ps-1">Overview</span>
                         </div>
                     </a>
-
-                    <ul class="nav collapse" id="plannerMenu">
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Kanban Board</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Task Backlog</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Features & Improvements</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Milestones & Roadmap</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Progress Overview</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Team Tasks</span></a></li>
-                    </ul>
+                    <a class="nav-link {{ request()->routeIs('planner.index') && request('view') !== 'kanban' ? 'active' : '' }}" href="{{ route('planner.index', ['view' => 'list']) }}">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-list-check"></span></span><span class="nav-link-text ps-1">Tasks — List</span></div>
+                    </a>
+                    <a class="nav-link {{ request()->routeIs('planner.index') && request('view') === 'kanban' ? 'active' : '' }}" href="{{ route('planner.index', ['view' => 'kanban']) }}">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-columns"></span></span><span class="nav-link-text ps-1">Tasks — Kanban</span></div>
+                    </a>
+                    <a class="nav-link {{ request()->routeIs('planner.business-plan') ? 'active' : '' }}" href="{{ route('planner.business-plan') }}">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-file-alt"></span></span><span class="nav-link-text ps-1">Business Plan</span></div>
+                    </a>
                 </li>
 
-                {{-- Team --}}
                 <li class="nav-item">
-                    <a class="nav-link dropdown-indicator"
-                       href="#teamMenu"
-                       role="button"
-                       data-bs-toggle="collapse"
-                       aria-expanded="false"
-                       aria-controls="teamMenu">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-user-cog"></span></span>
-                            <span class="nav-link-text ps-1">Team & Technicians</span>
-                        </div>
+                    <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                        <div class="col-auto navbar-vertical-label">Projects &amp; Teams</div>
+                        <div class="col ps-0"><hr class="mb-0 navbar-vertical-divider"></div>
+                    </div>
+                    <a class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}" href="{{ route('projects.index') }}">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span><span class="nav-link-text ps-1">Projects</span></div>
                     </a>
-
-                    <ul class="nav collapse" id="teamMenu">
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Staff Directory</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Ticket Assignments</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Workload Overview</span></a></li>
-                    </ul>
+                    <a class="nav-link {{ request()->routeIs('teams.*') ? 'active' : '' }}" href="{{ route('teams.index') }}">
+                        <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fas fa-users-cog"></span></span><span class="nav-link-text ps-1">Teams &amp; Technicians</span></div>
+                    </a>
                 </li>
 
                 {{-- Parts inventory --}}
@@ -171,7 +157,7 @@
                        href="#inventoryMenu"
                        role="button"
                        data-bs-toggle="collapse"
-                       aria-expanded="false"
+                       aria-expanded="{{ request()->routeIs('inventory.*') ? 'true' : 'false' }}"
                        aria-controls="inventoryMenu">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-boxes"></span></span>
@@ -179,11 +165,10 @@
                         </div>
                     </a>
 
-                    <ul class="nav collapse" id="inventoryMenu">
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Spare Parts</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Stock Movements</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Suppliers</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Low Stock</span></a></li>
+                    <ul class="nav collapse {{ request()->routeIs('inventory.*') ? 'show' : '' }}" id="inventoryMenu">
+                        <li class="nav-item"><a class="nav-link" href="{{ route('inventory.index') }}"><span class="nav-link-text ps-1">Spare Parts</span></a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('inventory.index') }}#movements"><span class="nav-link-text ps-1">Stock Movements</span></a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('inventory.index', ['low_stock' => 1]) }}"><span class="nav-link-text ps-1">Low Stock</span></a></li>
                     </ul>
                 </li>
 
@@ -193,7 +178,7 @@
                        href="#billingMenu"
                        role="button"
                        data-bs-toggle="collapse"
-                       aria-expanded="false"
+                       aria-expanded="{{ request()->routeIs('billing.*') ? 'true' : 'false' }}"
                        aria-controls="billingMenu">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
@@ -201,16 +186,16 @@
                         </div>
                     </a>
 
-                    <ul class="nav collapse" id="billingMenu">
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Quotations</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Invoices</span></a></li>
-                        <li class="nav-item"><a class="nav-link" href="#"><span class="nav-link-text ps-1">Payments</span></a></li>
+                    <ul class="nav collapse {{ request()->routeIs('billing.*') ? 'show' : '' }}" id="billingMenu">
+                        <li class="nav-item"><a class="nav-link" href="{{ route('billing.index', ['type' => 'quote']) }}"><span class="nav-link-text ps-1">Quotations</span></a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('billing.index', ['type' => 'invoice']) }}"><span class="nav-link-text ps-1">Invoices</span></a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('billing.index', ['type' => 'invoice', 'status' => 'partial']) }}"><span class="nav-link-text ps-1">Part-paid invoices</span></a></li>
                     </ul>
                 </li>
 
                 {{-- Reporting --}}
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-chart-line"></span></span>
                             <span class="nav-link-text ps-1">Reports & Analytics</span>

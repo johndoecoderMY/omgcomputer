@@ -7,6 +7,30 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Project Planner
+
+The authenticated planner supports shared team tasks and private personal tasks, with a Kanban board, assignments, priorities, due dates, milestones, and progress summaries. Run migrations and seed planner roles when setting up the database:
+
+```sh
+php artisan migrate
+php artisan db:seed --class="Database\Seeders\PlannerRoleSeeder"
+```
+
+To grant team-task administration to a user, assign the `planner-admin` role:
+
+```sh
+php artisan tinker
+>>> \App\Models\User::where('email', 'you@example.com')->firstOrFail()->assignRole('planner-admin');
+```
+
+The Project Overview is a single shared **OMG Computer** project for the website and the repair shop. Tasks are classified as website features/improvements, shop operations (such as buying parts), general tasks, or milestones. The dashboard shows task totals, completion, remaining work, progress, and repair-ticket counts. Existing projects are merged into the single project when the included migration runs.
+
+## Billing, Inventory, and Reports
+
+Authenticated users can manage stock parts and movements, create quotations and invoices, convert quotes into invoices, record partial or full payments, and render documents as PDFs with mPDF. The Falcon-style repair support desk records customer/device intake, assignments, priorities, diagnoses, estimates, target dates, and ticket progress. Issuing an invoice deducts linked inventory in the same database transaction; insufficient stock prevents the invoice from being created. Reports summarize issued invoices, received payments, outstanding balances, service totals, and stock activity, with a date-filtered invoice CSV export.
+
+Run `php artisan migrate` to create the planning, inventory, and billing tables. Keep a current database backup before applying migrations to an existing deployment.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
