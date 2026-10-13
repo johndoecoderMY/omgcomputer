@@ -9,11 +9,11 @@
     <main class="main" id="top">
         <div class="container-fluid" data-layout="container">
 
-            @include('layouts.app.navbar')
+            @include('layouts.app.sidebar')
 
             <div class="content">
 
-                @include('layouts.app.sidebar')
+                @include('layouts.app.navbar')
                 @yield('content')
 
 

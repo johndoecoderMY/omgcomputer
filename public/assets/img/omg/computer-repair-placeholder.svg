@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img" aria-labelledby="title desc">
+  <title id="title">Computer repair illustration</title>
+  <desc id="desc">A desktop computer, laptop, and repair tools on a warm orange background.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff0d6"/>
+      <stop offset="1" stop-color="#ffd5b5"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#27344f"/>
+      <stop offset="1" stop-color="#465d7a"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="680" rx="42" fill="url(#background)"/>
+  <circle cx="780" cy="126" r="90" fill="#ffb51b" opacity=".34"/>
+  <circle cx="152" cy="524" r="120" fill="#f34303" opacity=".11"/>
+  <path d="M0 520c170-48 264 38 414 15s285-93 546-9v154H0z" fill="#f7a474" opacity=".3"/>
+  <rect x="190" y="112" width="510" height="348" rx="24" fill="#26334a"/>
+  <rect x="211" y="133" width="468" height="300" rx="12" fill="url(#screen)"/>
+  <rect x="240" y="164" width="410" height="238" rx="8" fill="#eef4fa"/>
+  <rect x="240" y="164" width="410" height="34" rx="8" fill="#dce5ef"/>
+  <circle cx="263" cy="181" r="5" fill="#f34303"/>
+  <circle cx="281" cy="181" r="5" fill="#ffb51b"/>
+  <circle cx="299" cy="181" r="5" fill="#79b99b"/>
+  <rect x="267" y="225" width="142" height="13" rx="6" fill="#afbdce"/>
+  <rect x="267" y="253" width="226" height="10" rx="5" fill="#d0d9e4"/>
+  <rect x="267" y="274" width="198" height="10" rx="5" fill="#d0d9e4"/>
+  <rect x="267" y="316" width="154" height="53" rx="12" fill="#f34303"/>
+  <path d="M393 460h104l25 61H368z" fill="#596b82"/>
+  <path d="M333 521h226c13 0 22 8 22 18H311c0-10 9-18 22-18" fill="#26334a"/>
+  <rect x="531" y="392" width="230" height="150" rx="18" fill="#fff" stroke="#e5eaf0" stroke-width="8"/>
+  <rect x="550" y="411" width="192" height="111" rx="9" fill="#dce8f3"/>
+  <rect x="567" y="429" width="99" height="8" rx="4" fill="#8497ad"/>
+  <rect x="567" y="447" width="146" height="7" rx="3.5" fill="#aebdce"/>
+  <rect x="567" y="462" width="120" height="7" rx="3.5" fill="#aebdce"/>
+  <rect x="580" y="483" width="76" height="23" rx="7" fill="#f34303"/>
+  <path d="M649 285l91-92 19 19-92 91-28 8z" fill="#ffb51b" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M725 184l14-14a18 18 0 0 1 26 0l8 8a18 18 0 0 1 0 26l-14 14z" fill="#f34303" stroke="#fff" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M155 290h42m-21-21v42" stroke="#f34303" stroke-width="12" stroke-linecap="round" opacity=".7"/>
+  <path d="M798 348h42m-21-21v42" stroke="#f34303" stroke-width="12" stroke-linecap="round" opacity=".7"/>
+</svg>

@@ -9,8 +9,15 @@
                 <p class="text-500 fs-10 mb-0 mt-2">Computer repair and support for home and work.</p>
             </div>
             <div class="col-md-auto text-md-end">
-                <a class="link-300 me-3" href="{{ url('/') }}#services">Services</a>
-                <a class="link-300" href="{{ url('/') }}#repair-tracking">Guest repair tracking</a>
+                <div class="d-flex flex-wrap justify-content-md-end gap-3">
+                    <a class="link-300" href="{{ url('/') }}#services">Services</a>
+                    <a class="link-300" href="{{ url('/') }}#about">About</a>
+                    <a class="link-300" href="{{ url('/') }}#help">Help</a>
+                    <a class="link-300" href="{{ url('/') }}#faq">Q&amp;A</a>
+                    <a class="link-300" href="{{ url('/') }}#contact">Contact</a>
+                    <a class="link-300" href="{{ route('privacy') }}">Privacy</a>
+                    <a class="link-300" href="{{ route('toc') }}">TOC</a>
+                </div>
                 <p class="text-600 fs-10 mb-0 mt-2">&copy; {{ date('Y') }} OMG Computer</p>
             </div>
         </div>
