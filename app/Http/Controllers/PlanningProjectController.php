@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -56,13 +57,39 @@ class PlanningProjectController extends Controller
             'name' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:3000'],
             'visibility' => ['required', Rule::in(array_keys(PlanningTask::VISIBILITIES))],
+            'images' => ['nullable', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
+        unset($validated['images']);
         $project = $request->user()->planningProjects()->create($validated);
+        $this->appendImages($request, $project);
 
         return redirect()
             ->route('projects.show', $project)
             ->with('status', 'Project created.');
+    }
+
+    public function storeImages(Request $request, PlanningProject $planningProject): RedirectResponse
+    {
+        $this->authorizeProject($request->user(), $planningProject);
+        $request->validate([
+            'images' => ['required', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $this->appendImages($request, $planningProject);
+
+        return redirect()->route('projects.show', $planningProject)->with('status', 'Project photos uploaded.');
+    }
+
+    public function image(Request $request, PlanningProject $planningProject, int $image)
+    {
+        $this->authorizeProject($request->user(), $planningProject);
+        $path = $planningProject->images[$image] ?? null;
+        abort_unless(is_string($path), 404);
+
+        return Storage::disk('local')->response($path);
     }
 
     public function show(Request $request, PlanningProject $planningProject): View
@@ -164,5 +191,21 @@ class PlanningProjectController extends Controller
             $project->visibility === 'team' || $project->user_id === $user->id,
             404,
         );
+    }
+
+    private function appendImages(Request $request, PlanningProject $project): void
+    {
+        $paths = $project->images ?? [];
+        foreach ($request->file('images', []) as $image) {
+            $path = $image->store('projects/'.$project->id, 'local');
+            if (! is_string($path)) {
+                throw new \RuntimeException('Project image could not be saved.');
+            }
+            $paths[] = $path;
+        }
+
+        if ($paths !== ($project->images ?? [])) {
+            $project->update(['images' => $paths]);
+        }
     }
 }

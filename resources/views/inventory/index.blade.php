@@ -1,17 +1,19 @@
 @extends('layouts.app')
 
-@section('title', 'Parts & Inventory')
+@section('title', 'Spare Parts')
 
 @section('content')
     <div class="container-fluid py-3">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Operations</p>
-                <h1 class="h2 mb-1">Parts &amp; Inventory</h1>
-                <p class="text-700 mb-0">Manage parts, track stock changes, and spot reorder needs early.</p>
-            </div>
+        <x-page-header eyebrow="Operations" title="Spare parts" description="Manage parts and spot reorder needs early." :breadcrumbs="[['label' => 'Inventory overview', 'url' => route('inventory.index')], ['label' => 'Spare parts']]">
+            <x-slot:actions>
             <div class="d-flex gap-2"><a href="{{ route('reports.index') }}" class="btn btn-falcon-default"><span class="fas fa-chart-line me-2"></span>View reports</a><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createPartModal"><span class="fas fa-plus me-2"></span>Add part</button></div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
+        <nav class="nav nav-tabs mb-4">
+            <a class="nav-link" href="{{ route('inventory.index') }}">Overview</a>
+            <a class="nav-link active" href="{{ route('inventory.parts') }}">Spare parts</a>
+            <a class="nav-link" href="{{ route('inventory.movements') }}">Stock movements</a>
+        </nav>
 
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -24,12 +26,6 @@
                 <ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
             </div>
         @endif
-
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Active parts</p><p class="h3 mb-0">{{ $partCount }}</p></div></div></div>
-            <div class="col-6 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Need reorder</p><p class="h3 {{ $lowStockCount ? 'text-warning' : 'text-success' }} mb-0">{{ $lowStockCount }}</p></div></div></div>
-            <div class="col-12 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Stock value at cost</p><p class="h3 mb-0">RM{{ number_format($stockValue, 2) }}</p></div></div></div>
-        </div>
 
         <section class="card mb-4">
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -78,27 +74,6 @@
             </div></div></div>
         @endforeach
 
-        <section class="card" id="movements" style="scroll-margin-top: 90px;">
-            <div class="card-header"><h2 class="h5 mb-0">Recent stock movements</h2></div>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle mb-0" data-datatables='{"pageLength":10,"language":{"emptyTable":"No stock movements recorded yet."}}'>
-                    <thead><tr><th>Date</th><th>Part</th><th>Movement</th><th>Change</th><th>After</th><th>Recorded by</th><th>Note / reference</th></tr></thead>
-                    <tbody>
-                        @foreach ($movements as $movement)
-                            <tr>
-                                <td>{{ $movement->created_at->format('M j, Y H:i') }}</td>
-                                <td>{{ $movement->part->sku }} — {{ $movement->part->name }}</td>
-                                <td>{{ ucfirst($movement->type) }}</td>
-                                <td class="{{ $movement->quantity_change < 0 ? 'text-danger' : 'text-success' }}">{{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}</td>
-                                <td>{{ $movement->quantity_after }}</td>
-                                <td>{{ $movement->user->name }}</td>
-                                <td>{{ $movement->note ?? $movement->reference ?? '—' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
     </div>
     <div class="modal fade" id="createPartModal" tabindex="-1" aria-labelledby="createPartModalLabel" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
         <form method="POST" action="{{ route('inventory.store') }}">
@@ -113,10 +88,10 @@
         </form>
     </div></div></div>
     <div class="modal fade" id="inventoryFilterModal" tabindex="-1" aria-labelledby="inventoryFilterModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-        <form method="GET" action="{{ route('inventory.index') }}">
+        <form method="GET" action="{{ route('inventory.parts') }}">
             <div class="modal-header"><h2 class="modal-title fs-5" id="inventoryFilterModalLabel">Filter inventory</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
             <div class="modal-body"><div class="mb-3"><label class="form-label" for="inventory-search">Search SKU or name</label><input class="form-control" id="inventory-search" name="search" value="{{ $search }}"></div><div class="form-check"><input class="form-check-input" id="inventory-low-stock" type="checkbox" name="low_stock" value="1" @checked($lowOnly)><label class="form-check-label" for="inventory-low-stock">Show low stock only</label></div></div>
-            <div class="modal-footer"><a class="btn btn-falcon-default me-auto" href="{{ route('inventory.index') }}">Clear filters</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
+            <div class="modal-footer"><a class="btn btn-falcon-default me-auto" href="{{ route('inventory.parts') }}">Clear filters</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
         </form>
     </div></div></div>
     @push('scripts')

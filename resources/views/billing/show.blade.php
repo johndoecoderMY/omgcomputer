@@ -15,17 +15,12 @@
             <div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
 
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">{{ ucfirst($document->type) }}</p>
-                <h1 class="h2 mb-1">{{ $document->document_number }}</h1>
+        <x-page-header eyebrow="{{ ucfirst($document->type) }}" title="{{ $document->document_number }}" :breadcrumbs="[['label' => 'Billing documents', 'url' => route('billing.index', ['type' => $document->type])], ['label' => $document->document_number]]" :back-url="route('billing.index', ['type' => $document->type])" back-label="Back to billing">
+            <x-slot:actions>
                 <span class="badge badge-subtle-{{ $document->status === 'paid' ? 'success' : ($document->status === 'partial' ? 'warning' : 'primary') }}">{{ ucfirst($document->status) }}</span>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('billing.index', ['type' => $document->type]) }}" class="btn btn-outline-secondary">Back to billing</a>
                 <a href="{{ route('billing.documents.pdf', $document) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary"><span class="fas fa-file-pdf me-2"></span>Open PDF</a>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         <div class="row g-4">
             <div class="col-xl-8">

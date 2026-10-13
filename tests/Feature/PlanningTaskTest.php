@@ -7,6 +7,8 @@ use App\Models\PlanningTask;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PlanningTaskTest extends TestCase
@@ -25,6 +27,8 @@ class PlanningTaskTest extends TestCase
             ->get(route('planner.business-plan'))
             ->assertOk()
             ->assertSee('PC &amp; Laptop Repair Shop', false)
+            ->assertSee('Planning &amp; Progress', false)
+            ->assertSee('Back to planner')
             ->assertSee('RM15,500')
             ->assertSee('RM5,880');
     }
@@ -138,6 +142,56 @@ class PlanningTaskTest extends TestCase
             'title' => 'Keep this in the main project',
             'project_id' => $unrelatedProject->id,
         ]);
+    }
+
+    public function test_parent_task_can_have_subtasks_visible_on_task_details_and_kanban(): void
+    {
+        $user = User::factory()->create();
+        $parent = PlanningTask::create([
+            'user_id' => $user->id,
+            'title' => 'Prepare the repair counter',
+            'category' => 'operations',
+            'status' => 'planned',
+            'priority' => 'medium',
+            'visibility' => 'team',
+        ]);
+
+        $this->actingAs($user)->post(route('planner.subtasks.store', $parent), [
+            'title' => 'Label the intake shelves',
+            'status' => 'backlog',
+            'priority' => 'high',
+        ])->assertSessionHasNoErrors()
+            ->assertRedirect(route('planner.show', $parent));
+
+        $subtask = PlanningTask::query()->where('parent_task_id', $parent->id)->firstOrFail();
+        $this->assertSame($parent->project_id, $subtask->project_id);
+
+        $this->actingAs($user)->get(route('planner.show', $parent))
+            ->assertOk()
+            ->assertSee('Subtasks')
+            ->assertSee('Label the intake shelves');
+        $this->actingAs($user)->get(route('planner.index', ['view' => 'kanban']))
+            ->assertOk()
+            ->assertSee('Label the intake shelves');
+    }
+
+    public function test_project_images_can_be_uploaded_and_viewed_by_authorized_users(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post(route('projects.store'), [
+            'name' => 'Workshop refresh',
+            'description' => 'Refresh the repair area.',
+            'visibility' => 'team',
+            'images' => [UploadedFile::fake()->image('workshop.jpg')],
+        ])->assertSessionHasNoErrors();
+
+        $project = PlanningProject::query()->where('name', 'Workshop refresh')->firstOrFail();
+        $path = $project->images[0];
+        Storage::disk('local')->assertExists($path);
+
+        $this->actingAs($user)->get(route('projects.images.show', [$project, 0]))->assertOk();
     }
 
     public function test_overdue_filter_shows_only_unfinished_past_due_project_tasks(): void

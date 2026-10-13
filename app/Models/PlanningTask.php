@@ -38,6 +38,7 @@ class PlanningTask extends Model
     protected $fillable = [
         'user_id',
         'project_id',
+        'parent_task_id',
         'assigned_to',
         'title',
         'description',
@@ -83,5 +84,15 @@ class PlanningTask extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(PlanningTaskComment::class);
+    }
+
+    public function parentTask(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_task_id');
+    }
+
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_task_id')->orderBy('created_at');
     }
 }

@@ -15,7 +15,13 @@ class PlanningProject extends Model
         'name',
         'description',
         'visibility',
+        'images',
     ];
+
+    protected function casts(): array
+    {
+        return ['images' => 'array'];
+    }
 
     public static function omgComputer(User $owner): self
     {

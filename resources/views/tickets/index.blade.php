@@ -4,21 +4,11 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Repair support desk</li>
-            </ol>
-        </nav>
-
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Customer service</p>
-                <h1 class="h2 mb-1">Repair support desk</h1>
-                <p class="text-700 mb-0">Track customer devices from intake through diagnosis, repair, and pickup.</p>
-            </div>
+        <x-page-header eyebrow="Customer service" title="Repair support desk" description="Track customer devices from intake through diagnosis, repair, and pickup.">
+            <x-slot:actions>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#createTicketModal"><span class="fas fa-plus me-2"></span>Create repair ticket</button>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">

@@ -4,10 +4,7 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div><p class="text-primary fw-bold text-uppercase fs-10 mb-1">Billing</p><h1 class="h2 mb-0">New {{ $type === 'invoice' ? 'invoice' : 'quotation' }}</h1></div>
-            <a href="{{ route('billing.index') }}" class="btn btn-outline-secondary">Back to documents</a>
-        </div>
+        <x-page-header eyebrow="Billing" title="New {{ $type === 'invoice' ? 'invoice' : 'quotation' }}" :breadcrumbs="[['label' => 'Billing documents', 'url' => route('billing.index')], ['label' => 'New '.($type === 'invoice' ? 'invoice' : 'quotation')]]" :back-url="route('billing.index')" back-label="Back to documents" />
 
         @if ($errors->any())
             <div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>

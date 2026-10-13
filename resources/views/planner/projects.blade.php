@@ -7,30 +7,28 @@
         $taskBase = ['project' => $project->id];
     @endphp
     <div class="container-fluid py-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Project overview</li>
-            </ol>
-        </nav>
-
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Planning &amp; progress</p>
-                <h1 class="h2 mb-1">{{ $project->name }}</h1>
-                <p class="text-700 mb-0">{{ $isMainProject ? 'One project for the website, repair work, and everything needed to run the shop.' : ($project->description ?: 'Plan tasks, track progress, and keep project discussions together.') }}</p>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
+        <x-page-header
+            eyebrow="Planning & progress"
+            title="{{ $project->name }}"
+            description="{{ $isMainProject ? 'One project for the website, repair work, and everything needed to run the shop.' : ($project->description ?: 'Plan tasks, track progress, and keep project discussions together.') }}"
+            :breadcrumbs="[['label' => $project->name, 'url' => route('projects.index')], ['label' => 'Overview']]"
+            :back-url="route('projects.index')"
+            back-label="Back to projects"
+        >
+            <x-slot:actions>
                 @if ($isMainProject)<a class="btn btn-falcon-default" href="{{ route('tickets.index') }}"><span class="fas fa-ticket-alt me-2"></span>Support desk</a>@endif
                 <a class="btn btn-primary" href="{{ route('planner.index', $taskBase + ['view' => 'kanban']) }}"><span class="fas fa-columns me-2"></span>Open task board</a>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('status') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
+        @endif
+        @if ($errors->any())
+            <div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
 
         <section class="card mb-4 overflow-hidden">
@@ -47,6 +45,17 @@
                             </div>
                         </div>
                         <p class="text-700 mb-0">{{ $project->description }}</p>
+                        @if ($project->images)
+                            <div class="row g-2 mt-3">
+                                @foreach ($project->images as $imageIndex => $image)
+                                    <div class="col-6 col-md-4 col-lg-3">
+                                        <a href="{{ route('projects.images.show', [$project, $imageIndex]) }}" target="_blank" rel="noopener">
+                                            <img class="img-fluid rounded" src="{{ route('projects.images.show', [$project, $imageIndex]) }}" alt="Photo for {{ $project->name }}">
+                                        </a>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                     <div class="col-lg-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -61,6 +70,19 @@
                 </div>
             </div>
         </section>
+
+        @if ($project->visibility === 'team' || $project->user_id === auth()->id())
+            <section class="card mb-4">
+                <div class="card-body">
+                    <h2 class="h5">Project photos</h2>
+                    <form method="POST" action="{{ route('projects.images.store', $project) }}" enctype="multipart/form-data" class="d-flex flex-wrap align-items-end gap-3">
+                        @csrf
+                        <div><label class="form-label" for="project-images">Upload pictures</label><input class="form-control" id="project-images" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required><div class="form-text">Up to 5 images, 5 MB each (JPG, PNG, WebP).</div></div>
+                        <button class="btn btn-falcon-default" type="submit">Upload pictures</button>
+                    </form>
+                </div>
+            </section>
+        @endif
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-xl">

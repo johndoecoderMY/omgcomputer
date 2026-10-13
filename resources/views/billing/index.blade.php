@@ -4,17 +4,16 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Billing &amp; payments</p>
-                <h1 class="h2 mb-1">{{ $type === 'quote' ? 'Quotations' : ($type === 'invoice' ? 'Invoices' : 'Documents') }}</h1>
-                <p class="text-700 mb-0">Create customer estimates and invoices, record payments, and download PDFs.</p>
-            </div>
-            <div class="d-flex gap-2">
+        <x-page-header
+            eyebrow="Billing & payments"
+            title="{{ $type === 'quote' ? 'Quotations' : ($type === 'invoice' ? 'Invoices' : 'Documents') }}"
+            description="Create customer estimates and invoices, record payments, and download PDFs."
+        >
+            <x-slot:actions>
                 <a href="{{ route('billing.create', ['type' => 'quote']) }}" class="btn btn-outline-primary"><span class="fas fa-file-lines me-2"></span>New quote</a>
                 <a href="{{ route('billing.create', ['type' => 'invoice']) }}" class="btn btn-primary"><span class="fas fa-file-invoice-dollar me-2"></span>New invoice</a>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">

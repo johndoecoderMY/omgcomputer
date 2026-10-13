@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Home')
+@section('title', 'Dashboard')
 
 @section('content')
-
+    <div class="container-fluid py-3">
+    <x-page-header eyebrow="Workspace" title="Dashboard" description="Your shop activity and workspace at a glance." />
     <div class="row g-3 mb-3">
         <div class="col-md-6 col-xxl-3">
             <div class="card h-md-100 ecommerce-card-min-width">
@@ -797,5 +798,5 @@
             </div>
         </div>
     </div>
-
+    </div>
 @endsection

@@ -48,7 +48,7 @@ class PlanningTaskController extends Controller
         $overdue = $request->boolean('overdue');
 
         $query = PlanningTask::query()
-            ->with(['creator:id,name', 'assignee:id,name', 'project:id,name,visibility'])
+            ->with(['creator:id,name', 'assignee:id,name', 'project:id,name,visibility', 'subtasks.assignee:id,name'])
             ->withCount('comments')
             ->where('project_id', $project->id)
             ->where(function (Builder $query) use ($user): void {
@@ -176,6 +176,33 @@ class PlanningTaskController extends Controller
             ->with('status', 'Task progress updated.');
     }
 
+    public function storeSubtask(Request $request, PlanningTask $planningTask): RedirectResponse
+    {
+        $this->authorizeTaskAccess($request->user(), $planningTask);
+        $this->authorizeTaskManagement($request->user(), $planningTask);
+        abort_if($planningTask->parent_task_id !== null, 422, 'Subtasks cannot have their own subtasks.');
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:180'],
+            'description' => ['nullable', 'string', 'max:3000'],
+            'status' => ['required', Rule::in(array_keys(PlanningTask::STATUSES))],
+            'priority' => ['required', Rule::in(array_keys(PlanningTask::PRIORITIES))],
+            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'due_date' => ['nullable', 'date'],
+        ]);
+
+        $planningTask->subtasks()->create([
+            ...$validated,
+            'user_id' => $request->user()->id,
+            'project_id' => $planningTask->project_id,
+            'category' => 'task',
+            'visibility' => $planningTask->visibility,
+            'assigned_to' => $planningTask->visibility === 'team' ? ($validated['assigned_to'] ?? null) : null,
+        ]);
+
+        return redirect()->route('planner.show', $planningTask)->with('status', 'Subtask added.');
+    }
+
     public function destroy(Request $request, PlanningTask $planningTask): RedirectResponse
     {
         $this->authorizeTaskAccess($request->user(), $planningTask);
@@ -196,6 +223,9 @@ class PlanningTaskController extends Controller
             'creator:id,name',
             'assignee:id,name',
             'project:id,name,slug,visibility',
+            'parentTask:id,title,project_id',
+            'subtasks.creator:id,name',
+            'subtasks.assignee:id,name',
         ]);
         $comments = $planningTask->comments()
             ->with('author:id,name')
@@ -204,6 +234,7 @@ class PlanningTaskController extends Controller
 
         return view('planner.task-show', [
             'task' => $planningTask,
+            'parentTask' => $planningTask->parentTask,
             'statuses' => PlanningTask::STATUSES,
             'allStatuses' => PlanningTask::STATUSES,
             'categories' => PlanningTask::CATEGORIES,

@@ -25,6 +25,7 @@ class RepairTicket extends Model
 
     protected $fillable = [
         'created_by',
+        'customer_id',
         'assigned_to',
         'ticket_number',
         'customer_name',
@@ -40,6 +41,7 @@ class RepairTicket extends Model
         'priority',
         'quoted_amount',
         'due_date',
+        'images',
     ];
 
     protected function casts(): array
@@ -47,6 +49,7 @@ class RepairTicket extends Model
         return [
             'quoted_amount' => 'decimal:2',
             'due_date' => 'date',
+            'images' => 'array',
         ];
     }
 
@@ -58,5 +61,10 @@ class RepairTicket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 }

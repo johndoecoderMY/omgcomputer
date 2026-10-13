@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -56,11 +58,15 @@ class RepairTicketController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $customerId = filter_var($request->query('customer'), FILTER_VALIDATE_INT);
+        $customer = $customerId === false ? null : Customer::query()->find($customerId);
+
         return view('tickets.create', [
             'priorities' => RepairTicket::PRIORITIES,
             'teamMembers' => User::query()->orderBy('name')->get(['id', 'name']),
+            'customer' => $customer,
         ]);
     }
 
@@ -78,11 +84,16 @@ class RepairTicketController extends Controller
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'due_date' => ['nullable', 'date'],
+            'images' => ['nullable', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
+        unset($validated['images']);
 
         $ticket = DB::transaction(function () use ($request, $validated): RepairTicket {
+            $customer = $this->findOrCreateCustomer($validated);
             $ticket = RepairTicket::query()->create([
                 ...$validated,
+                'customer_id' => $customer->id,
                 'created_by' => $request->user()->id,
                 'ticket_number' => 'TMP-'.Str::uuid(),
                 'status' => 'received',
@@ -93,6 +104,7 @@ class RepairTicketController extends Controller
 
             return $ticket;
         });
+        $this->appendImages($request, $ticket);
 
         return redirect()
             ->route('tickets.show', $ticket)
@@ -101,7 +113,7 @@ class RepairTicketController extends Controller
 
     public function show(RepairTicket $repairTicket): View
     {
-        $repairTicket->load(['creator:id,name', 'assignee:id,name']);
+        $repairTicket->load(['creator:id,name', 'assignee:id,name', 'customer:id,name,email,phone']);
 
         return view('tickets.show', [
             'ticket' => $repairTicket,
@@ -120,12 +132,64 @@ class RepairTicketController extends Controller
             'diagnostic_notes' => ['nullable', 'string', 'max:5000'],
             'quoted_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
             'due_date' => ['nullable', 'date'],
+            'images' => ['nullable', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
+        unset($validated['images']);
         $repairTicket->update($validated);
+        $this->appendImages($request, $repairTicket);
 
         return redirect()
             ->route('tickets.show', $repairTicket)
             ->with('status', 'Ticket updated.');
+    }
+
+    public function image(RepairTicket $repairTicket, int $image)
+    {
+        $path = $repairTicket->images[$image] ?? null;
+        abort_unless(is_string($path), 404);
+
+        return Storage::disk('local')->response($path);
+    }
+
+    private function findOrCreateCustomer(array $ticket): Customer
+    {
+        $email = filled($ticket['customer_email'] ?? null) ? mb_strtolower(trim($ticket['customer_email'])) : null;
+        $phone = filled($ticket['customer_phone'] ?? null) ? trim($ticket['customer_phone']) : null;
+        $customer = $email ? Customer::query()->whereRaw('LOWER(email) = ?', [$email])->first() : null;
+        $customer ??= $phone ? Customer::query()->where('phone', $phone)->first() : null;
+
+        if ($customer) {
+            $customer->update([
+                'name' => $ticket['customer_name'],
+                'email' => $email ?? $customer->email,
+                'phone' => $phone ?? $customer->phone,
+            ]);
+
+            return $customer;
+        }
+
+        return Customer::query()->create([
+            'name' => $ticket['customer_name'],
+            'email' => $email,
+            'phone' => $phone,
+        ]);
+    }
+
+    private function appendImages(Request $request, RepairTicket $ticket): void
+    {
+        $paths = $ticket->images ?? [];
+        foreach ($request->file('images', []) as $image) {
+            $path = $image->store('repair-tickets/'.$ticket->id, 'local');
+            if (! is_string($path)) {
+                throw new \RuntimeException('Repair ticket image could not be saved.');
+            }
+            $paths[] = $path;
+        }
+
+        if ($paths !== ($ticket->images ?? [])) {
+            $ticket->update(['images' => $paths]);
+        }
     }
 }

@@ -4,14 +4,11 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Business intelligence</p>
-                <h1 class="h2 mb-1">Reports &amp; Analytics</h1>
-                <p class="text-700 mb-0">Review invoiced sales, received payments, unpaid balances, and stock activity.</p>
-            </div>
+        <x-page-header eyebrow="Business intelligence" title="Reports & Analytics" description="Review invoiced sales, received payments, unpaid balances, and stock activity.">
+            <x-slot:actions>
             <a href="{{ route('reports.export', ['from' => $from, 'to' => $to]) }}" class="btn btn-outline-primary"><span class="fas fa-download me-2"></span>Export invoices CSV</a>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         <button class="btn btn-falcon-default mb-4" type="button" data-bs-toggle="modal" data-bs-target="#reportFilterModal"><span class="fas fa-calendar-alt me-2"></span>Reporting period: {{ $from }} – {{ $to }}</button>
 

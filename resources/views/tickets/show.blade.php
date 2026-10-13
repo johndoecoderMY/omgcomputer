@@ -4,13 +4,6 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="{{ route('tickets.index') }}">Repair support desk</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $ticket->ticket_number }}</li>
-            </ol>
-        </nav>
-
         @if (session('status'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('status') }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
         @endif
@@ -18,18 +11,13 @@
             <div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
         @endif
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <p class="text-primary fw-bold text-uppercase fs-10 mb-1">Repair ticket</p>
-                <h1 class="h2 mb-2">{{ $ticket->ticket_number }}</h1>
+        <x-page-header eyebrow="Repair ticket" title="{{ $ticket->ticket_number }}" :breadcrumbs="[['label' => 'Repair support desk', 'url' => route('tickets.index')], ['label' => $ticket->ticket_number]]" :back-url="route('tickets.index')" back-label="Back to tickets">
+            <x-slot:actions>
                 <span class="badge rounded-pill badge-subtle-primary">{{ $statuses[$ticket->status] }}</span>
                 <span class="badge rounded-pill badge-subtle-warning">{{ $priorities[$ticket->priority] }} priority</span>
-            </div>
-            <div class="d-flex gap-2">
-                <a class="btn btn-falcon-default" href="{{ route('tickets.index') }}"><span class="fas fa-arrow-left me-2"></span>All tickets</a>
                 <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#updateTicketModal"><span class="fas fa-edit me-2"></span>Update ticket</button>
-            </div>
-        </div>
+            </x-slot:actions>
+        </x-page-header>
 
         <div class="row g-4">
             <div class="col-xl-8">
@@ -37,7 +25,7 @@
                     <div class="card-header"><h2 class="h5 mb-0">{{ $ticket->subject }}</h2></div>
                     <div class="card-body">
                         <div class="row g-4 mb-4">
-                            <div class="col-md-6"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Customer</p><h3 class="h6 mb-1">{{ $ticket->customer_name }}</h3>@if($ticket->customer_phone)<p class="mb-1">{{ $ticket->customer_phone }}</p>@endif @if($ticket->customer_email)<p class="mb-0">{{ $ticket->customer_email }}</p>@endif</div>
+                            <div class="col-md-6"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Customer</p><h3 class="h6 mb-1">@if($ticket->customer)<a href="{{ route('customers.show', $ticket->customer) }}">{{ $ticket->customer_name }}</a>@else{{ $ticket->customer_name }}@endif</h3>@if($ticket->customer_phone)<p class="mb-1">{{ $ticket->customer_phone }}</p>@endif @if($ticket->customer_email)<p class="mb-0">{{ $ticket->customer_email }}</p>@endif</div>
                             <div class="col-md-6"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Device</p><h3 class="h6 mb-1">{{ $ticket->device_type }}{{ $ticket->device_model ? ' · '.$ticket->device_model : '' }}</h3><p class="mb-0">Serial number: {{ $ticket->serial_number ?: 'Not recorded' }}</p></div>
                         </div>
                         <h3 class="h6">Customer-reported issue</h3>
@@ -49,6 +37,27 @@
                             @else
                                 <p class="text-600 mb-0">No diagnosis recorded yet.</p>
                             @endif
+                        </div>
+                        <div class="border-top pt-3 mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3"><h3 class="h6 mb-0">Device photos</h3><span class="badge badge-subtle-secondary">{{ count($ticket->images ?? []) }}</span></div>
+                            @if ($ticket->images)
+                                <div class="row g-2 mb-3">
+                                    @foreach ($ticket->images as $imageIndex => $image)
+                                        <div class="col-6 col-md-4">
+                                            <a href="{{ route('tickets.images.show', [$ticket, $imageIndex]) }}" target="_blank" rel="noopener">
+                                                <img class="img-fluid rounded" src="{{ route('tickets.images.show', [$ticket, $imageIndex]) }}" alt="Device photo for {{ $ticket->ticket_number }}">
+                                            </a>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                            <form method="POST" action="{{ route('tickets.update', $ticket) }}" enctype="multipart/form-data" class="d-flex flex-wrap align-items-end gap-3">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="{{ $ticket->status }}"><input type="hidden" name="priority" value="{{ $ticket->priority }}">
+                                @if($ticket->assigned_to)<input type="hidden" name="assigned_to" value="{{ $ticket->assigned_to }}">@endif
+                                <div><label class="form-label" for="ticket-add-images">Add pictures</label><input class="form-control" id="ticket-add-images" type="file" name="images[]" accept="image/jpeg,image/png,image/webp" multiple required><div class="form-text">Up to 5 images per upload, 5 MB each.</div></div>
+                                <button class="btn btn-falcon-default" type="submit">Upload pictures</button>
+                            </form>
                         </div>
                     </div>
                     <div class="card-footer text-600 fs-10">Created by {{ $ticket->creator->name }} on {{ $ticket->created_at->format('M j, Y · H:i') }}@if($ticket->due_date) · Target date {{ $ticket->due_date->format('M j, Y') }}@endif</div>

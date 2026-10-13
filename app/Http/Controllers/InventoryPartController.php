@@ -13,7 +13,22 @@ use Illuminate\View\View;
 
 class InventoryPartController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
+    {
+        $parts = InventoryPart::query()->where('is_active', true);
+        $movements = InventoryMovement::query()
+            ->with(['part:id,sku,name', 'user:id,name'])
+            ->whereHas('part', fn ($query) => $query->where('is_active', true));
+
+        return view('inventory.overview', [
+            'partCount' => (clone $parts)->count(),
+            'lowStockCount' => (clone $parts)->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'stockValue' => (float) (clone $parts)->selectRaw('COALESCE(SUM(stock_quantity * unit_cost), 0) as value')->value('value'),
+            'recentMovements' => (clone $movements)->latest()->limit(5)->get(),
+        ]);
+    }
+
+    public function parts(Request $request): View
     {
         $search = trim((string) $request->query('search', ''));
         $lowOnly = $request->boolean('low_stock');
@@ -31,26 +46,23 @@ class InventoryPartController extends Controller
         }
 
         $parts = $partsQuery->orderBy('name')->get();
+
+        return view('inventory.index', [
+            'parts' => $parts,
+            'search' => $search,
+            'lowOnly' => $lowOnly,
+        ]);
+    }
+
+    public function movements(): View
+    {
         $movements = InventoryMovement::query()
             ->with(['part:id,sku,name', 'user:id,name'])
             ->whereHas('part', fn ($query) => $query->where('is_active', true))
             ->latest()
-            ->limit(40)
-            ->get();
+            ->paginate(50);
 
-        return view('inventory.index', [
-            'parts' => $parts,
-            'movements' => $movements,
-            'search' => $search,
-            'lowOnly' => $lowOnly,
-            'partCount' => InventoryPart::where('is_active', true)->count(),
-            'lowStockCount' => InventoryPart::where('is_active', true)
-                ->whereColumn('stock_quantity', '<=', 'reorder_level')
-                ->count(),
-            'stockValue' => (float) InventoryPart::where('is_active', true)
-                ->selectRaw('COALESCE(SUM(stock_quantity * unit_cost), 0) as value')
-                ->value('value'),
-        ]);
+        return view('inventory.movements', compact('movements'));
     }
 
     public function store(Request $request, InventoryStock $stock): RedirectResponse
@@ -83,7 +95,7 @@ class InventoryPartController extends Controller
             }
         });
 
-        return redirect()->route('inventory.index')->with('status', 'Part added to inventory.');
+        return redirect()->route('inventory.parts')->with('status', 'Part added to inventory.');
     }
 
     public function update(Request $request, InventoryPart $inventoryPart): RedirectResponse
@@ -99,7 +111,7 @@ class InventoryPartController extends Controller
 
         $inventoryPart->update($validated);
 
-        return redirect()->route('inventory.index')->with('status', 'Part details updated.');
+        return redirect()->route('inventory.parts')->with('status', 'Part details updated.');
     }
 
     public function moveStock(Request $request, InventoryPart $inventoryPart, InventoryStock $stock): RedirectResponse
@@ -122,6 +134,6 @@ class InventoryPartController extends Controller
             $stock->setCount($inventoryPart, $request->user(), (int) $validated['quantity'], $validated['note'] ?? null);
         }
 
-        return redirect()->route('inventory.index')->with('status', 'Stock movement recorded.');
+        return redirect()->route('inventory.movements')->with('status', 'Stock movement recorded.');
     }
 }

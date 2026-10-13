@@ -118,7 +118,7 @@ class BillingInventoryReportsTest extends TestCase
             'reorder_level' => 2,
             'unit_cost' => 80,
             'sale_price' => 100,
-        ])->assertRedirect(route('inventory.index'));
+        ])->assertRedirect(route('inventory.parts'));
 
         $part = InventoryPart::query()->firstOrFail();
         $this->assertDatabaseHas('inventory_movements', [
@@ -132,12 +132,23 @@ class BillingInventoryReportsTest extends TestCase
             'type' => 'used',
             'quantity' => 1,
             'note' => 'Test usage',
-        ])->assertRedirect(route('inventory.index'));
+        ])->assertRedirect(route('inventory.movements'));
 
         $this->assertSame(1, $part->fresh()->stock_quantity);
-        $this->actingAs($user)->get(route('inventory.index', ['low_stock' => 1]))
+        $this->actingAs($user)->get(route('inventory.parts', ['low_stock' => 1]))
             ->assertOk()
             ->assertSee('Solid state drive');
+    }
+
+    public function test_inventory_overview_parts_and_movements_are_separate_pages(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->get(route('inventory.index'))
+            ->assertOk()->assertSee('Inventory overview')->assertSee('Recent stock movements');
+        $this->actingAs($user)->get(route('inventory.parts'))
+            ->assertOk()->assertSee('Spare parts')->assertDontSee('Recent stock movements');
+        $this->actingAs($user)->get(route('inventory.movements'))
+            ->assertOk()->assertSee('Stock movements');
     }
 
     private function createPart(User $user, int $stock): InventoryPart

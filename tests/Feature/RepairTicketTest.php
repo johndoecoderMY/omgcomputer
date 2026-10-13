@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Customer;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RepairTicketTest extends TestCase
@@ -85,6 +88,44 @@ class RepairTicketTest extends TestCase
             ->assertOk()
             ->assertDontSee($assigned->ticket_number)
             ->assertSee('OMG-2026-000002');
+    }
+
+    public function test_ticket_photos_and_customer_history_are_saved_and_accessible(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $payload = [
+            'customer_name' => 'Taylor Customer',
+            'customer_email' => 'taylor@example.test',
+            'customer_phone' => '0123456789',
+            'device_type' => 'Laptop',
+            'subject' => 'Screen flickers',
+            'issue_description' => 'The screen flickers on startup.',
+            'priority' => 'normal',
+            'images' => [UploadedFile::fake()->image('device.png')],
+        ];
+
+        $this->actingAs($user)->post(route('tickets.store'), $payload)->assertSessionHasNoErrors();
+        $firstTicket = RepairTicket::query()->firstOrFail();
+        $this->assertNotNull($firstTicket->customer_id);
+        Storage::disk('local')->assertExists($firstTicket->images[0]);
+        $this->actingAs($user)->get(route('tickets.images.show', [$firstTicket, 0]))->assertOk();
+
+        $payload['customer_name'] = 'Taylor C.';
+        $payload['customer_email'] = 'TAYLOR@example.test';
+        unset($payload['images']);
+        $this->actingAs($user)->post(route('tickets.store'), $payload)->assertSessionHasNoErrors();
+
+        $customer = Customer::query()->firstOrFail();
+        $this->assertSame(1, Customer::query()->count());
+        $this->assertSame(2, $customer->tickets()->count());
+        $this->actingAs($user)->get(route('customers.index'))
+            ->assertOk()
+            ->assertSee('Taylor C.');
+        $this->actingAs($user)->get(route('customers.show', $customer))
+            ->assertOk()
+            ->assertSee('Repair history')
+            ->assertSee($firstTicket->ticket_number);
     }
 
     private function ticketAttributes(User $user, array $overrides = []): array

@@ -4,13 +4,26 @@
 
 @section('content')
     <div class="container-fluid py-3">
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="{{ route('planner.projects') }}">This project</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('planner.index', ['project' => $task->project_id, 'view' => 'list']) }}">Tasks</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $task->title }}</li>
-            </ol>
-        </nav>
+        <x-page-header
+            eyebrow="{{ $task->project->name }} · {{ $categories[$task->category] }}"
+            title="{{ $task->title }}"
+            description="Created by {{ $task->creator->name }} · {{ $task->created_at->format('M j, Y') }}"
+            :breadcrumbs="array_merge([['label' => 'Tasks', 'url' => route('planner.index', ['project' => $task->project_id, 'view' => 'list'])]], $parentTask ? [['label' => $parentTask->title, 'url' => route('planner.show', $parentTask)]] : [], [['label' => $task->title]])"
+        >
+            <x-slot:actions>
+                @if ($canUpdateProgress)
+                    <form method="POST" action="{{ route('planner.update-status', $task) }}" class="d-flex gap-2 align-items-center">
+                        @csrf
+                        @method('PATCH')
+                        <label class="visually-hidden" for="task-status">Task status</label>
+                        <select class="form-select form-select-sm" name="status" id="task-status">@foreach ($statuses as $status => $label)<option value="{{ $status }}" @selected($task->status === $status)>{{ $label }}</option>@endforeach</select>
+                        <button class="btn btn-sm btn-primary" type="submit">Update</button>
+                    </form>
+                @else
+                    <span class="badge rounded-pill badge-subtle-primary">{{ $allStatuses[$task->status] }}</span>
+                @endif
+            </x-slot:actions>
+        </x-page-header>
         @if (session('status'))<div class="alert alert-success alert-dismissible fade show" role="alert">{{ session('status') }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>@endif
         @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 
@@ -18,20 +31,6 @@
             <div class="col-xl-8">
                 <section class="card mb-3">
                     <div class="card-body">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-                            <div><p class="text-primary fw-bold text-uppercase fs-10 mb-1">{{ $task->project->name }} · {{ $categories[$task->category] }}</p><h1 class="h2 mb-2">{{ $task->title }}</h1><p class="text-700 mb-0">Created by {{ $task->creator->name }} · {{ $task->created_at->format('M j, Y') }}</p></div>
-                            @if ($canUpdateProgress)
-                                <form method="POST" action="{{ route('planner.update-status', $task) }}" class="d-flex gap-2 align-items-center">
-                                    @csrf
-                                    @method('PATCH')
-                                    <label class="visually-hidden" for="task-status">Task status</label>
-                                    <select class="form-select form-select-sm" name="status" id="task-status">@foreach ($statuses as $status => $label)<option value="{{ $status }}" @selected($task->status === $status)>{{ $label }}</option>@endforeach</select>
-                                    <button class="btn btn-sm btn-primary" type="submit">Update</button>
-                                </form>
-                            @else
-                                <span class="badge rounded-pill badge-subtle-primary">{{ $allStatuses[$task->status] }}</span>
-                            @endif
-                        </div>
                         <div class="d-flex flex-wrap gap-2 mb-4">
                             <span class="badge rounded-pill badge-subtle-{{ $task->priority === 'urgent' ? 'danger' : ($task->priority === 'high' ? 'warning' : 'info') }}">{{ $priorities[$task->priority] }} priority</span>
                             <span class="badge rounded-pill badge-subtle-secondary">{{ $task->visibility === 'team' ? 'Team task' : 'Private task' }}</span>
@@ -41,6 +40,46 @@
                         <div class="text-700">{!! nl2br(e($task->description ?: 'No additional details have been provided.')) !!}</div>
                     </div>
                 </section>
+
+                @if ($parentTask)
+                    <section class="card mb-3">
+                        <div class="card-body">
+                            <p class="text-600 fs-10 mb-1">Subtask of</p>
+                            <a href="{{ route('planner.show', $parentTask) }}">{{ $parentTask->title }}</a>
+                        </div>
+                    </section>
+                @else
+                    <section class="card mb-3" id="subtasks">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h2 class="h5 mb-0">Subtasks</h2>
+                            <span class="badge badge-subtle-primary">{{ $task->subtasks->count() }}</span>
+                        </div>
+                        <div class="card-body">
+                            @forelse ($task->subtasks as $subtask)
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom py-2">
+                                    <div><a class="fw-semi-bold" href="{{ route('planner.show', $subtask) }}">{{ $subtask->title }}</a><div class="text-600 fs-10">{{ $subtask->assignee->name ?? 'Unassigned' }}@if($subtask->due_date) · Due {{ $subtask->due_date->format('M j, Y') }}@endif</div></div>
+                                    <span class="badge rounded-pill badge-subtle-{{ $subtask->status === 'done' ? 'success' : ($subtask->status === 'blocked' ? 'danger' : 'secondary') }}">{{ $allStatuses[$subtask->status] }}</span>
+                                </div>
+                            @empty
+                                <p class="text-600 mb-3">Break this task into smaller steps.</p>
+                            @endforelse
+                            @if ($canManage)
+                            <form method="POST" action="{{ route('planner.subtasks.store', $task) }}" class="border-top pt-3 mt-3">
+                                @csrf
+                                <h3 class="h6">Add a subtask</h3>
+                                <div class="row g-2">
+                                    <div class="col-lg-6"><label class="visually-hidden" for="subtask-title">Subtask title</label><input class="form-control" id="subtask-title" name="title" maxlength="180" required placeholder="Subtask title"></div>
+                                    <div class="col-sm-6 col-lg-3"><label class="visually-hidden" for="subtask-status">Status</label><select class="form-select" id="subtask-status" name="status">@foreach ($allStatuses as $value => $label)<option value="{{ $value }}" @selected($value === 'backlog')>{{ $label }}</option>@endforeach</select></div>
+                                    <div class="col-sm-6 col-lg-3"><label class="visually-hidden" for="subtask-priority">Priority</label><select class="form-select" id="subtask-priority" name="priority">@foreach ($priorities as $value => $label)<option value="{{ $value }}" @selected($value === 'medium')>{{ $label }}</option>@endforeach</select></div>
+                                    <div class="col-lg-6"><label class="visually-hidden" for="subtask-assignee">Assignee</label><select class="form-select" id="subtask-assignee" name="assigned_to"><option value="">Unassigned</option>@foreach ($members as $member)<option value="{{ $member->id }}">{{ $member->name }}</option>@endforeach</select></div>
+                                    <div class="col-lg-4"><label class="visually-hidden" for="subtask-due-date">Due date</label><input class="form-control" id="subtask-due-date" name="due_date" type="date"></div>
+                                    <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit">Add</button></div>
+                                </div>
+                            </form>
+                            @endif
+                        </div>
+                    </section>
+                @endif
 
                 <section class="card" id="discussion">
                     <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Task discussion</h2><span class="badge badge-subtle-primary">{{ $comments->count() }} replies</span></div>
