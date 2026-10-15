@@ -45,7 +45,11 @@
         <div id="flow-steps" class="d-grid gap-2">
             @foreach ($steps as $index => $step)
                 <div class="flow-step-row flow-chart-editor-node border rounded-2 p-3" data-step-id="{{ $step['id'] ?? '' }}">
-                    <input type="hidden" name="steps[{{ $index }}][id]" value="{{ $step['id'] ?? '' }}">
+                    <input class="step-id-input" type="hidden" name="steps[{{ $index }}][id]" value="{{ $step['id'] ?? '' }}">
+                    @if (isset($step['x'], $step['y']))
+                        <input class="step-position-x" type="hidden" name="steps[{{ $index }}][x]" value="{{ $step['x'] }}">
+                        <input class="step-position-y" type="hidden" name="steps[{{ $index }}][y]" value="{{ $step['y'] }}">
+                    @endif
                     <div class="flow-chart-editor-heading mb-2">
                         <span class="flow-chart-node-badge">{{ $index + 1 }}</span>
                         <span class="fw-semibold">Node {{ $index + 1 }}</span>
@@ -117,9 +121,13 @@
                 const stepId = row.dataset.stepId;
                 row.querySelector('.flow-chart-node-badge').textContent = index + 1;
                 row.querySelector('.flow-chart-editor-heading .fw-semibold').textContent = `Node ${index + 1}`;
-                const idInput = row.querySelector('input[type="hidden"]');
+                const idInput = row.querySelector('.step-id-input');
                 idInput.name = `steps[${index}][id]`;
                 idInput.value = stepId;
+                const positionX = row.querySelector('.step-position-x');
+                const positionY = row.querySelector('.step-position-y');
+                if (positionX) positionX.name = `steps[${index}][x]`;
+                if (positionY) positionY.name = `steps[${index}][y]`;
                 row.querySelector('label[for^="step-label-"]').htmlFor = `step-label-${index}`;
                 row.querySelector('[name$="[label]"]').id = `step-label-${index}`;
                 row.querySelector('label[for^="step-kind-"]').htmlFor = `step-kind-${index}`;
@@ -176,7 +184,7 @@
                 ? window.crypto.randomUUID()
                 : `step-${Date.now()}-${Math.random().toString(36).slice(2)}`;
             row.innerHTML = `
-                <input type="hidden">
+                <input class="step-id-input" type="hidden">
                 <div class="flow-chart-editor-heading mb-2">
                     <span class="flow-chart-node-badge"></span>
                     <span class="fw-semibold"></span>

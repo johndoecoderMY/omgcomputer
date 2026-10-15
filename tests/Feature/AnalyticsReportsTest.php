@@ -73,7 +73,23 @@ class AnalyticsReportsTest extends TestCase
         $this->actingAs($user)->get(route('reports.marketing'))
             ->assertOk()
             ->assertSee('October service campaign')
-            ->assertSee('$960.00');
+            ->assertSee('RM 960.00');
         $this->assertSame(1, MarketingCampaign::query()->count());
+    }
+
+    public function test_products_page_shows_business_plan_offers_and_filters_by_category(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('products.index'))
+            ->assertOk()
+            ->assertSee('Laptop cleaning')
+            ->assertSee('FYP consultation')
+            ->assertSee('RM60–100');
+
+        $this->actingAs($user)->get(route('products.index', ['category' => 'student']))
+            ->assertOk()
+            ->assertSee('FYP consultation')
+            ->assertDontSee('Laptop cleaning');
     }
 }

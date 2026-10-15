@@ -11,6 +11,7 @@
         </x-slot>
     </x-page-header>
 
+    <div class="alert alert-info"><strong>Quotation:</strong> proposed work and estimated price; it does not deduct inventory. <strong>Invoice:</strong> issued sale; linked stock is deducted and payments can be recorded.</div>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
     <form class="row g-2 mb-3" method="GET">
@@ -30,9 +31,9 @@
                             <td><a class="fw-semibold" href="{{ route('billing.documents.show', $document) }}">{{ $document->number }}</a><div class="small text-body-secondary">{{ ucfirst($document->type) }}</div></td>
                             <td>{{ $document->customer_name }}</td><td>{{ $document->issue_date->format('M j, Y') }}</td>
                             <td><span class="badge text-bg-{{ $document->status === 'paid' ? 'success' : ($document->status === 'void' ? 'secondary' : ($document->status === 'draft' ? 'light' : 'warning')) }}">{{ str_replace('_', ' ', ucfirst($document->status)) }}</span></td>
-                            <td class="text-end">${{ number_format($document->total, 2) }}</td>
-                            <td class="text-end">${{ number_format($document->paid_amount, 2) }}</td>
-                            <td class="text-end">${{ number_format($document->balance, 2) }}</td>
+                            <td class="text-end">RM {{ number_format($document->total, 2) }}</td>
+                            <td class="text-end">RM {{ number_format($document->paid_amount, 2) }}</td>
+                            <td class="text-end">RM {{ number_format($document->balance, 2) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="7" class="text-center text-body-secondary py-5">No billing documents yet.</td></tr>

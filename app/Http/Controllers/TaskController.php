@@ -95,7 +95,7 @@ class TaskController extends Controller
 
     public function show(Task $task): View
     {
-        $task->load(['parent', 'project', 'subtasks']);
+        $task->load(['parent', 'project', 'subtasks', 'attachments.uploader']);
 
         return view('tasks.show', compact('task'));
     }
@@ -110,6 +110,7 @@ class TaskController extends Controller
             'parent' => $task->parent,
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
+            'users' => User::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

@@ -11,6 +11,12 @@
             <a class="btn btn-outline-primary" href="{{ route('development.flowcharts.edit', $flowChart) }}">
                 <i class="fas fa-pen me-2"></i>Edit
             </a>
+            <form id="flow-chart-layout-form" method="POST" action="{{ route('development.flowcharts.layout', $flowChart) }}">
+                @csrf
+                @method('PATCH')
+                <div id="flow-chart-layout-inputs"></div>
+                <button class="btn btn-primary" type="submit" disabled><i class="fas fa-save me-2"></i>Save layout</button>
+            </form>
             <form method="POST" action="{{ route('development.flowcharts.destroy', $flowChart) }}"
                 onsubmit="return confirm('Delete this flow chart?');">
                 @csrf
@@ -22,6 +28,13 @@
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
+    @endif
+    @if ($errors->any())
+        <div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>
+    @endif
+
+    @if ($projects->isEmpty())
+        <div class="alert alert-warning">Create a project before turning flow-chart nodes into tasks.</div>
     @endif
 
     <section class="card">
@@ -43,9 +56,35 @@
                     @foreach ($flowChart->steps as $index => $step)
                         <article class="flow-chart-node-card flow-chart-node-{{ $step['kind'] }}"
                             data-node-id="{{ $step['id'] }}" data-node-index="{{ $index }}"
-                            data-connections="{{ json_encode($step['connections'] ?? []) }}">
+                            data-connections="{{ json_encode($step['connections'] ?? []) }}"
+                            data-position-x="{{ $step['x'] ?? '' }}" data-position-y="{{ $step['y'] ?? '' }}">
+                            <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="fas fa-grip"></span></button>
                             <span class="flow-chart-node-kind">{{ $step['kind'] }}</span>
                             <strong>{{ $step['label'] }}</strong>
+                            @if (($tasks[$step['id']] ?? collect())->isNotEmpty())
+                                <div class="mt-2">
+                                    @foreach ($tasks[$step['id']] as $task)
+                                        <a class="d-block small" href="{{ route('tasks.show', $task) }}"><span class="fas fa-list-check me-1"></span>{{ $task->title }} · {{ $task->project->name }}</a>
+                                    @endforeach
+                                </div>
+                            @endif
+                            @if ($projects->isNotEmpty())
+                                <form class="mt-3" method="POST" action="{{ route('development.flowcharts.tasks.store', $flowChart) }}">
+                                    @csrf
+                                    <input type="hidden" name="step_id" value="{{ $step['id'] }}">
+                                    <label class="visually-hidden" for="project-{{ $step['id'] }}">Project for {{ $step['label'] }}</label>
+                                    <select class="form-select form-select-sm mb-2" id="project-{{ $step['id'] }}" name="project_id" required>
+                                        <option value="">Add to project</option>
+                                        @foreach ($projects as $project)<option value="{{ $project->id }}">{{ $project->name }}</option>@endforeach
+                                    </select>
+                                    <label class="visually-hidden" for="assignee-{{ $step['id'] }}">Assignee for {{ $step['label'] }}</label>
+                                    <select class="form-select form-select-sm mb-2" id="assignee-{{ $step['id'] }}" name="assigned_to">
+                                        <option value="">Unassigned</option>
+                                        @foreach ($users as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary w-100" type="submit"><span class="fas fa-plus me-1"></span>Create task</button>
+                                </form>
+                            @endif
                         </article>
                     @endforeach
                 </div>
@@ -56,6 +95,11 @@
 @endsection
 
 @push('scripts')
+<style>
+.flow-chart-drag-handle{position:absolute;top:.35rem;right:.45rem;border:0;background:transparent;color:var(--falcon-gray-600);cursor:grab;padding:.2rem .35rem;touch-action:none}
+.flow-chart-drag-handle:active,.flow-chart-node-card.is-dragging .flow-chart-drag-handle{cursor:grabbing;color:var(--falcon-primary)}
+.flow-chart-node-card.is-dragging{z-index:3;box-shadow:0 .5rem 1.25rem rgba(0,0,0,.2)}
+</style>
 <script>
     (() => {
         const viewport = document.querySelector('[data-flow-chart]');
@@ -64,11 +108,45 @@
         const canvas = viewport.querySelector('.flow-chart-canvas');
         const svg = canvas.querySelector('.flow-chart-wires');
         const nodes = [...canvas.querySelectorAll('.flow-chart-node-card')];
+        const layoutForm = document.getElementById('flow-chart-layout-form');
+        const layoutInputs = document.getElementById('flow-chart-layout-inputs');
         if (!nodes.length) return;
 
+        const drawWires = () => {
+            const width = Math.max(viewport.clientWidth - 2, canvas.scrollWidth);
+            const height = Math.max(220, canvas.scrollHeight);
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.querySelectorAll('.flow-chart-wire').forEach((wire) => wire.remove());
+
+            const connections = new Map(nodes.map((node) => [
+                node.dataset.nodeId,
+                JSON.parse(node.dataset.connections || '[]'),
+            ]));
+            nodes.forEach((source) => {
+                const sourceX = source.offsetLeft + source.offsetWidth / 2;
+                const sourceY = source.offsetTop + source.offsetHeight;
+                (connections.get(source.dataset.nodeId) || []).forEach((targetId) => {
+                    const target = nodes.find((node) => node.dataset.nodeId === targetId);
+                    if (!target) return;
+                    const targetX = target.offsetLeft + target.offsetWidth / 2;
+                    const targetY = target.offsetTop;
+                    const bendY = sourceY + Math.max(28, (targetY - sourceY) / 2);
+                    const wire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    wire.setAttribute('class', 'flow-chart-wire');
+                    wire.setAttribute('d', `M ${sourceX} ${sourceY} C ${sourceX} ${bendY}, ${targetX} ${bendY}, ${targetX} ${targetY}`);
+                    wire.setAttribute('marker-end', 'url(#flow-chart-arrow)');
+                    svg.append(wire);
+                });
+            });
+        };
+
         const render = () => {
-            const gapX = 230;
-            const gapY = 170;
+            const gapX = 250;
+            const gapY = 340;
             const padding = 40;
             const connections = new Map(nodes.map((node) => [
                 node.dataset.nodeId,
@@ -108,42 +186,89 @@
 
             const widestRow = Math.max(...[...rows.values()].map((row) => row.length));
             const width = Math.max(viewport.clientWidth - 2, widestRow * gapX + padding * 2);
-            const height = Math.max(...rows.keys()) * gapY + 140;
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-            svg.setAttribute('width', width);
-            svg.setAttribute('height', height);
-
+            const defaults = new Map();
             rows.forEach((row, level) => {
                 const rowWidth = row.length * gapX;
                 const startX = Math.max(padding, (width - rowWidth) / 2);
                 row.forEach((node, index) => {
-                    node.style.left = `${startX + index * gapX}px`;
-                    node.style.top = `${padding + level * gapY}px`;
+                    defaults.set(node.dataset.nodeId, {
+                        x: startX + index * gapX,
+                        y: padding + level * gapY,
+                    });
                 });
             });
 
-            svg.querySelectorAll('.flow-chart-wire').forEach((wire) => wire.remove());
-            nodes.forEach((source) => {
-                const sourceX = source.offsetLeft + source.offsetWidth / 2;
-                const sourceY = source.offsetTop + source.offsetHeight;
-                (connections.get(source.dataset.nodeId) || []).forEach((targetId) => {
-                    const target = nodes.find((node) => node.dataset.nodeId === targetId);
-                    if (!target) return;
-                    const targetX = target.offsetLeft + target.offsetWidth / 2;
-                    const targetY = target.offsetTop;
-                    const bendY = sourceY + Math.max(28, (targetY - sourceY) / 2);
-                    const wire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    wire.setAttribute('class', 'flow-chart-wire');
-                    wire.setAttribute('d', `M ${sourceX} ${sourceY} C ${sourceX} ${bendY}, ${targetX} ${bendY}, ${targetX} ${targetY}`);
-                    wire.setAttribute('marker-end', 'url(#flow-chart-arrow)');
-                    svg.append(wire);
-                });
+            nodes.forEach((node) => {
+                const fallback = defaults.get(node.dataset.nodeId);
+                const x = node.dataset.positionX !== '' ? Number(node.dataset.positionX) : fallback.x;
+                const y = node.dataset.positionY !== '' ? Number(node.dataset.positionY) : fallback.y;
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
             });
+
+            drawWires();
         };
 
+        nodes.forEach((node) => {
+            const handle = node.querySelector('.flow-chart-drag-handle');
+            let drag = null;
+
+            handle.addEventListener('pointerdown', (event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                event.preventDefault();
+                handle.setPointerCapture(event.pointerId);
+                node.classList.add('is-dragging');
+                drag = {
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    left: node.offsetLeft,
+                    top: node.offsetTop,
+                };
+            });
+
+            handle.addEventListener('pointermove', (event) => {
+                if (!drag || drag.pointerId !== event.pointerId) return;
+                const scaleX = canvas.offsetWidth / Math.max(1, canvas.getBoundingClientRect().width);
+                const scaleY = canvas.offsetHeight / Math.max(1, canvas.getBoundingClientRect().height);
+                const left = Math.max(0, Math.round(drag.left + (event.clientX - drag.startX) * scaleX));
+                const top = Math.max(0, Math.round(drag.top + (event.clientY - drag.startY) * scaleY));
+                node.style.left = `${left}px`;
+                node.style.top = `${top}px`;
+                canvas.style.width = `${Math.max(viewport.clientWidth - 2, left + node.offsetWidth + 40, canvas.scrollWidth)}px`;
+                canvas.style.height = `${Math.max(220, top + node.offsetHeight + 40, canvas.scrollHeight)}px`;
+                drawWires();
+            });
+
+            const endDrag = (event) => {
+                if (!drag || drag.pointerId !== event.pointerId) return;
+                drag = null;
+                node.classList.remove('is-dragging');
+            };
+            handle.addEventListener('pointerup', endDrag);
+            handle.addEventListener('pointercancel', endDrag);
+        });
+
+        layoutForm.addEventListener('submit', () => {
+            layoutInputs.replaceChildren();
+            nodes.forEach((node, index) => {
+                const fields = {
+                    id: node.dataset.nodeId,
+                    x: Math.round(parseFloat(node.style.left) || 0),
+                    y: Math.round(parseFloat(node.style.top) || 0),
+                };
+                Object.entries(fields).forEach(([key, value]) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = `positions[${index}][${key}]`;
+                    input.value = value;
+                    layoutInputs.append(input);
+                });
+            });
+        });
+
         render();
+        layoutForm.querySelector('button[type="submit"]').disabled = false;
         window.addEventListener('resize', render);
     })();
 </script>

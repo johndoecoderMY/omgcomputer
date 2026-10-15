@@ -17,6 +17,16 @@ class Project extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    public function repairTickets(): HasMany
+    {
+        return $this->hasMany(RepairTicket::class);
+    }
+
     public function getProgressAttribute(): int
     {
         $total = $this->tasks_count ?? $this->tasks()->count();

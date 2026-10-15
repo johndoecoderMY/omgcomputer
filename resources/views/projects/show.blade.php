@@ -14,6 +14,9 @@
             <a class="btn btn-primary" href="{{ route('projects.tasks.create', $project) }}">
                 <i class="fas fa-plus me-2"></i>Add task
             </a>
+            <a class="btn btn-outline-primary" href="{{ route('customers.create', ['project_id' => $project->id]) }}">
+                <i class="fas fa-user-plus me-2"></i>Add customer
+            </a>
         </x-slot:actions>
     </x-page-header>
 
@@ -35,6 +38,21 @@
                 {{ $project->completed_tasks_count }} of {{ $project->tasks_count }} tasks complete
             </p>
         </div>
+    </section>
+
+    <section class="card mb-4">
+        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">Customers linked to this project</h2>
+            <span class="badge text-bg-light border">{{ $project->customers->count() }}</span>
+        </div>
+        @forelse ($project->customers as $customer)
+            <div class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <div><a class="fw-semibold" href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a><div class="small text-body-secondary">{{ $customer->email ?: $customer->phone }}</div></div>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ route('customers.show', $customer) }}">View profile</a>
+            </div>
+        @empty
+            <div class="card-body text-body-secondary">No customers are linked to this project yet.</div>
+        @endforelse
     </section>
 
     <section class="card">

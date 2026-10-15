@@ -38,6 +38,7 @@ class ProjectController extends Controller
     {
         $project->load([
             'tasks' => fn ($query) => $query->whereNull('parent_task_id')->with('subtasks'),
+            'customers',
         ]);
         $project->loadCount('tasks');
         $project->loadCount([

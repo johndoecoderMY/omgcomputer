@@ -80,6 +80,70 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
     }
 
+    public function test_business_plan_services_can_be_quoted_and_billed_without_stock_deduction(): void
+    {
+        $user = User::factory()->create();
+        $item = [
+            'product_id' => 'laptop-cleaning',
+            'quantity' => 1,
+            'unit_price' => null,
+        ];
+        $data = [
+            'type' => 'quotation',
+            'customer_name' => 'Customer Example',
+            'tax_rate' => 0,
+            'items' => [$item],
+        ];
+
+        $this->actingAs($user)->post(route('billing.store'), $data)
+            ->assertRedirect();
+        $quotation = BillingDocument::query()->firstOrFail();
+        $this->assertSame('quotation', $quotation->type);
+        $this->assertSame('draft', $quotation->status);
+        $this->assertSame(60.0, (float) $quotation->total);
+        $this->assertSame('Laptop cleaning', $quotation->items()->firstOrFail()->description);
+
+        $data['type'] = 'invoice';
+        $this->actingAs($user)->post(route('billing.store'), $data)
+            ->assertRedirect();
+        $invoice = BillingDocument::query()->where('type', 'invoice')->firstOrFail();
+        $this->assertSame('issued', $invoice->status);
+        $this->assertSame(60.0, (float) $invoice->total);
+        $this->assertDatabaseCount('inventory_movements', 0);
+    }
+
+    public function test_draft_quotation_can_be_edited_without_issuing_or_deducting_stock(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', null, 1));
+        $quotation = BillingDocument::query()->firstOrFail();
+
+        $this->get(route('billing.documents.edit', $quotation))
+            ->assertOk()
+            ->assertSee('Edit draft')
+            ->assertSee('Cleaning service');
+
+        $this->put(route('billing.documents.update', $quotation), [
+            'type' => 'quotation',
+            'customer_name' => 'Updated Customer',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'product_id' => 'laptop-cleaning',
+                'description' => 'Laptop cleaning',
+                'quantity' => 2,
+                'unit_price' => 60,
+            ]],
+        ])->assertRedirect(route('billing.documents.show', $quotation));
+
+        $quotation->refresh();
+        $this->assertSame('draft', $quotation->status);
+        $this->assertSame('Updated Customer', $quotation->customer_name);
+        $this->assertSame(120.0, (float) $quotation->total);
+        $this->assertSame('Laptop cleaning', $quotation->items()->firstOrFail()->description);
+        $this->assertDatabaseCount('inventory_movements', 0);
+    }
+
     public function test_invoice_pdf_and_date_filtered_reports_are_available(): void
     {
         $user = User::factory()->create();

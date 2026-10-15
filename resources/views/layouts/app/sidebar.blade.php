@@ -57,42 +57,57 @@
 
                     <ul class="nav collapse" id="repairTicketsMenu">
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('bookings.index') }}">
+                                <span class="nav-link-text ps-1">Customer Bookings</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('bookings.create') }}" target="_blank">
+                                <span class="nav-link-text ps-1">Public Booking Calendar</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('tickets.index') }}">
                                 <span class="nav-link-text ps-1">All Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.create') }}">
                                 <span class="nav-link-text ps-1">Create Ticket</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('customer-messages.index') }}">
+                                <span class="nav-link-text ps-1">Customer Messages</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'unassigned']) }}">
                                 <span class="nav-link-text ps-1">Unassigned Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'mine']) }}">
                                 <span class="nav-link-text ps-1">My Assigned Tickets</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_customer']) }}">
                                 <span class="nav-link-text ps-1">Awaiting Customer</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_parts']) }}">
                                 <span class="nav-link-text ps-1">Waiting for Parts</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'ready_for_pickup']) }}">
                                 <span class="nav-link-text ps-1">Ready for Pickup</span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="{{ route('tickets.index', ['status' => 'closed']) }}">
                                 <span class="nav-link-text ps-1">Closed Tickets</span>
                             </a>
                         </li>
@@ -111,7 +126,7 @@
 
                 {{-- Customers --}}
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{{ route('customers.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users"></span></span>
                             <span class="nav-link-text ps-1">Customers</span>
@@ -173,6 +188,13 @@
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users-cog"></span></span>
                             <span class="nav-link-text ps-1">Teams</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-link" href="{{ route('products.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-tags"></span></span>
+                            <span class="nav-link-text ps-1">Products & Services</span>
                         </div>
                     </a>
 

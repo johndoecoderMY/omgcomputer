@@ -171,4 +171,22 @@ class ProjectTaskTest extends TestCase
         $this->assertDatabaseMissing('projects', ['id' => $project->id]);
         $this->assertDatabaseMissing('tasks', ['id' => $task->id]);
     }
+
+    public function test_task_edit_form_renders_the_assignee_list(): void
+    {
+        $assignee = User::factory()->create(['name' => 'Jordan Lee']);
+        $this->actingAs(User::factory()->create());
+        $project = Project::create(['name' => 'Customer portal']);
+        $task = $project->tasks()->create([
+            'assigned_to' => $assignee->id,
+            'title' => 'Review account page',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $this->get(route('tasks.edit', $task))
+            ->assertOk()
+            ->assertSee('Assignee')
+            ->assertSee('Jordan Lee');
+    }
 }

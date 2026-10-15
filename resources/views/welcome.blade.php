@@ -14,6 +14,7 @@
                     <p class="lead text-700 mb-4">Friendly, dependable help for slow PCs, broken hardware, upgrades, and everyday tech headaches.</p>
                     <div class="d-flex flex-wrap gap-3">
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#services">Explore our services</a>
+                        <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="#repair-tracking">
                             <span class="fas fa-search me-2"></span>Track a repair
                         </a>
