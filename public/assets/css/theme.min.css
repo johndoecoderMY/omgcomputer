@@ -4474,12 +4474,12 @@ fieldset:disabled .tox .tox-dialog__footer .tox-button--secondary,
   --falcon-btn-bg: #f34303;
   --falcon-btn-border-color: #f34303;
   --falcon-btn-hover-color: #fff;
-  --falcon-btn-hover-bg: #2569c3;
+  --falcon-btn-hover-bg: #c92f00;
   --falcon-btn-hover-border-color: #c92f00;
-  --falcon-btn-focus-shadow-rgb: 76, 143, 233;
+  --falcon-btn-focus-shadow-rgb: 243, 67, 3;
   --falcon-btn-active-color: #fff;
   --falcon-btn-active-bg: #c92f00;
-  --falcon-btn-active-border-color: #215cac;
+  --falcon-btn-active-border-color: #c92f00;
   --falcon-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
   --falcon-btn-disabled-color: #fff;
   --falcon-btn-disabled-bg: #f34303;

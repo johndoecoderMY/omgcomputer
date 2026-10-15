@@ -8,30 +8,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BillingPayment extends Model
 {
     protected $fillable = [
-        'billing_document_id',
-        'user_id',
-        'amount',
-        'method',
-        'reference',
-        'received_at',
-        'note',
+        'billing_document_id', 'user_id', 'amount', 'method', 'reference', 'paid_at', 'notes',
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
-            'received_at' => 'date',
+            'paid_at' => 'datetime',
         ];
     }
 
     public function document(): BelongsTo
     {
         return $this->belongsTo(BillingDocument::class, 'billing_document_id');
-    }
-
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

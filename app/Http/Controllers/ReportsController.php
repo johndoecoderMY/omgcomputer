@@ -3,168 +3,169 @@
 namespace App\Http\Controllers;
 
 use App\Models\BillingDocument;
-use App\Models\BillingPayment;
+use App\Models\BillingDocumentItem;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
-use Carbon\CarbonImmutable;
+use App\Models\MarketingCampaign;
+use App\Models\Task;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportsController extends Controller
 {
     public function index(Request $request): View
     {
-        [$from, $to] = $this->dateRange($request);
-        $start = $from->startOfDay();
-        $end = $to->endOfDay();
-
-        $invoices = BillingDocument::query()
-            ->where('type', 'invoice')
-            ->whereIn('status', ['issued', 'partial', 'paid'])
-            ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()]);
-        $payments = BillingPayment::query()
-            ->whereBetween('received_at', [$from->toDateString(), $to->toDateString()]);
-
-        $invoiceTotals = (clone $invoices)
-            ->selectRaw('COUNT(*) as count')
-            ->selectRaw('COALESCE(SUM(total), 0) as billed')
-            ->first();
-        $paymentTotal = (float) (clone $payments)->sum('amount');
-        $outstanding = (float) BillingDocument::query()
-            ->where('type', 'invoice')
-            ->whereIn('status', ['issued', 'partial'])
-            ->selectRaw('COALESCE(SUM(total - (SELECT COALESCE(SUM(amount), 0) FROM billing_payments WHERE billing_payments.billing_document_id = billing_documents.id)), 0) as balance')
-            ->value('balance');
-
-        $monthly = collect();
-        $monthCursor = $from->startOfMonth();
-        $lastMonth = $to->startOfMonth();
-        while ($monthCursor <= $lastMonth) {
-            $monthStart = $monthCursor->startOfMonth()->toDateString();
-            $monthEnd = $monthCursor->endOfMonth()->toDateString();
-            $monthly->push([
-                'label' => $monthCursor->format('M Y'),
-                'billed' => (float) BillingDocument::query()
-                    ->where('type', 'invoice')
-                    ->whereIn('status', ['issued', 'partial', 'paid'])
-                    ->whereBetween('issued_at', [$monthStart, $monthEnd])
-                    ->sum('total'),
-                'collected' => (float) BillingPayment::query()
-                    ->whereBetween('received_at', [$monthStart, $monthEnd])
-                    ->sum('amount'),
-            ]);
-            $monthCursor = $monthCursor->addMonth();
-        }
-        $maxMonthly = max(1, (float) $monthly->max('billed'), (float) $monthly->max('collected'));
-
-        $topServices = DB::table('billing_document_items')
-            ->join('billing_documents', 'billing_documents.id', '=', 'billing_document_items.billing_document_id')
-            ->where('billing_documents.type', 'invoice')
-            ->whereIn('billing_documents.status', ['issued', 'partial', 'paid'])
-            ->whereBetween('billing_documents.issued_at', [$from->toDateString(), $to->toDateString()])
-            ->select('billing_document_items.description')
-            ->selectRaw('SUM(billing_document_items.quantity) as units')
-            ->selectRaw('SUM(billing_document_items.line_total) as sales')
-            ->groupBy('billing_document_items.description')
-            ->orderByDesc('sales')
-            ->limit(8)
-            ->get();
-
-        $lowStock = InventoryPart::query()
-            ->where('is_active', true)
-            ->whereColumn('stock_quantity', '<=', 'reorder_level')
-            ->orderBy('stock_quantity')
-            ->limit(10)
-            ->get(['sku', 'name', 'stock_quantity', 'reorder_level']);
-
-        $stockMovementTotals = InventoryMovement::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('COALESCE(SUM(CASE WHEN quantity_change > 0 THEN quantity_change ELSE 0 END), 0) as received')
-            ->selectRaw('COALESCE(SUM(CASE WHEN quantity_change < 0 THEN ABS(quantity_change) ELSE 0 END), 0) as used')
-            ->first();
+        [$from, $to] = $this->period($request);
+        $documents = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]);
 
         return view('reports.index', [
-            'from' => $from->toDateString(),
-            'to' => $to->toDateString(),
-            'invoiceCount' => (int) $invoiceTotals->count,
-            'billed' => (float) $invoiceTotals->billed,
-            'collected' => $paymentTotal,
-            'outstanding' => $outstanding,
-            'monthly' => $monthly,
-            'maxMonthly' => $maxMonthly,
-            'topServices' => $topServices,
-            'lowStock' => $lowStock,
-            'stockReceived' => (int) $stockMovementTotals->received,
-            'stockUsed' => (int) $stockMovementTotals->used,
+            'salesTotal' => (clone $documents)->sum('total'),
+            'invoiceCount' => (clone $documents)->count(),
+            'billed' => (clone $documents)->sum('total'),
+            'openBalance' => (clone $documents)->whereIn('status', ['issued', 'partial', 'part_paid'])->sum('total')
+                - (clone $documents)->whereIn('status', ['issued', 'partial', 'part_paid'])->sum('paid_amount'),
+            'from' => $from,
+            'to' => $to,
+            'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'activeCampaigns' => MarketingCampaign::query()->where('status', 'active')->count(),
         ]);
     }
 
-    public function export(Request $request): StreamedResponse
+    public function sales(Request $request): View
     {
-        [$from, $to] = $this->dateRange($request);
-
-        $documents = BillingDocument::query()
-            ->withSum('payments', 'amount')
-            ->where('type', 'invoice')
-            ->whereIn('status', ['issued', 'partial', 'paid'])
-            ->whereBetween('issued_at', [$from->toDateString(), $to->toDateString()])
-            ->orderBy('issued_at')
+        [$from, $to] = $this->period($request);
+        $documents = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]);
+        $invoices = (clone $documents)->with('payments')->latest('issue_date')->get();
+        $topItems = BillingDocumentItem::query()
+            ->selectRaw('billing_document_items.description, SUM(billing_document_items.quantity) as units, SUM(billing_document_items.line_total) as revenue')
+            ->whereHas('document', fn ($query) => $query->where('type', 'invoice')
+                ->whereIn('status', ['issued', 'part_paid', 'paid'])
+                ->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]))
+            ->groupBy('billing_document_items.description')
+            ->orderByDesc('revenue')
+            ->limit(10)
             ->get();
 
-        return response()->streamDownload(function () use ($documents): void {
-            $output = fopen('php://output', 'w');
-            if ($output === false) {
-                throw new \RuntimeException('Unable to open report output stream.');
-            }
-
-            fputcsv($output, ['Invoice', 'Customer', 'Issued', 'Status', 'Total (RM)', 'Paid (RM)', 'Balance (RM)']);
-            foreach ($documents as $document) {
-                $paid = (float) $document->payments_sum_amount;
-                fputcsv($output, [
-                    $this->safeCsvCell($document->document_number),
-                    $this->safeCsvCell($document->customer_name),
-                    $document->issued_at->toDateString(),
-                    $this->safeCsvCell($document->status),
-                    number_format((float) $document->total, 2, '.', ''),
-                    number_format($paid, 2, '.', ''),
-                    number_format(max(0, (float) $document->total - $paid), 2, '.', ''),
-                ]);
-            }
-
-            fclose($output);
-        }, "business-report-{$from->toDateString()}-to-{$to->toDateString()}.csv", [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+        return view('reports.sales', [
+            'from' => $from,
+            'to' => $to,
+            'invoiceCount' => (clone $documents)->count(),
+            'revenue' => (clone $documents)->sum('total'),
+            'collected' => (clone $documents)->sum('paid_amount'),
+            'invoices' => $invoices,
+            'topItems' => $topItems,
         ]);
     }
 
-    private function safeCsvCell(string $value): string
+    public function inventory(): View
     {
-        return preg_match('/^[\s]*[=+\-@]/u', $value) === 1 ? "'".$value : $value;
+        $parts = InventoryPart::query()->withCount('movements')->orderByRaw('stock_quantity <= reorder_level DESC')->orderBy('name')->get();
+
+        return view('reports.inventory', [
+            'parts' => $parts,
+            'lowStockCount' => $parts->filter(fn ($part) => $part->stock_quantity <= $part->reorder_level)->count(),
+            'stockValue' => $parts->sum(fn ($part) => (float) $part->cost_price * $part->stock_quantity),
+            'recentMovements' => InventoryMovement::query()->with('part')->latest()->limit(12)->get(),
+        ]);
     }
 
-    private function dateRange(Request $request): array
+    public function teams(): View
     {
-        $validated = $request->validate([
+        $users = User::query()
+            ->withCount('assignedTasks')
+            ->withCount(['assignedTasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')])
+            ->withCount(['assignedTasks as active_tasks_count' => fn ($query) => $query->where('status', 'in_progress')])
+            ->orderBy('name')
+            ->get();
+
+        return view('reports.teams', [
+            'users' => $users,
+            'unassignedTasks' => Task::query()->whereNull('assigned_to')->count(),
+        ]);
+    }
+
+    public function marketing(): View
+    {
+        $campaigns = MarketingCampaign::query()->orderByDesc('starts_on')->orderByDesc('created_at')->get();
+
+        return view('reports.marketing', [
+            'campaigns' => $campaigns,
+            'spend' => $campaigns->sum('spend'),
+            'revenue' => $campaigns->sum('attributed_revenue'),
+            'leads' => $campaigns->sum('leads'),
+            'conversions' => $campaigns->sum('conversions'),
+        ]);
+    }
+
+    public function storeCampaign(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'channel' => ['required', 'string', 'max:40'],
+            'status' => ['required', 'in:planned,active,completed,paused'],
+            'starts_on' => ['nullable', 'date'],
+            'ends_on' => ['nullable', 'date', 'after_or_equal:starts_on'],
+            'spend' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'impressions' => ['required', 'integer', 'min:0'],
+            'clicks' => ['required', 'integer', 'min:0'],
+            'leads' => ['required', 'integer', 'min:0'],
+            'conversions' => ['required', 'integer', 'min:0'],
+            'attributed_revenue' => ['required', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+        MarketingCampaign::create($data);
+
+        return back()->with('success', 'Campaign report saved.');
+    }
+
+    public function export(Request $request)
+    {
+        [$from, $to] = $this->period($request);
+        $invoices = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('issue_date')
+            ->get();
+
+        return response()->streamDownload(function () use ($invoices): void {
+            $output = fopen('php://output', 'w');
+            fputcsv($output, ['Invoice', 'Customer', 'Issued', 'Status', 'Billed', 'Paid', 'Balance']);
+            foreach ($invoices as $invoice) {
+                $customer = $invoice->customer_name;
+                if (preg_match('/^[=+\-@]/', $customer)) {
+                    $customer = "'" . $customer;
+                }
+                fputcsv($output, [
+                    $invoice->number,
+                    $customer,
+                    Carbon::parse($invoice->issue_date)->format('Y-m-d'),
+                    $invoice->status,
+                    number_format((float) $invoice->total, 2, '.', ''),
+                    number_format((float) $invoice->paid_amount, 2, '.', ''),
+                    number_format($invoice->balance, 2, '.', ''),
+                ]);
+            }
+            fclose($output);
+        }, 'sales-report.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function salesDocuments()
+    {
+        return BillingDocument::query()
+            ->where('type', 'invoice')
+            ->whereIn('status', ['issued', 'partial', 'part_paid', 'paid']);
+    }
+
+    private function period(Request $request): array
+    {
+        $data = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
         ]);
 
-        $from = isset($validated['from'])
-            ? CarbonImmutable::parse($validated['from'])
-            : CarbonImmutable::now()->startOfMonth();
-        $to = isset($validated['to'])
-            ? CarbonImmutable::parse($validated['to'])
-            : CarbonImmutable::now()->endOfMonth();
-
-        if ($from->diffInDays($to) > 366) {
-            throw ValidationException::withMessages([
-                'to' => 'Choose a reporting period of one year or less.',
-            ]);
-        }
-
-        return [$from, $to];
+        return [
+            Carbon::parse($data['from'] ?? now()->startOfMonth())->startOfDay(),
+            Carbon::parse($data['to'] ?? now())->endOfDay(),
+        ];
     }
 }

@@ -1,0 +1,13 @@
+@extends('layouts.app')
+
+@section('title', 'Inventory Report')
+
+@section('content')
+<div class="container-fluid py-3">
+    <x-page-header eyebrow="Reports" title="Inventory" :back-url="route('reports.index')" back-label="All reports" />
+    @include('reports._tabs', ['active' => 'inventory'])
+    <div class="row g-3 mb-3"><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">Tracked items</div><div class="fs-4 fw-semibold">{{ $parts->count() }}</div></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">At or below reorder level</div><div class="fs-4 fw-semibold text-danger">{{ $lowStockCount }}</div></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">Stock value at cost</div><div class="fs-4 fw-semibold">${{ number_format($stockValue, 2) }}</div></div></div></div></div>
+    <div class="row g-3"><div class="col-xl-8"><div class="card h-100"><div class="card-header fw-semibold">Stock on hand</div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Item</th><th>SKU</th><th class="text-end">Quantity</th><th class="text-end">Reorder</th><th class="text-end">Movements</th></tr></thead><tbody>@forelse ($parts as $part)<tr><td>{{ $part->name }}</td><td>{{ $part->sku ?: '—' }}</td><td class="text-end"><span class="badge text-bg-{{ $part->stock_quantity <= $part->reorder_level ? 'danger' : 'success' }}">{{ $part->stock_quantity }}</span></td><td class="text-end">{{ $part->reorder_level }}</td><td class="text-end">{{ $part->movements_count }}</td></tr>@empty<tr><td colspan="5" class="text-center text-body-secondary py-4">No inventory items tracked.</td></tr>@endforelse</tbody></table></div></div></div>
+    <div class="col-xl-4"><div class="card h-100"><div class="card-header fw-semibold">Recent stock activity</div><div class="list-group list-group-flush">@forelse ($recentMovements as $movement)<div class="list-group-item d-flex justify-content-between"><span>{{ $movement->part?->name ?? 'Deleted item' }}<small class="d-block text-body-secondary">{{ $movement->created_at->diffForHumans() }}</small></span><span class="{{ $movement->quantity_change < 0 ? 'text-danger' : 'text-success' }}">{{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}</span></div>@empty<div class="list-group-item text-body-secondary">No movements recorded.</div>@endforelse</div></div></div></div>
+</div>
+@endsection

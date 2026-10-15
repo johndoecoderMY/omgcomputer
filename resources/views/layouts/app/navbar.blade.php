@@ -464,7 +464,12 @@
                     <a class="dropdown-item" href="navbar-vertical.html#!">Feedback</a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="../pages/user/settings.html">Settings</a>
-                    <a class="dropdown-item" href="../pages/authentication/card/logout.html">Logout</a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="dropdown-item" type="submit">
+                            <span class="fas fa-sign-out-alt me-2" aria-hidden="true"></span>Log out
+                        </button>
+                    </form>
                 </div>
             </div>
         </li>

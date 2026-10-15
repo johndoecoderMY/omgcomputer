@@ -8,11 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BillingDocumentItem extends Model
 {
     protected $fillable = [
-        'inventory_part_id',
-        'description',
-        'quantity',
-        'unit_price',
-        'line_total',
+        'billing_document_id', 'inventory_part_id', 'description', 'quantity', 'unit_price', 'line_total',
     ];
 
     protected function casts(): array

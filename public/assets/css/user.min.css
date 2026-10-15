@@ -2,3 +2,199 @@
 /*                                Falcon Button                               */
 /* -------------------------------------------------------------------------- */
 /* prettier-ignore */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(var(--falcon-primary-rgb), 0.25);
+}
+
+.navbar-vertical .navbar-nav .nav-item .nav-link:hover,
+.navbar-vertical .navbar-nav .nav-item .nav-link:focus {
+    color: var(--falcon-primary);
+    background-color: rgba(var(--falcon-primary-rgb), 0.06);
+}
+
+.navbar-vertical .navbar-nav .nav-item .nav-link:hover.dropdown-indicator::after,
+.navbar-vertical .navbar-nav .nav-item .nav-link:focus.dropdown-indicator::after {
+    border-color: var(--falcon-primary);
+}
+
+.flow-chart-preview {
+    border: 1px solid var(--falcon-border-color);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+a.flow-chart-preview:hover,
+a.flow-chart-preview:focus-visible {
+    border-color: var(--falcon-primary);
+    box-shadow: 0 0.25rem 0.75rem rgba(var(--falcon-primary-rgb), 0.12);
+}
+
+.flow-chart-node {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(var(--falcon-primary-rgb), 0.25);
+    border-radius: 0.5rem;
+    color: var(--falcon-primary-text-emphasis, var(--falcon-primary));
+    background-color: rgba(var(--falcon-primary-rgb), 0.08);
+}
+
+.flow-chart-node-start,
+.flow-chart-node-end {
+    border-radius: 999px;
+    color: var(--falcon-success-text-emphasis, var(--falcon-success));
+    border-color: rgba(var(--falcon-success-rgb), 0.35);
+    background-color: rgba(var(--falcon-success-rgb), 0.08);
+}
+
+.flow-chart-node-action {
+    color: var(--falcon-info-text-emphasis, var(--falcon-info));
+    border-color: rgba(var(--falcon-info-rgb), 0.35);
+    background-color: rgba(var(--falcon-info-rgb), 0.08);
+}
+
+.flow-chart-node-decision {
+    color: var(--falcon-warning-text-emphasis, var(--falcon-warning));
+    border-color: rgba(var(--falcon-warning-rgb), 0.45);
+    background-color: rgba(var(--falcon-warning-rgb), 0.12);
+}
+
+.flow-chart-connector {
+    color: var(--falcon-primary);
+}
+
+.flow-chart-viewport {
+    overflow: auto;
+    min-height: 220px;
+    background-color: var(--falcon-body-bg);
+    background-image: radial-gradient(var(--falcon-border-color) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.flow-chart-canvas {
+    position: relative;
+    min-width: 100%;
+    min-height: 220px;
+}
+
+.flow-chart-wires {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.flow-chart-wires marker path {
+    fill: var(--falcon-primary);
+}
+
+.flow-chart-wire {
+    fill: none;
+    stroke: var(--falcon-primary);
+    stroke-width: 2;
+    opacity: 0.75;
+}
+
+.flow-chart-node-card {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    width: 190px;
+    min-height: 82px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border: 2px solid rgba(var(--falcon-primary-rgb), 0.55);
+    border-radius: 0.85rem;
+    background: var(--falcon-card-bg, var(--falcon-body-bg));
+    box-shadow: 0 0.25rem 0.75rem rgba(var(--falcon-gray-900-rgb), 0.12);
+    text-align: center;
+}
+
+.flow-chart-node-kind {
+    color: var(--falcon-primary);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.flow-chart-node-card.flow-chart-node-start,
+.flow-chart-node-card.flow-chart-node-end {
+    border-color: rgba(var(--falcon-success-rgb), 0.6);
+}
+
+.flow-chart-node-card.flow-chart-node-action {
+    border-color: rgba(var(--falcon-info-rgb), 0.7);
+}
+
+.flow-chart-node-card.flow-chart-node-decision {
+    border-color: rgba(var(--falcon-warning-rgb), 0.8);
+    border-radius: 0.25rem;
+}
+
+.flow-chart-editor-node {
+    border-left: 3px solid var(--falcon-primary) !important;
+    background: var(--falcon-card-bg, var(--falcon-body-bg));
+}
+
+.flow-chart-editor-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.flow-chart-node-badge {
+    display: inline-flex;
+    width: 1.6rem;
+    height: 1.6rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--falcon-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.flow-chart-target {
+    cursor: pointer;
+    user-select: none;
+}
+
+.flow-chart-target:has(input:checked) {
+    border-color: var(--falcon-primary) !important;
+    background: rgba(var(--falcon-primary-rgb), 0.08);
+}
+
+.task-subtask-list {
+    border-top: 1px solid var(--falcon-border-color);
+}
+
+.task-subtask-list li + li {
+    border-top: 1px solid var(--falcon-border-color);
+}
+
+.task-status-backlog {
+    color: var(--falcon-secondary-text-emphasis, var(--falcon-gray-900));
+    background-color: rgba(var(--falcon-warning-rgb), 0.15);
+}
+
+.task-status-in_progress {
+    color: var(--falcon-info-text-emphasis, var(--falcon-info));
+    background-color: rgba(var(--falcon-info-rgb), 0.12);
+}
+
+.task-status-done {
+    color: var(--falcon-success-text-emphasis, var(--falcon-success));
+    background-color: rgba(var(--falcon-success-rgb), 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .flow-chart-preview {
+        transition: none;
+    }
+}

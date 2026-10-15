@@ -3,30 +3,14 @@
 @section('title', 'Inventory Overview')
 
 @section('content')
-    <div class="container-fluid py-3">
-        <x-page-header eyebrow="Operations" title="Inventory overview" description="Quick stock position and recent activity." :breadcrumbs="[['label' => 'Inventory']]">
-            <x-slot:actions>
-            <a class="btn btn-primary" href="{{ route('inventory.parts') }}"><span class="fas fa-boxes me-2"></span>Manage spare parts</a>
-            </x-slot:actions>
-        </x-page-header>
-        <nav class="nav nav-tabs mb-4">
-            <a class="nav-link active" href="{{ route('inventory.index') }}">Overview</a>
-            <a class="nav-link" href="{{ route('inventory.parts') }}">Spare parts</a>
-            <a class="nav-link" href="{{ route('inventory.movements') }}">Stock movements</a>
-        </nav>
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Active parts</p><p class="h3 mb-0">{{ $partCount }}</p></div></div></div>
-            <div class="col-6 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Need reorder</p><p class="h3 {{ $lowStockCount ? 'text-warning' : 'text-success' }} mb-0">{{ $lowStockCount }}</p></div></div></div>
-            <div class="col-12 col-xl-4"><div class="card h-100"><div class="card-body"><p class="text-600 text-uppercase fs-10 fw-bold mb-2">Stock value at cost</p><p class="h3 mb-0">RM{{ number_format($stockValue, 2) }}</p></div></div></div>
-        </div>
-        <section class="card">
-            <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Recent stock movements</h2><a href="{{ route('inventory.movements') }}">View all</a></div>
-            <div class="table-responsive"><table class="table table-striped align-middle mb-0">
-                <thead><tr><th>Date</th><th>Part</th><th>Movement</th><th>Change</th><th>Recorded by</th></tr></thead>
-                <tbody>@forelse ($recentMovements as $movement)
-                    <tr><td>{{ $movement->created_at->format('M j, Y H:i') }}</td><td>{{ $movement->part->sku }} — {{ $movement->part->name }}</td><td>{{ ucfirst($movement->type) }}</td><td class="{{ $movement->quantity_change < 0 ? 'text-danger' : 'text-success' }}">{{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}</td><td>{{ $movement->user->name }}</td></tr>
-                @empty<tr><td colspan="5" class="text-center text-600 py-4">No stock movements recorded yet.</td></tr>@endforelse</tbody>
-            </table></div>
-        </section>
-    </div>
+<div class="container-fluid py-3">
+    <x-page-header eyebrow="Operations" title="Inventory overview">
+        <x-slot name="actions"><a class="btn btn-outline-primary" href="{{ route('inventory.parts') }}">Spare parts</a><a class="btn btn-outline-primary" href="{{ route('inventory.movements') }}">All stock movements</a></x-slot>
+    </x-page-header>
+    <div class="row g-3 mb-3"><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">Items tracked</div><div class="fs-4 fw-semibold">{{ $partCount }}</div></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">At or below reorder level</div><div class="fs-4 fw-semibold text-danger">{{ $lowStockCount }}</div><a class="small" href="{{ route('inventory.parts', ['low_stock' => 1]) }}">Review low stock</a></div></div></div><div class="col-md-4"><div class="card"><div class="card-body"><div class="small text-body-secondary">Inventory reporting</div><div class="mt-2"><a href="{{ route('reports.inventory') }}">Open inventory report <span class="fas fa-arrow-right ms-1"></span></a></div></div></div></div></div>
+    <div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Recent stock movements</span><a href="{{ route('inventory.movements') }}">View all</a></div><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Date</th><th>Item</th><th>Movement</th><th class="text-end">Change</th><th class="text-end">Balance</th><th>Reference</th></tr></thead><tbody>
+        @forelse ($recentMovements as $movement)<tr><td>{{ $movement->created_at->format('M j, Y') }}</td><td>{{ $movement->part?->name ?? 'Deleted item' }}</td><td>{{ ucfirst($movement->type) }}</td><td class="text-end {{ $movement->quantity_change < 0 ? 'text-danger' : 'text-success' }}">{{ $movement->quantity_change > 0 ? '+' : '' }}{{ $movement->quantity_change }}</td><td class="text-end">{{ $movement->quantity_after }}</td><td>{{ $movement->reference ?: '—' }}</td></tr>
+        @empty<tr><td colspan="6" class="text-center text-body-secondary py-5">No recent stock movements.</td></tr>@endforelse
+    </tbody></table></div></div>
+</div>
 @endsection

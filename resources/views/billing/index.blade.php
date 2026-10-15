@@ -3,62 +3,44 @@
 @section('title', 'Billing & Payments')
 
 @section('content')
-    <div class="container-fluid py-3">
-        <x-page-header
-            eyebrow="Billing & payments"
-            title="{{ $type === 'quote' ? 'Quotations' : ($type === 'invoice' ? 'Invoices' : 'Documents') }}"
-            description="Create customer estimates and invoices, record payments, and download PDFs."
-        >
-            <x-slot:actions>
-                <a href="{{ route('billing.create', ['type' => 'quote']) }}" class="btn btn-outline-primary"><span class="fas fa-file-lines me-2"></span>New quote</a>
-                <a href="{{ route('billing.create', ['type' => 'invoice']) }}" class="btn btn-primary"><span class="fas fa-file-invoice-dollar me-2"></span>New invoice</a>
-            </x-slot:actions>
-        </x-page-header>
+<div class="container-fluid py-3">
+    <x-page-header eyebrow="Finance" title="Billing & payments">
+        <x-slot name="actions">
+            <a class="btn btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation']) }}"><span class="fas fa-file-alt me-2"></span>New quotation</a>
+            <a class="btn btn-primary" href="{{ route('billing.create') }}"><span class="fas fa-plus me-2"></span>New invoice</a>
+        </x-slot>
+    </x-page-header>
 
-        @if (session('status'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('status') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
+    @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
-        <div class="card">
-            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <h2 class="h5 mb-0">Documents</h2>
-                <button class="btn btn-sm btn-falcon-default" type="button" data-bs-toggle="modal" data-bs-target="#billingFilterModal"><span class="fas fa-filter me-1"></span>Filters</button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-striped align-middle mb-0" data-datatables='{"pageLength":10,"order":[[2,"desc"]],"language":{"emptyTable":"No billing documents yet. Create a quote or invoice to get started."}}'>
-                    <thead><tr><th>Document</th><th>Customer</th><th>Issued</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
-                    <tbody>
-                        @foreach ($documents as $document)
-                            @php
-                                $paid = (float) $document->payments_sum_amount;
-                                $balance = max(0, (float) $document->total - $paid);
-                            @endphp
-                            <tr>
-                                <td><a class="fw-bold" href="{{ route('billing.documents.show', $document) }}">{{ $document->document_number }}</a><div class="text-600 fs-10">{{ ucfirst($document->type) }} · {{ $document->items_count }} line(s)</div></td>
-                                <td>{{ $document->customer_name }}</td>
-                                <td>{{ $document->issued_at->format('M j, Y') }}</td>
-                                <td><span class="badge badge-subtle-{{ $document->status === 'paid' ? 'success' : ($document->status === 'partial' ? 'warning' : 'primary') }}">{{ ucfirst($document->status) }}</span></td>
-                                <td class="text-end">RM{{ number_format((float) $document->total, 2) }}</td>
-                                <td class="text-end">RM{{ number_format($paid, 2) }}</td>
-                                <td class="text-end">RM{{ number_format($balance, 2) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+    <form class="row g-2 mb-3" method="GET">
+        <div class="col-md-4"><input class="form-control" name="search" value="{{ request('search') }}" placeholder="Number or customer"></div>
+        <div class="col-md-3"><select class="form-select" name="type"><option value="">All document types</option><option value="invoice" @selected(request('type') === 'invoice')>Invoices</option><option value="quotation" @selected(request('type') === 'quotation')>Quotations</option></select></div>
+        <div class="col-md-3"><select class="form-select" name="status"><option value="">All statuses</option>@foreach (['draft', 'issued', 'partial', 'paid', 'void'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ str_replace('_', ' ', ucfirst($status)) }}</option>@endforeach</select></div>
+        <div class="col-md-2 d-flex gap-2"><button class="btn btn-outline-primary flex-grow-1">Filter</button><a class="btn btn-outline-secondary" href="{{ route('billing.index') }}">Reset</a></div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Document</th><th>Customer</th><th>Issued</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+                <tbody>
+                    @forelse ($documents as $document)
+                        <tr>
+                            <td><a class="fw-semibold" href="{{ route('billing.documents.show', $document) }}">{{ $document->number }}</a><div class="small text-body-secondary">{{ ucfirst($document->type) }}</div></td>
+                            <td>{{ $document->customer_name }}</td><td>{{ $document->issue_date->format('M j, Y') }}</td>
+                            <td><span class="badge text-bg-{{ $document->status === 'paid' ? 'success' : ($document->status === 'void' ? 'secondary' : ($document->status === 'draft' ? 'light' : 'warning')) }}">{{ str_replace('_', ' ', ucfirst($document->status)) }}</span></td>
+                            <td class="text-end">${{ number_format($document->total, 2) }}</td>
+                            <td class="text-end">${{ number_format($document->paid_amount, 2) }}</td>
+                            <td class="text-end">${{ number_format($document->balance, 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="text-center text-body-secondary py-5">No billing documents yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
+        <div class="card-footer">{{ $documents->links() }}</div>
     </div>
-    <div class="modal fade" id="billingFilterModal" tabindex="-1" aria-labelledby="billingFilterModalLabel" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
-        <form method="GET" action="{{ route('billing.index') }}">
-            <div class="modal-header"><h2 class="modal-title fs-5" id="billingFilterModalLabel">Filter billing documents</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
-            <div class="modal-body">
-                <div class="mb-3"><label class="form-label" for="billing-type">Document type</label><select class="form-select" id="billing-type" name="type"><option value="">All documents</option><option value="quote" @selected($type === 'quote')>Quotes</option><option value="invoice" @selected($type === 'invoice')>Invoices</option></select></div>
-                <div><label class="form-label" for="billing-status">Status</label><select class="form-select" id="billing-status" name="status"><option value="">All statuses</option>@foreach (['draft', 'issued', 'partial', 'paid', 'void'] as $value)<option value="{{ $value }}" @selected($status === $value)>{{ ucfirst($value) }}</option>@endforeach</select></div>
-            </div>
-            <div class="modal-footer"><a class="btn btn-falcon-default me-auto" href="{{ route('billing.index') }}">Clear filters</a><button class="btn btn-primary" type="submit">Apply filters</button></div>
-        </form>
-    </div></div></div>
+</div>
 @endsection

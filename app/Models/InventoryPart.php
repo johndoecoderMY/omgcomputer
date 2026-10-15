@@ -3,35 +3,26 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InventoryPart extends Model
 {
     protected $fillable = [
-        'user_id',
-        'sku',
         'name',
+        'sku',
         'description',
+        'cost_price',
+        'selling_price',
         'stock_quantity',
         'reorder_level',
-        'unit_cost',
-        'sale_price',
-        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'unit_cost' => 'decimal:2',
-            'sale_price' => 'decimal:2',
-            'is_active' => 'boolean',
+            'cost_price' => 'decimal:2',
+            'selling_price' => 'decimal:2',
         ];
-    }
-
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function movements(): HasMany
