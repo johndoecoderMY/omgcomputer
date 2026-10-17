@@ -89,7 +89,7 @@ class AdminAccessAndProjectManagementTest extends TestCase
             'email' => 'updated-member@example.com',
             'phone' => '555-0100',
             'address' => 'New address',
-            'team_id' => '',
+            'team_ids' => [],
         ])->assertRedirect(route('admin.users.edit', $member))
             ->assertSessionHas('success', 'User profile updated.');
 

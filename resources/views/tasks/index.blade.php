@@ -17,7 +17,7 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <form class="card card-body mb-3" method="GET" action="{{ route('tasks.index') }}">
+    <form class="card card-body mb-3 p-2" method="GET" action="{{ route('tasks.index') }}">
         <div class="row g-2 align-items-end">
             <div class="col-lg-6">
                 <label class="form-label" for="search">Search tasks</label>
@@ -51,7 +51,7 @@
 
     <div class="d-grid gap-3">
         @forelse ($tasks as $task)
-            <article class="card">
+            <article class="card p-2">
                 <div class="card-body">
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                         <div>
@@ -97,7 +97,7 @@
                 </div>
             </article>
         @empty
-            <div class="card">
+            <div class="card p-2">
                 <div class="card-body text-center py-5">
                     <i class="fas fa-list-check text-primary fs-2 mb-3" aria-hidden="true"></i>
                     <h2 class="h5">No tasks found</h2>

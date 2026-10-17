@@ -39,7 +39,7 @@ class OrganizationInventorySopTest extends TestCase
         ])->assertRedirect(route('teams.index'));
 
         $team = Team::query()->firstOrFail();
-        $this->assertSame($team->id, $user->fresh()->team_id);
+        $this->assertTrue($user->fresh()->teams->contains('id', $team->id));
         $this->get(route('teams.index'))->assertOk()->assertSee('data-datatable', false);
         $this->getJson(route('teams.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()
@@ -52,6 +52,17 @@ class OrganizationInventorySopTest extends TestCase
         );
         $this->get(route('teams.edit', $team))->assertOk()->assertSee('Repair team');
 
+        $this->post(route('teams.store'), [
+            'department_id' => $department->id,
+            'name' => 'Support team',
+            'user_ids' => [$user->id],
+        ])->assertRedirect(route('teams.index'));
+        $secondTeam = Team::query()->where('name', 'Support team')->firstOrFail();
+        $this->assertEqualsCanonicalizing(
+            [$team->id, $secondTeam->id],
+            $user->fresh()->teams->modelKeys(),
+        );
+
         $this->put(route('teams.update', $team), [
             'department_id' => $department->id,
             'name' => 'Service team',
@@ -59,11 +70,14 @@ class OrganizationInventorySopTest extends TestCase
             'user_ids' => [],
         ])->assertRedirect(route('teams.index'));
         $this->assertSame('Service team', $team->fresh()->name);
-        $this->assertNull($user->fresh()->team_id);
+        $this->assertEquals([$secondTeam->id], $user->fresh()->teams->modelKeys());
 
         $this->delete(route('teams.destroy', $team))->assertRedirect(route('teams.index'));
+        $this->assertTrue($user->fresh()->teams->contains('id', $secondTeam->id));
+        $this->delete(route('teams.destroy', $secondTeam))->assertRedirect(route('teams.index'));
         $this->delete(route('departments.destroy', $department))->assertRedirect(route('departments.index'));
         $this->assertDatabaseMissing('departments', ['id' => $department->id]);
+        $this->assertCount(0, $user->fresh()->teams);
     }
 
     public function test_department_and_team_examples_seed_repeatedly_without_duplicates(): void

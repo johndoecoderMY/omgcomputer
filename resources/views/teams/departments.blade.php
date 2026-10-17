@@ -21,7 +21,7 @@
         <div class="card-footer text-end"><button class="btn btn-primary">Add department</button></div>
     </form>
 
-    <div class="card"><div class="table-responsive">
+    <div class="card p-2"><div class="table-responsive">
         <table class="table table-hover align-middle mb-0" data-datatable
             data-source="{{ route('departments.datatable') }}"
             data-columns="{{ json_encode([

@@ -37,8 +37,7 @@
         <div class="alert alert-warning">Create a project before turning flow-chart nodes into tasks.</div>
     @endif
 
-    <section class="card">
-        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+    <div class="card">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">{{ $flowChart->category === 'website' ? 'Website structure' : 'Process steps' }}</h2>
             <span class="badge text-bg-light border">{{ count($flowChart->steps) }} steps</span>
         </div>
@@ -90,9 +89,8 @@
                 </div>
             </div>
         </div>
-    </section>
-    <section class="card mt-4">
-        <div class="card-header bg-body"><h2 class="h5 mb-0">Linked projects</h2></div>
+    </div>
+    <div class="card mt-4">        <div class="card-header bg-body"><h2 class="h5 mb-0">Linked projects</h2></div>
         <div class="card-body">
             @if ($linkedProjects->isEmpty())
                 <p class="text-body-secondary mb-0">This flow chart is not linked to a project yet. Add it from a project page.</p>
@@ -100,7 +98,7 @@
                 <ul class="mb-0">@foreach ($linkedProjects as $project)<li><a href="{{ route('projects.show', $project) }}">{{ $project->name }}</a></li>@endforeach</ul>
             @endif
         </div>
-    </section>
+    </div>
 </div>
 @endsection
 

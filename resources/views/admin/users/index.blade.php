@@ -21,22 +21,21 @@
         <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
     @endif
 
-    <section class="card">
-        <div class="table-responsive">
+    <div class="card p-2">        <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" data-datatable
                 data-source="{{ route('admin.users.datatable') }}"
                 data-columns="{{ json_encode([
                     ['data' => 'name', 'name' => 'users.name'],
                     ['data' => 'email', 'name' => 'users.email'],
-                    ['data' => 'team_name', 'orderable' => false, 'searchable' => false],
+                    ['data' => 'teams_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'roles_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'permissions_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'actions', 'orderable' => false, 'searchable' => false],
                 ]) }}">
-                <thead><tr><th>Name</th><th>Email</th><th>Team</th><th>Roles</th><th>Additional permissions</th><th>Manage</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Teams</th><th>Roles</th><th>Additional permissions</th><th>Manage</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
-    </section>
+    </div>
 </div>
 @endsection

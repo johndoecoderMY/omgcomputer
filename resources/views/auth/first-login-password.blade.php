@@ -6,8 +6,7 @@
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-7 col-xl-5">
-            <section class="card">
-                <div class="card-header bg-body">
+            <div class="card">                <div class="card-header bg-body">
                     <h1 class="h4 mb-1">Choose a new password</h1>
                     <p class="small text-body-secondary mb-0">For your security, change the temporary password before continuing.</p>
                 </div>
@@ -30,7 +29,7 @@
                         <button class="btn btn-primary w-100" type="submit">Update password and continue</button>
                     </form>
                 </div>
-            </section>
+            </div>
         </div>
     </div>
 </div>

@@ -183,7 +183,7 @@
                 </svg></a>
             <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end dropdown-menu-card dropdown-caret-bg"
                 aria-labelledby="navbarDropdownMenu">
-                <div class="card shadow-none">
+                <div class="card shadow-none p-2">
                     <div class="scrollbar-overlay nine-dots-dropdown">
                         <div class="card-body px-3">
                             <div class="row text-center gx-0 gy-0">

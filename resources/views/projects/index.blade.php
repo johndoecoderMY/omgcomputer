@@ -19,7 +19,7 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <div class="card">
+    <div class="card p-2">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" data-datatable
                 data-source="{{ route('projects.datatable') }}"

@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Inventory" title="Stock movements" :back-url="route('inventory.index')" back-label="Back to inventory" />
-    <div class="card"><div class="table-responsive">
+    <div class="card p-2"><div class="table-responsive">
         <table class="table table-hover align-middle mb-0" data-datatable
             data-source="{{ route('inventory.movements.datatable') }}"
             data-columns="{{ json_encode([

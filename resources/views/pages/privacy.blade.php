@@ -13,7 +13,7 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 shadow-sm p-2">
                         <div class="card-body p-4 p-lg-5">
                             <div class="mb-4">
                                 <h2 class="h4 fw-bold text-1000">Information we collect</h2>

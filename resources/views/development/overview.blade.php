@@ -29,8 +29,7 @@
         </div>
     </div>
 
-    <section class="card mb-4 overflow-hidden">
-        <div class="card-body p-4 p-lg-5">
+    <div class="card mb-4 overflow-hidden p-2">        <div class="card-body p-4 p-lg-5">
             <div class="row align-items-center g-4">
                 <div class="col-lg-8">
                     <div class="d-flex align-items-center gap-3 mb-3">
@@ -65,11 +64,11 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <div class="row g-3 mb-4">
         <div class="col-6 col-xl">
-            <a class="card h-100 text-decoration-none" href="{{ route('tasks.index') }}">
+            <a class="card h-100 text-decoration-none p-2" href="{{ route('tasks.index') }}">
                 <div class="card-body">
                     <p class="text-600 text-uppercase fs-10 fw-bold mb-2">All tasks</p>
                     <p class="h3 mb-1">{{ $taskCounts['total'] }}</p>
@@ -78,7 +77,7 @@
             </a>
         </div>
         <div class="col-6 col-xl">
-            <a class="card h-100 text-decoration-none" href="{{ route('tasks.index', ['status' => 'done']) }}">
+            <a class="card h-100 text-decoration-none p-2" href="{{ route('tasks.index', ['status' => 'done']) }}">
                 <div class="card-body">
                     <p class="text-success text-uppercase fs-10 fw-bold mb-2">Done</p>
                     <p class="h3 text-success mb-1">{{ $taskCounts['done'] }}</p>
@@ -87,7 +86,7 @@
             </a>
         </div>
         <div class="col-6 col-xl">
-            <a class="card h-100 text-decoration-none" href="{{ route('tasks.index', ['status' => 'in_progress']) }}">
+            <a class="card h-100 text-decoration-none p-2" href="{{ route('tasks.index', ['status' => 'in_progress']) }}">
                 <div class="card-body">
                     <p class="text-primary text-uppercase fs-10 fw-bold mb-2">In progress</p>
                     <p class="h3 text-primary mb-1">{{ $taskCounts['inProgress'] }}</p>
@@ -97,8 +96,7 @@
         </div>
     </div>
 
-    <section class="card mb-4">
-        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+    <div class="card mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
             <div>
                 <h2 class="h5 mb-1">Flow charts</h2>
                 <p class="small text-body-secondary mb-0">Map the pages and actions that make up the website.</p>
@@ -140,6 +138,6 @@
                 </a>
             @endif
         </div>
-    </section>
+    </div>
     </div>
 @endsection

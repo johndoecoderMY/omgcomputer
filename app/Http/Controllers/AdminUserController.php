@@ -31,8 +31,8 @@ class AdminUserController extends Controller
 
     public function datatable()
     {
-        return DataTables::eloquent(User::query()->with(['team', 'roles', 'permissions']))
-            ->addColumn('team_name', fn (User $user): string => e($user->team?->name ?? 'Unassigned'))
+        return DataTables::eloquent(User::query()->with(['teams', 'roles', 'permissions']))
+            ->addColumn('teams_list', fn (User $user): string => e($user->teams->pluck('name')->join(', ') ?: 'Unassigned'))
             ->addColumn('roles_list', fn (User $user): string => e($user->roles->pluck('name')->join(', ') ?: 'No roles'))
             ->addColumn('permissions_list', fn (User $user): string => e(
                 $user->getDirectPermissions()->pluck('name')->join(', ') ?: 'Role permissions only',
@@ -52,7 +52,8 @@ class AdminUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:2000'],
-            'team_id' => ['nullable', 'integer', 'exists:teams,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['required', 'integer', 'distinct', 'exists:teams,id'],
             'password' => ['required', 'string', 'min:12', 'confirmed'],
         ]);
         $memberRole = Role::query()->firstOrCreate([
@@ -62,12 +63,11 @@ class AdminUserController extends Controller
 
         $user = DB::transaction(function () use ($data, $memberRole): User {
             $user = User::query()->create([
-                ...collect($data)->except(['password', 'team_id'])->all(),
+                ...collect($data)->except(['password', 'team_ids'])->all(),
                 'password' => Hash::make($data['password']),
                 'force_password_change' => true,
             ]);
-            $user->team_id = $data['team_id'] ?? null;
-            $user->save();
+            $user->teams()->sync($data['team_ids'] ?? []);
             $user->assignRole($memberRole);
 
             return $user;
@@ -80,7 +80,7 @@ class AdminUserController extends Controller
     public function edit(User $user): View
     {
         return view('admin.users.edit', [
-            'user' => $user->load(['team.department', 'roles', 'permissions']),
+            'user' => $user->load(['teams.department', 'roles', 'permissions']),
             'teams' => Team::query()->with('department')->orderBy('name')->get(),
             'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(),
             'permissions' => Permission::query()->where('guard_name', 'web')->orderBy('name')->get(),
@@ -114,14 +114,14 @@ class AdminUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:2000'],
-            'team_id' => ['nullable', 'integer', 'exists:teams,id'],
+            'team_ids' => ['nullable', 'array'],
+            'team_ids.*' => ['required', 'integer', 'distinct', 'exists:teams,id'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'remove_photo' => ['sometimes', 'boolean'],
         ]);
 
         $previousPhotoPath = $user->profile_photo_path;
         $user->fill(collect($data)->only(['name', 'email', 'phone', 'address'])->all());
-        $user->team_id = $data['team_id'] ?? null;
 
         if ($request->hasFile('photo')) {
             $photoPath = $request->file('photo')->store('profile-photos', 'public');
@@ -134,6 +134,7 @@ class AdminUserController extends Controller
         }
 
         $user->save();
+        $user->teams()->sync($data['team_ids'] ?? []);
         if ($previousPhotoPath !== null && $previousPhotoPath !== $user->profile_photo_path) {
             if (! Storage::disk('public')->delete($previousPhotoPath)) {
                 throw new \RuntimeException('The previous profile photo could not be removed.');

@@ -13,7 +13,7 @@
             @include('profile._identity-card', ['isSelf' => false])
         </aside>
         <main class="col-12 col-xl-9">
-            <section class="card">
+            <div class="card p-2">
                 <div class="card-header bg-body">
                     <h2 class="h5 mb-0">Personal information</h2>
                 </div>
@@ -37,11 +37,11 @@
                         </div>
                         <div class="col-sm-6 profile-info-item">
                             <span class="profile-info-label">Team</span>
-                            <span class="profile-info-value">{{ $user->team?->name ?? 'Not assigned' }}</span>
+                            <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
                         </div>
                         <div class="col-sm-6 profile-info-item">
                             <span class="profile-info-label">Department</span>
-                            <span class="profile-info-value">{{ $user->team?->department?->name ?? 'Not assigned' }}</span>
+                            <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
                         </div>
                         <div class="col-sm-6 profile-info-item">
                             <span class="profile-info-label">Member since</span>
@@ -49,7 +49,7 @@
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
         </main>
     </div>
 </div>

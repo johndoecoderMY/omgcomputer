@@ -15,7 +15,7 @@
         </div>
     @endif
 
-    <form class="card" method="POST" action="{{ route('admin.users.store') }}">
+    <form class="card p-2" method="POST" action="{{ route('admin.users.store') }}">
         @csrf
         <div class="card-body row g-3">
             <div class="col-md-6">
@@ -31,15 +31,15 @@
                 <input class="form-control" id="phone" name="phone" value="{{ old('phone') }}" maxlength="50">
             </div>
             <div class="col-md-6">
-                <label class="form-label" for="team_id">Team <span class="text-body-secondary">(optional)</span></label>
-                <select class="form-select" id="team_id" name="team_id">
-                    <option value="">No team assigned</option>
+                <label class="form-label" for="team_ids">Teams <span class="text-body-secondary">(optional)</span></label>
+                <select class="form-select" id="team_ids" name="team_ids[]" multiple>
                     @foreach ($teams as $team)
-                        <option value="{{ $team->id }}" @selected((string) old('team_id') === (string) $team->id)>
+                        <option value="{{ $team->id }}" @selected(in_array((string) $team->id, array_map('strval', old('team_ids', [])), true))>
                             {{ $team->department?->name ? $team->department->name.' · ' : '' }}{{ $team->name }}
                         </option>
                     @endforeach
                 </select>
+                <div class="form-text">Select one or more teams. Hold Ctrl (Windows) or Command (Mac) to select multiple teams.</div>
             </div>
             <div class="col-12">
                 <label class="form-label" for="address">Address</label>

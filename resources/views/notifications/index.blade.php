@@ -17,8 +17,7 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <section class="card">
-        @forelse ($notifications as $notification)
+    <div class="card p-2">        @forelse ($notifications as $notification)
             <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-start gap-3 {{ $notification->read_at ? '' : 'bg-body-tertiary' }}"
                 href="{{ route('notifications.read', $notification) }}">
                 <div>
@@ -41,6 +40,6 @@
         @if ($notifications->hasPages())
             <div class="card-footer bg-body">{{ $notifications->links() }}</div>
         @endif
-    </section>
+    </div>
 </div>
 @endsection

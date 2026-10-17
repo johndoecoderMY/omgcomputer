@@ -20,7 +20,7 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         return view('profile.edit', [
-            'user' => $request->user()->load('team.department'),
+            'user' => $request->user()->load('teams.department'),
         ]);
     }
 
@@ -31,7 +31,7 @@ class ProfileController extends Controller
         }
 
         return view('profile.member', [
-            'user' => $member->load('team.department'),
+            'user' => $member->load('teams.department'),
         ]);
     }
 

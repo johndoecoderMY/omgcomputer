@@ -22,7 +22,7 @@
     </x-page-header>
 
     @if (session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
-    <div class="card"><div class="table-responsive">
+    <div class="card p-2"><div class="table-responsive">
         <table class="table table-hover align-middle mb-0" data-datatable
             data-source="{{ route('development.sops.datatable', ['category' => $category]) }}"
             data-columns="{{ json_encode([

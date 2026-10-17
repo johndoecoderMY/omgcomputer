@@ -31,8 +31,7 @@
     </div>
 
     @forelse ($destinations as $destination)
-        <section class="card mb-4">
-            <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="card mb-4">            <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     <h2 class="h5 mb-1">Storage: {{ $destination['disk'] }}</h2>
                     <p class="small text-body-secondary mb-0">
@@ -94,7 +93,7 @@
                     </tbody>
                 </table>
             </div>
-        </section>
+        </div>
     @empty
         <div class="alert alert-warning" role="alert">
             No backup storage disks are configured. Set <code>BACKUP_DISK</code> and check the Laravel backup configuration.

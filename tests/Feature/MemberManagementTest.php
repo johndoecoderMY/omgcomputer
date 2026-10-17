@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Department;
+use App\Models\Team;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -32,6 +34,9 @@ class MemberManagementTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
         $this->actingAs($admin);
+        $department = Department::create(['name' => 'Operations']);
+        $repairTeam = Team::create(['department_id' => $department->id, 'name' => 'Repair']);
+        $supportTeam = Team::create(['department_id' => $department->id, 'name' => 'Support']);
 
         $this->get(route('admin.users.index'))
             ->assertOk()
@@ -47,7 +52,7 @@ class MemberManagementTest extends TestCase
             'name' => 'New Team Member',
             'email' => 'new-member@example.test',
             'phone' => '555-0102',
-            'team_id' => '',
+            'team_ids' => [$repairTeam->id, $supportTeam->id],
             'password' => 'temporary-password-123',
             'password_confirmation' => 'temporary-password-123',
         ])->assertRedirect();
@@ -56,6 +61,10 @@ class MemberManagementTest extends TestCase
         $this->assertTrue($member->hasRole('member'));
         $this->assertTrue($member->force_password_change);
         $this->assertTrue(Hash::check('temporary-password-123', $member->password));
+        $this->assertEqualsCanonicalizing(
+            [$repairTeam->id, $supportTeam->id],
+            $member->teams->modelKeys(),
+        );
 
         $permission = Permission::query()->create([
             'name' => 'members.export',
@@ -79,8 +88,16 @@ class MemberManagementTest extends TestCase
             ->assertJsonFragment([
                 'name' => 'New Team Member',
                 'roles_list' => 'member',
+                'teams_list' => 'Repair, Support',
                 'permissions_list' => 'members.export',
             ]);
+
+        $this->put(route('admin.users.update', $member), [
+            'name' => $member->name,
+            'email' => $member->email,
+            'team_ids' => [$supportTeam->id],
+        ])->assertRedirect(route('admin.users.edit', $member));
+        $this->assertEquals([$supportTeam->id], $member->fresh()->teams->modelKeys());
 
         $this->delete(route('admin.users.destroy', $member))
             ->assertRedirect(route('admin.users.index'));

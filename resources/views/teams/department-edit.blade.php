@@ -8,7 +8,7 @@
         :back-url="route('departments.index')" back-label="All departments" />
     @if (session('error'))<div class="alert alert-danger" role="alert">{{ session('error') }}</div>@endif
     @if ($errors->any())<div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-    <form class="card" method="POST" action="{{ route('departments.update', $department) }}">
+    <form class="card p-2" method="POST" action="{{ route('departments.update', $department) }}">
         @csrf
         @method('PUT')
         <div class="card-body">

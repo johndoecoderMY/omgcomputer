@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -87,9 +87,9 @@ class User extends Authenticatable
         return $this->hasMany(RepairTicket::class, 'assigned_to');
     }
 
-    public function team(): BelongsTo
+    public function teams(): BelongsToMany
     {
-        return $this->belongsTo(Team::class);
+        return $this->belongsToMany(Team::class)->withTimestamps();
     }
 
     public function profileActivities(): HasMany

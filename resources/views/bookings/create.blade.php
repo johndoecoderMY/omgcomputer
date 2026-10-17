@@ -9,12 +9,10 @@
         <h1 class="h2 mb-2">Book an appointment</h1>
         <p class="text-body-secondary mb-4">Choose an open time for a repair consultation. The team will confirm your booking by email or phone.</p>
         @if ($errors->any())<div class="alert alert-danger" role="alert"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-        <section class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center"><div><h2 class="h5 mb-0">Choose a date</h2><div class="small text-body-secondary">Red dates contain booked appointment times.</div></div><span class="small text-body-secondary">MYT</span></div>
+        <div class="card mb-3">            <div class="card-header d-flex justify-content-between align-items-center"><div><h2 class="h5 mb-0">Choose a date</h2><div class="small text-body-secondary">Red dates contain booked appointment times.</div></div><span class="small text-body-secondary">MYT</span></div>
             <div class="card-body"><div id="booking-calendar" aria-label="Appointment availability calendar"></div></div>
-        </section>
-        <section class="card">
-            <div class="card-header"><h2 class="h5 mb-0">Available times for {{ $selectedDate->format('l, F j') }}</h2></div>
+        </div>
+        <div class="card">            <div class="card-header"><h2 class="h5 mb-0">Available times for {{ $selectedDate->format('l, F j') }}</h2></div>
             <div class="card-body">
                 @if ($slots)
                     <fieldset><legend class="visually-hidden">Select a start time</legend><div class="row row-cols-2 row-cols-sm-3 g-2">
@@ -24,7 +22,7 @@
                     <p class="text-body-secondary mb-0">No appointments are available on this date. Choose another date on the calendar.</p>
                 @endif
             </div>
-        </section>
+        </div>
     </div>
     <div class="col-lg-5">
         <form id="booking-form" class="card" method="POST" action="{{ route('bookings.store') }}">

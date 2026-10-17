@@ -18,7 +18,7 @@ class TeamController extends Controller
     {
         return view('teams.index', [
             'departments' => Department::query()->orderBy('name')->get(),
-            'users' => User::query()->with('team')->orderBy('name')->get(['id', 'name', 'team_id']),
+            'users' => User::query()->with('teams')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -51,7 +51,7 @@ class TeamController extends Controller
         return view('teams.edit', [
             'team' => $team->load('users'),
             'departments' => Department::query()->orderBy('name')->get(),
-            'users' => User::query()->with('team')->orderBy('name')->get(['id', 'name', 'team_id']),
+            'users' => User::query()->with('teams')->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -81,10 +81,10 @@ class TeamController extends Controller
 
     public function destroy(Team $team): RedirectResponse
     {
-        $team->users()->update(['team_id' => null]);
+        $team->users()->detach();
         $team->delete();
 
-        return redirect()->route('teams.index')->with('success', 'Team deleted; former members are now unassigned.');
+        return redirect()->route('teams.index')->with('success', 'Team deleted; members remain assigned to their other teams.');
     }
 
     private function validatedData(Request $request, ?Team $team = null): array
@@ -107,7 +107,8 @@ class TeamController extends Controller
 
     private function syncMembers(Team $team, array $userIds): void
     {
-        User::query()->where('team_id', $team->id)->whereNotIn('id', $userIds)->update(['team_id' => null]);
-        User::query()->whereIn('id', $userIds)->update(['team_id' => $team->id]);
+        $currentUserIds = $team->users()->pluck('users.id')->all();
+        $team->users()->detach(array_diff($currentUserIds, $userIds));
+        $team->users()->syncWithoutDetaching($userIds);
     }
 }

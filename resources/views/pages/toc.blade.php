@@ -13,7 +13,7 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 shadow-sm p-2">
                         <div class="card-body p-4 p-lg-5">
                             <ol class="text-700 ps-3 mb-0">
                                 <li class="mb-4"><span class="fw-semibold text-1000">Service scope:</span> We provide repair, troubleshooting, diagnostics, and upgrade support for computer systems and related devices. Scope and pricing may vary based on the issue and requested work.</li>

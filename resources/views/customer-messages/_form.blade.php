@@ -1,4 +1,4 @@
-<form class="card" method="POST" action="{{ $action }}">
+<form class="card p-2" method="POST" action="{{ $action }}">
     @csrf
     @if ($method !== 'POST')@method($method)@endif
     <div class="card-body row g-3">

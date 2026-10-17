@@ -8,8 +8,7 @@
         :description="$project->description"
         :back-url="route('projects.index')" back-label="My projects" />
 
-    <section class="card mb-4">
-        <div class="card-header bg-body">
+    <div class="card mb-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-0">Your repair tickets for this project</h2>
         </div>
         <div class="table-responsive">
@@ -31,6 +30,6 @@
                 </tbody>
             </table>
         </div>
-    </section>
+    </div>
 </div>
 @endsection

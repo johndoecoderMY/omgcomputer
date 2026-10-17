@@ -49,7 +49,7 @@
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-xl-3">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-stethoscope text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Diagnostics &amp; troubleshooting</h5>
@@ -58,7 +58,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-xl-3">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-screwdriver-wrench text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">PC &amp; laptop repairs</h5>
@@ -67,7 +67,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-xl-3">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-memory text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Upgrades &amp; tune-ups</h5>
@@ -76,7 +76,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-xl-3">
-                    <div class="card h-100 border-0 shadow-sm">
+                    <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-shield-virus text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Software &amp; security support</h5>
@@ -184,7 +184,7 @@
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="fas fa-bolt text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Slow or unresponsive computer</h3>
@@ -193,7 +193,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="fas fa-laptop text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Hardware problems</h3>
@@ -202,7 +202,7 @@
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="fas fa-shield-halved text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Security and software issues</h3>
@@ -213,7 +213,7 @@
             </div>
             <div class="row justify-content-center mt-4">
                 <div class="col-lg-10">
-                    <div class="card border-0 shadow-sm">
+                    <div class="card border-0 shadow-sm p-2">
                         <div class="card-body p-4 p-lg-5">
                             <h3 class="h4 fw-bold text-1000 mb-3">Before you ask for support</h3>
                             <p class="text-700 mb-0">Have your device’s make and model handy, note when the issue started, and include any error messages you see. This helps us understand the problem more quickly.</p>
@@ -292,7 +292,7 @@
                     <a href="#faq" class="btn btn-outline-primary rounded-pill px-4">Read common questions</a>
                 </div>
                 <div class="col-lg-6">
-                    <div class="card border-0 shadow-lg">
+                    <div class="card border-0 shadow-lg p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="fas fa-headset text-primary fs-2 mb-3"></span>
                             <h3 class="h3 fw-bold text-1000">Need a hand?</h3>
@@ -306,7 +306,7 @@
 
     <section class="py-7 bg-body-tertiary" id="booking">
         <div class="container">
-            <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="card border-0 shadow-sm overflow-hidden p-2">
                 <div class="row g-0 align-items-center">
                     <div class="col-lg-8">
                         <div class="card-body p-4 p-lg-5">
@@ -328,7 +328,7 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-8 col-xl-7">
-                    <div class="card border-0 shadow">
+                    <div class="card border-0 shadow p-2">
                         <div class="card-body p-4 p-md-5 text-center">
                             <span class="fas fa-magnifying-glass text-primary fa-2x mb-3"></span>
                             <span class="d-block text-primary fw-bold text-uppercase fs-10">Guest repair tracking</span>

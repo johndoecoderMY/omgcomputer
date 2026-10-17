@@ -19,11 +19,10 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <section class="card">
-        <div class="card-body">
+    <div class="card p-2">        <div class="card-body">
             <div id="project-calendar" aria-label="Project events calendar"></div>
         </div>
-    </section>
+    </div>
     @include('projects._event-modal', ['projects' => $projects])
 </div>
 @endsection

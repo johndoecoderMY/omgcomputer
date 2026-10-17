@@ -30,8 +30,7 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <section class="card project-overview mb-4">
-        <div class="card-body">
+    <div class="card project-overview mb-4 p-2">        <div class="card-body">
             <div class="row align-items-center g-4">
                 <div class="col-xl-5">
                     <div class="d-flex justify-content-between align-items-end mb-3">
@@ -80,9 +79,9 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section class="card project-panel mb-4" id="project-schedule">
+    <div class="card project-panel mb-4" id="project-schedule">le">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h2 class="h5 mb-0">Project schedule</h2>
@@ -131,11 +130,10 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
     @include('projects._event-modal', ['fixedProject' => $project])
 
-    <section class="card project-panel mb-4">
-        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="h5 mb-0">Flow charts &amp; SOPs</h2>
             <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['project_id' => $project->id]) }}">
                 <i class="fas fa-plus me-1"></i>Create for this project
@@ -186,9 +184,9 @@
                 </table>
             </div>
         </div>
-    </section>
+    </div>
 
-    <section class="card project-panel mb-4" id="project-hardware">
+    <div class="card project-panel mb-4" id="project-hardware">re">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h2 class="h5 mb-0">Parts &amp; hardware recommendations</h2>
@@ -324,9 +322,9 @@
             <span class="fw-semibold">Recommended parts subtotal</span>
             <strong>RM {{ number_format($partsEstimateTotal, 2) }}</strong>
         </div>
-    </section>
+    </div>
 
-    <section class="card project-panel mb-4" id="project-estimate">
+    <div class="card project-panel mb-4" id="project-estimate">te">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h2 class="h5 mb-0">Software &amp; other project costs</h2>
@@ -398,10 +396,9 @@
             <span class="fw-semibold">Software &amp; other subtotal</span>
             <strong>RM {{ number_format($otherEstimateTotal, 2) }}</strong>
         </div>
-    </section>
+    </div>
 
-    <section class="card project-panel mb-4">
-        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+    <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">Customer linked to this project</h2>
             <span class="badge text-bg-light border">{{ $project->customers->count() }}</span>
         </div>
@@ -413,10 +410,9 @@
         @empty
             <div class="card-body text-body-secondary">No customer is linked to this project. You can change this from Edit project.</div>
         @endforelse
-    </section>
+    </div>
 
-    <section class="card project-panel">
-        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="card project-panel">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="h5 mb-0">Tasks</h2>
             <span class="badge text-bg-light border">{{ $project->tasks->count() }}</span>
         </div>
@@ -484,7 +480,7 @@
                 <button class="btn btn-sm btn-outline-danger" type="submit">Delete project</button>
             </form>
         </div>
-    </section>
+    </div>
 </div>
 @endsection
 

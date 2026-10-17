@@ -34,8 +34,7 @@
         </div>
     @endif
 
-    <section class="card mb-4">
-        <div class="card-body">
+    <div class="card mb-4 p-2">        <div class="card-body">
             <div class="d-flex flex-wrap gap-2 mb-3">
                 <span class="badge task-status-{{ $task->status }}">{{ \App\Models\Task::STATUSES[$task->status] }}</span>
                 <span class="badge text-bg-light border">{{ \App\Models\Task::PRIORITIES[$task->priority] }} priority</span>
@@ -45,10 +44,9 @@
             </div>
             <p class="mb-0 text-body-secondary">{{ $task->description ?: 'No description provided.' }}</p>
         </div>
-    </section>
+    </div>
 
-    <section class="card mb-4">
-        <div class="card-header fw-semibold">Task photos and references</div>
+    <div class="card mb-4">        <div class="card-header fw-semibold">Task photos and references</div>
         <form class="card-body border-bottom" method="POST" action="{{ route('tasks.attachments.store', $task) }}" enctype="multipart/form-data">
             @csrf
             @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
@@ -56,11 +54,10 @@
             <div class="form-text">Upload up to 8 JPG, PNG, or WebP images, up to 10 MB each.</div>
         </form>
         <div class="card-body">@include('attachments.gallery', ['attachments' => $task->attachments, 'emptyMessage' => 'No task photos yet.'])</div>
-    </section>
+    </div>
 
     @if (!$task->parent_task_id)
-        <section class="card">
-            <div class="card-header bg-body d-flex justify-content-between align-items-center">
+        <div class="card">            <div class="card-header bg-body d-flex justify-content-between align-items-center">
                 <h2 class="h5 mb-0">Subtasks</h2>
                 <span class="badge text-bg-light border">{{ $task->subtasks->count() }}</span>
             </div>
@@ -101,7 +98,7 @@
                     <i class="fas fa-plus me-2"></i>Add subtask
                 </a>
             </div>
-        </section>
+        </div>
     @endif
 </div>
 @endsection

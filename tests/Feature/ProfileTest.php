@@ -42,8 +42,7 @@ class ProfileTest extends TestCase
             'name' => 'Laptop Support',
             'department_id' => $department->id,
         ]);
-        $member->team()->associate($team);
-        $member->save();
+        $member->teams()->attach($team);
 
         $this->actingAs($viewer)
             ->get(route('members.show', $member))

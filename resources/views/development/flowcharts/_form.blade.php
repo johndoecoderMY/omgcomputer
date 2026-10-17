@@ -2,7 +2,7 @@
     $steps = old('steps', $flowChart->steps ?? []);
 @endphp
 
-<form method="POST" action="{{ $action }}" class="card" data-flow-chart-category="{{ old('category', $flowChart->category ?? 'website') }}">
+<form method="POST" action="{{ $action }}" class="card p-2" data-flow-chart-category="{{ old('category', $flowChart->category ?? 'website') }}">
     @csrf
     @if ($method !== 'POST')
         @method($method)

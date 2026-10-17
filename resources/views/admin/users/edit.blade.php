@@ -17,7 +17,7 @@
         </div>
     @endif
 
-    <form class="card" method="POST" action="{{ route('admin.users.update', $user) }}" enctype="multipart/form-data">
+    <form class="card p-2" method="POST" action="{{ route('admin.users.update', $user) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="card-body row g-3">
@@ -29,7 +29,7 @@
                 @endif
                 <div>
                     <div class="fw-semibold">{{ $user->name }}</div>
-                    <div class="small text-body-secondary">{{ $user->team?->name ?? 'No team assigned' }}</div>
+                    <div class="small text-body-secondary">{{ $user->teams->pluck('name')->join(', ') ?: 'No teams assigned' }}</div>
                 </div>
             </div>
             <div class="col-md-6">
@@ -45,15 +45,15 @@
                 <input class="form-control" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" maxlength="50">
             </div>
             <div class="col-md-6">
-                <label class="form-label" for="team_id">Team</label>
-                <select class="form-select" id="team_id" name="team_id">
-                    <option value="">No team assigned</option>
+                <label class="form-label" for="team_ids">Teams</label>
+                <select class="form-select" id="team_ids" name="team_ids[]" multiple>
                     @foreach ($teams as $team)
-                        <option value="{{ $team->id }}" @selected((string) old('team_id', $user->team_id) === (string) $team->id)>
+                        <option value="{{ $team->id }}" @selected(in_array((string) $team->id, array_map('strval', old('team_ids', $user->teams->modelKeys())), true))>
                             {{ $team->department->name }} · {{ $team->name }}
                         </option>
                     @endforeach
                 </select>
+                <div class="form-text">Select all teams this member belongs to. Hold Ctrl (Windows) or Command (Mac) to select multiple teams.</div>
             </div>
             <div class="col-12">
                 <label class="form-label" for="address">Address</label>
@@ -79,8 +79,7 @@
         </div>
     </form>
 
-    <section class="card mt-4">
-        <div class="card-header bg-body">
+    <div class="card mt-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-0">Account roles</h2>
             <p class="small text-body-secondary mb-0">At least one role is required. The last administrator cannot be demoted.</p>
         </div>
@@ -100,10 +99,9 @@
                 <button class="btn btn-outline-primary" type="submit">Save roles</button>
             </div>
         </form>
-    </section>
+    </div>
 
-    <section class="card mt-4">
-        <div class="card-header bg-body">
+    <div class="card mt-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-1">Additional individual permissions</h2>
             <p class="small text-body-secondary mb-0">These permissions are granted directly to this member in addition to permissions inherited from their roles.</p>
         </div>
@@ -126,10 +124,9 @@
                 <button class="btn btn-outline-primary" type="submit">Save additional permissions</button>
             </div>
         </form>
-    </section>
+    </div>
 
-    <section class="card border-danger mt-4">
-        <div class="card-header bg-body">
+    <div class="card border-danger mt-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-1 text-danger">Delete member</h2>
             <p class="small text-body-secondary mb-0">This permanently removes the member account. The currently signed-in account and the last administrator cannot be deleted.</p>
         </div>
@@ -142,6 +139,6 @@
                 <button class="btn btn-outline-danger" type="submit">Delete member</button>
             </form>
         </div>
-    </section>
+    </div>
 </div>
 @endsection

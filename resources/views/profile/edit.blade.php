@@ -23,7 +23,7 @@
             @include('profile._identity-card', ['isSelf' => true])
         </aside>
         <main class="col-12 col-xl-9">
-            <section class="card">
+            <div class="card p-2"> 
                 <div class="card-body p-0">
                     <div class="profile-tabs px-3" role="tablist" aria-label="Profile sections">
                         <button class="profile-tab active" id="profile-tab-overview" type="button"
@@ -48,7 +48,7 @@
                                     <h2 class="h5 mb-0">About</h2>
                                 </div>
                                 <p class="mb-0 text-body-secondary">
-                                    {{ $user->team?->description ?: 'Your profile keeps your contact details and account information in one place.' }}
+                                    {{ $user->teams->pluck('description')->filter()->join(' · ') ?: 'Your profile keeps your contact details and account information in one place.' }}
                                 </p>
                             </div>
 
@@ -79,11 +79,11 @@
                                     </div>
                                     <div class="col-sm-6 profile-info-item">
                                         <span class="profile-info-label">Team</span>
-                                        <span class="profile-info-value">{{ $user->team?->name ?? 'Not assigned' }}</span>
+                                        <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
                                     </div>
                                     <div class="col-sm-6 profile-info-item">
                                         <span class="profile-info-label">Department</span>
-                                        <span class="profile-info-value">{{ $user->team?->department?->name ?? 'Not assigned' }}</span>
+                                        <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -137,7 +137,7 @@
                         </section>
                     </div>
                 </div>
-            </section>
+            </div>
         </main>
     </div>
 </div>

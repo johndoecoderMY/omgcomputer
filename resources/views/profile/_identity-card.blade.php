@@ -1,4 +1,4 @@
-<section class="card text-center">
+<div class="card text-center p-2"> 
     <div class="card-body">
         <div class="avatar avatar-4xl mx-auto mb-3">
             @if ($user->profile_photo_url)
@@ -10,10 +10,10 @@
             @endif
         </div>
         <h2 class="h4 mb-1">{{ $user->name }}</h2>
-        <p class="profile-role mb-2">{{ $user->team?->name ?? 'Team member' }}</p>
+        <p class="profile-role mb-2">{{ $user->teams->pluck('name')->join(', ') ?: 'Team member' }}</p>
         <p class="profile-location mb-0">
             <span class="fas fa-building me-1" aria-hidden="true"></span>
-            {{ $user->team?->department?->name ?? 'No department assigned' }}
+            {{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'No department assigned' }}
         </p>
     </div>
     @if ($isSelf)
@@ -35,4 +35,4 @@
             </a>
         </div>
     @endif
-</section>
+</div>

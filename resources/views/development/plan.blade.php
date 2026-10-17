@@ -19,7 +19,7 @@
     </div>
 
     {{-- Executive summary --}}
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-0 shadow-sm mb-4 p-2">
         <div class="card-body p-4">
             <div class="row g-4 align-items-center">
                 <div class="col-xl-7">
@@ -199,6 +199,6 @@
         </tbody></table></div></div></div>
     </div>
 
-    <div class="card border-0 bg-primary text-white shadow-sm mb-4" id="recommendation"><div class="card-body p-4 p-lg-5"><p class="small text-uppercase fw-bold mb-2 opacity-75">Final recommendation</p><h2 class="h3 text-white mb-3">Build a repair business with a specialist student-tech offer.</h2><p class="mb-3">Start with essential repair services, add bookable FYP consultation and IoT mentoring, and promote packages to students and local customers. Keep parts inventory low, get approval before work, and track the profit of each service.</p><div class="row g-3"><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Validate first</div><p class="small mb-0">Confirm local demand, rent and regulations.</p></div></div><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Sell packages</div><p class="small mb-0">Bundle maintenance and scheduled technical coaching.</p></div></div><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Measure results</div><p class="small mb-0">Scale only services and ads that produce positive contribution.</p></div></div></div></div></div>
+    <div class="card border-0 bg-primary text-white shadow-sm mb-4 p-2" id="recommendation"><div class="card-body p-4 p-lg-5"><p class="small text-uppercase fw-bold mb-2 opacity-75">Final recommendation</p><h2 class="h3 text-white mb-3">Build a repair business with a specialist student-tech offer.</h2><p class="mb-3">Start with essential repair services, add bookable FYP consultation and IoT mentoring, and promote packages to students and local customers. Keep parts inventory low, get approval before work, and track the profit of each service.</p><div class="row g-3"><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Validate first</div><p class="small mb-0">Confirm local demand, rent and regulations.</p></div></div><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Sell packages</div><p class="small mb-0">Bundle maintenance and scheduled technical coaching.</p></div></div><div class="col-md-4"><div class="rounded-3 bg-white bg-opacity-10 p-3 h-100"><div class="fw-bold mb-1">Measure results</div><p class="small mb-0">Scale only services and ads that produce positive contribution.</p></div></div></div></div></div>
 </div>
 @endsection

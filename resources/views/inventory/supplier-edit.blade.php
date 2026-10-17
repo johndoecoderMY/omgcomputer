@@ -7,7 +7,7 @@
     <x-page-header eyebrow="Inventory" title="Edit supplier"
         :back-url="route('inventory.suppliers.index')" back-label="All suppliers" />
     @if ($errors->any())<div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-    <form class="card" method="POST" action="{{ route('inventory.suppliers.update', $supplier) }}">
+    <form class="card p-2" method="POST" action="{{ route('inventory.suppliers.update', $supplier) }}">
         @csrf
         @method('PUT')
         <div class="card-body row g-3">

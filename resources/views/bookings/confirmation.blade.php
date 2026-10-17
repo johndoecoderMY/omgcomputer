@@ -4,7 +4,7 @@
 
 @section('content')
 <section class="mx-auto" style="max-width:680px">
-    <div class="card">
+    <div class="card p-2">
         <div class="card-body p-4 p-lg-5">
             <div class="text-success mb-3"><span class="fas fa-circle-check fa-2x" aria-hidden="true"></span></div>
             <p class="text-primary fw-bold text-uppercase small mb-1">Request received</p>

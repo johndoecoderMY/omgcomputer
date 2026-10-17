@@ -113,8 +113,7 @@
         </div>
     </section>
 
-    <section class="card mb-4">
-        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+    <div class="card mb-4">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <h2 class="h4 mb-0">Permissions</h2>
             <span class="badge text-bg-light border">{{ $permissions->count() }}</span>
         </div>
@@ -141,7 +140,7 @@
                 </tbody>
             </table>
         </div>
-    </section>
+    </div>
 
 </div>
 @endsection

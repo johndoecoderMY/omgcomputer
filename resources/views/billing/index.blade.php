@@ -21,7 +21,7 @@
         <div class="col-md-2 d-flex gap-2"><button class="btn btn-outline-primary flex-grow-1">Filter</button><a class="btn btn-outline-secondary" href="{{ route('billing.index') }}">Reset</a></div>
     </form>
 
-    <div class="card">
+    <div class="card p-2">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead><tr><th>Document</th><th>Customer</th><th>Issued</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>

@@ -14,7 +14,7 @@
     </style>
 </head>
 <body>
-    <main class="card error-card shadow-sm">
+    <main class="card error-card shadow-sm p-2">
         <div class="card-body p-4 p-md-5 text-center">
             <a class="d-inline-block mb-4" href="{{ url('/') }}">
                 <img src="{{ asset('assets/img/omg/logoex2.png') }}" alt="OMG Computer" width="100">
