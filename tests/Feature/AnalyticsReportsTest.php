@@ -44,6 +44,10 @@ class AnalyticsReportsTest extends TestCase
     public function test_inventory_and_marketing_reports_render_saved_data(): void
     {
         $user = User::factory()->create();
+        config([
+            'services.delivery.api_key' => null,
+            'services.delivery.api_url' => null,
+        ]);
         InventoryPart::query()->create([
             'name' => 'USB-C adapter',
             'sku' => 'ADAPTER-01',
@@ -75,8 +79,8 @@ class AnalyticsReportsTest extends TestCase
             ->assertOk()
             ->assertSee('October service campaign')
             ->assertSee('RM 960.00')
-            ->assertSee('Marketing &WhatsApp', false)
-            ->assertSee('Meta API is not connected yet.')
+            ->assertSee('Marketing & WhatsApp')
+            ->assertSee('Configuration presence does not confirm a live connection.')
             ->assertSee('META_WHATSAPP_PHONE_NUMBER_ID')
             ->assertSee('Not connected');
         $this->actingAs($user)->get(route('reports.index'))
@@ -93,6 +97,7 @@ class AnalyticsReportsTest extends TestCase
     {
         config([
             'services.delivery.provider' => 'easyparcel',
+            'services.delivery.authentication' => 'test-delivery-auth',
             'services.delivery.api_key' => 'test-delivery-secret',
             'services.delivery.api_url' => 'https://api.example.test',
             'services.delivery.environment' => 'sandbox',
@@ -100,9 +105,11 @@ class AnalyticsReportsTest extends TestCase
 
         $this->actingAs(User::factory()->create())->get(route('reports.index'))
             ->assertOk()
+            ->assertSee('Authentication configured')
             ->assertSee('API key configured')
             ->assertSee('API URL configured')
             ->assertSee('Environment: Sandbox')
+            ->assertDontSee('test-delivery-auth')
             ->assertDontSee('test-delivery-secret')
             ->assertDontSee('https://api.example.test');
     }

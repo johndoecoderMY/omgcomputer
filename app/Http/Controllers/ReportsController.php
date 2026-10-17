@@ -33,6 +33,7 @@ class ReportsController extends Controller
             'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
             'activeCampaigns' => MarketingCampaign::query()->where('status', 'active')->count(),
             'deliverySetup' => [
+                'authentication' => filled(config('services.delivery.authentication')),
                 'api_key' => filled(config('services.delivery.api_key')),
                 'api_url' => filled(config('services.delivery.api_url')),
             ],

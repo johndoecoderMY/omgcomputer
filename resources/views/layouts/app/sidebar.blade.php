@@ -407,6 +407,18 @@
                                 <span class="nav-link-text ps-1">Team Performance</span>
                             </a>
                         </li>
+                        @role('admin')
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('reports.integrations.whatsapp') }}">
+                                    <span class="nav-link-text ps-1">Test WhatsApp API</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
+                                    <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
+                                </a>
+                            </li>
+                        @endrole
                     </ul>
                 </li>
 

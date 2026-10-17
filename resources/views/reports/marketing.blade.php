@@ -4,13 +4,18 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Growth" title="Marketing &WhatsApp"
-        description="Review campaign performance and prepare Meta channels for a future API connection."
+    <x-page-header eyebrow="Growth" title="Marketing & WhatsApp"
+        description="Review campaign performance and check your WhatsApp Cloud API connection."
         :back-url="route('reports.index')" back-label="All reports">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('customer-messages.index') }}">
                 <span class="fab fa-whatsapp me-2" aria-hidden="true"></span>Message templates
             </a>
+            @role('admin')
+                <a class="btn btn-primary" href="{{ route('reports.integrations.whatsapp') }}">
+                    <span class="fas fa-plug me-2" aria-hidden="true"></span>Test WhatsApp API
+                </a>
+            @endrole
         </x-slot:actions>
     </x-page-header>
     @include('reports._tabs', ['active' => 'marketing'])
@@ -27,9 +32,9 @@
     <div class="alert alert-info d-flex align-items-start gap-2" role="status">
         <span class="fas fa-info-circle mt-1" aria-hidden="true"></span>
         <div>
-            <strong>Meta API is not connected yet.</strong>
-            This page checks whether the server-side setup values are present. It does not contact Meta or validate credentials.
-            Secrets are never displayed here.
+            <strong>Configuration presence does not confirm a live connection.</strong>
+            Setup values are checked here. Open the WhatsApp API test page to verify your phone-number credentials against Meta.
+            No message is sent, and secrets are never displayed.
         </div>
     </div>
 
@@ -44,7 +49,7 @@
                             <span class="small text-body-secondary">Cloud API setup readiness</span>
                         </div>
                     </div>
-                    <span class="badge text-bg-secondary">Not connected</span>
+                    <span class="badge text-bg-secondary">Test from WhatsApp page</span>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -81,8 +86,13 @@
                     </div>
                 </div>
                 <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-                    <span class="small text-body-secondary">No messages are sent from this page.</span>
-                    <a class="btn btn-sm btn-outline-success" href="{{ route('customer-messages.index') }}">Manage templates</a>
+                    <span class="small text-body-secondary">Connection check reads the phone profile; no messages are sent.</span>
+                    <div class="d-flex gap-2">
+                        @role('admin')
+                            <a class="btn btn-sm btn-outline-success" href="{{ route('reports.integrations.whatsapp') }}">Test connection</a>
+                        @endrole
+                        <a class="btn btn-sm btn-outline-success" href="{{ route('customer-messages.index') }}">Manage templates</a>
+                    </div>
                 </div>
             </div>
         </div>

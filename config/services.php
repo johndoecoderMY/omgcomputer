@@ -48,6 +48,7 @@ return [
 
     'delivery' => [
         'provider' => env('EASYPARCEL_PROVIDER', 'easyparcel'),
+        'authentication' => env('EASYPARCEL_AUTHENTICATION'),
         'api_key' => env('EASYPARCEL_API_KEY'),
         'api_url' => env('EASYPARCEL_API_URL'),
         'environment' => env('EASYPARCEL_ENVIRONMENT', 'sandbox'),

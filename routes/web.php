@@ -13,6 +13,7 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -191,6 +192,12 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/marketing', 'marketing')->name('marketing');
         Route::post('/marketing/campaigns', 'storeCampaign')->name('marketing.store');
         Route::get('/export', 'export')->name('export');
+    });
+    Route::prefix('reports/integrations')->name('reports.integrations.')->middleware('role:admin')->controller(IntegrationTestController::class)->group(function (): void {
+        Route::get('/whatsapp', 'whatsapp')->name('whatsapp');
+        Route::post('/whatsapp/check', 'checkWhatsapp')->name('whatsapp.check');
+        Route::get('/easyparcel', 'easyParcel')->name('easyparcel');
+        Route::post('/easyparcel/rates', 'checkEasyParcel')->name('easyparcel.rates');
     });
 
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');

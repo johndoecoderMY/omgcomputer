@@ -68,24 +68,30 @@
                     <div class="col-lg-8">
                         <p class="mb-2">EasyParcel is a practical first option to evaluate because its API supports rate checks across courier services from a single integration. Confirm the couriers, coverage, and account terms you need before building the connection.</p>
                         <div class="d-flex flex-wrap gap-2">
+                            <span class="badge {{ $deliverySetup['authentication'] ? 'text-bg-success' : 'text-bg-light border' }}">Authentication {{ $deliverySetup['authentication'] ? 'configured' : 'not set' }}</span>
                             <span class="badge {{ $deliverySetup['api_key'] ? 'text-bg-success' : 'text-bg-light border' }}">API key {{ $deliverySetup['api_key'] ? 'configured' : 'not set' }}</span>
                             <span class="badge {{ $deliverySetup['api_url'] ? 'text-bg-success' : 'text-bg-light border' }}">API URL {{ $deliverySetup['api_url'] ? 'configured' : 'not set' }}</span>
                             <span class="badge text-bg-light border">Environment: {{ ucfirst($deliveryEnvironment ?: 'not set') }}</span>
                         </div>
                         <p class="small text-body-secondary mt-2 mb-0">
                             Credentials are not stored in the database or shown here. Add them to the server environment as
-                            <code>EASYPARCEL_API_KEY</code> and <code>EASYPARCEL_API_URL</code> after creating an API account.
+                            <code>EASYPARCEL_AUTHENTICATION</code>, <code>EASYPARCEL_API_KEY</code>, and <code>EASYPARCEL_API_URL</code> after creating an API account.
                             Configuration readiness does not mean the API has been tested.
                         </p>
                     </div>
                     <div class="col-lg-4 text-lg-end">
+                        @role('admin')
+                            <a class="btn btn-primary mb-2" href="{{ route('reports.integrations.easyparcel') }}">
+                                <span class="fas fa-magnifying-glass-dollar me-2" aria-hidden="true"></span>Open rate checker
+                            </a>
+                        @endrole
                         <a class="btn btn-outline-primary" href="https://developers.easyparcel.com/" target="_blank" rel="noopener noreferrer">
                             <span class="fas fa-arrow-up-right-from-square me-2" aria-hidden="true"></span>EasyParcel API docs
                         </a>
                     </div>
                 </div>
                 <div class="card-footer bg-body small text-body-secondary">
-                    No rates, labels, bookings, or tracking requests are made yet. A later integration should start with rate lookup and tracking, then add shipment booking only after confirming workflow and credentials.
+                    The rate checker requests quotations only. It does not book shipments, buy labels, or request tracking.
                 </div>
             </div>
         </div>
