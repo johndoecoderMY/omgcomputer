@@ -39,7 +39,7 @@
 
     <section class="card">
         <div class="card-header bg-body d-flex justify-content-between align-items-center">
-            <h2 class="h5 mb-0">Website structure</h2>
+            <h2 class="h5 mb-0">{{ $flowChart->category === 'website' ? 'Website structure' : 'Process steps' }}</h2>
             <span class="badge text-bg-light border">{{ count($flowChart->steps) }} steps</span>
         </div>
         <div class="card-body p-0">
@@ -59,7 +59,7 @@
                             data-connections="{{ json_encode($step['connections'] ?? []) }}"
                             data-position-x="{{ $step['x'] ?? '' }}" data-position-y="{{ $step['y'] ?? '' }}">
                             <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="fas fa-grip"></span></button>
-                            <span class="flow-chart-node-kind">{{ $step['kind'] }}</span>
+                            <span class="flow-chart-node-kind">{{ $step['kind'] === 'page' && $flowChart->category !== 'website' ? 'step' : $step['kind'] }}</span>
                             <strong>{{ $step['label'] }}</strong>
                             @if (($tasks[$step['id']] ?? collect())->isNotEmpty())
                                 <div class="mt-2">
@@ -73,7 +73,7 @@
                                     @csrf
                                     <input type="hidden" name="step_id" value="{{ $step['id'] }}">
                                     <label class="visually-hidden" for="project-{{ $step['id'] }}">Project for {{ $step['label'] }}</label>
-                                    <select class="form-select form-select-sm mb-2" id="project-{{ $step['id'] }}" name="project_id" required>
+                                    <select class="form-select form-select-sm js-project-search mb-2" id="project-{{ $step['id'] }}" name="project_id" required>
                                         <option value="">Add to project</option>
                                         @foreach ($projects as $project)<option value="{{ $project->id }}">{{ $project->name }}</option>@endforeach
                                     </select>
@@ -89,6 +89,16 @@
                     @endforeach
                 </div>
             </div>
+        </div>
+    </section>
+    <section class="card mt-4">
+        <div class="card-header bg-body"><h2 class="h5 mb-0">Linked projects</h2></div>
+        <div class="card-body">
+            @if ($linkedProjects->isEmpty())
+                <p class="text-body-secondary mb-0">This flow chart is not linked to a project yet. Add it from a project page.</p>
+            @else
+                <ul class="mb-0">@foreach ($linkedProjects as $project)<li><a href="{{ route('projects.show', $project) }}">{{ $project->name }}</a></li>@endforeach</ul>
+            @endif
         </div>
     </section>
 </div>

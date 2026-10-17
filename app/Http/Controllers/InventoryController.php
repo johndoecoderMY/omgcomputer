@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
+use App\Models\Supplier;
 use App\Services\InventoryStock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class InventoryController extends Controller
 {
@@ -17,24 +19,46 @@ class InventoryController extends Controller
         return view('inventory.overview', [
             'partCount' => InventoryPart::count(),
             'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'supplierCount' => Supplier::count(),
             'recentMovements' => InventoryMovement::query()->with('part')->latest()->limit(8)->get(),
         ]);
     }
 
     public function parts(Request $request): View
     {
-        $query = InventoryPart::query()->orderBy('name');
-        if ($request->boolean('low_stock')) {
-            $query->whereColumn('stock_quantity', '<=', 'reorder_level');
-        }
-
-        $parts = $query->paginate(25)->withQueryString();
-
         return view('inventory.index', [
-            'parts' => $parts,
             'partCount' => InventoryPart::count(),
             'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'suppliers' => Supplier::query()->orderBy('name')->get(),
         ]);
+    }
+
+    public function partsDatatable(Request $request)
+    {
+        $query = InventoryPart::query()
+            ->leftJoin('suppliers', 'inventory_parts.supplier_id', '=', 'suppliers.id')
+            ->select('inventory_parts.*', 'suppliers.name as supplier_name')
+            ->when($request->boolean('low_stock'), fn ($parts) => $parts->whereColumn(
+                'inventory_parts.stock_quantity',
+                '<=',
+                'inventory_parts.reorder_level',
+            ));
+
+        return DataTables::eloquent($query)
+            ->editColumn('stock_quantity', fn (InventoryPart $part): string => sprintf(
+                '<span class="badge text-bg-%s">%s</span>',
+                $part->stock_quantity <= $part->reorder_level ? 'danger' : 'success',
+                $part->stock_quantity,
+            ))
+            ->editColumn('cost_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->cost_price, 2))
+            ->editColumn('selling_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->selling_price, 2))
+            ->addColumn('actions', fn (InventoryPart $part): string => sprintf(
+                '<form class="d-flex gap-1" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><select class="form-select form-select-sm" name="direction" aria-label="Stock adjustment direction"><option value="receive">Receive</option><option value="use">Use</option></select><input class="form-control form-control-sm" name="quantity" type="number" min="1" placeholder="Qty" required style="max-width:85px"><button class="btn btn-sm btn-outline-primary" aria-label="Save stock adjustment"><span class="fas fa-check"></span></button></form>',
+                e(route('inventory.movements.store', $part)),
+                e(csrf_token()),
+            ))
+            ->rawColumns(['stock_quantity', 'actions'])
+            ->toJson();
     }
 
     public function store(Request $request): RedirectResponse
@@ -47,6 +71,7 @@ class InventoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:100', 'unique:inventory_parts,sku'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'description' => ['nullable', 'string', 'max:2000'],
             'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
@@ -92,8 +117,23 @@ class InventoryController extends Controller
 
     public function movements(): View
     {
-        return view('inventory.movements', [
-            'movements' => InventoryMovement::query()->with(['part', 'user'])->latest()->paginate(30),
-        ]);
+        return view('inventory.movements');
+    }
+
+    public function movementsDatatable()
+    {
+        return DataTables::eloquent(
+            InventoryMovement::query()
+                ->leftJoin('inventory_parts', 'inventory_movements.inventory_part_id', '=', 'inventory_parts.id')
+                ->leftJoin('users', 'inventory_movements.user_id', '=', 'users.id')
+                ->select('inventory_movements.*', 'inventory_parts.name as part_name', 'users.name as user_name')
+        )
+            ->editColumn('created_at', fn (InventoryMovement $movement): string => $movement->created_at->format('M j, Y g:i A'))
+            ->editColumn('part_name', fn (InventoryMovement $movement): string => $movement->part_name ?? 'Deleted item')
+            ->editColumn('quantity_change', fn (InventoryMovement $movement): string => $movement->quantity_change > 0
+                ? '+'.$movement->quantity_change
+                : (string) $movement->quantity_change)
+            ->editColumn('user_name', fn (InventoryMovement $movement): string => $movement->user_name ?? 'System')
+            ->toJson();
     }
 }

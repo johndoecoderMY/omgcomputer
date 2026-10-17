@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Customer;
 use App\Models\BillingDocument;
+use App\Models\Customer;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
@@ -72,7 +72,18 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('Waiting for parts');
         $this->get(route('tickets.index', ['status' => 'waiting_parts']))
             ->assertOk()
-            ->assertSee($ticket->ticket_number);
+            ->assertSee('data-datatable', false);
+        $this->getJson(route('tickets.datatable', [
+            'status' => 'waiting_parts',
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => $ticket->ticket_number],
+        ]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.customer_name', 'Avery Tan')
+            ->assertJsonPath('data.0.priority_label', 'Urgent');
 
         $this->get(route('billing.create', ['type' => 'quotation', 'repair_ticket_id' => $ticket->id]))
             ->assertOk()

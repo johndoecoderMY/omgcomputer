@@ -100,7 +100,7 @@
     <section class="card mb-4">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
             <div>
-                <h2 class="h5 mb-1">Website flow charts</h2>
+                <h2 class="h5 mb-1">Flow charts</h2>
                 <p class="small text-body-secondary mb-0">Map the pages and actions that make up the website.</p>
             </div>
             <a class="btn btn-sm btn-outline-primary" href="{{ route('development.flowcharts.create') }}">

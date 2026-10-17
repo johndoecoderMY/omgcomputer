@@ -2,10 +2,13 @@
     $steps = old('steps', $flowChart->steps ?? []);
 @endphp
 
-<form method="POST" action="{{ $action }}" class="card">
+<form method="POST" action="{{ $action }}" class="card" data-flow-chart-category="{{ old('category', $flowChart->category ?? 'website') }}">
     @csrf
     @if ($method !== 'POST')
         @method($method)
+    @endif
+    @if ($method === 'POST' && !empty($projectId))
+        <input type="hidden" name="project_id" value="{{ $projectId }}">
     @endif
     <div class="card-body">
         @if ($errors->any())
@@ -27,6 +30,22 @@
         </div>
 
         <div class="mb-4">
+            <label class="form-label" for="category">Flow chart purpose</label>
+            <select class="form-select" id="category" name="category" required>
+                @foreach (['website' => 'Website journey', 'process' => 'Business process', 'product' => 'Product SOP', 'service' => 'Service SOP', 'education' => 'Student FYP SOP'] as $key => $label)
+                    <option value="{{ $key }}" @selected(old('category', $flowChart->category ?? 'website') === $key)>{{ $label }}</option>
+                @endforeach
+            </select>
+            @error('category')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="mb-4" id="sop-subject-field">
+            <label class="form-label" for="subject_name">Product, service, or programme name <span class="text-body-secondary">(for SOPs)</span></label>
+            <input class="form-control" id="subject_name" name="subject_name" value="{{ old('subject_name', $flowChart->subject_name) }}" maxlength="255">
+            @error('subject_name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="mb-4">
             <label class="form-label" for="description">Description <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="description" name="description" rows="3" maxlength="2000">{{ old('description', $flowChart->description) }}</textarea>
             @error('description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
@@ -34,8 +53,8 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
             <div>
-                <h2 class="h5 mb-1">Website pages and connections</h2>
-                <p class="small text-body-secondary mb-0">Each node can link to multiple pages. Use the checkboxes under a node to create branches.</p>
+                <h2 class="h5 mb-1" id="flow-steps-heading">Website pages and connections</h2>
+                <p class="small text-body-secondary mb-0" id="flow-steps-help">Each node can link to multiple pages. Use the checkboxes under a node to create branches.</p>
             </div>
             <button class="btn btn-sm btn-outline-primary" type="button" id="add-flow-step">
                 <i class="fas fa-plus me-1"></i>Add step
@@ -114,6 +133,23 @@
         const container = document.getElementById('flow-steps');
         const addButton = document.getElementById('add-flow-step');
         const maxSteps = 30;
+        const categorySelect = document.getElementById('category');
+        const subjectField = document.getElementById('sop-subject-field');
+        const syncPurpose = () => {
+            const website = categorySelect.value === 'website';
+            document.getElementById('flow-steps-heading').textContent = website
+                ? 'Website pages and connections'
+                : 'Process steps and connections';
+            document.getElementById('flow-steps-help').textContent = website
+                ? 'Each node can link to multiple pages. Use the checkboxes under a node to create branches.'
+                : 'Describe the actions, decisions and hand-offs in this workflow.';
+            subjectField.hidden = !['product', 'service', 'education'].includes(categorySelect.value);
+            document.getElementById('subject_name').required = !subjectField.hidden;
+            document.querySelectorAll('.flow-chart-editor-node select[name$="[kind]"] option[value="page"]').forEach((option) => {
+                option.textContent = categorySelect.value === 'website' ? 'Website page' : 'Step';
+            });
+        };
+        categorySelect.addEventListener('change', syncPurpose);
 
         const updateRows = () => {
             const rows = [...container.querySelectorAll('.flow-step-row')];
@@ -197,7 +233,7 @@
                     <div class="col-md-4">
                         <label class="form-label" for="step-kind-${index}">Step type</label>
                         <select class="form-select" id="step-kind-${index}" name="steps[${index}][kind]" required>
-                            <option value="page">Website page</option>
+                            <option value="page">${categorySelect.value === 'website' ? 'Website page' : 'Step'}</option>
                             <option value="action">User action</option>
                             <option value="decision">Decision</option>
                             <option value="start">Start</option>
@@ -237,6 +273,7 @@
         });
 
         updateRows();
+        syncPurpose();
     })();
 </script>
 @endpush

@@ -35,8 +35,8 @@
       } else {
         var linkRTL = document.getElementById('style-rtl');
         var userLinkRTL = document.getElementById('user-style-rtl');
-        linkRTL.setAttribute('disabled', true);
-        userLinkRTL.setAttribute('disabled', true);
+        if (linkRTL) linkRTL.setAttribute('disabled', true);
+        if (userLinkRTL) userLinkRTL.setAttribute('disabled', true);
       }
     </script>
   </head>

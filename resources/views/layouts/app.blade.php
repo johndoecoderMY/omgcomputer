@@ -4,7 +4,13 @@
 
 @include('layouts.app.head')
 
-<body>
+<body
+    @auth
+        data-notifications-user="{{ auth()->id() }}"
+    @endauth
+    data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
+    data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
+    data-notification-read-prefix="{{ url('/notifications') }}">
     <!-- ===============================================--><!--    Main Content--><!-- ===============================================-->
     <main class="main" id="top">
         <div class="container-fluid" data-layout="container">

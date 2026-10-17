@@ -8,16 +8,25 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Services\AttachmentStorage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class RepairTicketController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
+    {
+        return view('tickets.index', [
+            'statuses' => RepairTicket::STATUSES,
+        ]);
+    }
+
+    public function datatable(Request $request)
     {
         $query = RepairTicket::query()->with(['customer', 'project', 'assignee']);
 
@@ -29,18 +38,47 @@ class RepairTicketController extends Controller
         } elseif ($request->input('assigned') === 'mine') {
             $query->where('assigned_to', $request->user()->id);
         }
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $query->where(fn ($tickets) => $tickets
-                ->where('ticket_number', 'like', "%{$search}%")
-                ->orWhere('device_model', 'like', "%{$search}%")
-                ->orWhereHas('customer', fn ($customers) => $customers->where('name', 'like', "%{$search}%")));
-        }
 
-        return view('tickets.index', [
-            'tickets' => $query->latest('received_at')->paginate(25)->withQueryString(),
-            'statuses' => RepairTicket::STATUSES,
-        ]);
+        return DataTables::eloquent($query)
+            ->filter(function (Builder $tickets) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search === '') {
+                    return;
+                }
+
+                $tickets->where(function (Builder $matches) use ($search): void {
+                    $matches->where('ticket_number', 'like', "%{$search}%")
+                        ->orWhere('device_type', 'like', "%{$search}%")
+                        ->orWhere('device_model', 'like', "%{$search}%")
+                        ->orWhere('serial_number', 'like', "%{$search}%")
+                        ->orWhere('issue_description', 'like', "%{$search}%")
+                        ->orWhereHas('customer', fn (Builder $customer) => $customer->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('assignee', fn (Builder $assignee) => $assignee->where('name', 'like', "%{$search}%"));
+                });
+            }, true)
+            ->addColumn('ticket', fn (RepairTicket $ticket): string => sprintf(
+                '<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
+                e(route('tickets.show', $ticket)),
+                e($ticket->ticket_number),
+                e($ticket->received_at->format('M j, Y')),
+            ))
+            ->addColumn('customer_name', fn (RepairTicket $ticket): string => $ticket->customer->name)
+            ->addColumn('device', fn (RepairTicket $ticket): string => $ticket->device_model ?: $ticket->device_type ?: '—')
+            ->addColumn('project_name', fn (RepairTicket $ticket): string => $ticket->project?->name ?: '—')
+            ->addColumn('status_label', fn (RepairTicket $ticket): string => sprintf(
+                '<span class="badge text-bg-light border">%s</span>',
+                e(RepairTicket::STATUSES[$ticket->status] ?? $ticket->status),
+            ))
+            ->addColumn('priority_label', fn (RepairTicket $ticket): string => RepairTicket::PRIORITIES[$ticket->priority] ?? $ticket->priority)
+            ->addColumn('assignee_name', fn (RepairTicket $ticket): string => $ticket->assignee?->name ?: 'Unassigned')
+            ->addColumn('due_date', fn (RepairTicket $ticket): string => $ticket->due_at?->format('M j, Y') ?? '—')
+            ->addColumn('actions', fn (RepairTicket $ticket): string => sprintf(
+                '<a class="btn btn-sm btn-outline-primary" href="%s">Open</a>',
+                e(route('tickets.show', $ticket)),
+            ))
+            ->rawColumns(['ticket', 'status_label', 'actions'])
+            ->toJson();
     }
 
     public function create(Request $request): View
@@ -77,13 +115,13 @@ class RepairTicketController extends Controller
             $customer = Customer::query()->findOrFail($data['customer_id']);
             $ticket = RepairTicket::create([
                 ...$data,
-                'ticket_number' => 'TEMP-' . Str::upper(Str::random(12)),
+                'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'project_id' => $data['project_id'] ?? $customer->project_id,
                 'status' => 'new',
                 'received_at' => now(),
             ]);
             $ticket->update([
-                'ticket_number' => 'RT-' . now()->format('Y') . '-' . str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT),
+                'ticket_number' => 'RT-'.now()->format('Y').'-'.str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT),
             ]);
             $ticket->updates()->create([
                 'user_id' => $request->user()->id,
@@ -144,7 +182,7 @@ class RepairTicketController extends Controller
                 if ($statusChanged) {
                     $ticket->updates()->create([
                         'user_id' => $request->user()->id,
-                        'title' => 'Status changed to ' . RepairTicket::STATUSES[$data['status']],
+                        'title' => 'Status changed to '.RepairTicket::STATUSES[$data['status']],
                         'status' => $data['status'],
                         'notes' => $data['diagnosis'] ?? null,
                     ]);
@@ -153,7 +191,7 @@ class RepairTicketController extends Controller
             if ($statusChanged) {
                 $ticket->updates()->create([
                     'user_id' => $request->user()->id,
-                    'title' => 'Status changed to ' . RepairTicket::STATUSES[$data['status']],
+                    'title' => 'Status changed to '.RepairTicket::STATUSES[$data['status']],
                     'status' => $data['status'],
                     'notes' => $data['diagnosis'] ?? null,
                 ]);

@@ -14,22 +14,53 @@ The authenticated planner supports shared team tasks and private personal tasks,
 ```sh
 php artisan migrate
 php artisan db:seed --class="Database\Seeders\PlannerRoleSeeder"
+php artisan db:seed --class="Database\Seeders\DepartmentTeamSeeder"
 ```
 
-To grant team-task administration to a user, assign the `planner-admin` role:
+To grant team-task administration to a user, assign the `admin` role:
 
 ```sh
 php artisan tinker
->>> \App\Models\User::where('email', 'you@example.com')->firstOrFail()->assignRole('planner-admin');
+>>> \App\Models\User::where('email', 'you@example.com')->firstOrFail()->assignRole('admin');
 ```
+
+Users with the `admin` role can use the **Members** page to search, create, edit, and delete accounts, assign teams, and manage roles and individual permissions. New members receive the default `member` role and must change their temporary password at first sign-in. The `customer` role is available for customer accounts. **Roles & permissions** manages shared roles and permission definitions; additional permissions can be granted directly to individual members. The last administrator cannot be demoted or deleted.
+
+Customer accounts can view projects linked to a customer record with the same email address, either directly or through one of that customer's repair tickets. Their project view is read-only and does not include internal tasks, estimates, or project-management controls.
 
 The Project Overview is a single shared **OMG Computer** project for the website and the repair shop. Tasks are classified as website features/improvements, shop operations (such as buying parts), general tasks, or milestones. The dashboard shows task totals, completion, remaining work, progress, and repair-ticket counts. Existing projects are merged into the single project when the included migration runs.
 
+The authenticated dashboard summarizes live project progress, assigned and overdue work, the repair queue, upcoming events, unread notifications, and example SOPs. Email verification and password-confirmation fields are temporarily disabled. Accounts provisioned with a temporary/default password are still required to replace it at first sign-in; self-registered accounts keep their chosen password.
+
 ## Billing, Inventory, and Reports
 
-Authenticated users can manage stock parts and movements, create quotations and invoices, convert quotes into invoices, record partial or full payments, and render documents as PDFs with mPDF. The Falcon-style repair support desk records customer/device intake, assignments, priorities, diagnoses, estimates, target dates, and ticket progress. Issuing an invoice deducts linked inventory in the same database transaction; insufficient stock prevents the invoice from being created. Reports summarize issued invoices, received payments, outstanding balances, service totals, and stock activity, with a date-filtered invoice CSV export.
+Authenticated users can manage stock parts and movements, create quotations and invoices, convert quotes into invoices, record partial or full payments, and render documents as PDFs with mPDF. The repair support desk records customer/device intake, assignments, priorities, diagnoses, estimates, target dates, and ticket progress; tickets are searchable and filterable in a server-side Yajra DataTable. Issuing an invoice deducts linked inventory in the same database transaction; insufficient stock prevents the invoice from being created. Reports summarize issued invoices, received payments, outstanding balances, service totals, and stock activity, with a date-filtered invoice CSV export.
 
 Run `php artisan migrate` to create the planning, inventory, and billing tables. Keep a current database backup before applying migrations to an existing deployment.
+
+## Teams, Suppliers, and SOP Flow Charts
+
+Authenticated users can maintain departments, teams, and team membership; associate inventory parts with supplier contacts; and link reusable flow charts to projects using a fuzzy-searchable picker. The project table and linked flow-chart/SOP table use server-side Yajra DataTables; the linked-chart table shows only charts already associated with that project. Flow charts can also be created directly for a project or duplicated from selected templates. Product, service, and student FYP SOP flow charts are available from the Operations menu. Student FYP examples cover consultations, debugging, mentoring, project setup workshops, progress reviews, and small-group tech clinics. Calendar events are stored in the shared `events` table and may optionally link to a project; they can be created from the calendar and viewed in FullCalendar month, week, day, and list views, with a mini-calendar and upcoming event list on each project. The database seeder includes department/team and SOP examples; run `php artisan db:seed` or the individual seeders to add examples to an existing database. Run `php artisan migrate` to add these tables and relationships.
+
+The SOP library also includes example web-application structure and database design/migration workflows. Projects can keep hardware recommendations linked to existing inventory parts, including quantities, a per-project selling, cost, or custom price, implementation notes, and multiple source URLs; these recommendations do not reserve or decrement stock. Add software, labor, and other estimate items to see their subtotals and combined project estimate. Projects themselves are listed in a server-side Yajra DataTable. Example repair tickets across every supported lifecycle status can be added with `php artisan db:seed --class="Database\Seeders\RepairTicketExampleSeeder"`. The full demo seeder runs these ticket examples in local and testing environments.
+
+## Notifications, Email, and Profile Photos
+
+Task assignments and project-linked calendar events create in-app notifications, which are stored per user and delivered live through Pusher. Set `BROADCAST_CONNECTION=pusher` and configure `PUSHER_APP_ID`, `PUSHER_APP_KEY`, `PUSHER_APP_SECRET`, and `PUSHER_APP_CLUSTER` in the local environment; never commit the secret. The example environment uses the log broadcaster until credentials are configured. For local development `MAIL_MAILER=log` writes notification emails to the application log, so no email API keys or SMTP credentials are required. Configure a mail transport only when enabling delivery outside development. Run a queue worker when processing queued broadcasts (`php artisan queue:work`). Build the browser client with `npm run build`.
+
+Profile pictures use Laravel’s public disk. Run `php artisan storage:link` after setup so uploaded images can be served from `public/storage`.
+
+## Access Control and Error Pages
+
+The **Roles & permissions** page is restricted to users with the `admin` role. Assign that role to an initial administrator with the command shown above; administrators can then manage roles, permissions, and user assignments in the application. Branded error pages are provided for access denied, not found, expired session, rate limited, server error, and maintenance responses.
+
+## User Profiles and Account Activity
+
+Authenticated users can update their name, email, phone number, and address, change their password, review profile/password changes, and delete their account after confirming their password. Team directory links open read-only member profiles showing name, email, phone, team, and department; home addresses remain private to each account owner. Apply migrations with `php artisan migrate` to add the contact fields and account activity history.
+
+## Backups
+
+Spatie Laravel Backup creates verified, private local archives containing application files and the configured database. Planner administrators can review archive status, download backups, and run a backup from **Manage → Backups**. This app requires PHP 8.3 or newer. Environment files, Git data, dependencies, temporary framework files, and backup archives are excluded from the file archive. Set `BACKUP_ARCHIVE_PASSWORD` to enable ZIP encryption and configure `BACKUP_NOTIFICATION_EMAIL` for backup alerts. `BACKUP_DISK` defaults to `backup_local`; set it to `s3` and configure the AWS variables below to store backups off-site. The scheduler runs cleanup at 01:00, creates a backup at 02:00, and checks backup health at 03:00 daily; ensure the Laravel scheduler is running in production. Use `php artisan backup:run` to create a backup manually. MySQL deployments also need the database dump utilities required by Spatie Backup.
 
 ## About Laravel
 

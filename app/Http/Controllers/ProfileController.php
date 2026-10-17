@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class ProfileController extends Controller
 {
@@ -17,8 +20,37 @@ class ProfileController extends Controller
     public function edit(Request $request): View
     {
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $request->user()->load('team.department'),
         ]);
+    }
+
+    public function showMember(User $member): View|RedirectResponse
+    {
+        if (auth()->id() === $member->id) {
+            return redirect()->route('profile.edit');
+        }
+
+        return view('profile.member', [
+            'user' => $member->load('team.department'),
+        ]);
+    }
+
+    public function activity(Request $request)
+    {
+        return DataTables::eloquent(
+            $request->user()->profileActivities()->getQuery()
+        )
+            ->editColumn('created_at', fn ($activity): string => $activity->created_at->format('M j, Y g:i A'))
+            ->editColumn('event', fn ($activity): string => match ($activity->event) {
+                'profile_updated' => 'Profile details updated',
+                'password_updated' => 'Password changed',
+                'account_deleted' => 'Account deleted',
+                default => str($activity->event)->replace('_', ' ')->title()->toString(),
+            })
+            ->editColumn('changed_fields', fn ($activity): string => collect($activity->changed_fields ?? [])
+                ->map(fn (string $field): string => str($field)->replace('_', ' ')->title()->toString())
+                ->join(', '))
+            ->toJson();
     }
 
     /**
@@ -26,15 +58,39 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $data = $request->safe()->except(['photo', 'remove_photo']);
+        $previousPhotoPath = $user->profile_photo_path;
+        $user->fill($data);
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('profile-photos', 'public');
+            if ($photoPath === false) {
+                throw new \RuntimeException('The profile photo could not be stored.');
+            }
+            $user->profile_photo_path = $photoPath;
+        } elseif ($request->boolean('remove_photo')) {
+            $user->profile_photo_path = null;
+        }
+        $changedFields = array_keys($user->getDirty());
+
+        $user->save();
+        if ($previousPhotoPath !== null && $previousPhotoPath !== $user->profile_photo_path) {
+            if (! Storage::disk('public')->delete($previousPhotoPath)) {
+                throw new \RuntimeException('The previous profile photo could not be removed.');
+            }
         }
 
-        $request->user()->save();
+        if ($changedFields !== []) {
+            $user->profileActivities()->create([
+                'event' => 'profile_updated',
+                'changed_fields' => $changedFields,
+            ]);
+        }
 
-        return Redirect::route('profile.edit')->with('status', 'profile-updated');
+        return Redirect::route('profile.edit')
+            ->with('status', 'profile-updated')
+            ->with('profile-tab', 'overview');
     }
 
     /**
@@ -48,6 +104,7 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        $user->profileActivities()->create(['event' => 'account_deleted']);
         Auth::logout();
 
         $user->delete();

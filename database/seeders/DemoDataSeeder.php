@@ -37,6 +37,12 @@ class DemoDataSeeder extends Seeder
                 'reorder_level' => 2,
             ],
         );
+        $project->inventoryParts()->syncWithoutDetaching([
+            $part->id => [
+                'quantity' => 1,
+                'notes' => 'Example recommended hardware for storage expansion and testing.',
+            ],
+        ]);
         InventoryMovement::query()->firstOrCreate(
             ['reference' => 'SEED-OPENING-' . $part->id],
             [

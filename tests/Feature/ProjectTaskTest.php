@@ -107,6 +107,8 @@ class ProjectTaskTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertOk()
+            ->assertSee('project-overview')
+            ->assertSee('project-stat')
             ->assertSee('50%')
             ->assertSee('Create the homepage');
         $this->assertSame(50, $project->fresh()->progress);

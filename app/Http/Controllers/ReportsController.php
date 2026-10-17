@@ -75,6 +75,7 @@ class ReportsController extends Controller
     public function teams(): View
     {
         $users = User::query()
+            ->with('team.department')
             ->withCount('assignedTasks')
             ->withCount(['assignedTasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')])
             ->withCount(['assignedTasks as active_tasks_count' => fn ($query) => $query->where('status', 'in_progress')])

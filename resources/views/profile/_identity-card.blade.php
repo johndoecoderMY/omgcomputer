@@ -1,0 +1,38 @@
+<section class="card text-center">
+    <div class="card-body">
+        <div class="avatar avatar-4xl mx-auto mb-3">
+            @if ($user->profile_photo_url)
+                <img class="rounded-circle profile-avatar-photo" src="{{ $user->profile_photo_url }}" alt="{{ $user->name }} profile photo">
+            @else
+                <div class="avatar-name rounded-circle bg-primary-subtle text-primary profile-avatar">
+                    <span>{{ str($user->name)->substr(0, 1)->upper() }}</span>
+                </div>
+            @endif
+        </div>
+        <h2 class="h4 mb-1">{{ $user->name }}</h2>
+        <p class="profile-role mb-2">{{ $user->team?->name ?? 'Team member' }}</p>
+        <p class="profile-location mb-0">
+            <span class="fas fa-building me-1" aria-hidden="true"></span>
+            {{ $user->team?->department?->name ?? 'No department assigned' }}
+        </p>
+    </div>
+    @if ($isSelf)
+        <div class="list-group list-group-flush text-start">
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="edit">
+                <span class="fas fa-user-pen me-2" aria-hidden="true"></span>Edit profile
+            </button>
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="activity">
+                <span class="fas fa-clock-rotate-left me-2" aria-hidden="true"></span>Account activity
+            </button>
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="security">
+                <span class="fas fa-shield-halved me-2" aria-hidden="true"></span>Security
+            </button>
+        </div>
+    @else
+        <div class="card-footer bg-body">
+            <a class="btn btn-outline-primary w-100" href="{{ route('teams.index') }}">
+                <span class="fas fa-users me-2" aria-hidden="true"></span>Team directory
+            </a>
+        </div>
+    @endif
+</section>

@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryPart extends Model
 {
     protected $fillable = [
         'name',
         'sku',
+        'supplier_id',
         'description',
         'cost_price',
         'selling_price',
@@ -28,5 +30,10 @@ class InventoryPart extends Model
     public function movements(): HasMany
     {
         return $this->hasMany(InventoryMovement::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

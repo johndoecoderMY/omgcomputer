@@ -4,12 +4,66 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Support desk" title="Repair tickets"><x-slot name="actions"><a class="btn btn-primary" href="{{ route('tickets.create') }}"><span class="fas fa-plus me-2"></span>New ticket</a></x-slot></x-page-header>
-    @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    <form class="row g-2 mb-3" method="GET"><div class="col-md-5"><label class="visually-hidden" for="search">Search tickets</label><input class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="Ticket, device or customer"></div><div class="col-md-4"><label class="visually-hidden" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All statuses</option>@foreach ($statuses as $value => $label)<option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>@endforeach</select></div><div class="col-auto"><button class="btn btn-outline-primary">Filter</button><a class="btn btn-outline-secondary" href="{{ route('tickets.index') }}">Reset</a></div></form>
-    <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Ticket</th><th>Customer</th><th>Device</th><th>Project</th><th>Status</th><th>Priority</th><th>Assigned to</th></tr></thead><tbody>
-        @forelse ($tickets as $ticket)<tr><td><a class="fw-semibold" href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a><div class="small text-body-secondary">{{ $ticket->received_at->format('M j, Y') }}</div></td><td><a href="{{ route('customers.show', $ticket->customer) }}">{{ $ticket->customer->name }}</a></td><td>{{ $ticket->device_model ?: $ticket->device_type ?: '—' }}</td><td>{{ $ticket->project?->name ?: '—' }}</td><td><span class="badge text-bg-light border">{{ $statuses[$ticket->status] }}</span></td><td>{{ ucfirst($ticket->priority) }}</td><td>{{ $ticket->assignee?->name ?: 'Unassigned' }}</td></tr>
-        @empty<tr><td colspan="7" class="text-center text-body-secondary py-5">No repair tickets match these filters.</td></tr>@endforelse
-    </tbody></table></div><div class="card-footer">{{ $tickets->links() }}</div></div>
+    <x-page-header eyebrow="Support desk" title="Repair tickets">
+        <x-slot:actions>
+            <a class="btn btn-primary" href="{{ route('tickets.create') }}">
+                <span class="fas fa-plus me-2"></span>New ticket
+            </a>
+        </x-slot:actions>
+    </x-page-header>
+
+    @if (session('success'))
+        <div class="alert alert-success" role="status">{{ session('success') }}</div>
+    @endif
+
+    <form class="row g-2 align-items-end mb-3" method="GET" action="{{ route('tickets.index') }}">
+        <div class="col-sm-5 col-md-4">
+            <label class="form-label" for="status">Ticket status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All statuses</option>
+                @foreach ($statuses as $value => $label)
+                    <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-sm-5 col-md-4">
+            <label class="form-label" for="assigned">Assignment</label>
+            <select class="form-select" id="assigned" name="assigned">
+                <option value="">All tickets</option>
+                <option value="unassigned" @selected(request('assigned') === 'unassigned')>Unassigned</option>
+                <option value="mine" @selected(request('assigned') === 'mine')>Assigned to me</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" type="submit">Apply filters</button>
+            <a class="btn btn-outline-secondary" href="{{ route('tickets.index') }}">Reset</a>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" data-datatable
+                data-source="{{ route('tickets.datatable', request()->only(['status', 'assigned'])) }}"
+                data-columns="{{ json_encode([
+                    ['data' => 'ticket', 'name' => 'ticket_number', 'orderable' => true, 'searchable' => true],
+                    ['data' => 'customer_name', 'name' => 'customer_name', 'orderable' => false, 'searchable' => true],
+                    ['data' => 'device', 'name' => 'device', 'orderable' => false, 'searchable' => true],
+                    ['data' => 'project_name', 'name' => 'project_name', 'orderable' => false, 'searchable' => true],
+                    ['data' => 'status_label', 'name' => 'status', 'orderable' => true, 'searchable' => false],
+                    ['data' => 'priority_label', 'name' => 'priority', 'orderable' => true, 'searchable' => false],
+                    ['data' => 'assignee_name', 'name' => 'assignee_name', 'orderable' => false, 'searchable' => true],
+                    ['data' => 'due_date', 'name' => 'due_at', 'orderable' => true, 'searchable' => false],
+                    ['data' => 'actions', 'orderable' => false, 'searchable' => false],
+                ]) }}">
+                <thead>
+                    <tr>
+                        <th>Ticket</th><th>Customer</th><th>Device</th><th>Project</th>
+                        <th>Status</th><th>Priority</th><th>Assigned to</th><th>Due</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection

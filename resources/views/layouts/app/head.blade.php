@@ -24,19 +24,24 @@
     <link href="{{ asset('vendors/datatables.net-bs5/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
      <link href="{{ asset('assets/css/theme.min.css') }}" rel="stylesheet" id="style-default">
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
+     <link href="{{ asset('vendors/select2/select2.min.css') }}" rel="stylesheet">
+     <link href="{{ asset('vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css') }}" rel="stylesheet">
+     @stack('styles')
     <script>
       var isRTL = JSON.parse(localStorage.getItem('isRTL'));
+      var linkDefault = document.getElementById('style-default');
+      var userLinkDefault = document.getElementById('user-style-default');
+      var linkRTL = document.getElementById('style-rtl');
+      var userLinkRTL = document.getElementById('user-style-rtl');
       if (isRTL) {
-        var linkDefault = document.getElementById('style-default');
-        var userLinkDefault = document.getElementById('user-style-default');
-        linkDefault.setAttribute('disabled', true);
-        userLinkDefault.setAttribute('disabled', true);
         document.querySelector('html').setAttribute('dir', 'rtl');
+        if (linkRTL && userLinkRTL) {
+          linkDefault.setAttribute('disabled', true);
+          userLinkDefault.setAttribute('disabled', true);
+        }
       } else {
-        var linkRTL = document.getElementById('style-rtl');
-        var userLinkRTL = document.getElementById('user-style-rtl');
-        linkRTL.setAttribute('disabled', true);
-        userLinkRTL.setAttribute('disabled', true);
+        if (linkRTL) linkRTL.setAttribute('disabled', true);
+        if (userLinkRTL) userLinkRTL.setAttribute('disabled', true);
       }
     </script>
   </head>

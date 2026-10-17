@@ -20,12 +20,17 @@ class PlannerRoleSeeder extends Seeder
         ]);
 
         Role::firstOrCreate([
-            'name' => 'planner-admin',
+            'name' => 'admin',
             'guard_name' => 'web',
         ])->syncPermissions([$manageTeamTasks]);
 
         $memberRole = Role::firstOrCreate([
-            'name' => 'planner-member',
+            'name' => 'member',
+            'guard_name' => 'web',
+        ]);
+
+        Role::firstOrCreate([
+            'name' => 'customer',
             'guard_name' => 'web',
         ]);
 

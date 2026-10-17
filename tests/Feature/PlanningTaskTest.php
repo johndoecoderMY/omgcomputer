@@ -376,7 +376,7 @@ class PlanningTaskTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         $owner = User::factory()->create();
         $admin = User::factory()->create();
-        $admin->assignRole('planner-admin');
+        $admin->assignRole('admin');
         $task = PlanningTask::create([
             'user_id' => $owner->id,
             'title' => 'Admin-managed task',
@@ -398,7 +398,7 @@ class PlanningTaskTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         $owner = User::factory()->create();
         $admin = User::factory()->create();
-        $admin->assignRole('planner-admin');
+        $admin->assignRole('admin');
         $task = PlanningTask::create([
             'user_id' => $owner->id,
             'title' => 'Private task',

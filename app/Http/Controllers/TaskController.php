@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Notifications\WorkspaceNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,10 +84,11 @@ class TaskController extends Controller
         $parent = $this->validatedParent($project, $data['parent_id'] ?? null);
         unset($data['parent_id']);
 
-        $project->tasks()->create([
+        $task = $project->tasks()->create([
             ...$data,
             'parent_task_id' => $parent?->id,
         ]);
+        $this->notifyAssignee($task);
 
         return redirect()
             ->route($parent ? 'tasks.show' : 'projects.show', $parent ?? $project)
@@ -118,7 +120,11 @@ class TaskController extends Controller
     {
         $data = $this->validatedData($request);
         unset($data['parent_id']);
+        $assigneeChanged = (int) $task->assigned_to !== (int) ($data['assigned_to'] ?? 0);
         $task->update($data);
+        if ($assigneeChanged) {
+            $this->notifyAssignee($task);
+        }
 
         return redirect()
             ->route('tasks.show', $task->parent ?? $task)
@@ -131,10 +137,11 @@ class TaskController extends Controller
 
         $data = $this->validatedData($request);
         unset($data['parent_id']);
-        $task->subtasks()->create([
+        $subtask = $task->subtasks()->create([
             ...$data,
             'project_id' => $task->project_id,
         ]);
+        $this->notifyAssignee($subtask);
 
         return redirect()
             ->route('tasks.show', $task)
@@ -197,5 +204,19 @@ class TaskController extends Controller
         abort_if($parent->parent_task_id !== null, 422, 'Choose a top-level task as the parent.');
 
         return $parent;
+    }
+
+    private function notifyAssignee(Task $task): void
+    {
+        if (! $task->assigned_to || (int) $task->assigned_to === (int) auth()->id()) {
+            return;
+        }
+
+        $task->loadMissing('project', 'assignee');
+        $task->assignee?->notify(new WorkspaceNotification(
+            'Task assigned to you',
+            sprintf('You have been assigned “%s” in the %s project.', $task->title, $task->project->name),
+            route('tasks.show', $task),
+        ));
     }
 }
