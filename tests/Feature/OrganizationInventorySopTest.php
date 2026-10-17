@@ -51,6 +51,20 @@ class OrganizationInventorySopTest extends TestCase
                 ->json('data.0.members'),
         );
         $this->get(route('teams.edit', $team))->assertOk()->assertSee('Repair team');
+        $this->post(route('teams.store'), [
+            'department_id' => '',
+            'name' => 'Independent team',
+        ])->assertRedirect(route('teams.index'));
+        $unassignedDepartmentTeam = Team::query()->where('name', 'Independent team')->firstOrFail();
+        $this->assertNull($unassignedDepartmentTeam->department_id);
+        $this->getJson(route('teams.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Independent team'],
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.0.department_name', '—');
 
         $this->post(route('teams.store'), [
             'department_id' => $department->id,
@@ -74,6 +88,7 @@ class OrganizationInventorySopTest extends TestCase
 
         $this->delete(route('teams.destroy', $team))->assertRedirect(route('teams.index'));
         $this->assertTrue($user->fresh()->teams->contains('id', $secondTeam->id));
+        $this->delete(route('teams.destroy', $unassignedDepartmentTeam))->assertRedirect(route('teams.index'));
         $this->delete(route('teams.destroy', $secondTeam))->assertRedirect(route('teams.index'));
         $this->delete(route('departments.destroy', $department))->assertRedirect(route('departments.index'));
         $this->assertDatabaseMissing('departments', ['id' => $department->id]);
@@ -151,10 +166,21 @@ class OrganizationInventorySopTest extends TestCase
         $flowChart = FlowChart::query()->firstOrFail();
         $this->assertSame('service', $flowChart->category);
         $this->assertSame('Laptop cleaning', $flowChart->subject_name);
+        FlowChart::query()->create([
+            'title' => 'Example service procedure',
+            'category' => 'service',
+            'subject_name' => 'Example service',
+            'is_example' => true,
+            'steps' => [['id' => 'example-step', 'label' => 'Review request', 'kind' => 'action', 'connections' => []]],
+        ]);
         $this->get(route('development.sops', ['category' => 'service']))
-            ->assertOk()->assertSee('data-datatable', false);
+            ->assertOk()->assertSee('data-datatable', false)->assertSee('sop-type', false);
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'draw' => 1, 'start' => 0, 'length' => 25]))
-            ->assertOk()->assertJsonPath('data.0.title', 'Laptop cleaning procedure');
+            ->assertOk()->assertJsonPath('recordsFiltered', 2);
+        $this->getJson(route('development.sops.datatable', ['category' => 'service', 'type' => 'custom', 'draw' => 1, 'start' => 0, 'length' => 25]))
+            ->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.title', 'Laptop cleaning procedure');
+        $this->getJson(route('development.sops.datatable', ['category' => 'service', 'type' => 'example', 'draw' => 1, 'start' => 0, 'length' => 25]))
+            ->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.title', 'Example service procedure');
         $this->getJson(route('development.flowcharts.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('data.0.subject_name', 'Laptop cleaning');
         $this->get(route('development.sops', ['category' => 'invalid']))->assertNotFound();
@@ -165,7 +191,7 @@ class OrganizationInventorySopTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Flow charts &amp; SOPs', false)
+            ->assertSee('Flow charts &SOPs', false)
             ->assertSee('data-datatable', false);
         $this->getJson(route('projects.flowcharts.datatable', [
             'project' => $project->id,
@@ -206,7 +232,8 @@ class OrganizationInventorySopTest extends TestCase
 
         $this->assertDatabaseCount('flow_charts', 1);
         $example = FlowChart::query()->firstOrFail();
-        $this->assertSame('Laptop Repair Service SOP (Example)', $example->title);
+        $this->assertSame('Laptop Repair Service SOP', $example->title);
+        $this->assertTrue($example->is_example);
         $this->assertSame('service', $example->category);
         $this->assertCount(10, $example->steps);
         $this->assertSame(

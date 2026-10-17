@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -13,11 +14,39 @@ use Spatie\Permission\Models\Role;
 
 class AdminAccessController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $roles = Role::query()
+            ->where('guard_name', 'web')
+            ->with('permissions')
+            ->withCount('users')
+            ->orderBy('name')
+            ->get();
+        $selectedRole = $roles->firstWhere('id', $request->integer('role')) ?? $roles->first();
+
+        if ($selectedRole) {
+            $selectedRole->load(['users' => fn ($query) => $query->orderBy('name')]);
+        }
+
+        $permissions = Permission::query()
+            ->where('guard_name', 'web')
+            ->withCount('roles')
+            ->orderBy('name')
+            ->get();
+
         return view('admin.access.index', [
-            'roles' => Role::query()->where('guard_name', 'web')->with('permissions')->withCount('users')->orderBy('name')->get(),
-            'permissions' => Permission::query()->where('guard_name', 'web')->orderBy('name')->get(),
+            'roles' => $roles,
+            'permissions' => $permissions,
+            'permissionGroups' => $permissions->groupBy(fn (Permission $permission): string => Str::contains($permission->name, '.')
+                ? Str::before($permission->name, '.')
+                : 'General'),
+            'selectedRole' => $selectedRole,
+            'selectedRoleDescription' => match ($selectedRole?->name) {
+                'admin' => 'Full administrative access to manage users, roles, and workspace settings.',
+                'member' => 'Staff access for day-to-day project, task, and repair work.',
+                'customer' => 'Customer access to projects and tickets linked to their account.',
+                default => 'Custom access defined by the permissions selected below.',
+            },
         ]);
     }
 
@@ -26,9 +55,9 @@ class AdminAccessController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', 'alpha_dash', Rule::unique('roles')->where('guard_name', 'web')],
         ]);
-        Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
 
-        return $this->backWith('Role created.');
+        return $this->backWith('Role created.', 'success', $role->id);
     }
 
     public function updateRole(Request $request, Role $role): RedirectResponse
@@ -57,7 +86,7 @@ class AdminAccessController extends Controller
                 ->get());
         });
 
-        return $this->backWith('Role permissions updated.');
+        return $this->backWith('Role permissions updated.', 'success', $role->id);
     }
 
     public function destroyRole(Role $role): RedirectResponse
@@ -85,7 +114,7 @@ class AdminAccessController extends Controller
         ]);
         Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
 
-        return $this->backWith('Permission created.');
+        return $this->backWith('Permission created.', 'success', $request->integer('selected_role_id') ?: null);
     }
 
     public function destroyPermission(Permission $permission): RedirectResponse
@@ -97,7 +126,7 @@ class AdminAccessController extends Controller
 
         $permission->delete();
 
-        return $this->backWith('Permission deleted.');
+        return $this->backWith('Permission deleted.', 'success', request()->integer('selected_role_id') ?: null);
     }
 
     public function updateUserRoles(Request $request, User $user): RedirectResponse
@@ -121,8 +150,8 @@ class AdminAccessController extends Controller
         return redirect()->route('admin.users.edit', $user)->with('success', 'User roles updated.');
     }
 
-    private function backWith(string $message, string $key = 'success'): RedirectResponse
+    private function backWith(string $message, string $key = 'success', ?int $roleId = null): RedirectResponse
     {
-        return redirect()->route('admin.access.index')->with($key, $message);
+        return redirect()->route('admin.access.index', $roleId ? ['role' => $roleId] : [])->with($key, $message);
     }
 }

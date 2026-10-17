@@ -6,52 +6,85 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\WorkspaceNotification;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class TaskController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Task::query()
-            ->with(['project', 'subtasks'])
-            ->whereNull('parent_task_id');
-
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $query->where(function ($query) use ($search): void {
-                $query->where('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereHas('subtasks', fn ($subtasks) => $subtasks
-                        ->where('title', 'like', "%{$search}%"));
-            });
-        }
-
-        if ($request->filled('status')) {
-            $status = $request->input('status');
-            $query->where(function ($query) use ($status): void {
-                $query->where('status', $status)
-                    ->orWhereHas('subtasks', fn ($subtasks) => $subtasks->where('status', $status));
-            });
-        }
-
-        if ($request->filled('priority')) {
-            $priority = $request->input('priority');
-            $query->where(function ($query) use ($priority): void {
-                $query->where('priority', $priority)
-                    ->orWhereHas('subtasks', fn ($subtasks) => $subtasks->where('priority', $priority));
-            });
-        }
-
         return view('tasks.index', [
-            'tasks' => $query->latest()->get(),
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    public function datatable(Request $request)
+    {
+        $query = Task::query()
+            ->with(['project', 'assignee'])
+            ->withCount('subtasks')
+            ->whereNull('parent_task_id');
+
+        $status = $request->input('status');
+        if (is_string($status) && isset(Task::STATUSES[$status])) {
+            $query->where(fn (Builder $tasks) => $tasks
+                ->where('status', $status)
+                ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('status', $status)));
+        }
+        $priority = $request->input('priority');
+        if (is_string($priority) && isset(Task::PRIORITIES[$priority])) {
+            $query->where(fn (Builder $tasks) => $tasks
+                ->where('priority', $priority)
+                ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('priority', $priority)));
+        }
+
+        return DataTables::eloquent($query)
+            ->filter(function (Builder $tasks) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search === '') {
+                    return;
+                }
+
+                $tasks->where(fn (Builder $matches) => $matches
+                    ->where('tasks.title', 'like', "%{$search}%")
+                    ->orWhere('tasks.description', 'like', "%{$search}%")
+                    ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('assignee', fn (Builder $assignee) => $assignee->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('title', 'like', "%{$search}%")));
+            }, true)
+            ->addColumn('task', fn (Task $task): string => sprintf(
+                '<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
+                e(route('tasks.show', $task)),
+                e($task->title),
+                e(Str::limit($task->description ?? '', 120)),
+            ))
+            ->addColumn('project_name', fn (Task $task): string => sprintf(
+                '<a href="%s">%s</a>',
+                e(route('projects.show', $task->project)),
+                e($task->project->name),
+            ))
+            ->addColumn('status_label', fn (Task $task): string => e(Task::STATUSES[$task->status] ?? $task->status))
+            ->addColumn('priority_label', fn (Task $task): string => e(Task::PRIORITIES[$task->priority] ?? $task->priority))
+            ->editColumn('due_date', fn (Task $task): string => $task->due_date?->format('M j, Y') ?? '—')
+            ->addColumn('actions', fn (Task $task): string => sprintf(
+                '<form method="POST" action="%s" class="d-inline"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PATCH"><input type="hidden" name="done" value="%s"><button class="btn btn-sm btn-outline-%s" type="submit">%s</button></form> <a class="btn btn-sm btn-outline-primary" href="%s">Details</a> <a class="btn btn-sm btn-outline-secondary" href="%s">Edit</a>',
+                e(route('tasks.update-status', $task)),
+                e(csrf_token()),
+                $task->status === 'done' ? '0' : '1',
+                $task->status === 'done' ? 'secondary' : 'success',
+                $task->status === 'done' ? 'Reopen' : 'Mark done',
+                e(route('tasks.show', $task)),
+                e(route('tasks.edit', $task)),
+            ))
+            ->rawColumns(['task', 'project_name', 'actions'])
+            ->toJson();
     }
 
     public function create(Project $project, Request $request): View
@@ -166,7 +199,7 @@ class TaskController extends Controller
         return redirect()
             ->back()
             ->with('success', $status === 'done'
-                ? 'Task marked done' . ($task->parent_task_id === null ? '; all subtasks marked done.' : '.')
+                ? 'Task marked done'.($task->parent_task_id === null ? '; all subtasks marked done.' : '.')
                 : 'Task marked not done.');
     }
 

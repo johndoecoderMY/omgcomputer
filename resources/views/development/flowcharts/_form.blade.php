@@ -51,6 +51,15 @@
             @error('description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
 
+        <div class="form-check mb-4">
+            <input type="hidden" name="is_example" value="0">
+            <input class="form-check-input" type="checkbox" id="is_example" name="is_example" value="1"
+                @checked(old('is_example', $flowChart->is_example ?? false))>
+            <label class="form-check-label" for="is_example">Example flow chart or SOP</label>
+            <div class="form-text">Examples appear in the SOP library and can only be duplicated into projects.</div>
+        </div>
+        @error('is_example')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-2">
             <div>
                 <h2 class="h5 mb-1" id="flow-steps-heading">Website pages and connections</h2>

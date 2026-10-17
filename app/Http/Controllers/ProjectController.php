@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -130,7 +131,12 @@ class ProjectController extends Controller
                 fn ($item): float => $item->line_total,
             ),
             'availableFlowCharts' => FlowChart::query()
+                ->where('is_example', false)
                 ->whereDoesntHave('projects', fn (Builder $query) => $query->where('projects.id', $project->id))
+                ->orderBy('title')
+                ->get(['id', 'title', 'category', 'subject_name']),
+            'availableExamples' => FlowChart::query()
+                ->where('is_example', true)
                 ->orderBy('title')
                 ->get(['id', 'title', 'category', 'subject_name']),
         ]);
@@ -226,7 +232,7 @@ class ProjectController extends Controller
 
     public function flowChartsDatatable(Project $project)
     {
-        return DataTables::eloquent($project->flowCharts())
+        return DataTables::eloquent($project->flowCharts()->where('is_example', false))
             ->addColumn('category_label', fn (FlowChart $flowChart): string => [
                 'website' => 'Website',
                 'process' => 'Process',
@@ -250,6 +256,11 @@ class ProjectController extends Controller
             'flow_chart_ids' => ['required', 'array', 'min:1'],
             'flow_chart_ids.*' => ['required', 'integer', 'distinct', 'exists:flow_charts,id'],
         ]);
+        if (FlowChart::query()->whereIn('id', $data['flow_chart_ids'])->where('is_example', true)->exists()) {
+            throw ValidationException::withMessages([
+                'flow_chart_ids' => 'Example flow charts must be duplicated before they can be linked to a project.',
+            ]);
+        }
         $project->flowCharts()->syncWithoutDetaching($data['flow_chart_ids']);
 
         return redirect()->route('projects.show', $project)->with('success', 'Selected flow charts linked to the project.');
@@ -268,6 +279,7 @@ class ProjectController extends Controller
                 $copy = $sourceChart->replicate();
                 $suffix = " — {$project->name} copy";
                 $copy->title = Str::limit($sourceChart->title, 255 - Str::length($suffix), '').$suffix;
+                $copy->is_example = false;
                 $copy->save();
                 $copy->projects()->attach($project->id);
             }
@@ -315,6 +327,11 @@ class ProjectController extends Controller
             'flow_chart_ids' => ['nullable', 'array'],
             'flow_chart_ids.*' => ['required', 'integer', 'distinct', 'exists:flow_charts,id'],
         ]);
+        if (FlowChart::query()->whereIn('id', $data['flow_chart_ids'] ?? [])->where('is_example', true)->exists()) {
+            throw ValidationException::withMessages([
+                'flow_chart_ids' => 'Example flow charts must be duplicated before they can be linked to a project.',
+            ]);
+        }
 
         $project->flowCharts()->sync($data['flow_chart_ids'] ?? []);
 

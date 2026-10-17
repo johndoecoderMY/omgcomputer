@@ -8,27 +8,54 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class CustomerMessageTemplateController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $query = CustomerMessageTemplate::query();
-        if ($request->filled('stage') && isset(CustomerMessageTemplate::STAGES[$request->input('stage')])) {
-            $query->where('stage', $request->input('stage'));
-        }
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $query->where(fn ($templates) => $templates
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('subject', 'like', "%{$search}%")
-                ->orWhere('body', 'like', "%{$search}%"));
-        }
-
         return view('customer-messages.index', [
-            'templates' => $query->orderBy('stage')->orderBy('name')->paginate(25)->withQueryString(),
             'stages' => CustomerMessageTemplate::STAGES,
         ]);
+    }
+
+    public function datatable(Request $request)
+    {
+        $query = CustomerMessageTemplate::query();
+        $stage = $request->input('stage');
+        if (is_string($stage) && isset(CustomerMessageTemplate::STAGES[$stage])) {
+            $query->where('stage', $stage);
+        }
+
+        return DataTables::eloquent($query)
+            ->filter(function ($templates) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search !== '') {
+                    $templates->where(fn ($matches) => $matches
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('subject', 'like', "%{$search}%")
+                        ->orWhere('body', 'like', "%{$search}%"));
+                }
+            }, true)
+            ->addColumn('template', fn (CustomerMessageTemplate $template): string => sprintf(
+                '<a class="fw-semibold" href="%s">%s</a>%s',
+                e(route('customer-messages.show', $template)),
+                e($template->name),
+                $template->subject ? '<div class="small text-body-secondary">'.e($template->subject).'</div>' : '',
+            ))
+            ->addColumn('stage_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::STAGES[$template->stage])
+            ->addColumn('channel_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::CHANNELS[$template->channel])
+            ->addColumn('status_label', fn (CustomerMessageTemplate $template): string => sprintf(
+                '<span class="badge text-bg-%s">%s</span>',
+                $template->is_active ? 'success' : 'secondary',
+                $template->is_active ? 'Available' : 'Archived',
+            ))
+            ->addColumn('actions', fn (CustomerMessageTemplate $template): string => sprintf(
+                '<a class="btn btn-sm btn-outline-secondary" href="%s">Preview</a>',
+                e(route('customer-messages.show', $template)),
+            ))
+            ->rawColumns(['template', 'status_label', 'actions'])
+            ->toJson();
     }
 
     public function create(): View
@@ -44,7 +71,7 @@ class CustomerMessageTemplateController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $this->validatedData($request);
-        $data['slug'] = Str::slug($data['name']) . '-' . Str::lower(Str::random(6));
+        $data['slug'] = Str::slug($data['name']).'-'.Str::lower(Str::random(6));
         $data['is_active'] = $request->boolean('is_active');
         $template = CustomerMessageTemplate::create($data);
 
@@ -58,7 +85,7 @@ class CustomerMessageTemplateController extends Controller
         return view('customer-messages.show', [
             'template' => $customerMessage,
             'eyebrow' => CustomerMessageTemplate::STAGES[$customerMessage->stage]
-                . ' · ' . CustomerMessageTemplate::CHANNELS[$customerMessage->channel],
+                .' · '.CustomerMessageTemplate::CHANNELS[$customerMessage->channel],
             'subjectPreview' => $customerMessage->render($customerMessage->subject ?? ''),
             'bodyPreview' => $customerMessage->render($customerMessage->body),
             'placeholders' => CustomerMessageTemplate::PLACEHOLDERS,

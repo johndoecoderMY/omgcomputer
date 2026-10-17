@@ -99,6 +99,36 @@
         </div>
 
         <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-4">
+                <div class="card h-100 p-2">
+                    <div class="card-header bg-body">
+                        <h2 class="h5 mb-1 text-primary">Task status</h2>
+                        <p class="small text-body-secondary mb-0">Current workload by stage.</p>
+                    </div>
+                    <div class="card-body"><div id="dashboard-task-status-chart" role="img" aria-label="Tasks by status chart" style="height: 280px"></div></div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card h-100 p-2">
+                    <div class="card-header bg-body">
+                        <h2 class="h5 mb-1 text-primary">Repair queue</h2>
+                        <p class="small text-body-secondary mb-0">Tickets by repair stage.</p>
+                    </div>
+                    <div class="card-body"><div id="dashboard-ticket-status-chart" role="img" aria-label="Repair tickets by status chart" style="height: 280px"></div></div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card h-100 p-2">
+                    <div class="card-header bg-body">
+                        <h2 class="h5 mb-1 text-primary">New tickets</h2>
+                        <p class="small text-body-secondary mb-0">Tickets received in the last 7 days.</p>
+                    </div>
+                    <div class="card-body"><div id="dashboard-ticket-arrivals-chart" role="img" aria-label="New repair tickets over the last seven days" style="height: 280px"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
             <div class="col-12 col-xl-7">
                 <div class="card h-100">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
@@ -225,7 +255,7 @@
                 <div class="card h-100">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
                         <div>
-                            <h4 class="mb-0 text-primary">SOP &amp; technical examples</h4>
+                            <h4 class="mb-0 text-primary">SOP &technical examples</h4>
                             <p class="small text-body-secondary mb-0">Reusable web, database, and service structures.</p>
                         </div>
                         <a class="btn btn-sm btn-primary" href="{{ route('development.sops') }}">Browse library</a>
@@ -250,3 +280,79 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    (() => {
+        if (!window.echarts) return;
+
+        const palette = ['#2c7be5', '#00d27a', '#f5803e', '#e63757', '#39afd1', '#6f42c1', '#748194', '#f6c343'];
+        const charts = [
+            {
+                element: document.getElementById('dashboard-task-status-chart'),
+                data: @js($taskStatusChart),
+                type: 'donut',
+            },
+            {
+                element: document.getElementById('dashboard-ticket-status-chart'),
+                data: @js($ticketStatusChart),
+                type: 'donut',
+            },
+        ];
+
+        charts.forEach(({ element, data }) => {
+            if (!element) return;
+            const chart = window.echarts.init(element);
+            chart.setOption({
+                color: palette,
+                tooltip: { trigger: 'item' },
+                legend: { bottom: 0, left: 'center', type: 'scroll' },
+                series: [{
+                    type: 'pie',
+                    radius: ['44%', '70%'],
+                    center: ['50%', '43%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+                    label: { show: false },
+                    emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
+                    data,
+                }],
+            });
+            window.addEventListener('resize', () => chart.resize());
+        });
+
+        const arrivalsElement = document.getElementById('dashboard-ticket-arrivals-chart');
+        if (arrivalsElement) {
+            const arrivals = @js($ticketArrivalChart);
+            const chart = window.echarts.init(arrivalsElement);
+            chart.setOption({
+                color: [palette[0]],
+                tooltip: { trigger: 'axis' },
+                grid: { top: 18, right: 12, bottom: 28, left: 36 },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: arrivals.map((item) => item.date),
+                    axisLine: { lineStyle: { color: '#d8e2ef' } },
+                    axisLabel: { color: '#748194' },
+                },
+                yAxis: {
+                    type: 'value',
+                    minInterval: 1,
+                    splitLine: { lineStyle: { color: '#edf2f9' } },
+                    axisLabel: { color: '#748194' },
+                },
+                series: [{
+                    name: 'New tickets',
+                    type: 'line',
+                    smooth: true,
+                    symbolSize: 8,
+                    data: arrivals.map((item) => item.count),
+                    areaStyle: { opacity: 0.12 },
+                }],
+            });
+            window.addEventListener('resize', () => chart.resize());
+        }
+    })();
+</script>
+@endpush

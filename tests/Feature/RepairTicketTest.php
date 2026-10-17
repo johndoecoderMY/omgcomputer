@@ -121,7 +121,15 @@ class RepairTicketTest extends TestCase
         $this->assertSame(2, $customer->tickets()->count());
         $this->actingAs($user)->get(route('customers.index'))
             ->assertOk()
-            ->assertSee('Taylor C.');
+            ->assertSee('data-datatable', false);
+        $this->actingAs($user)->getJson(route('customers.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Taylor C.'],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.customer', fn (string $customer): bool => str_contains($customer, 'Taylor C.'));
         $this->actingAs($user)->get(route('customers.show', $customer))
             ->assertOk()
             ->assertSee('Repair history')

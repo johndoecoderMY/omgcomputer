@@ -62,13 +62,26 @@
 
         document.querySelectorAll('table[data-datatable]').forEach((table) => {
             const columns = JSON.parse(table.dataset.columns || '[]');
-            window.jQuery(table).DataTable({
+            const $table = window.jQuery(table);
+            const dataTable = $table.DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: table.dataset.source,
                 columns,
                 pageLength: 25,
                 order: [],
+            });
+
+            let retryScheduled = false;
+            $table.on('error.dt', function () {
+                if (retryScheduled) {
+                    return;
+                }
+
+                retryScheduled = true;
+                setTimeout(() => {
+                    dataTable.ajax.reload(null, false);
+                }, 1200);
             });
         });
     </script>

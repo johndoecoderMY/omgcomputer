@@ -12,6 +12,7 @@ class FlowChart extends Model
         'title',
         'category',
         'subject_name',
+        'is_example',
         'description',
         'steps',
     ];
@@ -20,6 +21,7 @@ class FlowChart extends Model
     {
         return [
             'steps' => 'array',
+            'is_example' => 'boolean',
         ];
     }
 

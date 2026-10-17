@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class BookingController extends Controller
 {
@@ -118,7 +120,7 @@ class BookingController extends Controller
         ]);
         $start = Carbon::createFromFormat(
             'Y-m-d H:i',
-            $data['booking_date'] . ' ' . $data['start_time'],
+            $data['booking_date'].' '.$data['start_time'],
             self::TIMEZONE,
         );
         if ($start->dayOfWeek === Carbon::SUNDAY || $start->lte(Carbon::now(self::TIMEZONE))) {
@@ -142,7 +144,7 @@ class BookingController extends Controller
                 }
 
                 return Booking::create([
-                    'reference' => 'BK-' . Str::upper(Str::random(10)),
+                    'reference' => 'BK-'.Str::upper(Str::random(10)),
                     'customer_id' => $customer->id,
                     'customer_name' => $data['customer_name'],
                     'customer_email' => $data['customer_email'],
@@ -174,19 +176,77 @@ class BookingController extends Controller
         return view('bookings.confirmation', compact('booking'));
     }
 
-    public function index(Request $request): View
+    public function index(): View
     {
-        $status = $request->input('status');
+        return view('bookings.index', [
+            'statuses' => Booking::STATUSES,
+        ]);
+    }
+
+    public function datatable(Request $request)
+    {
         $query = Booking::query()->with(['assignee', 'repairTicket']);
-        if (isset(Booking::STATUSES[$status])) {
+        $status = $request->input('status');
+        if (is_string($status) && isset(Booking::STATUSES[$status])) {
             $query->where('status', $status);
         }
+        $users = User::query()->orderBy('name')->get(['id', 'name']);
 
-        return view('bookings.index', [
-            'bookings' => $query->orderBy('starts_at')->paginate(30)->withQueryString(),
-            'statuses' => Booking::STATUSES,
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
-        ]);
+        return DataTables::eloquent($query)
+            ->filter(function (Builder $bookings) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search !== '') {
+                    $bookings->where(fn (Builder $matches) => $matches
+                        ->where('reference', 'like', "%{$search}%")
+                        ->orWhere('customer_name', 'like', "%{$search}%")
+                        ->orWhere('customer_email', 'like', "%{$search}%")
+                        ->orWhere('customer_phone', 'like', "%{$search}%")
+                        ->orWhere('service_name', 'like', "%{$search}%")
+                        ->orWhere('device_model', 'like', "%{$search}%")
+                        ->orWhere('request_notes', 'like', "%{$search}%"));
+                }
+            }, true)
+            ->editColumn('starts_at', fn (Booking $booking): string => $booking->starts_at
+                ->setTimezone(self::TIMEZONE)->format('M j, Y g:i A'))
+            ->addColumn('customer_contact', fn (Booking $booking): string => sprintf(
+                '%s<div class="small text-body-secondary">%s · %s</div>',
+                e($booking->customer_name),
+                e($booking->customer_email),
+                e($booking->customer_phone),
+            ))
+            ->addColumn('service', fn (Booking $booking): string => sprintf(
+                '%s<div class="small text-body-secondary">%s</div>%s',
+                e($booking->service_name),
+                e($booking->device_model),
+                $booking->repairTicket
+                    ? sprintf('<a class="small d-block mt-1" href="%s">Ticket %s</a>', e(route('tickets.show', $booking->repairTicket)), e($booking->repairTicket->ticket_number))
+                    : '',
+            ))
+            ->editColumn('request_notes', fn (Booking $booking): string => e($booking->request_notes ?: '—'))
+            ->addColumn('management', function (Booking $booking) use ($users): string {
+                $statusOptions = collect(Booking::STATUSES)->map(fn (string $label, string $value): string => sprintf(
+                    '<option value="%s"%s>%s</option>',
+                    e($value),
+                    $booking->status === $value ? ' selected' : '',
+                    e($label),
+                ))->implode('');
+                $userOptions = '<option value="">Unassigned</option>'.$users->map(fn (User $user): string => sprintf(
+                    '<option value="%d"%s>%s</option>',
+                    $user->id,
+                    $booking->assigned_to === $user->id ? ' selected' : '',
+                    e($user->name),
+                ))->implode('');
+
+                return sprintf(
+                    '<form class="d-flex flex-column gap-2" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PUT"><select class="form-select form-select-sm" name="status" aria-label="Booking status">%s</select><select class="form-select form-select-sm" name="assigned_to" aria-label="Assigned staff">%s</select><button class="btn btn-sm btn-outline-primary">Save</button></form>',
+                    e(route('bookings.update', $booking)),
+                    e(csrf_token()),
+                    $statusOptions,
+                    $userOptions,
+                );
+            })
+            ->rawColumns(['customer_contact', 'service', 'management'])
+            ->toJson();
     }
 
     public function update(Request $request, Booking $booking): RedirectResponse
@@ -201,23 +261,23 @@ class BookingController extends Controller
 
             if ($data['status'] === 'confirmed' && ! $booking->repair_ticket_id) {
                 $ticket = RepairTicket::create([
-                    'ticket_number' => 'TEMP-' . Str::upper(Str::random(12)),
+                    'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
                     'customer_id' => $booking->customer_id,
                     'project_id' => $booking->customer?->project_id,
                     'assigned_to' => $data['assigned_to'] ?? null,
                     'device_type' => 'Computer',
                     'device_model' => $booking->device_model,
-                    'issue_description' => trim($booking->service_name . ".\n" . ($booking->request_notes ?? 'Appointment request converted to a repair ticket.')),
+                    'issue_description' => trim($booking->service_name.".\n".($booking->request_notes ?? 'Appointment request converted to a repair ticket.')),
                     'status' => 'new',
                     'priority' => 'normal',
                     'received_at' => now(),
                 ]);
                 $ticket->update([
-                    'ticket_number' => 'RT-' . now()->format('Y') . '-' . str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT),
+                    'ticket_number' => 'RT-'.now()->format('Y').'-'.str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT),
                 ]);
                 $ticket->updates()->create([
                     'user_id' => $request->user()->id,
-                    'title' => 'Created from confirmed booking ' . $booking->reference,
+                    'title' => 'Created from confirmed booking '.$booking->reference,
                     'status' => 'new',
                     'notes' => $booking->request_notes,
                 ]);

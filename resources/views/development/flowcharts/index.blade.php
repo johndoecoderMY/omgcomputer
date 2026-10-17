@@ -25,11 +25,12 @@
             data-columns="{{ json_encode([
                 ['data' => 'title', 'name' => 'flow_charts.title'],
                 ['data' => 'category_label', 'orderable' => false, 'searchable' => false],
+                ['data' => 'example_label', 'orderable' => false, 'searchable' => false],
                 ['data' => 'subject_name', 'name' => 'flow_charts.subject_name'],
                 ['data' => 'projects', 'orderable' => false, 'searchable' => false],
                 ['data' => 'actions', 'orderable' => false, 'searchable' => false],
             ]) }}">
-            <thead><tr><th>Flow chart</th><th>Type</th><th>Product, service, or programme</th><th>Linked projects</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Flow chart</th><th>Type</th><th>Example</th><th>Product, service, or programme</th><th>Linked projects</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div></div>

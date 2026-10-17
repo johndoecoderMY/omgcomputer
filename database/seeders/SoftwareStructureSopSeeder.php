@@ -13,7 +13,7 @@ class SoftwareStructureSopSeeder extends Seeder
         $examples = [
             [
                 'category' => 'website',
-                'title' => 'Example Website Structure & Build SOP',
+                'title' => 'Website Structure & Build SOP',
                 'subject_name' => 'Website architecture',
                 'description' => 'Example structure for planning a maintainable web application from routes and pages through reusable UI, business logic, and data access.',
                 'steps' => [
@@ -32,7 +32,7 @@ class SoftwareStructureSopSeeder extends Seeder
             ],
             [
                 'category' => 'process',
-                'title' => 'Example Database Design & Migration SOP',
+                'title' => 'Database Design & Migration SOP',
                 'subject_name' => 'Database architecture',
                 'description' => 'Example workflow for translating application requirements into a normalized schema, reviewed migrations, safe data changes, and verified queries.',
                 'steps' => [
@@ -56,6 +56,7 @@ class SoftwareStructureSopSeeder extends Seeder
             FlowChart::query()->firstOrCreate(
                 ['category' => $example['category'], 'title' => $example['title']],
                 [
+                    'is_example' => true,
                     'subject_name' => $example['subject_name'],
                     'description' => $example['description'],
                     'steps' => SopTemplate::customSteps($example['steps'], $example['connections']),

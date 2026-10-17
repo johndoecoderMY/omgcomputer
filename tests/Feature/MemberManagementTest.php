@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Department;
 use App\Models\Team;
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -122,5 +122,53 @@ class MemberManagementTest extends TestCase
             ->assertRedirect(route('admin.users.index'))
             ->assertSessionHas('error', 'You cannot delete your own account from member management.');
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
+
+    public function test_customer_accounts_have_separate_listing_and_creation_from_staff_members(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+        $this->actingAs($admin);
+
+        $this->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSee('Members')
+            ->assertSee('/admin/users/datatable', false);
+        $members = $this->getJson(route('admin.users.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))->assertOk();
+        $members->assertJsonPath('recordsFiltered', 2);
+        $members->assertJsonMissing(['email' => $customer->email]);
+
+        $this->get(route('admin.users.customers.create'))
+            ->assertOk()
+            ->assertSee('Create customer account')
+            ->assertDontSee('for="team_ids"', false);
+        $this->post(route('admin.users.customers.store'), [
+            'name' => 'New Portal Customer',
+            'email' => 'portal-customer@example.test',
+            'password' => 'temporary-customer-password',
+            'password_confirmation' => 'temporary-customer-password',
+        ])->assertRedirect();
+
+        $createdCustomer = User::query()->where('email', 'portal-customer@example.test')->firstOrFail();
+        $this->assertTrue($createdCustomer->hasRole('customer'));
+        $this->assertTrue($createdCustomer->force_password_change);
+
+        $customers = $this->getJson(route('admin.users.customers.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))->assertOk();
+        $customers->assertJsonPath('recordsFiltered', 2);
+        $customers->assertJsonFragment(['email' => $createdCustomer->email]);
+        $customers->assertJsonFragment(['email' => $customer->email]);
     }
 }

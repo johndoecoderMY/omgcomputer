@@ -25,7 +25,7 @@ class CustomerMessageTemplateTest extends TestCase
         ])->assertRedirect();
 
         $template = CustomerMessageTemplate::query()->firstOrFail();
-        $this->assertSame('repair-status-update-' . substr($template->slug, -6), $template->slug);
+        $this->assertSame('repair-status-update-'.substr($template->slug, -6), $template->slug);
         $this->get(route('customer-messages.show', $template))
             ->assertOk()
             ->assertSee('Preview values are examples')
@@ -56,6 +56,12 @@ class CustomerMessageTemplateTest extends TestCase
 
         $this->get(route('customer-messages.index'))
             ->assertOk()
+            ->assertSee('data-datatable', false);
+        $this->getJson(route('customer-messages.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))->assertOk()
             ->assertSee('Booking request received')
             ->assertSee('Diagnosis and approval request')
             ->assertSee('Parts delay update');

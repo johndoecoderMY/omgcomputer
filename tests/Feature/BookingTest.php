@@ -66,6 +66,19 @@ class BookingTest extends TestCase
         $this->assertSame($staff->id, $ticket->assigned_to);
         $this->assertSame(1, $ticket->updates()->count());
 
+        $this->actingAs($staff)->get(route('bookings.index'))
+            ->assertOk()
+            ->assertSee('data-datatable', false);
+        $this->actingAs($staff)->getJson(route('bookings.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Morgan Lee'],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertSee('Morgan Lee')
+            ->assertSee($booking->reference);
+
         $this->actingAs($staff)->put(route('bookings.update', $booking), [
             'status' => 'confirmed',
             'assigned_to' => $staff->id,

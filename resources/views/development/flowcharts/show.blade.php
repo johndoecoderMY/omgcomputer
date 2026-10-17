@@ -33,15 +33,20 @@
         <div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>
     @endif
 
-    @if ($projects->isEmpty())
-        <div class="alert alert-warning">Create a project before turning flow-chart nodes into tasks.</div>
+    @if ($flowChart->is_example)
+        <div class="alert alert-info" role="status">This example can be copied from a project page. Its steps are not assigned to separate projects.</div>
+    @else
+        <div class="alert alert-info" role="status">Link the complete flow chart to a project, then add its steps as tasks for that project.</div>
     @endif
 
     <div class="card">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
-            <h2 class="h5 mb-0">{{ $flowChart->category === 'website' ? 'Website structure' : 'Process steps' }}</h2>
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h5 mb-0">{{ $flowChart->category === 'website' ? 'Website structure' : 'Process steps' }}</h2>
+                @if ($flowChart->is_example)<span class="badge text-bg-info">Example</span>@endif
+            </div>
             <span class="badge text-bg-light border">{{ count($flowChart->steps) }} steps</span>
         </div>
-        <div class="card-body p-0">
+        <div class="card-body p-4">
             <div class="flow-chart-viewport" data-flow-chart>
                 <div class="flow-chart-canvas">
                     <svg class="flow-chart-wires" aria-hidden="true">
@@ -60,36 +65,51 @@
                             <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="fas fa-grip"></span></button>
                             <span class="flow-chart-node-kind">{{ $step['kind'] === 'page' && $flowChart->category !== 'website' ? 'step' : $step['kind'] }}</span>
                             <strong>{{ $step['label'] }}</strong>
-                            @if (($tasks[$step['id']] ?? collect())->isNotEmpty())
-                                <div class="mt-2">
-                                    @foreach ($tasks[$step['id']] as $task)
-                                        <a class="d-block small" href="{{ route('tasks.show', $task) }}"><span class="fas fa-list-check me-1"></span>{{ $task->title }} · {{ $task->project->name }}</a>
-                                    @endforeach
-                                </div>
-                            @endif
-                            @if ($projects->isNotEmpty())
-                                <form class="mt-3" method="POST" action="{{ route('development.flowcharts.tasks.store', $flowChart) }}">
-                                    @csrf
-                                    <input type="hidden" name="step_id" value="{{ $step['id'] }}">
-                                    <label class="visually-hidden" for="project-{{ $step['id'] }}">Project for {{ $step['label'] }}</label>
-                                    <select class="form-select form-select-sm js-project-search mb-2" id="project-{{ $step['id'] }}" name="project_id" required>
-                                        <option value="">Add to project</option>
-                                        @foreach ($projects as $project)<option value="{{ $project->id }}">{{ $project->name }}</option>@endforeach
-                                    </select>
-                                    <label class="visually-hidden" for="assignee-{{ $step['id'] }}">Assignee for {{ $step['label'] }}</label>
-                                    <select class="form-select form-select-sm mb-2" id="assignee-{{ $step['id'] }}" name="assigned_to">
-                                        <option value="">Unassigned</option>
-                                        @foreach ($users as $user)<option value="{{ $user->id }}">{{ $user->name }}</option>@endforeach
-                                    </select>
-                                    <button class="btn btn-sm btn-outline-primary w-100" type="submit"><span class="fas fa-plus me-1"></span>Create task</button>
-                                </form>
-                            @endif
                         </article>
                     @endforeach
                 </div>
             </div>
         </div>
     </div>
+    @unless ($flowChart->is_example)
+        <div class="card mt-4 p-2">
+            <div class="card-header bg-body">
+                <h2 class="h5 mb-0">Add flow chart steps to tasks</h2>
+            </div>
+            <div class="card-body">
+                @if ($linkedProjects->isEmpty())
+                    <p class="text-body-secondary mb-0">Link this flow chart to a project before adding its steps as tasks.</p>
+                @else
+                    <p class="text-body-secondary">Creates one task per step in a single linked project. Existing tasks from these steps are kept and not duplicated.</p>
+                    <form method="POST" action="{{ route('development.flowcharts.tasks.store', $flowChart) }}"
+                        class="d-flex flex-wrap align-items-end gap-2">
+                        @csrf
+                        <div>
+                            <label class="form-label mb-1" for="flow-chart-task-project">Project</label>
+                            <select class="form-select" id="flow-chart-task-project" name="project_id" required>
+                                @foreach ($linkedProjects as $project)
+                                    <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>{{ $project->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Add steps as tasks</button>
+                    </form>
+                    @error('project_id')<div class="text-danger mt-2">{{ $message }}</div>@enderror
+                @endif
+                @if ($stepTasks->isNotEmpty())
+                    <h3 class="h6 mt-4">Tasks created from this flow chart</h3>
+                    <ul class="mb-0">
+                        @foreach ($stepTasks as $task)
+                            <li>
+                                <a href="{{ route('tasks.show', $task) }}">{{ $task->title }}</a>
+                                <span class="text-body-secondary">— {{ $task->project->name }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        </div>
+    @endunless
     <div class="card mt-4">        <div class="card-header bg-body"><h2 class="h5 mb-0">Linked projects</h2></div>
         <div class="card-body">
             @if ($linkedProjects->isEmpty())

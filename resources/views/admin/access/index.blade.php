@@ -4,12 +4,18 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration" title="Roles &amp; permissions"
-        description="Manage access rules by creating roles and assigning permissions."
-        :back-url="route('dashboard')" back-label="Dashboard" />
-    <div class="mb-3">
-        <a class="btn btn-outline-primary" href="{{ route('admin.users.index') }}"><span class="fas fa-users me-2" aria-hidden="true"></span>Manage members</a>
-    </div>
+    <x-page-header eyebrow="Administration" title="Roles &permissions"
+        description="Choose a role to review its members and configure its permissions."
+        :back-url="route('dashboard')" back-label="Dashboard">
+        <x-slot:actions>
+            <a class="btn btn-outline-primary" href="{{ route('admin.users.index') }}">
+                <span class="fas fa-users me-2" aria-hidden="true"></span>Members
+            </a>
+            <a class="btn btn-outline-primary" href="{{ route('admin.users.customers') }}">
+                <span class="fas fa-user-tag me-2" aria-hidden="true"></span>Customer accounts
+            </a>
+        </x-slot:actions>
+    </x-page-header>
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
@@ -26,110 +32,209 @@
 
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
-            <form class="card h-100" method="POST" action="{{ route('admin.access.roles.store') }}">
+            <form class="card h-100 p-2" method="POST" action="{{ route('admin.access.roles.store') }}">
                 @csrf
-                <div class="card-header bg-body"><h2 class="h5 mb-0">Create a role</h2></div>
-                <div class="card-body">
-                    <label class="form-label" for="new-role-name">Role name</label>
-                    <input class="form-control" id="new-role-name" name="name" value="{{ old('name') }}"
-                        placeholder="for example, supervisor" maxlength="100" required>
-                    <div class="form-text">Use letters, numbers, dashes, or underscores.</div>
+                <div class="card-header bg-body"><h2 class="h5 mb-0">Add role</h2></div>
+                <div class="card-body d-flex flex-wrap align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <label class="form-label" for="new-role-name">Role name</label>
+                        <input class="form-control" id="new-role-name" name="name" value="{{ old('name') }}"
+                            placeholder="for example, supervisor" maxlength="100" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Create role</button>
                 </div>
-                <div class="card-footer bg-body"><button class="btn btn-primary" type="submit">Create role</button></div>
             </form>
         </div>
         <div class="col-lg-6">
-            <form class="card h-100" method="POST" action="{{ route('admin.access.permissions.store') }}">
+            <form class="card h-100 p-2" method="POST" action="{{ route('admin.access.permissions.store') }}">
                 @csrf
-                <div class="card-header bg-body"><h2 class="h5 mb-0">Create a permission</h2></div>
-                <div class="card-body">
-                    <label class="form-label" for="new-permission-name">Permission name</label>
-                    <input class="form-control" id="new-permission-name" name="name" value="{{ old('name') }}"
-                        placeholder="for example, projects.approve" maxlength="150" required>
-                    <div class="form-text">Use a descriptive name; dots, dashes, and underscores are supported.</div>
+                @if ($selectedRole)
+                    <input type="hidden" name="selected_role_id" value="{{ $selectedRole->id }}">
+                @endif
+                <div class="card-header bg-body"><h2 class="h5 mb-0">Add permission</h2></div>
+                <div class="card-body d-flex flex-wrap align-items-end gap-2">
+                    <div class="flex-grow-1">
+                        <label class="form-label" for="new-permission-name">Permission name</label>
+                        <input class="form-control" id="new-permission-name" name="name" value="{{ old('name') }}"
+                            placeholder="for example, projects.approve" maxlength="150" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Create permission</button>
                 </div>
-                <div class="card-footer bg-body"><button class="btn btn-primary" type="submit">Create permission</button></div>
             </form>
         </div>
     </div>
 
-    <section class="mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h4 mb-0">Roles</h2>
-            <span class="badge text-bg-light border">{{ $roles->count() }}</span>
-        </div>
-        <div class="row g-3">
-            @forelse ($roles as $role)
-                <div class="col-xl-6">
-                    <form class="card h-100" method="POST" action="{{ route('admin.access.roles.update', $role) }}">
-                        @csrf
-                        @method('PUT')
-                        <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
-                            <div>
-                                <h3 class="h5 mb-0">{{ $role->name }}</h3>
-                                <span class="small text-body-secondary">{{ $role->users_count }} assigned user(s)</span>
-                            </div>
+    <div class="row g-3">
+        <div class="col-xl-4">
+            <div class="card p-2 mb-3">
+                <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Roles</h2>
+                    <span class="badge text-bg-light border">{{ $roles->count() }}</span>
+                </div>
+                <div class="list-group list-group-flush">
+                    @forelse ($roles as $role)
+                        <div class="list-group-item d-flex align-items-center justify-content-between gap-2 {{ $selectedRole?->is($role) ? 'active' : '' }}">
+                            <a class="d-flex align-items-center gap-3 text-decoration-none flex-grow-1 {{ $selectedRole?->is($role) ? 'text-white' : 'text-body' }}"
+                                href="{{ route('admin.access.index', ['role' => $role->id]) }}">
+                                <span class="avatar avatar-l">
+                                    <span class="avatar-name rounded-circle {{ $role->name === 'admin' ? 'bg-danger-subtle text-danger' : ($role->name === 'customer' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary') }}">
+                                        <span class="fas {{ $role->name === 'admin' ? 'fa-shield-alt' : ($role->name === 'customer' ? 'fa-user-tag' : 'fa-user') }}"></span>
+                                    </span>
+                                </span>
+                                <span>
+                                    <span class="d-block fw-semibold">{{ ucfirst($role->name) }}</span>
+                                    <span class="small {{ $selectedRole?->is($role) ? 'text-white-50' : 'text-body-secondary' }}">{{ $role->users_count }} assigned user(s)</span>
+                                </span>
+                            </a>
                             @if ($role->name !== 'admin')
-                                <button class="btn btn-sm btn-outline-danger" type="submit" form="delete-role-{{ $role->id }}">Delete</button>
-                            @else
-                                <span class="badge text-bg-warning">Admin access gate</span>
+                                <form method="POST" action="{{ route('admin.access.roles.destroy', $role) }}"
+                                    onsubmit="return confirm('Delete the {{ $role->name }} role?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm {{ $selectedRole?->is($role) ? 'btn-outline-light' : 'btn-outline-danger' }}"
+                                        type="submit" aria-label="Delete {{ $role->name }} role">
+                                        <span class="fas fa-trash" aria-hidden="true"></span>
+                                    </button>
+                                </form>
                             @endif
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label" for="role-name-{{ $role->id }}">Role name</label>
-                                <input class="form-control" id="role-name-{{ $role->id }}" name="name"
-                                    value="{{ $role->name }}" maxlength="100" required @readonly($role->name === 'admin')>
-                            </div>
-                            <fieldset>
-                                <legend class="form-label">Permissions</legend>
-                                @forelse ($permissions as $permission)
-                                    <label class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="permission_ids[]"
-                                            value="{{ $permission->id }}" @checked($role->permissions->contains('id', $permission->id))>
-                                        <span class="form-check-label">{{ $permission->name }}</span>
-                                    </label>
-                                @empty
-                                    <p class="small text-body-secondary">Create permissions to assign them to this role.</p>
-                                @endforelse
-                            </fieldset>
-                        </div>
-                        <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-                            <button class="btn btn-sm btn-primary" type="submit">Save role</button>
-                            <span class="small text-body-secondary">{{ $role->permissions->count() }} permission(s)</span>
-                        </div>
-                    </form>
-                    @if ($role->name !== 'admin')
-                        <form id="delete-role-{{ $role->id }}" method="POST" action="{{ route('admin.access.roles.destroy', $role) }}"
-                            onsubmit="return confirm('Delete the {{ $role->name }} role?');">
-                            @csrf
-                            @method('DELETE')
-                        </form>
-                    @endif
+                    @empty
+                        <p class="text-body-secondary p-3 mb-0">No roles have been created yet.</p>
+                    @endforelse
                 </div>
-            @empty
-                <div class="col-12"><div class="alert alert-info mb-0">No roles have been created.</div></div>
-            @endforelse
-        </div>
-    </section>
+            </div>
 
-    <div class="card mb-4">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
-            <h2 class="h4 mb-0">Permissions</h2>
+            @if ($selectedRole)
+                <div class="card p-2">
+                    <div class="card-header bg-body"><h2 class="h5 mb-0">Role information</h2></div>
+                    <div class="card-body">
+                        <dl class="mb-0">
+                            <dt class="small text-body-secondary">Role name</dt>
+                            <dd class="mb-3">{{ ucfirst($selectedRole->name) }}</dd>
+                            <dt class="small text-body-secondary">Description</dt>
+                            <dd class="mb-3">{{ $selectedRoleDescription }}</dd>
+                            <dt class="small text-body-secondary">Created</dt>
+                            <dd class="mb-3">{{ $selectedRole->created_at?->format('M j, Y') ?? '—' }}</dd>
+                            <dt class="small text-body-secondary">Last modified</dt>
+                            <dd class="mb-0">{{ $selectedRole->updated_at?->format('M j, Y') ?? '—' }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <div class="col-xl-8">
+            @if ($selectedRole)
+                <form class="card p-2 mb-3" method="POST" action="{{ route('admin.access.roles.update', $selectedRole) }}">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="name" value="{{ $selectedRole->name }}">
+                    <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h2 class="h5 mb-1">Permissions matrix</h2>
+                            <p class="small text-body-secondary mb-0">Configure access for the {{ ucfirst($selectedRole->name) }} role.</p>
+                        </div>
+                        <button class="btn btn-primary" type="submit">
+                            <span class="fas fa-check me-1" aria-hidden="true"></span>Save changes
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr><th>Module / permission</th><th class="text-center" style="width: 130px">Enabled</th></tr>
+                            </thead>
+                            @forelse ($permissionGroups as $module => $modulePermissions)
+                                <tbody>
+                                    <tr class="table-light">
+                                        <th>{{ ucfirst(str_replace(['-', '_'], ' ', $module)) }}</th>
+                                        <th class="text-center">
+                                            <label class="form-check d-inline-flex align-items-center gap-2 mb-0">
+                                                <span class="small">All</span>
+                                                <input class="form-check-input mb-0" type="checkbox" data-permission-group="{{ $loop->index }}"
+                                                    aria-label="Toggle all {{ $module }} permissions">
+                                            </label>
+                                        </th>
+                                    </tr>
+                                    @foreach ($modulePermissions as $permission)
+                                        <tr>
+                                            <td class="ps-4">{{ $permission->name }}</td>
+                                            <td class="text-center">
+                                                <input class="form-check-input" type="checkbox" name="permission_ids[]"
+                                                    value="{{ $permission->id }}" data-permission-item="{{ $loop->parent->index }}"
+                                                    aria-label="Enable {{ $permission->name }}"
+                                                    @checked($selectedRole->permissions->contains('id', $permission->id))>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            @empty
+                                <tbody><tr><td colspan="2" class="text-center text-body-secondary py-4">No permissions have been created yet.</td></tr></tbody>
+                            @endforelse
+                        </table>
+                    </div>
+                    <div class="card-footer bg-body d-flex justify-content-between align-items-center">
+                        @if ($selectedRole->name === 'admin')
+                            <span class="small text-body-secondary">The admin role is protected from deletion and renaming.</span>
+                        @else
+                            <span class="small text-body-secondary">Changes apply to all users assigned this role.</span>
+                        @endif
+                        <button class="btn btn-primary" type="submit">Save permissions</button>
+                    </div>
+                </form>
+
+                <div class="card p-2">
+                    <div class="card-header bg-body d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0">Users with {{ ucfirst($selectedRole->name) }} role</h2>
+                        <span class="badge text-bg-primary">{{ $selectedRole->users->count() }} users</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead><tr><th>User</th><th>Email</th><th>Status</th><th>Account created</th><th></th></tr></thead>
+                            <tbody>
+                                @forelse ($selectedRole->users as $user)
+                                    <tr>
+                                        <td class="fw-semibold">{{ $user->name }}</td>
+                                        <td>{{ $user->email }}</td>
+                                        <td><span class="badge text-bg-success">Active</span></td>
+                                        <td>{{ $user->created_at?->format('M j, Y') ?? '—' }}</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.users.edit', $user) }}">Manage</a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-body-secondary py-4">No users have this role.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @else
+                <div class="card p-2"><div class="card-body text-center text-body-secondary">Create a role to configure its permissions.</div></div>
+            @endif
+        </div>
+    </div>
+
+    <div class="card p-2 mt-4">
+        <div class="card-header bg-body d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">All permissions</h2>
             <span class="badge text-bg-light border">{{ $permissions->count() }}</span>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead><tr><th>Permission</th><th>Assigned to roles</th><th>Action</th></tr></thead>
+                <thead><tr><th>Permission</th><th>Assigned to roles</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse ($permissions as $permission)
                         <tr>
                             <td class="fw-semibold">{{ $permission->name }}</td>
-                            <td>{{ $permission->roles()->count() }}</td>
-                            <td>
+                            <td>{{ $permission->roles_count }}</td>
+                            <td class="text-end">
                                 <form method="POST" action="{{ route('admin.access.permissions.destroy', $permission) }}"
                                     onsubmit="return confirm('Delete the {{ $permission->name }} permission?');">
                                     @csrf
                                     @method('DELETE')
+                                    @if ($selectedRole)
+                                        <input type="hidden" name="selected_role_id" value="{{ $selectedRole->id }}">
+                                    @endif
                                     <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
                                 </form>
                             </td>
@@ -141,6 +246,26 @@
             </table>
         </div>
     </div>
-
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('[data-permission-group]').forEach((groupToggle) => {
+        const groupId = groupToggle.dataset.permissionGroup;
+        const items = [...document.querySelectorAll(`[data-permission-item="${groupId}"]`)];
+        const refresh = () => {
+            const checkedCount = items.filter((item) => item.checked).length;
+            groupToggle.checked = items.length > 0 && checkedCount === items.length;
+            groupToggle.indeterminate = checkedCount > 0 && checkedCount < items.length;
+        };
+
+        groupToggle.addEventListener('change', () => {
+            items.forEach((item) => { item.checked = groupToggle.checked; });
+            groupToggle.indeterminate = false;
+        });
+        items.forEach((item) => item.addEventListener('change', refresh));
+        refresh();
+    });
+</script>
+@endpush

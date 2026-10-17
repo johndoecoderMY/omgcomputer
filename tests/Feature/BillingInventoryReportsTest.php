@@ -31,6 +31,18 @@ class BillingInventoryReportsTest extends TestCase
             'reference' => $document->document_number,
         ]);
         $this->assertSame(20.0, (float) $document->total);
+        $this->actingAs($user)->get(route('billing.index'))
+            ->assertOk()
+            ->assertSee('data-datatable', false);
+        $this->actingAs($user)->getJson(route('billing.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => $document->number],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertSee($document->number)
+            ->assertSee('RM 20.00');
     }
 
     public function test_failed_invoice_stock_deduction_rolls_back_the_document_and_stock_changes(): void

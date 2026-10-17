@@ -30,6 +30,14 @@ class CustomerRepairTicketTest extends TestCase
 
         $customer = Customer::query()->firstOrFail();
         $this->assertSame($project->id, $customer->project_id);
+        $this->getJson(route('customers.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Avery Tan'],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertSee('Avery Tan');
         $this->get(route('customers.show', $customer))
             ->assertOk()
             ->assertSee('Avery Tan')

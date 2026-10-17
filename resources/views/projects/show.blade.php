@@ -81,7 +81,7 @@
         </div>
     </div>
 
-    <div class="card project-panel mb-4" id="project-schedule">le">
+    <div class="card project-panel mb-4" id="project-schedule">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h2 class="h5 mb-0">Project schedule</h2>
@@ -134,18 +134,18 @@
     @include('projects._event-modal', ['fixedProject' => $project])
 
     <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h2 class="h5 mb-0">Flow charts &amp; SOPs</h2>
+            <h2 class="h5 mb-0">Flow charts &SOPs</h2>
             <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['project_id' => $project->id]) }}">
                 <i class="fas fa-plus me-1"></i>Create for this project
             </a>
         </div>
         <div class="card-body">
-            <p class="small text-body-secondary">Search the flow-chart and SOP library, then link a chart or make a project-specific copy.</p>
+            <p class="small text-body-secondary">Link complete custom flow charts. Example flow charts and SOPs must be duplicated before they can be used by a project.</p>
             <form id="project-flow-chart-actions" method="POST" action="{{ route('projects.flowcharts.link', $project) }}">
                 @csrf
                 <div class="row g-2 align-items-end mb-4">
                     <div class="col-12 col-lg-8">
-                        <label class="form-label" for="project-flow-chart-select">Find flow charts and SOP examples</label>
+                        <label class="form-label" for="project-flow-chart-select">Find custom flow charts to link</label>
                         <select class="form-select js-project-search @error('flow_chart_ids') is-invalid @enderror"
                             id="project-flow-chart-select" name="flow_chart_ids[]" multiple>
                             @foreach ($availableFlowCharts as $flowChart)
@@ -155,18 +155,38 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if ($availableFlowCharts->isEmpty())<div class="form-text">No unlinked custom flow charts are available.</div>@endif
                         @error('flow_chart_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         @error('flow_chart_ids.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12 col-lg-4 d-flex flex-wrap gap-2">
+                    <div class="col-12 col-lg-4">
                         <button class="btn btn-sm btn-primary" type="submit">
                             <i class="fas fa-link me-1"></i>Link selected
                         </button>
-                        <button class="btn btn-sm btn-outline-primary" type="submit"
-                            formaction="{{ route('projects.flowcharts.duplicate', $project) }}">
-                            <i class="fas fa-copy me-1"></i>Duplicate selected for project
-                        </button>
                     </div>
+                </div>
+            </form>
+            <form method="POST" action="{{ route('projects.flowcharts.duplicate', $project) }}" class="row g-2 align-items-end mb-4">
+                @csrf
+                <div class="col-12 col-lg-8">
+                    <label class="form-label" for="project-example-flow-chart-select">Find SOP examples to duplicate</label>
+                    <select class="form-select js-project-search @error('flow_chart_ids') is-invalid @enderror"
+                        id="project-example-flow-chart-select" name="flow_chart_ids[]" multiple>
+                        @foreach ($availableExamples as $flowChart)
+                            <option value="{{ $flowChart->id }}" @selected(in_array((string) $flowChart->id, old('flow_chart_ids', []), true))>
+                                {{ ['website' => 'Website', 'process' => 'Process', 'product' => 'Product SOP', 'service' => 'Service SOP', 'education' => 'Student FYP SOP'][$flowChart->category] ?? 'Flow chart' }}
+                                · {{ $flowChart->title }}{{ $flowChart->subject_name ? ' · '.$flowChart->subject_name : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if ($availableExamples->isEmpty())<div class="form-text">No example charts are available to duplicate.</div>@endif
+                    @error('flow_chart_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    @error('flow_chart_ids.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12 col-lg-4">
+                    <button class="btn btn-sm btn-outline-primary" type="submit">
+                        <i class="fas fa-copy me-1"></i>Duplicate selected for project
+                    </button>
                 </div>
             </form>
             <h3 class="h6 mb-3">Linked flow charts and SOPs</h3>
@@ -186,10 +206,10 @@
         </div>
     </div>
 
-    <div class="card project-panel mb-4" id="project-hardware">re">
+    <div class="card project-panel mb-4" id="project-hardware">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Parts &amp; hardware recommendations</h2>
+                <h2 class="h5 mb-0">Parts &hardware recommendations</h2>
                 <p class="small text-body-secondary mb-0">Track suggested parts for this project without changing inventory stock.</p>
             </div>
             <span class="badge text-bg-light border">{{ $project->inventoryParts->count() }} recommended</span>
@@ -324,10 +344,9 @@
         </div>
     </div>
 
-    <div class="card project-panel mb-4" id="project-estimate">te">
-        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="card project-panel mb-4" id="project-estimate">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Software &amp; other project costs</h2>
+                <h2 class="h5 mb-0">Software &other project costs</h2>
                 <p class="small text-body-secondary mb-0">Add software licenses, labor, or other estimated costs to the project total.</p>
             </div>
             <span class="badge text-bg-light border">{{ $project->estimateItems->count() }} items</span>
@@ -393,7 +412,7 @@
             @endforelse
         </div>
         <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">Software &amp; other subtotal</span>
+            <span class="fw-semibold">Software &other subtotal</span>
             <strong>RM {{ number_format($otherEstimateTotal, 2) }}</strong>
         </div>
     </div>

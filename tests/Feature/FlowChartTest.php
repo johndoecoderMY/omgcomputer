@@ -4,10 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\FlowChart;
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\User;
-use Illuminate\Support\Str;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class FlowChartTest extends TestCase
@@ -49,7 +48,7 @@ class FlowChartTest extends TestCase
             ->assertSee('Services')
             ->assertSee('Contact')
             ->assertSee('data-flow-chart', false)
-            ->assertSee('data-node-id="' . $home . '"', false)
+            ->assertSee('data-node-id="'.$home.'"', false)
             ->assertSee($services, false)
             ->assertSee($contact, false);
 
@@ -97,38 +96,116 @@ class FlowChartTest extends TestCase
         $this->assertDatabaseCount('flow_charts', 0);
     }
 
-    public function test_a_flow_chart_node_can_create_a_linked_project_task(): void
+    public function test_example_flow_charts_can_only_be_duplicated_into_projects(): void
     {
         $user = User::factory()->create();
         $project = Project::query()->create(['name' => 'Website launch']);
-        $stepId = (string) Str::uuid();
         $flowChart = FlowChart::query()->create([
-            'title' => 'Website journey',
-            'steps' => [[
-                'id' => $stepId,
-                'label' => 'Build service page',
-                'kind' => 'page',
-                'connections' => [],
-            ]],
+            'title' => 'Reusable website journey',
+            'is_example' => true,
+            'steps' => [['id' => (string) Str::uuid(), 'label' => 'Build service page', 'kind' => 'page', 'connections' => []]],
         ]);
 
         $this->actingAs($user)->get(route('development.flowcharts.show', $flowChart))
             ->assertOk()
-            ->assertSee('Create task')
-            ->assertSee('Website launch');
+            ->assertSee('This example can be copied')
+            ->assertDontSee('name="assigned_to"', false)
+            ->assertDontSee('flowcharts/'.$flowChart->id.'/tasks', false);
 
-        $this->actingAs($user)->post(route('development.flowcharts.tasks.store', $flowChart), [
-            'step_id' => $stepId,
+        $this->post(route('projects.flowcharts.link', $project), [
+            'flow_chart_ids' => [$flowChart->id],
+        ])->assertSessionHasErrors('flow_chart_ids');
+        $this->put(route('projects.flowcharts.sync', $project), [
+            'flow_chart_ids' => [$flowChart->id],
+        ])->assertSessionHasErrors('flow_chart_ids');
+        $this->assertDatabaseCount('flow_chart_project', 0);
+
+        $this->post(route('projects.flowcharts.duplicate', $project), [
+            'flow_chart_ids' => [$flowChart->id],
+        ])->assertRedirect(route('projects.show', $project));
+        $copy = FlowChart::query()->where('title', 'Reusable website journey — Website launch copy')->firstOrFail();
+        $this->assertFalse($copy->is_example);
+        $this->assertTrue($project->flowCharts()->whereKey($copy->id)->exists());
+
+        $this->post(route('development.flowcharts.store'), [
             'project_id' => $project->id,
-            'assigned_to' => $user->id,
-        ])->assertRedirect(route('development.flowcharts.show', $flowChart));
+            'title' => 'Invalid linked example',
+            'is_example' => '1',
+            'steps' => [['id' => (string) Str::uuid(), 'label' => 'Start', 'kind' => 'start', 'connections' => []]],
+        ])->assertStatus(422);
+    }
 
-        $task = Task::query()->firstOrFail();
-        $this->assertSame('Build service page', $task->title);
-        $this->assertSame($project->id, $task->project_id);
-        $this->assertSame($user->id, $task->assigned_to);
-        $this->assertSame($flowChart->id, $task->flow_chart_id);
-        $this->assertSame($stepId, $task->flow_chart_step_id);
+    public function test_custom_flow_chart_steps_can_be_added_as_tasks_to_a_linked_project(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create(['name' => 'Website launch']);
+        $firstStepId = (string) Str::uuid();
+        $secondStepId = (string) Str::uuid();
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Website launch process',
+            'steps' => [
+                ['id' => $firstStepId, 'label' => 'Prepare homepage', 'kind' => 'action', 'connections' => [$secondStepId]],
+                ['id' => $secondStepId, 'label' => 'Review homepage', 'kind' => 'action', 'connections' => []],
+            ],
+        ]);
+        $flowChart->projects()->attach($project);
+        $this->actingAs($user);
+
+        $this->get(route('development.flowcharts.show', $flowChart))
+            ->assertOk()
+            ->assertSee('Add flow chart steps to tasks')
+            ->assertSee('Add steps as tasks');
+
+        $this->post(route('development.flowcharts.tasks.store', $flowChart), [
+            'project_id' => $project->id,
+        ])->assertRedirect(route('development.flowcharts.show', $flowChart))
+            ->assertSessionHas('success', '2 task(s) created from the flow chart steps.');
+
+        $this->get(route('development.flowcharts.show', $flowChart))
+            ->assertOk()
+            ->assertSee('data-flash-toast', false)
+            ->assertSee('2 task(s) created from the flow chart steps.');
+
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'flow_chart_id' => $flowChart->id,
+            'flow_chart_step_id' => $firstStepId,
+            'title' => 'Prepare homepage',
+        ]);
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'flow_chart_id' => $flowChart->id,
+            'flow_chart_step_id' => $secondStepId,
+            'title' => 'Review homepage',
+        ]);
+
+        $this->post(route('development.flowcharts.tasks.store', $flowChart), [
+            'project_id' => $project->id,
+        ])->assertSessionHas('success', 'Tasks for this flow chart already exist in the selected project.');
+        $this->assertDatabaseCount('tasks', 2);
+    }
+
+    public function test_flow_chart_steps_cannot_be_added_to_unlinked_or_example_projects(): void
+    {
+        $user = User::factory()->create();
+        $project = Project::query()->create(['name' => 'Website launch']);
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Unlinked process',
+            'steps' => [['id' => 'step-one', 'label' => 'Prepare homepage', 'kind' => 'action', 'connections' => []]],
+        ]);
+        $example = FlowChart::query()->create([
+            'title' => 'Example process',
+            'is_example' => true,
+            'steps' => [['id' => 'example-step', 'label' => 'Prepare homepage', 'kind' => 'action', 'connections' => []]],
+        ]);
+        $this->actingAs($user);
+
+        $this->from(route('development.flowcharts.show', $flowChart))
+            ->post(route('development.flowcharts.tasks.store', $flowChart), ['project_id' => $project->id])
+            ->assertSessionHasErrors('project_id');
+        $this->post(route('development.flowcharts.tasks.store', $example), ['project_id' => $project->id])
+            ->assertNotFound();
+        $this->assertDatabaseCount('tasks', 0);
     }
 
     public function test_flow_chart_node_positions_can_be_saved_and_survive_edits(): void

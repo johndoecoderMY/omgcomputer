@@ -12,7 +12,7 @@ class StudentFypSopSeeder extends Seeder
     {
         $examples = [
             [
-                'FYP Consultation SOP (Example)',
+                'FYP Consultation SOP',
                 'Student consultations',
                 'Agree an agenda, review evidence since the last meeting, unblock decisions, and leave with recorded actions.',
                 [
@@ -26,7 +26,7 @@ class StudentFypSopSeeder extends Seeder
                 [[1], [2], [3, 4], [4], [5], []],
             ],
             [
-                'FYP Debugging SOP (Example)',
+                'FYP Debugging SOP',
                 'Debugging support',
                 'Guide students to reproduce and isolate a fault, form a testable hypothesis, and document a verified fix.',
                 [
@@ -42,7 +42,7 @@ class StudentFypSopSeeder extends Seeder
                 [[1], [2], [3], [4], [6, 5], [3], [7], []],
             ],
             [
-                'FYP Mentoring SOP (Example)',
+                'FYP Mentoring SOP',
                 'Student mentoring',
                 'Set a student-led mentoring goal, discuss options and wellbeing or support needs, and agree a manageable next step.',
                 [
@@ -56,7 +56,7 @@ class StudentFypSopSeeder extends Seeder
                 [[1], [2], [3, 4], [4], [5], []],
             ],
             [
-                'FYP Project Setup Workshop SOP (Example)',
+                'FYP Project Setup Workshop SOP',
                 'Project setup workshop',
                 'Help students establish a clear project brief, safe workspace, version control, collaboration norms, and first milestones.',
                 [
@@ -72,7 +72,7 @@ class StudentFypSopSeeder extends Seeder
                 [[1], [2], [3], [4], [5], [7, 6], [7], []],
             ],
             [
-                'FYP Progress Review SOP (Example)',
+                'FYP Progress Review SOP',
                 'Progress reviews',
                 'Review milestone evidence against the plan, identify risks early, and agree a realistic recovery or continuation plan.',
                 [
@@ -87,7 +87,7 @@ class StudentFypSopSeeder extends Seeder
                 [[1], [2], [3], [5, 4], [5], [6], []],
             ],
             [
-                'Small-Group FYP Tech Clinic SOP (Example)',
+                'Small-Group FYP Tech Clinic SOP',
                 'Small-group technical clinic',
                 'Run a time-boxed peer clinic that protects project privacy, shares reproducible technical questions, and closes with individual actions.',
                 [
@@ -107,6 +107,7 @@ class StudentFypSopSeeder extends Seeder
             FlowChart::query()->firstOrCreate(
                 ['category' => 'education', 'title' => $title],
                 [
+                    'is_example' => true,
                     'subject_name' => $subject,
                     'description' => $description,
                     'steps' => SopTemplate::customSteps($steps, $connections),

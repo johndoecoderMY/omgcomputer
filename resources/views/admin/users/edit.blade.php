@@ -1,12 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Manage member')
+@section('title', $accountType === 'customers' ? 'Manage customer account' : 'Manage member')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration / Members" :title="$user->name"
-        description="Update this member's contact details, roles, and individual permissions."
-        :back-url="route('admin.users.index')" back-label="All members" />
+    <x-page-header eyebrow="Administration / Accounts" :title="$user->name"
+        :description="$accountType === 'customers'
+            ? 'Update this customer account, its role assignments, and individual permissions.'
+            : 'Update this member’s contact details, roles, and individual permissions.'"
+        :back-url="route($accountType === 'customers' ? 'admin.users.customers' : 'admin.users.index')"
+        :back-label="$accountType === 'customers' ? 'All customer accounts' : 'All members'" />
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
@@ -44,6 +47,7 @@
                 <label class="form-label" for="phone">Phone</label>
                 <input class="form-control" id="phone" name="phone" value="{{ old('phone', $user->phone) }}" maxlength="50">
             </div>
+            @if ($accountType !== 'customers')
             <div class="col-md-6">
                 <label class="form-label" for="team_ids">Teams</label>
                 <select class="form-select" id="team_ids" name="team_ids[]" multiple>
@@ -55,6 +59,7 @@
                 </select>
                 <div class="form-text">Select all teams this member belongs to. Hold Ctrl (Windows) or Command (Mac) to select multiple teams.</div>
             </div>
+            @endif
             <div class="col-12">
                 <label class="form-label" for="address">Address</label>
                 <textarea class="form-control" id="address" name="address" rows="3" maxlength="2000">{{ old('address', $user->address) }}</textarea>
@@ -75,7 +80,7 @@
         </div>
         <div class="card-footer d-flex justify-content-between">
             <a class="btn btn-outline-secondary" href="{{ route('members.show', $user) }}">View profile</a>
-            <button class="btn btn-primary" type="submit">Save user profile</button>
+            <button class="btn btn-primary" type="submit">Save account</button>
         </div>
     </form>
 
@@ -116,7 +121,7 @@
                         <span class="form-check-label">{{ $permission->name }}</span>
                     </label>
                 @empty
-                    <p class="small text-body-secondary mb-0">No permissions exist yet. Create them in Roles &amp; permissions.</p>
+                    <p class="small text-body-secondary mb-0">No permissions exist yet. Create them in Roles & permissions.</p>
                 @endforelse
             </div>
             <div class="card-footer bg-body d-flex justify-content-between align-items-center">
@@ -128,7 +133,7 @@
 
     <div class="card border-danger mt-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-1 text-danger">Delete member</h2>
-            <p class="small text-body-secondary mb-0">This permanently removes the member account. The currently signed-in account and the last administrator cannot be deleted.</p>
+            <p class="small text-body-secondary mb-0">This permanently removes the account. The currently signed-in account and the last administrator cannot be deleted.</p>
         </div>
         <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
             <span>{{ $user->email }}</span>
@@ -136,7 +141,7 @@
                 onsubmit="return confirm('Permanently delete {{ $user->name }}? This cannot be undone.');">
                 @csrf
                 @method('DELETE')
-                <button class="btn btn-outline-danger" type="submit">Delete member</button>
+                <button class="btn btn-outline-danger" type="submit">Delete account</button>
             </form>
         </div>
     </div>

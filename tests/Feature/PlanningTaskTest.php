@@ -26,8 +26,8 @@ class PlanningTaskTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('planner.business-plan'))
             ->assertOk()
-            ->assertSee('PC &amp; Laptop Repair Shop', false)
-            ->assertSee('Planning &amp; Progress', false)
+            ->assertSee('PC &Laptop Repair Shop', false)
+            ->assertSee('Planning &Progress', false)
             ->assertSee('Back to planner')
             ->assertSee('RM15,500')
             ->assertSee('RM5,880');

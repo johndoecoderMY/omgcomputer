@@ -31,13 +31,16 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $admin->assignRole('admin');
         $this->actingAs($admin)->get(route('admin.access.index'))
             ->assertOk()
-            ->assertSee('Roles &amp; permissions', false)
+            ->assertSee('Roles & permissions', false)
+            ->assertSee('Permissions matrix')
+            ->assertSee('Role information')
             ->assertDontSee('User roles');
         $this->get(route('admin.users.index'))->assertOk()->assertSee('Members');
+        $this->get(route('admin.users.customers'))->assertOk()->assertSee('Customer accounts');
         $this->get(route('admin.users.edit', $member))->assertOk()->assertSee('Account roles');
 
         $this->post(route('admin.access.roles.store'), ['name' => 'supervisor'])
-            ->assertRedirect(route('admin.access.index'));
+            ->assertRedirect(route('admin.access.index', ['role' => Role::query()->where('name', 'supervisor')->value('id')]));
         $supervisor = Role::query()->where('name', 'supervisor')->firstOrFail();
         $this->post(route('admin.access.permissions.store'), ['name' => 'projects.approve'])
             ->assertRedirect(route('admin.access.index'));
@@ -46,13 +49,17 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->put(route('admin.access.roles.update', $supervisor), [
             'name' => 'supervisor',
             'permission_ids' => [$permission->id],
-        ])->assertRedirect(route('admin.access.index'));
+        ])->assertRedirect(route('admin.access.index', ['role' => $supervisor->id]));
         $this->assertTrue($supervisor->fresh()->hasPermissionTo($permission));
 
         $this->put(route('admin.access.users.roles.update', $member), [
             'role_ids' => [$supervisor->id],
         ])->assertRedirect(route('admin.users.edit', $member));
         $this->assertTrue($member->fresh()->hasRole('supervisor'));
+        $this->get(route('admin.access.index', ['role' => $supervisor->id]))
+            ->assertOk()
+            ->assertSee('projects.approve')
+            ->assertSee($member->email);
         $this->delete(route('admin.access.roles.destroy', $supervisor))
             ->assertSessionHas('error');
         $this->delete(route('admin.access.permissions.destroy', $permission))
@@ -68,7 +75,7 @@ class AdminAccessAndProjectManagementTest extends TestCase
         ])->assertRedirect(route('admin.users.edit', $member));
         $this->put(route('admin.access.roles.update', $supervisor), [
             'name' => 'supervisor',
-        ])->assertRedirect(route('admin.access.index'));
+        ])->assertRedirect(route('admin.access.index', ['role' => $supervisor->id]));
         $this->delete(route('admin.access.permissions.destroy', $permission))
             ->assertRedirect(route('admin.access.index'));
         $this->delete(route('admin.access.roles.destroy', $supervisor))
@@ -181,7 +188,8 @@ class AdminAccessAndProjectManagementTest extends TestCase
             ->assertOk()
             ->assertSee('data-datatable', false)
             ->assertSee('Duplicate selected for project')
-            ->assertSee('Find flow charts and SOP examples');
+            ->assertSee('Find custom flow charts to link')
+            ->assertSee('Find SOP examples to duplicate');
         $this->getJson(route('projects.flowcharts.datatable', [
             'project' => $project->id,
             'draw' => 1,

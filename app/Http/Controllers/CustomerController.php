@@ -8,25 +8,45 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Yajra\DataTables\Facades\DataTables;
 
 class CustomerController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $query = Customer::query()->with('project')->withCount('repairTickets');
+        return view('customers.index');
+    }
 
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $query->where(fn ($customers) => $customers
-                ->where('name', 'like', "%{$search}%")
-                ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%")
-                ->orWhere('company', 'like', "%{$search}%"));
-        }
-
-        return view('customers.index', [
-            'customers' => $query->orderBy('name')->paginate(25)->withQueryString(),
-        ]);
+    public function datatable(Request $request)
+    {
+        return DataTables::eloquent(Customer::query()->with('project')->withCount('repairTickets'))
+            ->filter(function ($customers) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search !== '') {
+                    $customers->where(fn ($matches) => $matches
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('company', 'like', "%{$search}%"));
+                }
+            }, true)
+            ->addColumn('customer', fn (Customer $customer): string => sprintf(
+                '<a class="fw-semibold" href="%s">%s</a>%s',
+                e(route('customers.show', $customer)),
+                e($customer->name),
+                $customer->company ? '<div class="small text-body-secondary">'.e($customer->company).'</div>' : '',
+            ))
+            ->addColumn('contact', fn (Customer $customer): string => e($customer->email ?: '—')
+                .'<div class="small text-body-secondary">'.e($customer->phone ?: '').'</div>')
+            ->addColumn('project_name', fn (Customer $customer): string => $customer->project
+                ? sprintf('<a href="%s">%s</a>', e(route('projects.show', $customer->project)), e($customer->project->name))
+                : '<span class="text-body-secondary">—</span>')
+            ->addColumn('actions', fn (Customer $customer): string => sprintf(
+                '<a class="btn btn-sm btn-outline-secondary" href="%s">View profile</a>',
+                e(route('customers.show', $customer)),
+            ))
+            ->rawColumns(['customer', 'contact', 'project_name', 'actions'])
+            ->toJson();
     }
 
     public function create(Request $request): View

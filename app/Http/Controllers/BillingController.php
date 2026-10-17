@@ -15,32 +15,52 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Mpdf\Mpdf;
+use Yajra\DataTables\Facades\DataTables;
 
 class BillingController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $query = BillingDocument::query()->withSum('payments', 'amount');
+        return view('billing.index');
+    }
 
-        if ($request->filled('type') && in_array($request->input('type'), ['invoice', 'quotation'], true)) {
+    public function datatable(Request $request)
+    {
+        $query = BillingDocument::query();
+        if (in_array($request->input('type'), ['invoice', 'quotation'], true)) {
             $query->where('type', $request->input('type'));
         }
-
-        if ($request->filled('status') && in_array($request->input('status'), ['draft', 'issued', 'partial', 'part_paid', 'paid', 'void'], true)) {
+        if (in_array($request->input('status'), ['draft', 'issued', 'partial', 'part_paid', 'paid', 'void'], true)) {
             $query->where('status', $request->input('status'));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->string('search')->toString();
-            $query->where(fn ($documents) => $documents
-                ->where('number', 'like', "%{$search}%")
-                ->orWhere('customer_name', 'like', "%{$search}%")
-                ->orWhere('customer_email', 'like', "%{$search}%"));
-        }
-
-        return view('billing.index', [
-            'documents' => $query->latest('issue_date')->paginate(20)->withQueryString(),
-        ]);
+        return DataTables::eloquent($query)
+            ->filter(function ($documents) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search !== '') {
+                    $documents->where(fn ($matches) => $matches
+                        ->where('number', 'like', "%{$search}%")
+                        ->orWhere('customer_name', 'like', "%{$search}%")
+                        ->orWhere('customer_email', 'like', "%{$search}%"));
+                }
+            }, true)
+            ->addColumn('document', fn (BillingDocument $document): string => sprintf(
+                '<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
+                e(route('billing.documents.show', $document)),
+                e($document->number),
+                e(ucfirst($document->type)),
+            ))
+            ->editColumn('issue_date', fn (BillingDocument $document): string => $document->issue_date->format('M j, Y'))
+            ->addColumn('status_label', fn (BillingDocument $document): string => sprintf(
+                '<span class="badge text-bg-%s">%s</span>',
+                $document->status === 'paid' ? 'success' : ($document->status === 'void' ? 'secondary' : ($document->status === 'draft' ? 'light' : 'warning')),
+                e(str_replace('_', ' ', ucfirst($document->status))),
+            ))
+            ->editColumn('total', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->total, 2))
+            ->editColumn('paid_amount', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->paid_amount, 2))
+            ->addColumn('balance', fn (BillingDocument $document): string => 'RM '.number_format($document->balance, 2))
+            ->rawColumns(['document', 'status_label'])
+            ->toJson();
     }
 
     public function create(Request $request): View
@@ -66,7 +86,7 @@ class BillingController extends Controller
             'lines' => [[
                 'inventory_part_id' => null,
                 'product_id' => null,
-                'description' => $ticket ? 'Repair service: ' . $ticket->issue_description : '',
+                'description' => $ticket ? 'Repair service: '.$ticket->issue_description : '',
                 'quantity' => 1,
                 'unit_price' => null,
             ]],
@@ -147,11 +167,11 @@ class BillingController extends Controller
 
         $document = DB::transaction(function () use ($data, $request, $type, $issueDate, $stock): BillingDocument {
             $document = BillingDocument::create([
-                'number' => 'TEMP-' . Str::upper(Str::random(12)),
+                'number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'type' => $type,
                 'status' => 'draft',
                 'user_id' => $request->user()->id,
-            'repair_ticket_id' => $data['repair_ticket_id'] ?? null,
+                'repair_ticket_id' => $data['repair_ticket_id'] ?? null,
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?? null,
                 'customer_phone' => $data['customer_phone'] ?? null,
@@ -186,7 +206,7 @@ class BillingController extends Controller
             $taxAmount = round($subtotal * (float) $data['tax_rate'] / 100, 2);
             $document->update([
                 'number' => ($type === 'quotation' ? 'QUO-' : 'INV-')
-                    . now()->format('Y') . '-' . str_pad((string) $document->id, 6, '0', STR_PAD_LEFT),
+                    .now()->format('Y').'-'.str_pad((string) $document->id, 6, '0', STR_PAD_LEFT),
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
                 'total' => round($subtotal + $taxAmount, 2),
@@ -341,7 +361,7 @@ class BillingController extends Controller
             $locked->paid_amount = round((float) $locked->paid_amount + $amount, 2);
             $locked->status = $locked->paid_amount >= $locked->total ? 'paid' : 'partial';
             $locked->save();
-            });
+        });
 
         return redirect()->route('billing.documents.show', $document)->with('success', 'Payment recorded.');
     }
@@ -375,11 +395,11 @@ class BillingController extends Controller
         $logoData = is_file($logoPath) ? base64_encode((string) file_get_contents($logoPath)) : null;
         $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
         $mpdf->WriteHTML(view('billing.pdf', compact('document', 'logoData'))->render());
-        $filename = strtolower($document->number) . '.pdf';
+        $filename = strtolower($document->number).'.pdf';
 
         return response($mpdf->Output($filename, 'S'))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+            ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
     }
 
     private function validateLineItems(array $items): void

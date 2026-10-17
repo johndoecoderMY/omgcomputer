@@ -3,6 +3,16 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$dumpBinaryPath = env('DB_DUMP_BINARY_PATH');
+if (! is_string($dumpBinaryPath) || trim($dumpBinaryPath) === '') {
+    $wampDumpBinaries = [
+        ...(glob('C:\\wamp64\\bin\\mysql\\*\\bin\\mysqldump.exe') ?: []),
+        ...(glob('C:\\wamp64\\bin\\mariadb\\*\\bin\\mysqldump.exe') ?: []),
+    ];
+    sort($wampDumpBinaries, SORT_NATURAL);
+    $dumpBinaryPath = $wampDumpBinaries === [] ? '' : dirname(end($wampDumpBinaries));
+}
+
 return [
 
     /*
@@ -59,6 +69,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'dump' => [
+                'dump_binary_path' => $dumpBinaryPath,
+            ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
@@ -79,6 +92,9 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'dump' => [
+                'dump_binary_path' => $dumpBinaryPath,
+            ],
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

@@ -60,8 +60,11 @@ class WorkspaceDashboardAndPartsTest extends TestCase
             ->assertSee('1 high priority')
             ->assertSee('Student capstone')
             ->assertSee('Design review')
-            ->assertSee('Example Website Structure & Build SOP')
-            ->assertSee('Example Database Design & Migration SOP');
+            ->assertSee('dashboard-task-status-chart', false)
+            ->assertSee('dashboard-ticket-status-chart', false)
+            ->assertSee('dashboard-ticket-arrivals-chart', false)
+            ->assertSee('Website Structure & Build SOP')
+            ->assertSee('Database Design & Migration SOP');
     }
 
     public function test_project_parts_can_be_recommended_without_changing_stock(): void
@@ -132,7 +135,7 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         ]);
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Software &amp; other project costs', false)
+            ->assertSee('Software &other project costs', false)
             ->assertSee('IDE licenses')
             ->assertSee('RM 31.00')
             ->assertSee('RM 56.00');
@@ -200,11 +203,13 @@ class WorkspaceDashboardAndPartsTest extends TestCase
 
         $this->assertDatabaseHas('flow_charts', [
             'category' => 'website',
-            'title' => 'Example Website Structure & Build SOP',
+            'title' => 'Website Structure & Build SOP',
+            'is_example' => true,
         ]);
         $this->assertDatabaseHas('flow_charts', [
             'category' => 'process',
-            'title' => 'Example Database Design & Migration SOP',
+            'title' => 'Database Design & Migration SOP',
+            'is_example' => true,
         ]);
         $this->assertSame(2, FlowChart::query()->whereIn('category', ['website', 'process'])->count());
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,15 +23,25 @@ class TeamController extends Controller
         ]);
     }
 
-    public function datatable()
+    public function datatable(Request $request)
     {
         return DataTables::eloquent(
             Team::query()
-                ->join('departments', 'teams.department_id', '=', 'departments.id')
+                ->leftJoin('departments', 'teams.department_id', '=', 'departments.id')
                 ->select('teams.*', 'departments.name as department_name')
                 ->with('users')
                 ->withCount('users')
         )
+            ->filter(function (Builder $teams) use ($request): void {
+                $search = trim((string) $request->input('search.value', ''));
+                if ($search !== '') {
+                    $teams->where(fn (Builder $matches) => $matches
+                        ->where('teams.name', 'like', "%{$search}%")
+                        ->orWhere('departments.name', 'like', "%{$search}%")
+                        ->orWhere('teams.description', 'like', "%{$search}%"));
+                }
+            }, true)
+            ->editColumn('department_name', fn (Team $team): string => $team->department_name ?? '—')
             ->addColumn('members', fn (Team $team): string => $team->users
                 ->map(fn (User $user): string => sprintf(
                     '<a href="%s">%s</a>',
@@ -90,13 +101,15 @@ class TeamController extends Controller
     private function validatedData(Request $request, ?Team $team = null): array
     {
         return $request->validate([
-            'department_id' => ['required', 'integer', 'exists:departments,id'],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'name' => [
                 'required',
                 'string',
                 'max:255',
                 Rule::unique('teams', 'name')
-                    ->where('department_id', $request->input('department_id'))
+                    ->where(fn ($query) => $request->filled('department_id')
+                        ? $query->where('department_id', $request->input('department_id'))
+                        : $query->whereNull('department_id'))
                     ->ignore($team?->id),
             ],
             'description' => ['nullable', 'string', 'max:2000'],

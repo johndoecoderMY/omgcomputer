@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\CustomerMessageTemplate;
 use App\Models\InventoryPart;
 use App\Models\MarketingCampaign;
 use App\Models\Project;
@@ -73,8 +74,67 @@ class AnalyticsReportsTest extends TestCase
         $this->actingAs($user)->get(route('reports.marketing'))
             ->assertOk()
             ->assertSee('October service campaign')
-            ->assertSee('RM 960.00');
+            ->assertSee('RM 960.00')
+            ->assertSee('Marketing &WhatsApp', false)
+            ->assertSee('Meta API is not connected yet.')
+            ->assertSee('META_WHATSAPP_PHONE_NUMBER_ID')
+            ->assertSee('Not connected');
+        $this->actingAs($user)->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('Delivery API readiness')
+            ->assertSee('EasyParcel Malaysia')
+            ->assertSee('EasyParcel API docs')
+            ->assertSee('EASYPARCEL_API_KEY')
+            ->assertSee('not set');
         $this->assertSame(1, MarketingCampaign::query()->count());
+    }
+
+    public function test_delivery_api_readiness_displays_presence_without_exposing_credentials(): void
+    {
+        config([
+            'services.delivery.provider' => 'easyparcel',
+            'services.delivery.api_key' => 'test-delivery-secret',
+            'services.delivery.api_url' => 'https://api.example.test',
+            'services.delivery.environment' => 'sandbox',
+        ]);
+
+        $this->actingAs(User::factory()->create())->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('API key configured')
+            ->assertSee('API URL configured')
+            ->assertSee('Environment: Sandbox')
+            ->assertDontSee('test-delivery-secret')
+            ->assertDontSee('https://api.example.test');
+    }
+
+    public function test_marketing_page_reports_meta_configuration_presence_without_exposing_secrets(): void
+    {
+        $user = User::factory()->create();
+        CustomerMessageTemplate::query()->create([
+            'slug' => 'whatsapp-ready',
+            'name' => 'WhatsApp ready',
+            'stage' => 'ready',
+            'channel' => 'whatsapp',
+            'body' => 'Your device is ready.',
+            'is_active' => true,
+        ]);
+        config([
+            'services.meta.app_id' => 'app-id-test',
+            'services.meta.app_secret' => 'test-meta-secret',
+            'services.meta.access_token' => null,
+            'services.meta.ad_account_id' => 'act_123',
+            'services.meta.whatsapp_business_account_id' => null,
+            'services.meta.whatsapp_phone_number_id' => 'phone-id-test',
+            'services.meta.webhook_verify_token' => null,
+        ]);
+
+        $this->actingAs($user)->get(route('reports.marketing'))
+            ->assertOk()
+            ->assertSee('3 / 6')
+            ->assertSee('3 / 4')
+            ->assertSee('1 active WhatsApp message template')
+            ->assertSee('Configured')
+            ->assertDontSee('test-meta-secret');
     }
 
     public function test_products_page_shows_business_plan_offers_and_filters_by_category(): void

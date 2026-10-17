@@ -129,6 +129,14 @@ class ProjectTaskTest extends TestCase
 
         $this->get(route('tasks.index'))
             ->assertOk()
+            ->assertSee('data-datatable', false);
+        $this->getJson(route('tasks.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Build the website'],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
             ->assertSee('Build the website')
             ->assertSee('Main website');
 

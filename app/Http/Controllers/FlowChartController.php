@@ -3,9 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\FlowChart;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\User;
 use App\Support\SopTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -35,6 +33,9 @@ class FlowChartController extends Controller
                 'service' => 'Service SOP',
                 'education' => 'Student FYP SOP',
             ][$flowChart->category] ?? 'Flow chart')
+            ->addColumn('example_label', fn (FlowChart $flowChart): string => $flowChart->is_example
+                ? '<span class="badge text-bg-info">Example</span>'
+                : '<span class="badge text-bg-light border">Custom</span>')
             ->addColumn('projects', fn (FlowChart $flowChart): string => $flowChart->projects->pluck('name')->join(', '))
             ->addColumn('actions', fn (FlowChart $flowChart): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">View</a> <a class="btn btn-sm btn-outline-secondary" href="%s">Edit</a> <form class="d-inline" method="POST" action="%s" onsubmit="return confirm(&quot;Delete this flow chart?&quot;);"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="DELETE"><button class="btn btn-sm btn-outline-danger" type="submit">Delete</button></form>',
@@ -43,7 +44,7 @@ class FlowChartController extends Controller
                 e(route('development.flowcharts.destroy', $flowChart)),
                 e(csrf_token()),
             ))
-            ->rawColumns(['actions'])
+            ->rawColumns(['example_label', 'actions'])
             ->toJson();
     }
 
@@ -51,9 +52,13 @@ class FlowChartController extends Controller
     {
         $category = $request->query('category', 'product');
         abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
+        $type = $request->validate([
+            'type' => ['nullable', Rule::in(['example', 'custom'])],
+        ])['type'] ?? '';
 
         return view('development.flowcharts.sops', [
             'category' => $category,
+            'type' => $type,
             'categoryLabel' => [
                 'product' => 'Product',
                 'service' => 'Service',
@@ -66,13 +71,24 @@ class FlowChartController extends Controller
     {
         $category = $request->query('category', 'product');
         abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
+        $type = $request->validate([
+            'type' => ['nullable', Rule::in(['example', 'custom'])],
+        ])['type'] ?? '';
+        $flowCharts = FlowChart::query()->where('category', $category);
 
-        return DataTables::eloquent(FlowChart::query()->where('category', $category))
+        if ($type !== '') {
+            $flowCharts->where('is_example', $type === 'example');
+        }
+
+        return DataTables::eloquent($flowCharts)
+            ->addColumn('example_label', fn (FlowChart $flowChart): string => $flowChart->is_example
+                ? '<span class="badge text-bg-info">Example</span>'
+                : '<span class="badge text-bg-light border">Custom</span>')
             ->addColumn('actions', fn (FlowChart $flowChart): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">Open SOP</a>',
                 e(route('development.flowcharts.show', $flowChart)),
             ))
-            ->rawColumns(['actions'])
+            ->rawColumns(['example_label', 'actions'])
             ->toJson();
     }
 
@@ -103,8 +119,11 @@ class FlowChartController extends Controller
         $projectId = $request->validate([
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
         ])['project_id'] ?? null;
-        $flowChart = DB::transaction(function () use ($request, $projectId): FlowChart {
-            $flowChart = FlowChart::create($this->validatedData($request));
+        $validatedData = $this->validatedData($request);
+        abort_if($validatedData['is_example'] && $projectId !== null, 422, 'Example flow charts must be duplicated before they can be linked to projects.');
+
+        $flowChart = DB::transaction(function () use ($validatedData, $projectId): FlowChart {
+            $flowChart = FlowChart::create($validatedData);
             if ($projectId !== null) {
                 $flowChart->projects()->attach($projectId);
             }
@@ -121,38 +140,53 @@ class FlowChartController extends Controller
     {
         return view('development.flowcharts.show', [
             'flowChart' => $flowchart,
-            'projects' => Project::query()->orderBy('name')->get(),
             'linkedProjects' => $flowchart->projects()->orderBy('name')->get(),
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
-            'tasks' => $flowchart->tasks()->with('project')->get()->groupBy('flow_chart_step_id'),
+            'stepTasks' => $flowchart->tasks()->with('project')->orderBy('id')->get(),
         ]);
     }
 
-    public function storeTask(Request $request, FlowChart $flowchart): RedirectResponse
+    public function addStepsToTasks(Request $request, FlowChart $flowchart): RedirectResponse
     {
-        $data = $request->validate([
-            'step_id' => ['required', 'string', 'max:64'],
-            'project_id' => ['required', 'integer', 'exists:projects,id'],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-        ]);
-        $step = collect($flowchart->steps)->firstWhere('id', $data['step_id']);
-        abort_if($step === null, 404, 'That node is no longer part of this flow chart.');
+        abort_if($flowchart->is_example, 404);
 
-        DB::transaction(function () use ($flowchart, $step, $data): void {
-            Task::create([
-                'project_id' => $data['project_id'],
-                'assigned_to' => $data['assigned_to'] ?? null,
-                'flow_chart_id' => $flowchart->id,
-                'flow_chart_step_id' => $step['id'],
-                'title' => $step['label'],
-                'description' => "Created from flow chart: {$flowchart->title} ({$step['kind']} node).",
-                'status' => 'backlog',
-                'priority' => 'medium',
+        $data = $request->validate([
+            'project_id' => ['required', 'integer', 'exists:projects,id'],
+        ]);
+        $project = $flowchart->projects()->whereKey($data['project_id'])->first();
+
+        if (! $project) {
+            throw ValidationException::withMessages([
+                'project_id' => 'Choose a project linked to this flow chart.',
             ]);
+        }
+
+        $createdCount = 0;
+        DB::transaction(function () use ($flowchart, $project, &$createdCount): void {
+            foreach ($flowchart->steps as $step) {
+                $task = $project->tasks()->firstOrCreate(
+                    [
+                        'flow_chart_id' => $flowchart->id,
+                        'flow_chart_step_id' => $step['id'],
+                    ],
+                    [
+                        'title' => $step['label'],
+                        'description' => 'Created from flow chart: '.$flowchart->title,
+                        'status' => 'backlog',
+                        'priority' => 'medium',
+                    ],
+                );
+
+                if ($task->wasRecentlyCreated) {
+                    $createdCount++;
+                }
+            }
         });
 
-        return redirect()->route('development.flowcharts.show', $flowchart)
-            ->with('success', "Task created from node: {$step['label']}.");
+        return redirect()
+            ->route('development.flowcharts.show', $flowchart)
+            ->with('success', $createdCount > 0
+                ? "{$createdCount} task(s) created from the flow chart steps."
+                : 'Tasks for this flow chart already exist in the selected project.');
     }
 
     public function saveLayout(Request $request, FlowChart $flowchart): RedirectResponse
@@ -189,7 +223,9 @@ class FlowChartController extends Controller
 
     public function update(Request $request, FlowChart $flowchart): RedirectResponse
     {
-        $flowchart->update($this->validatedData($request));
+        $data = $this->validatedData($request);
+        abort_if($data['is_example'] && $flowchart->projects()->exists(), 422, 'Unlink this flow chart from its projects before marking it as an example.');
+        $flowchart->update($data);
 
         return redirect()
             ->route('development.flowcharts.show', $flowchart)
@@ -212,6 +248,7 @@ class FlowChartController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'category' => ['sometimes', 'required', Rule::in(['website', 'process', 'product', 'service', 'education'])],
             'subject_name' => ['nullable', 'required_if:category,product,service,education', 'string', 'max:255'],
+            'is_example' => ['sometimes', 'boolean'],
             'steps' => ['required', 'array', 'min:1', 'max:30'],
             'steps.*.id' => ['required', 'string', 'max:64', 'distinct:strict'],
             'steps.*.label' => ['required', 'string', 'max:255'],
@@ -261,6 +298,9 @@ class FlowChartController extends Controller
             }
         });
 
-        return $validator->validate();
+        return [
+            ...$validator->validate(),
+            'is_example' => $request->boolean('is_example'),
+        ];
     }
 }

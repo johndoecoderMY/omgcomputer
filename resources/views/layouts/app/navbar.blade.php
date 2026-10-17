@@ -359,7 +359,7 @@
                             class="fas fa-crown me-1"></span><span>Go Pro</span></a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="navbar-vertical.html#!">Set status</a>
-                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile &amp; account</a>
+                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile &account</a>
                     <a class="dropdown-item" href="navbar-vertical.html#!">Feedback</a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="../pages/user/settings.html">Settings</a>

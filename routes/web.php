@@ -69,6 +69,10 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::prefix('admin/users')->name('admin.users.')->middleware('role:admin')->controller(AdminUserController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/customers', 'customers')->name('customers');
+        Route::get('/customers/datatable', 'customersDatatable')->name('customers.datatable');
+        Route::get('/customers/create', 'createCustomer')->name('customers.create');
+        Route::post('/customers', 'storeCustomer')->name('customers.store');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{user}/edit', 'edit')->name('edit');
@@ -87,11 +91,13 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::prefix('bookings')->name('bookings.')->controller(BookingController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::put('/{booking}', 'update')->name('update');
     });
 
     Route::prefix('customer-messages')->name('customer-messages.')->controller(CustomerMessageTemplateController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{customerMessage}', 'show')->name('show');
@@ -103,6 +109,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::prefix('customers')->name('customers.')->controller(CustomerController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{customer}', 'show')->name('show');
@@ -128,6 +135,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::prefix('billing')->name('billing.')->controller(BillingController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
@@ -221,6 +229,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
 
     Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->middleware('not-customer')->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
         Route::post('/{task}/attachments', [AttachmentController::class, 'storeTask'])->name('attachments.store');
         Route::post('/{task}/subtasks', 'storeSubtask')->name('subtasks.store');
         Route::patch('/{task}/status', 'updateStatus')->name('update-status');
@@ -237,7 +246,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/sops', [FlowChartController::class, 'sops'])->name('sops');
         Route::get('/sops/datatable', [FlowChartController::class, 'sopsDatatable'])->name('sops.datatable');
         Route::get('/flowcharts/datatable', [FlowChartController::class, 'datatable'])->name('flowcharts.datatable');
-        Route::post('/flowcharts/{flowchart}/tasks', [FlowChartController::class, 'storeTask'])->name('flowcharts.tasks.store');
+        Route::post('/flowcharts/{flowchart}/tasks', [FlowChartController::class, 'addStepsToTasks'])->name('flowcharts.tasks.store');
         Route::patch('/flowcharts/{flowchart}/layout', [FlowChartController::class, 'saveLayout'])->name('flowcharts.layout');
         Route::resource('flowcharts', FlowChartController::class);
     });

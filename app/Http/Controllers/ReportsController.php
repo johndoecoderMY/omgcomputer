@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BillingDocument;
 use App\Models\BillingDocumentItem;
+use App\Models\CustomerMessageTemplate;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\MarketingCampaign;
@@ -31,6 +32,11 @@ class ReportsController extends Controller
             'to' => $to,
             'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
             'activeCampaigns' => MarketingCampaign::query()->where('status', 'active')->count(),
+            'deliverySetup' => [
+                'api_key' => filled(config('services.delivery.api_key')),
+                'api_url' => filled(config('services.delivery.api_url')),
+            ],
+            'deliveryEnvironment' => config('services.delivery.environment'),
         ]);
     }
 
@@ -48,6 +54,14 @@ class ReportsController extends Controller
             ->orderByDesc('revenue')
             ->limit(10)
             ->get();
+        $salesTrend = $invoices
+            ->groupBy(fn (BillingDocument $invoice): string => $invoice->issue_date->format('Y-m'))
+            ->sortKeys()
+            ->map(fn ($monthlyInvoices, string $month): array => [
+                'month' => Carbon::createFromFormat('Y-m', $month)->format('M Y'),
+                'revenue' => round((float) $monthlyInvoices->sum('total'), 2),
+                'collected' => round((float) $monthlyInvoices->sum('paid_amount'), 2),
+            ])->values();
 
         return view('reports.sales', [
             'from' => $from,
@@ -57,18 +71,29 @@ class ReportsController extends Controller
             'collected' => (clone $documents)->sum('paid_amount'),
             'invoices' => $invoices,
             'topItems' => $topItems,
+            'salesTrend' => $salesTrend,
         ]);
     }
 
     public function inventory(): View
     {
         $parts = InventoryPart::query()->withCount('movements')->orderByRaw('stock_quantity <= reorder_level DESC')->orderBy('name')->get();
+        $lowStockCount = $parts->filter(fn ($part) => $part->stock_quantity <= $part->reorder_level)->count();
 
         return view('reports.inventory', [
             'parts' => $parts,
-            'lowStockCount' => $parts->filter(fn ($part) => $part->stock_quantity <= $part->reorder_level)->count(),
+            'lowStockCount' => $lowStockCount,
             'stockValue' => $parts->sum(fn ($part) => (float) $part->cost_price * $part->stock_quantity),
             'recentMovements' => InventoryMovement::query()->with('part')->latest()->limit(12)->get(),
+            'stockChart' => $parts->sortBy('stock_quantity')->take(10)->map(fn ($part): array => [
+                'name' => $part->name,
+                'quantity' => (int) $part->stock_quantity,
+                'reorder' => (int) $part->reorder_level,
+            ])->values(),
+            'stockHealthChart' => [
+                ['name' => 'At or below reorder', 'value' => $lowStockCount],
+                ['name' => 'Healthy stock', 'value' => max(0, $parts->count() - $lowStockCount)],
+            ],
         ]);
     }
 
@@ -85,12 +110,33 @@ class ReportsController extends Controller
         return view('reports.teams', [
             'users' => $users,
             'unassignedTasks' => Task::query()->whereNull('assigned_to')->count(),
+            'teamChart' => $users->sortByDesc('assigned_tasks_count')->take(8)->map(fn (User $user): array => [
+                'name' => $user->name,
+                'assigned' => (int) $user->assigned_tasks_count,
+                'completed' => (int) $user->completed_tasks_count,
+                'active' => (int) $user->active_tasks_count,
+            ])->values(),
         ]);
     }
 
     public function marketing(): View
     {
         $campaigns = MarketingCampaign::query()->orderByDesc('starts_on')->orderByDesc('created_at')->get();
+        $metaConfig = config('services.meta', []);
+        $whatsAppSetup = [
+            'app_id' => filled($metaConfig['app_id'] ?? null),
+            'app_secret' => filled($metaConfig['app_secret'] ?? null),
+            'access_token' => filled($metaConfig['access_token'] ?? null),
+            'business_account_id' => filled($metaConfig['whatsapp_business_account_id'] ?? null),
+            'phone_number_id' => filled($metaConfig['whatsapp_phone_number_id'] ?? null),
+            'webhook_verify_token' => filled($metaConfig['webhook_verify_token'] ?? null),
+        ];
+        $marketingSetup = [
+            'app_id' => filled($metaConfig['app_id'] ?? null),
+            'app_secret' => filled($metaConfig['app_secret'] ?? null),
+            'access_token' => filled($metaConfig['access_token'] ?? null),
+            'ad_account_id' => filled($metaConfig['ad_account_id'] ?? null),
+        ];
 
         return view('reports.marketing', [
             'campaigns' => $campaigns,
@@ -98,6 +144,12 @@ class ReportsController extends Controller
             'revenue' => $campaigns->sum('attributed_revenue'),
             'leads' => $campaigns->sum('leads'),
             'conversions' => $campaigns->sum('conversions'),
+            'whatsAppSetup' => $whatsAppSetup,
+            'marketingSetup' => $marketingSetup,
+            'whatsAppTemplateCount' => CustomerMessageTemplate::query()
+                ->where('channel', 'whatsapp')
+                ->where('is_active', true)
+                ->count(),
         ]);
     }
 
@@ -134,7 +186,7 @@ class ReportsController extends Controller
             foreach ($invoices as $invoice) {
                 $customer = $invoice->customer_name;
                 if (preg_match('/^[=+\-@]/', $customer)) {
-                    $customer = "'" . $customer;
+                    $customer = "'".$customer;
                 }
                 fputcsv($output, [
                     $invoice->number,

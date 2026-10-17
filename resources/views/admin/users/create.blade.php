@@ -1,12 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Create member')
+@section('title', $accountType === 'customers' ? 'Create customer account' : 'Create member')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration / Members" title="Create member"
-        description="New members receive the default member role and must change their password at first sign-in."
-        :back-url="route('admin.users.index')" back-label="All members" />
+    <x-page-header eyebrow="Administration / Accounts" :title="$accountType === 'customers' ? 'Create customer account' : 'Create member'"
+        :description="$accountType === 'customers'
+            ? 'New customer accounts can view projects and tickets linked to their account.'
+            : 'New members receive the member role and must change their password at first sign-in.'"
+        :back-url="route($accountType === 'customers' ? 'admin.users.customers' : 'admin.users.index')"
+        :back-label="$accountType === 'customers' ? 'All customer accounts' : 'All members'" />
 
     @if ($errors->any())
         <div class="alert alert-danger" role="alert">
@@ -15,7 +18,7 @@
         </div>
     @endif
 
-    <form class="card p-2" method="POST" action="{{ route('admin.users.store') }}">
+    <form class="card p-2" method="POST" action="{{ route($accountType === 'customers' ? 'admin.users.customers.store' : 'admin.users.store') }}">
         @csrf
         <div class="card-body row g-3">
             <div class="col-md-6">
@@ -30,6 +33,7 @@
                 <label class="form-label" for="phone">Phone</label>
                 <input class="form-control" id="phone" name="phone" value="{{ old('phone') }}" maxlength="50">
             </div>
+            @if ($accountType !== 'customers')
             <div class="col-md-6">
                 <label class="form-label" for="team_ids">Teams <span class="text-body-secondary">(optional)</span></label>
                 <select class="form-select" id="team_ids" name="team_ids[]" multiple>
@@ -41,6 +45,7 @@
                 </select>
                 <div class="form-text">Select one or more teams. Hold Ctrl (Windows) or Command (Mac) to select multiple teams.</div>
             </div>
+            @endif
             <div class="col-12">
                 <label class="form-label" for="address">Address</label>
                 <textarea class="form-control" id="address" name="address" rows="3" maxlength="2000">{{ old('address') }}</textarea>
@@ -48,7 +53,7 @@
             <div class="col-md-6">
                 <label class="form-label" for="password">Temporary password</label>
                 <input class="form-control" id="password" name="password" type="password" minlength="12" autocomplete="new-password" required>
-                <div class="form-text">Use at least 12 characters. The member must replace this at first sign-in.</div>
+                <div class="form-text">Use at least 12 characters. The user must replace this at first sign-in.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="password_confirmation">Confirm temporary password</label>
@@ -56,8 +61,8 @@
             </div>
         </div>
         <div class="card-footer bg-body d-flex justify-content-end gap-2">
-            <a class="btn btn-outline-secondary" href="{{ route('admin.users.index') }}">Cancel</a>
-            <button class="btn btn-primary" type="submit">Create member</button>
+            <a class="btn btn-outline-secondary" href="{{ route($accountType === 'customers' ? 'admin.users.customers' : 'admin.users.index') }}">Cancel</a>
+            <button class="btn btn-primary" type="submit">Create {{ $accountType === 'customers' ? 'customer account' : 'member' }}</button>
         </div>
     </form>
 </div>

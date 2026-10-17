@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'meta' => [
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
+        'access_token' => env('META_ACCESS_TOKEN'),
+        'ad_account_id' => env('META_AD_ACCOUNT_ID'),
+        'whatsapp_business_account_id' => env('META_WHATSAPP_BUSINESS_ACCOUNT_ID'),
+        'whatsapp_phone_number_id' => env('META_WHATSAPP_PHONE_NUMBER_ID'),
+        'webhook_verify_token' => env('META_WEBHOOK_VERIFY_TOKEN'),
+        'graph_api_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
+    ],
+
+    'delivery' => [
+        'provider' => env('EASYPARCEL_PROVIDER', 'easyparcel'),
+        'api_key' => env('EASYPARCEL_API_KEY'),
+        'api_url' => env('EASYPARCEL_API_URL'),
+        'environment' => env('EASYPARCEL_ENVIRONMENT', 'sandbox'),
+    ],
+
 ];

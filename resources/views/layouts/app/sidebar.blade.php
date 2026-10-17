@@ -151,7 +151,7 @@
                                 data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketBookingsMenu">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
-                                    <span class="nav-link-text ps-1">Bookings &amp; messages</span>
+                                    <span class="nav-link-text ps-1">Bookings &messages</span>
                                 </div>
                             </a>
                             <ul class="nav collapse" id="repairTicketBookingsMenu">
@@ -191,12 +191,12 @@
                     </a>
                 </li>
 
-                {{-- Customers --}}
+                {{-- Customer records --}}
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('customers.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users"></span></span>
-                            <span class="nav-link-text ps-1">Customers</span>
+                            <span class="nav-link-text ps-1">Customer records</span>
                         </div>
                     </a>
                 </li>
@@ -270,16 +270,29 @@
                         </div>
                     </a>
                     @role('admin')
-                        <a class="nav-link" href="{{ route('admin.users.index') }}">
+                        <a class="nav-link dropdown-indicator" href="#userAccountsMenu" role="button"
+                            data-bs-toggle="collapse" aria-expanded="false" aria-controls="userAccountsMenu">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-users"></span></span>
-                                <span class="nav-link-text ps-1">Members</span>
+                                <span class="nav-link-text ps-1">User accounts</span>
                             </div>
                         </a>
+                        <ul class="nav collapse" id="userAccountsMenu">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('admin.users.index') }}">
+                                    <span class="nav-link-text ps-1">Members </span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('admin.users.customers') }}">
+                                    <span class="nav-link-text ps-1">Customer accounts</span>
+                                </a>
+                            </li>
+                        </ul>
                         <a class="nav-link" href="{{ route('admin.access.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-user-shield"></span></span>
-                                <span class="nav-link-text ps-1">Roles &amp; permissions</span>
+                                <span class="nav-link-text ps-1">Roles & permissions</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('admin.backups.index') }}">
@@ -360,12 +373,41 @@
 
                 {{-- Reports --}}
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ route('reports.index') }}">
+                    <a class="nav-link dropdown-indicator" href="#reportsMenu" role="button"
+                        data-bs-toggle="collapse" aria-expanded="false" aria-controls="reportsMenu">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-chart-line"></span></span>
                             <span class="nav-link-text ps-1">Reports & Analytics</span>
                         </div>
                     </a>
+
+                    <ul class="nav collapse" id="reportsMenu">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.index') }}">
+                                <span class="nav-link-text ps-1">Reports Overview</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.marketing') }}">
+                                <span class="nav-link-text ps-1">Marketing & WhatsApp</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.sales') }}">
+                                <span class="nav-link-text ps-1">Sales</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.inventory') }}">
+                                <span class="nav-link-text ps-1">Inventory</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('reports.teams') }}">
+                                <span class="nav-link-text ps-1">Team Performance</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 {{-- System --}}
