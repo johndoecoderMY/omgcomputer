@@ -42,11 +42,11 @@
                                     <h2 class="h4">Your details</h2>
                                     <div class="mb-3">
                                         <label class="form-label" for="booking-date">Appointment date</label>
-                                        <input class="form-control" type="date" id="booking-date" name="booking_date" value="{{ $initialDate }}" min="{{ now()->toDateString() }}" required>
+                                        <input class="form-control" type="date" id="booking-date" name="booking_date" value="{{ $initialDate }}" min="{{ now()->toDateString() }}" readonly required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label" for="booking-time">Appointment time</label>
-                                        <input class="form-control" type="time" id="booking-time" name="start_time" value="{{ old('start_time') }}" required>
+                                        <input class="form-control" type="time" id="booking-time" name="start_time" value="{{ old('start_time') }}" readonly required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label" for="customer-name">Full name</label>
@@ -86,6 +86,20 @@
                     </div>
                 </form>
 
+                <div class="modal fade" id="booking-times-modal" tabindex="-1" aria-labelledby="booking-times-title" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2 class="modal-title h5" id="booking-times-title">Available times</h2>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p id="availability-message" role="status" aria-live="polite">Loading available times...</p>
+                                <div id="available-times" class="d-flex flex-wrap justify-content-center gap-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -98,11 +112,65 @@
     document.addEventListener("DOMContentLoaded", function () {
         const calendarEl = document.getElementById("calendar");
         const bookingDate = document.getElementById("booking-date");
+        const bookingTime = document.getElementById("booking-time");
+        const availabilityMessage = document.getElementById("availability-message");
+        const availableTimes = document.getElementById("available-times");
+        const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
+        const availabilityUrl = @json(route('bookings.availability'));
+        let availabilityRequest = 0;
+
+        function renderTimes(slots) {
+            availableTimes.replaceChildren();
+
+            slots.forEach(function (slot) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "btn btn-outline-primary btn-lg";
+                button.textContent = new Date("1970-01-01T" + slot + ":00").toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit"
+                });
+                button.addEventListener("click", function () {
+                    bookingTime.value = slot;
+                    timesModal.hide();
+                });
+                availableTimes.append(button);
+            });
+        }
+
         const calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: "dayGridMonth",
-            dateClick: function (info) {
+            dateClick: async function (info) {
+                const request = ++availabilityRequest;
                 calendar.select(info.dateStr);
                 bookingDate.value = info.dateStr;
+                bookingTime.value = "";
+                availableTimes.replaceChildren();
+                availabilityMessage.textContent = "Loading available times...";
+                timesModal.show();
+
+                try {
+                    const response = await fetch(availabilityUrl + "?date=" + encodeURIComponent(info.dateStr), {
+                        headers: { "Accept": "application/json" }
+                    });
+                    if (!response.ok) {
+                        throw new Error("Availability could not be loaded.");
+                    }
+
+                    const data = await response.json();
+                    if (request !== availabilityRequest) {
+                        return;
+                    }
+
+                    renderTimes(data.slots);
+                    availabilityMessage.textContent = data.slots.length
+                        ? "Choose an available time."
+                        : "No times are available for this date.";
+                } catch (error) {
+                    if (request === availabilityRequest) {
+                        availabilityMessage.textContent = "Unable to load available times. Please try again.";
+                    }
+                }
             }
         });
 

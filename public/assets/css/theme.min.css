@@ -24323,7 +24323,7 @@ html[dir=rtl] .googlemap .gm-style-iw.gm-style-iw-c button[title=Close] {
 }
 .fc.fc-theme-standard .fc-list,
 .fc.fc-theme-standard td, .fc.fc-theme-standard th {
-  border-color: var(--falcon-gray-200);
+  border-color: var(--falcon-gray-300);
 }
 .fc .fc-col-header {
   background-color: var(--falcon-gray-100);

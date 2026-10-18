@@ -111,9 +111,18 @@ class BookingTest extends TestCase
             ->assertSee('initialView: "dayGridMonth"', false)
             ->assertSee('calendar.select(info.dateStr)', false)
             ->assertSee('bookingDate.value = info.dateStr', false)
+            ->assertSee('booking-times-modal', false)
+            ->assertSee('modal-dialog-centered', false)
+            ->assertSee('justify-content-center gap-3', false)
+            ->assertSee('availabilityUrl + "?date="', false)
+            ->assertSee('timesModal.show()', false)
+            ->assertSee('button.className = "btn btn-outline-primary btn-lg"', false)
+            ->assertSee('bookingTime.value = slot', false)
+            ->assertSee('id="booking-date"', false)
+            ->assertSee('id="booking-time"', false)
+            ->assertSee('readonly required', false)
             ->assertDontSee('alert(info.dateStr)', false)
-            ->assertDontSee('events:', false)
-            ->assertDontSee('booking-times-modal', false);
+            ->assertDontSee('events:', false);
 
         $date = Carbon::now('Asia/Kuala_Lumpur')->next(Carbon::MONDAY);
         $this->getJson(route('bookings.availability', ['date' => $date->toDateString()]))
