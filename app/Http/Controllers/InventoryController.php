@@ -9,6 +9,7 @@ use App\Services\InventoryStock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -29,8 +30,58 @@ class InventoryController extends Controller
         return view('inventory.index', [
             'partCount' => InventoryPart::count(),
             'lowStockCount' => InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+        ]);
+    }
+
+    public function create(): View
+    {
+        return view('inventory.create', [
+            'part' => new InventoryPart(['stock_quantity' => 0, 'reorder_level' => 0, 'cost_price' => 0, 'selling_price' => 0]),
             'suppliers' => Supplier::query()->orderBy('name')->get(),
         ]);
+    }
+
+    public function show(InventoryPart $part): View
+    {
+        $part->load('supplier');
+
+        return view('inventory.show', compact('part'));
+    }
+
+    public function edit(InventoryPart $part): View
+    {
+        return view('inventory.edit', [
+            'part' => $part,
+            'suppliers' => Supplier::query()->orderBy('name')->get(),
+        ]);
+    }
+
+    public function update(Request $request, InventoryPart $part): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sku' => ['nullable', 'string', 'max:100', Rule::unique('inventory_parts', 'sku')->ignore($part->id)],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'reorder_level' => ['required', 'integer', 'min:0', 'max:10000000'],
+        ]);
+        $part->update($data);
+
+        return redirect()->route('inventory.parts.show', $part)->with('success', 'Inventory item updated.');
+    }
+
+    public function delete(InventoryPart $part): View
+    {
+        return view('inventory.delete', compact('part'));
+    }
+
+    public function destroy(InventoryPart $part): RedirectResponse
+    {
+        $part->delete();
+
+        return redirect()->route('inventory.parts')->with('success', 'Inventory item archived. Its stock movement history is preserved.');
     }
 
     public function partsDatatable(Request $request)
@@ -53,7 +104,8 @@ class InventoryController extends Controller
             ->editColumn('cost_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->cost_price, 2))
             ->editColumn('selling_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->selling_price, 2))
             ->addColumn('actions', fn (InventoryPart $part): string => sprintf(
-                '<form class="d-flex gap-1" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><select class="form-select form-select-sm" name="direction" aria-label="Stock adjustment direction"><option value="receive">Receive</option><option value="use">Use</option></select><input class="form-control form-control-sm" name="quantity" type="number" min="1" placeholder="Qty" required style="max-width:85px"><button class="btn btn-sm btn-outline-primary" aria-label="Save stock adjustment"><span class="fas fa-check"></span></button></form>',
+                '<div class="d-flex gap-1"><a class="btn btn-sm btn-outline-secondary" href="%s">Details</a><form class="d-flex gap-1" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><select class="form-select form-select-sm" name="direction" aria-label="Stock adjustment direction"><option value="receive">Receive</option><option value="use">Use</option></select><input class="form-control form-control-sm" name="quantity" type="number" min="1" placeholder="Qty" required style="max-width:85px"><button class="btn btn-sm btn-outline-primary" aria-label="Save stock adjustment"><span class="fas fa-check"></span></button></form></div>',
+                e(route('inventory.parts.show', $part)),
                 e(route('inventory.movements.store', $part)),
                 e(csrf_token()),
             ))

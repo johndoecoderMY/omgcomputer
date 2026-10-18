@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FlowChart;
+use App\Models\ProductService;
 use App\Support\SopTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -52,13 +53,17 @@ class FlowChartController extends Controller
     {
         $category = $request->query('category', 'product');
         abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
-        $type = $request->validate([
+        $filters = $request->validate([
             'type' => ['nullable', Rule::in(['example', 'custom'])],
-        ])['type'] ?? '';
+            'subject_name' => ['nullable', 'string', Rule::in(ProductService::query()->orderBy('name')->pluck('name')->all())],
+        ]);
+        $type = $filters['type'] ?? '';
 
         return view('development.flowcharts.sops', [
             'category' => $category,
             'type' => $type,
+            'subjectName' => $filters['subject_name'] ?? '',
+            'subjects' => ProductService::query()->orderBy('name')->pluck('name'),
             'categoryLabel' => [
                 'product' => 'Product',
                 'service' => 'Service',
@@ -71,13 +76,18 @@ class FlowChartController extends Controller
     {
         $category = $request->query('category', 'product');
         abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
-        $type = $request->validate([
+        $filters = $request->validate([
             'type' => ['nullable', Rule::in(['example', 'custom'])],
-        ])['type'] ?? '';
+            'subject_name' => ['nullable', 'string', Rule::in(ProductService::query()->orderBy('name')->pluck('name')->all())],
+        ]);
+        $type = $filters['type'] ?? '';
         $flowCharts = FlowChart::query()->where('category', $category);
 
         if ($type !== '') {
             $flowCharts->where('is_example', $type === 'example');
+        }
+        if (($filters['subject_name'] ?? '') !== '') {
+            $flowCharts->where('subject_name', $filters['subject_name']);
         }
 
         return DataTables::eloquent($flowCharts)

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\BookingTimeSlot;
 use App\Models\Customer;
+use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Carbon\Carbon;
@@ -22,50 +24,15 @@ class BookingController extends Controller
 {
     private const TIMEZONE = 'Asia/Kuala_Lumpur';
 
-    private const SLOTS = [
-        '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
-    ];
-
     public function create(Request $request): View
     {
-        $query = $request->validate([
-            'month' => ['nullable', 'date_format:Y-m'],
-            'date' => ['nullable', 'date_format:Y-m-d'],
-        ]);
-        $month = isset($query['month'])
-            ? Carbon::createFromFormat('Y-m', $query['month'], self::TIMEZONE)->startOfMonth()
-            : Carbon::now(self::TIMEZONE)->startOfMonth();
-        $selectedDate = $query['date'] ?? Carbon::now(self::TIMEZONE)->toDateString();
-        $calendarStart = $month->copy()->startOfWeek(Carbon::SUNDAY);
-        $calendarEnd = $month->copy()->endOfMonth()->endOfWeek(Carbon::SATURDAY);
-        $bookedCounts = $this->bookedCounts($month->copy()->startOfMonth(), $month->copy()->endOfMonth());
-        $days = [];
-
-        for ($day = $calendarStart->copy(); $day->lte($calendarEnd); $day->addDay()) {
-            $date = $day->toDateString();
-            $days[] = [
-                'date' => $date,
-                'inMonth' => $day->month === $month->month,
-                'isToday' => $date === Carbon::now(self::TIMEZONE)->toDateString(),
-                'isSelected' => $date === $selectedDate,
-                'isBookable' => $day->gte(Carbon::now(self::TIMEZONE)->startOfDay())
-                    && $day->dayOfWeek !== Carbon::SUNDAY
-                    && ($bookedCounts[$date] ?? 0) < count(self::SLOTS),
-                'bookedCount' => $bookedCounts[$date] ?? 0,
-            ];
-        }
-
+        $selectedDate = Carbon::now(self::TIMEZONE)->toDateString();
         $selected = Carbon::createFromFormat('Y-m-d', $selectedDate, self::TIMEZONE);
-        $services = collect(config('products.catalog'));
+        $services = ProductService::query()->orderBy('name')->get();
 
         return view('bookings.create', [
-            'month' => $month,
-            'days' => $days,
             'selectedDate' => $selected,
-            'slots' => $this->availableSlots($selected),
             'services' => $services,
-            'previousMonth' => $month->copy()->subMonth()->format('Y-m'),
-            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
         ]);
     }
 
@@ -75,19 +42,44 @@ class BookingController extends Controller
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after:start'],
         ]);
-        $start = Carbon::parse($data['start'], self::TIMEZONE)->setTimezone('UTC');
-        $end = Carbon::parse($data['end'], self::TIMEZONE)->setTimezone('UTC');
-
-        $events = Booking::query()
+        $start = Carbon::parse($data['start'])->setTimezone(self::TIMEZONE)->startOfDay();
+        $end = Carbon::parse($data['end'])->setTimezone(self::TIMEZONE)->startOfDay()->subDay();
+        $startUtc = $start->copy()->setTimezone('UTC');
+        $endUtc = $end->copy()->endOfDay()->setTimezone('UTC');
+        $bookedSlots = Booking::query()
             ->whereIn('status', ['pending', 'confirmed'])
-            ->whereBetween('starts_at', [$start, $end])
-            ->get(['starts_at', 'duration_minutes'])
-            ->map(fn (Booking $booking): array => [
-                'title' => 'Unavailable',
-                'start' => $booking->starts_at->setTimezone(self::TIMEZONE)->toIso8601String(),
-                'display' => 'background',
-                'color' => '#c94c4c',
-            ]);
+            ->whereBetween('starts_at', [$startUtc, $endUtc])
+            ->get(['starts_at'])
+            ->groupBy(fn (Booking $booking): string => $booking->starts_at->setTimezone(self::TIMEZONE)->toDateString())
+            ->map(fn ($bookings) => $bookings
+                ->map(fn (Booking $booking): string => $booking->starts_at->setTimezone(self::TIMEZONE)->format('H:i'))
+                ->all());
+        $slotsByDay = BookingTimeSlot::query()
+            ->orderBy('start_time')
+            ->get(['day_of_week', 'start_time'])
+            ->groupBy('day_of_week')
+            ->map(fn ($slots) => $slots->map(fn (BookingTimeSlot $slot): string => substr($slot->start_time, 0, 5))->all());
+        $now = Carbon::now(self::TIMEZONE);
+        $events = [];
+
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            $dateString = $date->toDateString();
+            $booked = $bookedSlots->get($dateString, []);
+            $hasAvailability = collect($slotsByDay->get($date->dayOfWeek, []))
+                ->contains(fn (string $slot): bool => ! in_array($slot, $booked, true)
+                    && $date->copy()->setTimeFromTimeString($slot)->gt($now));
+
+            if ($hasAvailability) {
+                $events[] = [
+                    'title' => 'Available',
+                    'start' => $dateString,
+                    'allDay' => true,
+                    'display' => 'background',
+                    'color' => '#d1e7dd',
+                    'extendedProps' => ['available' => true],
+                ];
+            }
+        }
 
         return response()->json($events);
     }
@@ -107,7 +99,7 @@ class BookingController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $serviceIds = collect(config('products.catalog'))->pluck('id')->all();
+        $serviceIds = ProductService::query()->pluck('id')->all();
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['required', 'email', 'max:255'],
@@ -116,8 +108,14 @@ class BookingController extends Controller
             'device_model' => ['nullable', 'string', 'max:255'],
             'request_notes' => ['nullable', 'string', 'max:3000'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
-            'start_time' => ['required', Rule::in(self::SLOTS)],
         ]);
+        $time = $request->validate([
+            'start_time' => [
+                'required',
+                Rule::in($this->availableSlots(Carbon::createFromFormat('Y-m-d', $data['booking_date'], self::TIMEZONE))),
+            ],
+        ]);
+        $data = [...$data, ...$time];
         $start = Carbon::createFromFormat(
             'Y-m-d H:i',
             $data['booking_date'].' '.$data['start_time'],
@@ -130,7 +128,7 @@ class BookingController extends Controller
             throw ValidationException::withMessages(['start_time' => 'That appointment has just been taken. Choose another time.']);
         }
 
-        $service = collect(config('products.catalog'))->firstWhere('id', $data['service_id']);
+        $service = ProductService::query()->findOrFail($data['service_id']);
 
         try {
             $booking = DB::transaction(function () use ($data, $service, $start): Booking {
@@ -291,7 +289,17 @@ class BookingController extends Controller
     private function availableSlots(Carbon $date): array
     {
         $localDate = $date->copy()->setTimezone(self::TIMEZONE)->startOfDay();
-        if ($localDate->isSunday() || $localDate->lt(Carbon::now(self::TIMEZONE)->startOfDay())) {
+        if ($localDate->lt(Carbon::now(self::TIMEZONE)->startOfDay())) {
+            return [];
+        }
+
+        $slots = BookingTimeSlot::query()
+            ->where('day_of_week', $localDate->dayOfWeek)
+            ->orderBy('start_time')
+            ->pluck('start_time')
+            ->map(fn (string $time): string => substr($time, 0, 5))
+            ->all();
+        if ($slots === []) {
             return [];
         }
 
@@ -305,23 +313,10 @@ class BookingController extends Controller
             ->all();
         $now = Carbon::now(self::TIMEZONE);
 
-        return array_values(array_filter(self::SLOTS, function (string $slot) use ($booked, $localDate, $now): bool {
+        return array_values(array_filter($slots, function (string $slot) use ($booked, $localDate, $now): bool {
             $slotTime = $localDate->copy()->setTimeFromTimeString($slot);
 
             return ! in_array($slot, $booked, true) && $slotTime->gt($now);
         }));
-    }
-
-    private function bookedCounts(Carbon $start, Carbon $end): array
-    {
-        $bookings = Booking::query()
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->whereBetween('starts_at', [
-                $start->copy()->setTimezone('UTC'),
-                $end->copy()->endOfDay()->setTimezone('UTC'),
-            ])
-            ->get(['starts_at']);
-
-        return $bookings->countBy(fn (Booking $booking): string => $booking->starts_at->setTimezone(self::TIMEZONE)->toDateString())->all();
     }
 }

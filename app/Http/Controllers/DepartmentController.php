@@ -16,34 +16,53 @@ class DepartmentController extends Controller
         return view('teams.departments');
     }
 
+    public function create(): View
+    {
+        return view('departments.create', ['department' => new Department]);
+    }
+
     public function datatable()
     {
         return DataTables::eloquent(Department::query()->withCount('teams'))
             ->addColumn('actions', fn (Department $department): string => sprintf(
-                '<a class="btn btn-sm btn-outline-primary" href="%s">Edit</a>',
-                e(route('departments.edit', $department)),
+                '<a class="btn btn-sm btn-outline-primary" href="%s">View</a>',
+                e(route('departments.show', $department)),
             ))
             ->rawColumns(['actions'])
             ->toJson();
     }
 
+    public function show(Department $department): View
+    {
+        $department->load('teams');
+
+        return view('departments.show', compact('department'));
+    }
+
     public function edit(Department $department): View
     {
-        return view('teams.department-edit', compact('department'));
+        return view('departments.edit', compact('department'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        Department::query()->create($this->validatedData($request));
+        $department = Department::query()->create($this->validatedData($request));
 
-        return redirect()->route('departments.index')->with('success', 'Department created.');
+        return redirect()->route('departments.show', $department)->with('success', 'Department created.');
     }
 
     public function update(Request $request, Department $department): RedirectResponse
     {
         $department->update($this->validatedData($request, $department));
 
-        return redirect()->route('departments.index')->with('success', 'Department updated.');
+        return redirect()->route('departments.show', $department)->with('success', 'Department updated.');
+    }
+
+    public function delete(Department $department): View
+    {
+        $department->load('teams');
+
+        return view('departments.delete', compact('department'));
     }
 
     public function destroy(Department $department): RedirectResponse

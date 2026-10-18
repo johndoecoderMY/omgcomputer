@@ -207,11 +207,28 @@ class WorkspaceDashboardAndPartsTest extends TestCase
             'is_example' => true,
         ]);
         $this->assertDatabaseHas('flow_charts', [
+            'category' => 'website',
+            'title' => 'Website Sitemap Example',
+            'subject_name' => 'OMG Computer website',
+            'is_example' => true,
+        ]);
+        $sitemap = FlowChart::query()->where('title', 'Website Sitemap Example')->firstOrFail();
+        $this->assertSame([
+            'Home',
+            'Services',
+            'Service detail',
+            'Book an appointment',
+            'About',
+            'Frequently asked questions',
+            'Contact',
+            'Repair tracking',
+        ], array_column($sitemap->steps, 'label'));
+        $this->assertDatabaseHas('flow_charts', [
             'category' => 'process',
             'title' => 'Database Design & Migration SOP',
             'is_example' => true,
         ]);
-        $this->assertSame(2, FlowChart::query()->whereIn('category', ['website', 'process'])->count());
+        $this->assertSame(3, FlowChart::query()->whereIn('category', ['website', 'process'])->count());
     }
 
     public function test_repair_ticket_examples_cover_every_status_and_can_run_repeatedly(): void

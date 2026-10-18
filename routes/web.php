@@ -6,14 +6,15 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\BookingTimeSlotController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerMessageTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\FlowChartController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\IntegrationTestController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -27,6 +28,9 @@ use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
+Route::get('/sitemap.xml', fn () => response()
+    ->view('sitemap', [], 200, ['Content-Type' => 'application/xml; charset=UTF-8']))
+    ->name('sitemap');
 Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
@@ -95,6 +99,17 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::put('/{booking}', 'update')->name('update');
     });
+    Route::prefix('booking-time-slots')->name('booking-time-slots.')->middleware('not-customer')->controller(BookingTimeSlotController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{bookingTimeSlot}/delete', 'delete')->name('delete');
+        Route::delete('/{bookingTimeSlot}', 'destroy')->name('destroy');
+        Route::get('/{bookingTimeSlot}/edit', 'edit')->name('edit');
+        Route::put('/{bookingTimeSlot}', 'update')->name('update');
+        Route::get('/{bookingTimeSlot}', 'show')->name('show');
+    });
 
     Route::prefix('customer-messages')->name('customer-messages.')->controller(CustomerMessageTemplateController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
@@ -130,8 +145,15 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::put('/{ticket}', [RepairTicketController::class, 'update'])->name('update');
     });
 
-    Route::prefix('products')->name('products.')->controller(ProductController::class)->group(function (): void {
+    Route::prefix('products')->name('products.')->middleware('not-customer')->controller(ProductController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{product}/delete', 'delete')->name('delete');
+        Route::delete('/{product}', 'destroy')->name('destroy');
+        Route::get('/{product}/edit', 'edit')->name('edit');
+        Route::put('/{product}', 'update')->name('update');
+        Route::get('/{product}', 'show')->name('show');
     });
 
     Route::prefix('billing')->name('billing.')->controller(BillingController::class)->group(function (): void {
@@ -148,19 +170,29 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/{document}/pdf', 'pdf')->name('documents.pdf');
     });
 
-    Route::prefix('inventory')->name('inventory.')->controller(InventoryController::class)->group(function (): void {
+    Route::prefix('inventory')->name('inventory.')->middleware('not-customer')->controller(InventoryController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/parts/datatable', 'partsDatatable')->name('parts.datatable');
         Route::get('/parts', 'parts')->name('parts');
+        Route::get('/parts/create', 'create')->name('parts.create');
+        Route::post('/parts', 'store')->name('parts.store');
+        Route::get('/parts/{part}/delete', 'delete')->name('parts.delete');
+        Route::delete('/parts/{part}', 'destroy')->name('parts.destroy');
+        Route::get('/parts/{part}/edit', 'edit')->name('parts.edit');
+        Route::put('/parts/{part}', 'update')->name('parts.update');
+        Route::get('/parts/{part}', 'show')->name('parts.show');
         Route::get('/movements/datatable', 'movementsDatatable')->name('movements.datatable');
         Route::post('/', 'store')->name('store');
         Route::post('/{part}/movements', 'adjust')->name('movements.store');
         Route::get('/movements', 'movements')->name('movements');
     });
-    Route::prefix('inventory/suppliers')->name('inventory.suppliers.')->controller(SupplierController::class)->group(function (): void {
+    Route::prefix('inventory/suppliers')->name('inventory.suppliers.')->middleware('not-customer')->controller(SupplierController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::get('/{supplier}/delete', 'delete')->name('delete');
+        Route::get('/{supplier}', 'show')->name('show');
         Route::get('/{supplier}/edit', 'edit')->name('edit');
         Route::put('/{supplier}', 'update')->name('update');
         Route::delete('/{supplier}', 'destroy')->name('destroy');
@@ -174,10 +206,13 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::put('/{team}', 'update')->name('update');
         Route::delete('/{team}', 'destroy')->name('destroy');
     });
-    Route::prefix('departments')->name('departments.')->controller(DepartmentController::class)->group(function (): void {
+    Route::prefix('departments')->name('departments.')->middleware('not-customer')->controller(DepartmentController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::get('/{department}/delete', 'delete')->name('delete');
+        Route::get('/{department}', 'show')->name('show');
         Route::get('/{department}/edit', 'edit')->name('edit');
         Route::put('/{department}', 'update')->name('update');
         Route::delete('/{department}', 'destroy')->name('destroy');

@@ -161,6 +161,11 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
+                                        <span class="nav-link-text ps-1">Available booking times</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link" href="{{ route('bookings.create') }}" target="_blank">
                                         <span class="nav-link-text ps-1">Public booking calendar</span>
                                     </a>

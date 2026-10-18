@@ -4,7 +4,10 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Catalogue" title="Products & services" description="Business plan offers and estimated starting prices." />
+    <x-page-header eyebrow="Catalogue" title="Products & services" description="Manage services and product prices for bookings and billing.">
+        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('products.create') }}"><span class="fas fa-plus me-2"></span>Add product or service</a></x-slot>
+    </x-page-header>
+    @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <div class="alert alert-info" role="note">Prices are planning estimates for Kampar. Confirm scope, parts, software licences and final charges before quoting.</div>
 
     <form class="row g-2 mb-3" method="GET">
@@ -19,11 +22,11 @@
             <tbody>
                 @forelse ($products as $product)
                     <tr>
-                        <td class="fw-semibold">{{ $product['name'] }}</td>
-                        <td>{{ $categories[$product['category']] }}</td>
-                        <td>{{ $product['scope'] }}</td>
-                        <td>{{ $product['audience'] }}</td>
-                        <td class="text-end text-nowrap">{{ $product['price'] }}</td>
+                        <td class="fw-semibold"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></td>
+                        <td>{{ $categories[$product->category] }}</td>
+                        <td>{{ $product->scope }}</td>
+                        <td>{{ $product->audience }}</td>
+                        <td class="text-end text-nowrap">{{ $product->price }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" class="text-center text-body-secondary py-5">No offers match these filters.</td></tr>

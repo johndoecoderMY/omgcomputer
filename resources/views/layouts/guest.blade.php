@@ -24,6 +24,7 @@
 
 
     @include('layouts.guest.scripts')
+    @stack('scripts')
 
 </body>
 

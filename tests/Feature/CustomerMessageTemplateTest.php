@@ -64,6 +64,8 @@ class CustomerMessageTemplateTest extends TestCase
         ]))->assertOk()
             ->assertSee('Booking request received')
             ->assertSee('Diagnosis and approval request')
-            ->assertSee('Parts delay update');
+            ->assertSee('Parts delay update')
+            ->assertSee('Permintaan janji temu diterima (Bahasa Melayu)')
+            ->assertSee('Makluman kelewatan alat ganti (Bahasa Melayu)');
     }
 }

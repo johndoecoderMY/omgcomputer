@@ -8,7 +8,7 @@
             <img class="bg-auth-circle-shape" src="../../../assets/img/icons/spot-illustrations/bg-shape.png" alt="" width="250">
             <img class="bg-auth-circle-shape-2" src="../../../assets/img/icons/spot-illustrations/shape-1.png" alt="" width="150">
 
-            <div class="card overflow-hidden z-1 p-2">
+            <div class="card overflow-hidden z-1">
                 <div class="card-body p-0">
                     <div class="row g-0 h-100">
                         <div class="col-md-5 text-center bg-card-gradient">
@@ -86,19 +86,7 @@
                                     </div>
                                 </form>
 
-                                <div class="position-relative mt-4">
-                                    <hr>
-                                    <div class="divider-content-center">or log in with</div>
-                                </div>
-
-                                <div class="row g-2 mt-2">
-                                    <div class="col-sm-6">
-                                        <a class="btn btn-outline-google-plus btn-sm d-block w-100" href="#"><span class="fab fa-google-plus-g me-2" data-fa-transform="grow-8"></span> google</a>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <a class="btn btn-outline-facebook btn-sm d-block w-100" href="#"><span class="fab fa-facebook-square me-2" data-fa-transform="grow-8"></span> facebook</a>
-                                    </div>
-                                </div>
+                          
                             </div>
                         </div>
                     </div>

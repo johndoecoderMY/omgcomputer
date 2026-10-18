@@ -312,12 +312,13 @@
                         <div class="card-body p-4 p-lg-5">
                             <span class="text-primary fw-bold text-uppercase fs-10">Book a service</span>
                             <h2 class="fw-bold text-1000 mt-2">Ready to get your PC checked?</h2>
-                            <p class="text-700 mb-lg-0">Online service booking is coming soon. In the meantime, contact the shop directly to arrange a repair or support visit.</p>
+                            <p class="text-700 mb-0">Choose the service you need and request a convenient appointment online. Our team will contact you to confirm the time.</p>
                         </div>
                     </div>
                     <div class="col-lg-4 bg-primary text-center p-4 p-lg-5">
                         <span class="fas fa-calendar-check fa-3x text-white mb-3"></span>
-                        <p class="text-white mb-0">We’re preparing online booking so you can request a service right here.</p>
+                        <p class="text-white mb-3">Request a booking online and our team will contact you to confirm.</p>
+                        <a class="btn btn-light btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
                     </div>
                 </div>
             </div>

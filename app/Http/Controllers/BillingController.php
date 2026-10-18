@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BillingDocument;
 use App\Models\InventoryPart;
+use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Services\InventoryStock;
 use Illuminate\Http\RedirectResponse;
@@ -72,7 +73,7 @@ class BillingController extends Controller
 
         return view('billing.create', [
             'parts' => InventoryPart::query()->orderBy('name')->get(),
-            'products' => collect(config('products.catalog')),
+            'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $ticket,
             'document' => new BillingDocument([
                 'type' => $type,
@@ -103,7 +104,7 @@ class BillingController extends Controller
 
         return view('billing.create', [
             'parts' => InventoryPart::query()->orderBy('name')->get(),
-            'products' => collect(config('products.catalog')),
+            'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $document->repairTicket,
             'document' => $document,
             'lines' => $document->items->map(fn ($item) => [
@@ -135,7 +136,7 @@ class BillingController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
-            'items.*.product_id' => ['nullable', 'string', Rule::in(collect(config('products.catalog'))->pluck('id')->all())],
+            'items.*.product_id' => ['nullable', 'string', Rule::exists('product_services', 'id')],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
@@ -188,7 +189,7 @@ class BillingController extends Controller
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
                 $product = ! empty($item['product_id'])
-                    ? collect(config('products.catalog'))->firstWhere('id', $item['product_id'])
+                    ? ProductService::withTrashed()->findOrFail($item['product_id'])
                     : null;
                 $price = round((float) ($item['unit_price'] ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);
@@ -242,7 +243,7 @@ class BillingController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
-            'items.*.product_id' => ['nullable', 'string', Rule::in(collect(config('products.catalog'))->pluck('id')->all())],
+            'items.*.product_id' => ['nullable', 'string', Rule::exists('product_services', 'id')],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
@@ -274,7 +275,7 @@ class BillingController extends Controller
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
                 $product = ! empty($item['product_id'])
-                    ? collect(config('products.catalog'))->firstWhere('id', $item['product_id'])
+                    ? ProductService::withTrashed()->findOrFail($item['product_id'])
                     : null;
                 $price = round((float) ($item['unit_price'] ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);

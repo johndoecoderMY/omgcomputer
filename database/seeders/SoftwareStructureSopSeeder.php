@@ -13,6 +13,23 @@ class SoftwareStructureSopSeeder extends Seeder
         $examples = [
             [
                 'category' => 'website',
+                'title' => 'Website Sitemap Example',
+                'subject_name' => 'OMG Computer website',
+                'description' => 'Example website page hierarchy showing the main navigation, service detail pages, booking path, customer help, and repair tracking.',
+                'steps' => [
+                    ['Page', 'Home'],
+                    ['Page', 'Services'],
+                    ['Page', 'Service detail'],
+                    ['Page', 'Book an appointment'],
+                    ['Page', 'About'],
+                    ['Page', 'Frequently asked questions'],
+                    ['Page', 'Contact'],
+                    ['Page', 'Repair tracking'],
+                ],
+                'connections' => [[1, 4, 5, 6, 7], [2], [3], [], [], [], [], []],
+            ],
+            [
+                'category' => 'website',
                 'title' => 'Website Structure & Build SOP',
                 'subject_name' => 'Website architecture',
                 'description' => 'Example structure for planning a maintainable web application from routes and pages through reusable UI, business logic, and data access.',

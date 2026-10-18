@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Booking;
+use App\Models\BookingTimeSlot;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Carbon\Carbon;
@@ -22,8 +23,11 @@ class BookingTest extends TestCase
         $dateString = $date->toDateString();
         $this->get(route('bookings.create', ['date' => $dateString]))
             ->assertOk()
-            ->assertSee('booking-calendar', false)
-            ->assertSee('Book an appointment');
+            ->assertSee('id="calendar"', false)
+            ->assertSee('Book an appointment')
+            ->assertSee('guestNavbar', false)
+            ->assertSee('Book a service')
+            ->assertSee('OMG Computer');
 
         $data = [
             'customer_name' => 'Morgan Lee',
@@ -45,7 +49,9 @@ class BookingTest extends TestCase
         $this->get(route('bookings.confirmation', $booking->reference))
             ->assertOk()
             ->assertSee($booking->reference)
-            ->assertSee('Laptop cleaning');
+            ->assertSee('Laptop cleaning')
+            ->assertSee('guestNavbar', false)
+            ->assertSee('Back to home');
 
         $this->from(route('bookings.create', ['date' => $dateString]))
             ->post(route('bookings.store'), $data)
@@ -84,5 +90,71 @@ class BookingTest extends TestCase
             'assigned_to' => $staff->id,
         ])->assertSessionHas('success', 'Booking updated.');
         $this->assertSame(1, RepairTicket::query()->count());
+    }
+
+    public function test_landing_page_links_to_the_live_booking_form(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee(route('bookings.create'))
+            ->assertSee('Choose the service you need')
+            ->assertDontSee('Online service booking is coming soon.');
+    }
+
+    public function test_booking_calendar_is_basic_and_availability_comes_from_the_database(): void
+    {
+        $this->get('/book')
+            ->assertOk()
+            ->assertSee('id="calendar"', false)
+            ->assertDontSee('window.location.href =')
+            ->assertSee('new FullCalendar.Calendar(calendarEl, {', false)
+            ->assertSee('initialView: "dayGridMonth"', false)
+            ->assertSee('calendar.select(info.dateStr)', false)
+            ->assertSee('bookingDate.value = info.dateStr', false)
+            ->assertDontSee('alert(info.dateStr)', false)
+            ->assertDontSee('events:', false)
+            ->assertDontSee('booking-times-modal', false);
+
+        $date = Carbon::now('Asia/Kuala_Lumpur')->next(Carbon::MONDAY);
+        $this->getJson(route('bookings.availability', ['date' => $date->toDateString()]))
+            ->assertOk()
+            ->assertJsonPath('date', $date->toDateString())
+            ->assertJsonPath('slots.0', '09:00')
+            ->assertJsonPath('slots.8', '17:00');
+
+        $this->getJson(route('bookings.events', [
+            'start' => $date->toDateString(),
+            'end' => $date->copy()->addWeek()->toDateString(),
+        ]))->assertOk()
+            ->assertJsonFragment(['start' => $date->toDateString(), 'available' => true]);
+    }
+
+    public function test_staff_can_create_edit_and_delete_recurring_booking_times(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $this->get(route('booking-time-slots.index'))->assertOk()->assertSee('Available booking times');
+        $this->get(route('booking-time-slots.create'))->assertOk();
+
+        $this->post(route('booking-time-slots.store'), [
+            'day_of_week' => Carbon::SUNDAY,
+            'start_time' => '11:30',
+        ])->assertRedirect();
+        $slot = BookingTimeSlot::query()->where('day_of_week', Carbon::SUNDAY)->firstOrFail();
+        $this->get(route('booking-time-slots.show', $slot))->assertOk()->assertSee('Sunday');
+        $this->get(route('booking-time-slots.edit', $slot))->assertOk();
+        $this->put(route('booking-time-slots.update', $slot), [
+            'day_of_week' => Carbon::SUNDAY,
+            'start_time' => '12:30',
+        ])->assertRedirect(route('booking-time-slots.show', $slot));
+
+        $sunday = Carbon::now('Asia/Kuala_Lumpur')->next(Carbon::SUNDAY);
+        $this->getJson(route('bookings.availability', ['date' => $sunday->toDateString()]))
+            ->assertOk()->assertJsonPath('slots.0', '12:30');
+
+        $this->get(route('booking-time-slots.delete', $slot))->assertOk();
+        $this->delete(route('booking-time-slots.destroy', $slot))->assertRedirect(route('booking-time-slots.index'));
+        $this->assertDatabaseMissing('booking_time_slots', ['id' => $slot->id]);
+        $this->getJson(route('bookings.availability', ['date' => $sunday->toDateString()]))
+            ->assertOk()->assertJsonPath('slots', []);
     }
 }

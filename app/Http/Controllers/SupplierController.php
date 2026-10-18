@@ -16,34 +16,53 @@ class SupplierController extends Controller
         return view('inventory.suppliers');
     }
 
+    public function create(): View
+    {
+        return view('suppliers.create', ['supplier' => new Supplier]);
+    }
+
     public function datatable()
     {
         return DataTables::eloquent(Supplier::query()->withCount('parts'))
             ->addColumn('actions', fn (Supplier $supplier): string => sprintf(
-                '<a class="btn btn-sm btn-outline-primary" href="%s">Edit</a>',
-                e(route('inventory.suppliers.edit', $supplier)),
+                '<a class="btn btn-sm btn-outline-primary" href="%s">View</a>',
+                e(route('inventory.suppliers.show', $supplier)),
             ))
             ->rawColumns(['actions'])
             ->toJson();
     }
 
+    public function show(Supplier $supplier): View
+    {
+        $supplier->load('parts');
+
+        return view('suppliers.show', compact('supplier'));
+    }
+
     public function edit(Supplier $supplier): View
     {
-        return view('inventory.supplier-edit', compact('supplier'));
+        return view('suppliers.edit', compact('supplier'));
     }
 
     public function store(Request $request): RedirectResponse
     {
-        Supplier::query()->create($this->validatedData($request));
+        $supplier = Supplier::query()->create($this->validatedData($request));
 
-        return redirect()->route('inventory.suppliers.index')->with('success', 'Supplier added.');
+        return redirect()->route('inventory.suppliers.show', $supplier)->with('success', 'Supplier added.');
     }
 
     public function update(Request $request, Supplier $supplier): RedirectResponse
     {
         $supplier->update($this->validatedData($request, $supplier));
 
-        return redirect()->route('inventory.suppliers.index')->with('success', 'Supplier updated.');
+        return redirect()->route('inventory.suppliers.show', $supplier)->with('success', 'Supplier updated.');
+    }
+
+    public function delete(Supplier $supplier): View
+    {
+        $supplier->loadCount('parts');
+
+        return view('suppliers.delete', compact('supplier'));
     }
 
     public function destroy(Supplier $supplier): RedirectResponse

@@ -24,10 +24,14 @@ class OrganizationInventorySopTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
         $this->get(route('departments.index'))->assertOk()->assertSee('Departments');
+        $this->get(route('departments.create'))->assertOk();
         $this->get(route('teams.index'))->assertOk()->assertSee('Teams');
         $this->post(route('departments.store'), ['name' => 'Operations'])
-            ->assertRedirect(route('departments.index'));
+            ->assertRedirect();
         $department = Department::query()->firstOrFail();
+        $this->get(route('departments.show', $department))->assertOk()->assertSee('Operations');
+        $this->get(route('departments.edit', $department))->assertOk();
+        $this->get(route('departments.delete', $department))->assertOk();
         $this->getJson(route('departments.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('data.0.name', 'Operations');
 
@@ -111,14 +115,16 @@ class OrganizationInventorySopTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
         $this->get(route('inventory.suppliers.index'))->assertOk()->assertSee('data-datatable', false)->assertSee('Add supplier');
+        $this->get(route('inventory.suppliers.create'))->assertOk();
         $this->post(route('inventory.suppliers.store'), [
             'name' => 'Parts Wholesale',
             'contact_name' => 'Alex Supplier',
             'email' => 'sales@example.test',
             'phone' => '+60123456789',
             'website' => 'https://supplier.example.test',
-        ])->assertRedirect(route('inventory.suppliers.index'));
+        ])->assertRedirect();
         $supplier = Supplier::query()->firstOrFail();
+        $this->get(route('inventory.suppliers.show', $supplier))->assertOk()->assertSee('Parts Wholesale');
 
         $part = InventoryPart::query()->create([
             'name' => 'Laptop charger',
@@ -138,9 +144,10 @@ class OrganizationInventorySopTest extends TestCase
         $this->put(route('inventory.suppliers.update', $supplier), [
             'name' => 'Parts Wholesale MY',
             'email' => 'updated@example.test',
-        ])->assertRedirect(route('inventory.suppliers.index'));
+        ])->assertRedirect(route('inventory.suppliers.show', $supplier));
         $this->assertSame('Parts Wholesale MY', $supplier->fresh()->name);
 
+        $this->get(route('inventory.suppliers.delete', $supplier))->assertOk();
         $this->delete(route('inventory.suppliers.destroy', $supplier))
             ->assertRedirect(route('inventory.suppliers.index'));
         $this->assertNull($part->fresh()->supplier_id);
@@ -174,13 +181,22 @@ class OrganizationInventorySopTest extends TestCase
             'steps' => [['id' => 'example-step', 'label' => 'Review request', 'kind' => 'action', 'connections' => []]],
         ]);
         $this->get(route('development.sops', ['category' => 'service']))
-            ->assertOk()->assertSee('data-datatable', false)->assertSee('sop-type', false);
+            ->assertOk()->assertSee('data-datatable', false)->assertSee('sop-type', false)->assertSee('sop-subject', false);
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('recordsFiltered', 2);
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'type' => 'custom', 'draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.title', 'Laptop cleaning procedure');
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'type' => 'example', 'draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('recordsFiltered', 1)->assertJsonPath('data.0.title', 'Example service procedure');
+        $this->getJson(route('development.sops.datatable', [
+            'category' => 'service',
+            'subject_name' => 'Laptop cleaning',
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.subject_name', 'Laptop cleaning');
         $this->getJson(route('development.flowcharts.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('data.0.subject_name', 'Laptop cleaning');
         $this->get(route('development.sops', ['category' => 'invalid']))->assertNotFound();
