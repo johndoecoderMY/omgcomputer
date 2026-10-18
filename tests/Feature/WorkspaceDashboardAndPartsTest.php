@@ -113,10 +113,12 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('16GB DDR4 memory')
+            ->assertSee('table table-bordered align-middle mb-0', false)
+            ->assertSee('2 needed')
             ->assertSee('Use the laptop-compatible memory kit.')
             ->assertSee('https://example.test/memory-specification')
             ->assertSee('https://example.test/compatible-kit')
-            ->assertSee('RM 12.50 each')
+            ->assertSee('RM 12.50')
             ->assertSee('RM 25.00');
 
         $this->post(route('projects.estimate-items.store', $project), [

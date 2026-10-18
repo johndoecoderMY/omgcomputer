@@ -78,7 +78,7 @@
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('inventory.movements') }}">Stock movements</a>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-bordered">
                         <thead><tr><th>Item</th><th>SKU</th><th class="text-end">Quantity</th><th class="text-end">Reorder point</th><th class="text-end">Movements</th></tr></thead>
                         <tbody>
                             @forelse ($parts as $part)

@@ -8,27 +8,86 @@
         :description="$project->description"
         :back-url="route('projects.index')" back-label="All projects">
         <x-slot:actions>
-            <a class="btn btn-outline-primary" href="{{ route('projects.calendar') }}">
-                <i class="fas fa-calendar-days me-2"></i>Calendar
-            </a>
-            <a class="btn btn-outline-primary" href="#project-schedule">
-                <i class="fas fa-calendar-plus me-2"></i>Schedule event
-            </a>
-            <a class="btn btn-outline-secondary" href="{{ route('projects.edit', $project) }}">
-                <i class="fas fa-pen me-2"></i>Edit project
-            </a>
-            <a class="btn btn-primary" href="{{ route('projects.tasks.create', $project) }}">
-                <i class="fas fa-plus me-2"></i>Add task
-            </a>
-            <a class="btn btn-outline-primary" href="{{ route('customers.create', ['project_id' => $project->id]) }}">
-                <i class="fas fa-user-plus me-2"></i>Add customer
-            </a>
+            <button class="btn" type="button" data-bs-toggle="modal" data-bs-target="#project-export-modal">
+                <i class="fas fa-file-pdf fa-fw me-2"></i>Export PDF
+            </button>
+            <a href="{{ route('projects.calendar') }}"><i class="fas fa-calendar-days fa-fw me-2"></i>Calendar</a>
+            <a href="#project-schedule"><i class="fas fa-calendar-plus fa-fw me-2"></i>Schedule event</a>
+            <a href="{{ route('projects.edit', $project) }}"><i class="fas fa-pen fa-fw me-2"></i>Edit project</a>
+            <a href="{{ route('projects.tasks.create', $project) }}"><i class="fas fa-plus fa-fw me-2"></i>Add task</a>
+            <a href="{{ route('customers.create', ['project_id' => $project->id]) }}"><i class="fas fa-user-plus fa-fw me-2"></i>Add customer</a>
         </x-slot:actions>
     </x-page-header>
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
+    @if ($errors->any())
+        <div class="alert alert-danger" role="alert">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <div class="modal fade" id="project-export-modal" tabindex="-1" aria-labelledby="project-export-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('projects.export', $project) }}" target="_blank">
+                    @csrf
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="project-export-title">Export project PDF</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Select the project information to include. Task details are excluded unless you select the Gantt chart.</p>
+                        <div class="row g-2">
+                            @foreach ([
+                                'overview' => 'Project overview',
+                                'customers' => 'Linked customers',
+                                'technology_stack' => 'Technology stack and versions',
+                                'estimates' => 'Software and other estimates',
+                                'schedule' => 'Project event schedule',
+                                'gantt' => 'Task Gantt chart',
+                                'flowcharts' => 'Flow charts and SOPs',
+                            ] as $section => $label)
+                                <div class="col-sm-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="sections[]" value="{{ $section }}" id="export-{{ $section }}" checked>
+                                        <label class="form-check-label" for="export-{{ $section }}">{{ $label }}</label>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <fieldset class="mt-4">
+                            <legend class="form-label">Flow charts to include</legend>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="flowchart_mode" value="all" id="flowcharts-all" checked>
+                                <label class="form-check-label" for="flowcharts-all">All linked flow charts and SOPs</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="flowchart_mode" value="selected" id="flowcharts-selected">
+                                <label class="form-check-label" for="flowcharts-selected">Only selected flow charts</label>
+                            </div>
+                            <label class="form-label mt-2" for="export-flowchart-ids">Choose flow charts</label>
+                            <select class="form-select" name="flow_chart_ids[]" id="export-flowchart-ids" multiple size="5">
+                                @foreach ($project->flowCharts as $flowChart)
+                                    <option value="{{ $flowChart->id }}">{{ $flowChart->title }} · {{ $flowChart->category }}</option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">Used only when “Only selected flow charts” is chosen. Use Ctrl or Cmd to select multiple charts.</div>
+                        </fieldset>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" type="submit"><i class="fas fa-file-pdf me-2"></i>Generate PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div class="card project-overview mb-4 p-2">        <div class="card-body">
             <div class="row align-items-center g-4">
@@ -191,7 +250,7 @@
             </form>
             <h3 class="h6 mb-3">Linked flow charts and SOPs</h3>
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" data-datatable
+                <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
                     data-source="{{ route('projects.flowcharts.datatable', $project) }}"
                     data-columns="{{ json_encode([
                         ['data' => 'title', 'name' => 'flow_charts.title'],
@@ -206,10 +265,69 @@
         </div>
     </div>
 
+    <div class="card project-panel mb-4" id="project-technology-stack">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h2 class="h5 mb-0">Project technology stack</h2>
+                <p class="small text-body-secondary mb-0">Record the technologies and versions used by this project, such as PHP, Laravel, and FullCalendar.</p>
+            </div>
+            <span class="badge text-bg-light border">{{ $project->technologyStack->count() }} technologies</span>
+        </div>
+        <div class="card-body border-bottom">
+            <form class="row g-3 align-items-end" method="POST" action="{{ route('projects.technology-stack.store', $project) }}">
+                @csrf
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="technology-name">Technology</label>
+                    <input class="form-control" id="technology-name" name="name" value="{{ old('name') }}" maxlength="120" placeholder="e.g. PHP" required>
+                </div>
+                <div class="col-12 col-md-2">
+                    <label class="form-label" for="technology-version">Version</label>
+                    <input class="form-control" id="technology-version" name="version" value="{{ old('version') }}" maxlength="80" placeholder="e.g. 8.3">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="technology-notes">Notes <span class="text-body-secondary">(optional)</span></label>
+                    <input class="form-control" id="technology-notes" name="notes" value="{{ old('notes') }}" maxlength="1000" placeholder="e.g. Frontend calendar component">
+                </div>
+                <div class="col-12 col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">Add technology</button>
+                </div>
+            </form>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead><tr><th scope="col">Technology</th><th scope="col">Version</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead>
+                <tbody>
+                    @forelse ($project->technologyStack as $technology)
+                        <tr>
+                            <td><input class="form-control" form="technology-update-{{ $technology->id }}" name="name" value="{{ $technology->name }}" maxlength="120" required aria-label="Technology name"></td>
+                            <td><input class="form-control" form="technology-update-{{ $technology->id }}" name="version" value="{{ $technology->version }}" maxlength="80" aria-label="Technology version"></td>
+                            <td><input class="form-control" form="technology-update-{{ $technology->id }}" name="notes" value="{{ $technology->notes }}" maxlength="1000" aria-label="Technology notes"></td>
+                            <td class="text-nowrap">
+                                <form id="technology-update-{{ $technology->id }}" class="d-inline" method="POST" action="{{ route('projects.technology-stack.update', [$project, $technology]) }}">
+                                    @csrf
+                                    @method('PUT')
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Save</button>
+                                </form>
+                                <form class="d-inline" method="POST" action="{{ route('projects.technology-stack.destroy', [$project, $technology]) }}"
+                                    onsubmit="return confirm('Remove this technology from the project?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td class="text-body-secondary" colspan="4">No project technologies have been recorded.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="card project-panel mb-4" id="project-hardware">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Parts &hardware recommendations</h2>
+                <h2 class="h5 mb-0">Parts &amp; hardware recommendations</h2>
                 <p class="small text-body-secondary mb-0">Track suggested parts for this project without changing inventory stock.</p>
             </div>
             <span class="badge text-bg-light border">{{ $project->inventoryParts->count() }} recommended</span>
@@ -264,7 +382,9 @@
                     <div class="col-12 col-lg-8">
                         <label class="form-label" for="project-part-url-sources">Source URLs <span class="text-body-secondary">(optional, up to 10)</span></label>
                         <div id="project-part-url-sources" class="d-grid gap-2">
-                            @php($urlSources = old('url_sources', ['']))
+                            @php
+                                $urlSources = old('url_sources', ['']);
+                            @endphp
                             @foreach ($urlSources as $index => $url)
                                 <input class="form-control @error("url_sources.$index") is-invalid @enderror"
                                     type="url" name="url_sources[]" value="{{ $url }}" maxlength="2048"
@@ -286,57 +406,67 @@
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('inventory.index') }}">Open inventory</a>
             @endif
         </div>
-        <div class="list-group list-group-flush">
-            @forelse ($project->inventoryParts as $part)
-                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-3 px-4 py-3">
-                    <div class="flex-grow-1">
-                        <a class="fw-semibold" href="{{ route('inventory.index') }}">{{ $part->name }}</a>
-                        @if ($part->sku)<span class="small text-body-secondary ms-2">{{ $part->sku }}</span>@endif
-                        <div class="small text-body-secondary mt-1">
-                            Need {{ $part->pivot->quantity }} · In stock {{ $part->stock_quantity }}
-                            · RM {{ number_format((float) ($part->pivot->unit_price ?? $part->selling_price), 2) }} each
-                            · Line total RM {{ number_format($part->pivot->quantity * (float) ($part->pivot->unit_price ?? $part->selling_price), 2) }}
-                            @if ($part->supplier) · Supplier: {{ $part->supplier->name }}@endif
-                        </div>
-                        <form class="row g-2 align-items-end mt-2" method="POST"
-                            action="{{ route('projects.parts.update', [$project, $part]) }}">
-                            @csrf
-                            @method('PUT')
-                            <div class="col-auto">
-                                <label class="form-label small mb-1" for="part-price-source-{{ $part->id }}">Price source</label>
-                                <select class="form-select form-select-sm project-part-price-source"
-                                    id="part-price-source-{{ $part->id }}" name="price_source"
-                                    data-selling-price="{{ $part->selling_price }}" data-cost-price="{{ $part->cost_price }}">
-                                    <option value="selling_price" @selected(($part->pivot->price_source ?? 'selling_price') === 'selling_price')>Selling price</option>
-                                    <option value="cost_price" @selected($part->pivot->price_source === 'cost_price')>Cost price</option>
-                                    <option value="custom" @selected($part->pivot->price_source === 'custom')>Custom</option>
-                                </select>
-                            </div>
-                            <div class="col-auto">
-                                <label class="form-label small mb-1" for="part-unit-price-{{ $part->id }}">Unit price (RM)</label>
-                                <input class="form-control form-control-sm project-part-unit-price" id="part-unit-price-{{ $part->id }}"
-                                    type="number" name="unit_price" min="0" max="99999999" step="0.01"
-                                    value="{{ number_format((float) ($part->pivot->unit_price ?? $part->selling_price), 2, '.', '') }}">
-                            </div>
-                            <div class="col-auto">
-                                <button class="btn btn-sm btn-outline-primary" type="submit">Update price</button>
-                            </div>
-                        </form>
-                        @if ($part->pivot->notes)<p class="small mb-0 mt-1">{{ $part->pivot->notes }}</p>@endif
-                        @foreach ($part->pivot->url_sources ?? [] as $sourceUrl)
-                            <a class="small d-block mt-1" href="{{ $sourceUrl }}" target="_blank" rel="noopener noreferrer">{{ $sourceUrl }}</a>
-                        @endforeach
-                    </div>
-                    <form method="POST" action="{{ route('projects.parts.destroy', [$project, $part]) }}"
-                        onsubmit="return confirm('Remove this hardware recommendation?');">
-                        @csrf
-                        @method('DELETE')
-                        <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
-                    </form>
-                </div>
-            @empty
-                <div class="card-body text-body-secondary">No parts have been recommended for this project yet.</div>
-            @endforelse
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0">
+                <thead>
+                    <tr><th scope="col">Part</th><th scope="col">Needed / stock</th><th scope="col">Unit price</th><th scope="col">Notes and sources</th><th scope="col">Actions</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($project->inventoryParts as $part)
+                        @php
+                            $recommendedUnitPrice = (float) ($part->pivot->unit_price ?? $part->selling_price);
+                        @endphp
+                        <tr>
+                            <th scope="row">
+                                <a href="{{ route('inventory.index') }}">{{ $part->name }}</a>
+                                @if ($part->sku)<div class="small text-body-secondary">{{ $part->sku }}</div>@endif
+                                @if ($part->supplier)<div class="small text-body-secondary">Supplier: {{ $part->supplier->name }}</div>@endif
+                            </th>
+                            <td>{{ $part->pivot->quantity }} needed<br><span class="small text-body-secondary">{{ $part->stock_quantity }} in stock</span></td>
+                            <td>
+                                <div>RM {{ number_format($recommendedUnitPrice, 2) }}</div>
+                                <form class="d-grid gap-1 mt-2" method="POST" action="{{ route('projects.parts.update', [$project, $part]) }}">
+                                    @csrf
+                                    @method('PUT')
+                                    <label class="visually-hidden" for="part-price-source-{{ $part->id }}">Price source</label>
+                                    <select class="form-select form-select-sm project-part-price-source"
+                                        id="part-price-source-{{ $part->id }}" name="price_source"
+                                        data-selling-price="{{ $part->selling_price }}" data-cost-price="{{ $part->cost_price }}">
+                                        <option value="selling_price" @selected(($part->pivot->price_source ?? 'selling_price') === 'selling_price')>Selling price</option>
+                                        <option value="cost_price" @selected($part->pivot->price_source === 'cost_price')>Cost price</option>
+                                        <option value="custom" @selected($part->pivot->price_source === 'custom')>Custom</option>
+                                    </select>
+                                    <label class="visually-hidden" for="part-unit-price-{{ $part->id }}">Unit price (RM)</label>
+                                    <input class="form-control form-control-sm project-part-unit-price" id="part-unit-price-{{ $part->id }}"
+                                        type="number" name="unit_price" min="0" max="99999999" step="0.01"
+                                        value="{{ number_format($recommendedUnitPrice, 2, '.', '') }}">
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Update price</button>
+                                </form>
+                            </td>
+                            <td>
+                                @if ($part->pivot->notes)<div>{{ $part->pivot->notes }}</div>@endif
+                                @foreach ($part->pivot->url_sources ?? [] as $sourceUrl)
+                                    <a class="d-block small" href="{{ $sourceUrl }}" target="_blank" rel="noopener noreferrer">{{ $sourceUrl }}</a>
+                                @endforeach
+                                @if (! $part->pivot->notes && empty($part->pivot->url_sources))
+                                    <span class="text-body-secondary">—</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="small text-body-secondary mb-2">Line total<br><strong class="text-body">RM {{ number_format($part->pivot->quantity * $recommendedUnitPrice, 2) }}</strong></div>
+                                <form method="POST" action="{{ route('projects.parts.destroy', [$project, $part]) }}"
+                                    onsubmit="return confirm('Remove this hardware recommendation?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td class="text-body-secondary" colspan="5">No parts have been recommended for this project yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
         <div class="card-footer bg-body d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Recommended parts subtotal</span>
@@ -429,6 +559,81 @@
         @empty
             <div class="card-body text-body-secondary">No customer is linked to this project. You can change this from Edit project.</div>
         @endforelse
+    </div>
+
+    @php
+        $ganttTasks = $project->tasks->flatMap(fn ($task) => collect([$task])->concat($task->subtasks))->values();
+        $datedGanttTasks = $ganttTasks->filter(fn ($task) => $task->start_date || $task->due_date);
+        $ganttStart = $datedGanttTasks
+            ->map(fn ($task) => $task->start_date ?? $task->due_date)
+            ->sortBy(fn ($date) => $date->timestamp)
+            ->first();
+        $ganttEnd = $datedGanttTasks
+            ->map(fn ($task) => $task->due_date ?? $task->start_date)
+            ->sortByDesc(fn ($date) => $date->timestamp)
+            ->first();
+        $ganttDays = $ganttStart && $ganttEnd ? max(1, (int) $ganttStart->diffInDays($ganttEnd) + 1) : 0;
+    @endphp
+    <div class="card project-panel mb-4" id="project-gantt">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h2 class="h5 mb-0">Task Gantt chart</h2>
+                <p class="small text-body-secondary mb-0">Planned task start and due dates; tasks without dates are listed as unscheduled.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.tasks.create', $project) }}">Add scheduled task</a>
+        </div>
+        <div class="card-body">
+            @if ($ganttTasks->isEmpty())
+                <p class="text-body-secondary mb-0">Add tasks to display the project Gantt chart.</p>
+            @else
+                @if ($ganttStart && $ganttEnd)
+                    <div class="d-flex justify-content-between small text-body-secondary mb-2">
+                        <span>{{ $ganttStart->format('M j, Y') }}</span>
+                        <span>{{ $ganttEnd->format('M j, Y') }}</span>
+                    </div>
+                @endif
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr><th scope="col">Task</th><th scope="col">Status</th><th scope="col">Schedule</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($ganttTasks as $ganttTask)
+                                @php
+                                    $barStart = $ganttTask->start_date ?? $ganttTask->due_date;
+                                    $barEnd = $ganttTask->due_date ?? $ganttTask->start_date;
+                                    $barOffset = $barStart && $ganttStart ? (int) $ganttStart->diffInDays($barStart) : 0;
+                                    $barDuration = $barStart && $barEnd ? (int) $barStart->diffInDays($barEnd) + 1 : 0;
+                                    $barWidth = $ganttDays > 0 ? max(1, $barDuration / $ganttDays * 100) : 0;
+                                    $barLeft = $ganttDays > 0 ? $barOffset / $ganttDays * 100 : 0;
+                                @endphp
+                                <tr>
+                                    <th scope="row">
+                                        @if ($ganttTask->parent_task_id)<span class="text-body-secondary me-1">↳</span>@endif
+                                        <a href="{{ route('tasks.show', $ganttTask) }}">{{ $ganttTask->title }}</a>
+                                        <div class="small text-body-secondary">{{ \App\Models\Task::PRIORITIES[$ganttTask->priority] }}</div>
+                                    </th>
+                                    <td>{{ \App\Models\Task::STATUSES[$ganttTask->status] }}</td>
+                                    <td style="min-width: 240px;">
+                                        @if ($barStart && $barEnd && $ganttDays > 0)
+                                            <div class="position-relative bg-body-tertiary rounded" style="height: 2rem;">
+                                                <div class="position-absolute top-0 h-100 rounded bg-{{ $ganttTask->status === 'done' ? 'success' : ($ganttTask->status === 'in_progress' ? 'primary' : 'secondary') }}"
+                                                    style="left: {{ number_format($barLeft, 3, '.', '') }}%; width: {{ number_format(min($barWidth, 100 - $barLeft), 3, '.', '') }}%;"
+                                                    title="{{ $barStart->format('M j, Y') }} – {{ $barEnd->format('M j, Y') }}">
+                                                </div>
+                                            </div>
+                                            <span class="small text-body-secondary">{{ $barStart->format('M j') }}–{{ $barEnd->format('M j, Y') }}</span>
+                                        @else
+                                            <span class="small text-body-secondary">Unscheduled</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
     </div>
 
     <div class="card project-panel">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">

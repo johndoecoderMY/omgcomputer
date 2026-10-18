@@ -12,7 +12,7 @@
             <h2 class="h5 mb-0">Your repair tickets for this project</h2>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead>
                     <tr><th>Ticket</th><th>Device</th><th>Status</th><th>Received</th></tr>
                 </thead>

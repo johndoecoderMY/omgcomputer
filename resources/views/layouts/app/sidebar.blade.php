@@ -423,6 +423,11 @@
                                     <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('marketplace-shops.index') }}">
+                                    <span class="nav-link-text ps-1">E-commerce Shops</span>
+                                </a>
+                            </li>
                         @endrole
                     </ul>
                 </li>

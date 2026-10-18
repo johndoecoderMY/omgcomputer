@@ -212,7 +212,7 @@
                         <a class="btn btn-sm btn-primary" href="{{ route('tickets.index') }}">All tickets</a>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-bordered">
                             <thead>
                                 <tr>
                                     <th>Ticket</th>

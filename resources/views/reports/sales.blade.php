@@ -66,7 +66,7 @@
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.index', ['type' => 'invoice']) }}">All invoices</a>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-bordered">
                         <thead><tr><th>Invoice</th><th>Customer</th><th>Status</th><th class="text-end">Total</th><th class="text-end">Paid</th></tr></thead>
                         <tbody>
                             @forelse ($invoices as $invoice)
@@ -89,7 +89,7 @@
             <div class="card h-100 p-2">
                 <div class="card-header bg-body"><h2 class="h5 mb-1 text-primary">Top items by revenue</h2><p class="small text-body-secondary mb-0">Best-performing invoice line items.</p></div>
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 table-bordered">
                         <thead><tr><th>Item</th><th class="text-end">Units</th><th class="text-end">Revenue</th></tr></thead>
                         <tbody>
                             @forelse ($topItems as $item)

@@ -54,4 +54,19 @@ return [
         'environment' => env('EASYPARCEL_ENVIRONMENT', 'sandbox'),
     ],
 
+    'marketplaces' => [
+        'shopee' => [
+            'partner_id' => env('SHOPEE_PARTNER_ID'),
+            'partner_key' => env('SHOPEE_PARTNER_KEY'),
+            'redirect_url' => env('SHOPEE_REDIRECT_URL'),
+        ],
+        'lazada' => [
+            'app_key' => env('LAZADA_APP_KEY'),
+            'app_secret' => env('LAZADA_APP_SECRET'),
+            'redirect_url' => env('LAZADA_REDIRECT_URL'),
+            'api_url' => env('LAZADA_API_URL', 'https://api.lazada.com.my/rest'),
+            'auth_url' => env('LAZADA_AUTH_URL', 'https://auth.lazada.com/rest'),
+        ],
+    ],
+
 ];

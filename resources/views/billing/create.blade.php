@@ -21,7 +21,7 @@
             <div class="col-md-3"><label class="form-label" for="due_date">Due date</label><input class="form-control" id="due_date" name="due_date" type="date" value="{{ old('due_date', $document->due_date?->format('Y-m-d')) }}"></div>
         </div></div>
         <div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Line items</span><button class="btn btn-sm btn-outline-primary" id="add-line" type="button"><span class="fas fa-plus me-1"></span>Add line</button></div>
-            <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th style="min-width:260px">Inventory or service</th><th style="min-width:200px">Description</th><th style="width:110px">Quantity</th><th style="width:160px">Unit price (RM)</th><th style="width:56px"></th></tr></thead><tbody id="lines">
+            <div class="table-responsive"><table class="table align-middle mb-0 table-bordered"><thead><tr><th style="min-width:260px">Inventory or service</th><th style="min-width:200px">Description</th><th style="width:110px">Quantity</th><th style="width:160px">Unit price (RM)</th><th style="width:56px"></th></tr></thead><tbody id="lines">
                 @php($currentLines = old('items', $lines))
                 @foreach ($currentLines as $index => $line)
                     @php($selectedProduct = empty($line['inventory_part_id']) ? $products->firstWhere('name', $line['description'] ?? '') : null)

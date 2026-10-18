@@ -67,6 +67,12 @@
                 @error('priority')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-4">
+                <label class="form-label" for="start_date">Planned start <span class="text-body-secondary">(optional)</span></label>
+                <input class="form-control" id="start_date" name="start_date" type="date"
+                    value="{{ old('start_date', $task->start_date?->format('Y-m-d')) }}">
+                @error('start_date')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-md-4">
                 <label class="form-label" for="due_date">Due date <span class="text-body-secondary">(optional)</span></label>
                 <input class="form-control" id="due_date" name="due_date" type="date"
                     value="{{ old('due_date', $task->due_date?->format('Y-m-d')) }}">

@@ -109,6 +109,8 @@ class ProjectController extends Controller
         $project->load([
             'tasks' => fn ($query) => $query->whereNull('parent_task_id')->with('subtasks'),
             'customers',
+            'technologyStack' => fn ($query) => $query->orderBy('name'),
+            'flowCharts' => fn ($query) => $query->orderBy('title'),
             'inventoryParts.supplier',
             'estimateItems' => fn ($query) => $query->orderBy('category')->orderBy('description'),
             'events' => fn ($query) => $query->where('starts_at', '>=', now()->startOfDay())

@@ -11,7 +11,7 @@
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
     <div class="row g-3 mb-3"><div class="col-md-3"><div class="card p-2"><div class="card-body"><div class="small text-body-secondary">Items tracked</div><div class="fs-4 fw-semibold">{{ $partCount }}</div></div></div></div><div class="col-md-3"><div class="card p-2"><div class="card-body"><div class="small text-body-secondary">At or below reorder level</div><div class="fs-4 fw-semibold text-danger">{{ $lowStockCount }}</div></div></div></div></div>
     <div class="card p-2"><div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" data-datatable
+        <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
             data-source="{{ route('inventory.parts.datatable', request()->query()) }}"
             data-columns="{{ json_encode([
                 ['data' => 'name', 'name' => 'inventory_parts.name'],

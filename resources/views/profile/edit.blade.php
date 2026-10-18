@@ -123,7 +123,7 @@
                                 <p class="text-body-secondary mb-0">Profile updates and password changes are recorded here.</p>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0" data-datatable
+                                <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
                                     data-source="{{ route('profile.activity') }}"
                                     data-columns="{{ json_encode([
                                         ['data' => 'created_at', 'name' => 'created_at'],

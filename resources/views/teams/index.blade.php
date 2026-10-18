@@ -25,7 +25,7 @@
     </details>
 
     <div class="card p-2">
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0" data-datatable
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered" data-datatable
             data-source="{{ route('teams.datatable') }}"
             data-columns="{{ json_encode([
                 ['data' => 'name', 'name' => 'teams.name'],

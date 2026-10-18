@@ -15,11 +15,14 @@ use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MarketplaceShopController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectEventController;
+use App\Http\Controllers\ProjectExportController;
+use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SupplierController;
@@ -52,6 +55,9 @@ Route::prefix('book')->name('bookings.')->controller(BookingController::class)->
     Route::post('/', 'store')->name('store');
     Route::get('/confirmation/{reference}', 'confirmation')->name('confirmation');
 });
+
+Route::get('/marketplaces/callback/{platform}', [MarketplaceShopController::class, 'callback'])
+    ->name('marketplace-shops.callback');
 
 Route::middleware(['auth', 'password.changed'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -234,6 +240,12 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/easyparcel', 'easyParcel')->name('easyparcel');
         Route::post('/easyparcel/rates', 'checkEasyParcel')->name('easyparcel.rates');
     });
+    Route::prefix('marketplace-shops')->name('marketplace-shops.')->middleware('role:admin')->controller(MarketplaceShopController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{platform}/connect', 'connect')->name('connect');
+        Route::post('/{marketplaceShop}/disconnect', 'disconnect')->name('disconnect');
+        Route::post('/{marketplaceShop}/orders/import', 'importOrders')->name('orders.import');
+    });
 
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');
     Route::delete('/events/{event}', [ProjectEventController::class, 'destroy'])->middleware('not-customer')->name('events.destroy');
@@ -248,6 +260,10 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/', [ProjectController::class, 'index'])->name('index');
         Route::get('/{project}', [ProjectController::class, 'show'])->name('show');
         Route::middleware('not-customer')->group(function (): void {
+            Route::post('/{project}/export', [ProjectExportController::class, 'export'])->name('export');
+            Route::post('/{project}/technology-stack', [ProjectTechnologyController::class, 'store'])->name('technology-stack.store');
+            Route::put('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'update'])->name('technology-stack.update');
+            Route::delete('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'destroy'])->name('technology-stack.destroy');
             Route::get('/{project}/flowcharts/datatable', [ProjectController::class, 'flowChartsDatatable'])->name('flowcharts.datatable');
             Route::post('/{project}/flowcharts/link', [ProjectController::class, 'linkFlowCharts'])->name('flowcharts.link');
             Route::post('/{project}/flowcharts/duplicate', [ProjectController::class, 'duplicateFlowCharts'])->name('flowcharts.duplicate');

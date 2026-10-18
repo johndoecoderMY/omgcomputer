@@ -45,7 +45,7 @@
     </form>
 
     <div class="card p-2"><div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" data-datatable
+        <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
             data-source="{{ route('tasks.datatable', request()->only(['status', 'priority'])) }}"
             data-columns="{{ json_encode([
                 ['data' => 'task', 'name' => 'tasks.title'],

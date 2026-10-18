@@ -69,7 +69,7 @@
     <div class="card shadow-sm mb-4" id="services">
         <div class="card-header bg-body py-3"><h2 class="h5 mb-1">2. Service catalogue and estimated pricing</h2><p class="small text-body-secondary mb-0">Use clear starting prices; confirm final charges after inspection or scope discussion.</p></div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead class="table-light"><tr><th scope="col">Service</th><th scope="col">Typical scope</th><th scope="col">Target customer</th><th scope="col" class="text-end">Estimated price</th></tr></thead>
                 <tbody>
                     <tr><td class="fw-semibold">Desktop PC cleaning</td><td>Dust removal and basic inspection</td><td>Home users / gamers</td><td class="text-end text-nowrap">RM40–70</td></tr>
@@ -94,7 +94,7 @@
     {{-- Student revenue --}}
     <div class="card shadow-sm mb-4" id="student-services">
         <div class="card-header bg-body py-3"><h2 class="h5 mb-1">3. Student and FYP revenue opportunities</h2><p class="small text-body-secondary mb-0">Create bookable offers that fit around repair work and use your technical skills to increase average revenue.</p></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered">
             <thead class="table-light"><tr><th>Offer</th><th>Deliverable</th><th>Suggested format</th><th class="text-end">Draft price</th><th>Business benefit</th></tr></thead>
             <tbody>
                 <tr><td class="fw-semibold">FYP idea and scope consultation</td><td>Problem statement discussion, scope boundaries and milestone roadmap</td><td>45–60 minutes</td><td class="text-end text-nowrap">RM40–80</td><td>Low equipment cost; builds referrals</td></tr>
@@ -111,7 +111,7 @@
     {{-- Customer workflow --}}
     <div class="card shadow-sm mb-4" id="operations">
         <div class="card-header bg-body py-3"><h2 class="h5 mb-0">4. Service workflow and job tracking</h2></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered">
             <thead class="table-light"><tr><th>Step</th><th>Job status</th><th>Required action</th><th>Record to keep</th></tr></thead>
             <tbody>
                 <tr><td><span class="badge text-bg-secondary">01</span></td><td class="fw-semibold">Received</td><td>Record symptoms, make/model, accessories and visible condition.</td><td>Customer details and intake checklist</td></tr>
@@ -128,14 +128,14 @@
     <div class="row g-4 mb-4">
         <div class="col-xl-6" id="startup-capital"><div class="card shadow-sm h-100">
             <div class="card-header bg-body py-3"><h2 class="h5 mb-0">5. Initial startup capital</h2></div>
-            <div class="table-responsive"><table class="table table-striped align-middle mb-0"><thead class="table-light"><tr><th>Item</th><th class="text-end">Estimate</th></tr></thead><tbody>
+            <div class="table-responsive"><table class="table table-striped align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Item</th><th class="text-end">Estimate</th></tr></thead><tbody>
                 <tr><td>Rental deposit and advance</td><td class="text-end">RM4,200</td></tr><tr><td>Workbench, chairs and shelves</td><td class="text-end">RM1,500</td></tr><tr><td>Repair tools and cleaning equipment</td><td class="text-end">RM1,500</td></tr><tr><td>Thermal paste and consumables</td><td class="text-end">RM400</td></tr><tr><td>Test monitor, cables and adapters</td><td class="text-end">RM800</td></tr><tr><td>Signboard and shop setup</td><td class="text-end">RM1,000</td></tr><tr><td>Registration and licensing allowance</td><td class="text-end">RM800</td></tr><tr><td>Initial advertising</td><td class="text-end">RM300</td></tr><tr><td>Emergency cash reserve</td><td class="text-end">RM5,000</td></tr>
             </tbody><tfoot class="table-light"><tr class="fw-bold"><th>Total estimated capital</th><th class="text-end">RM15,500</th></tr></tfoot></table></div>
             <div class="card-body"><p class="small text-body-secondary mb-2">Suggested planning range</p><div class="d-flex justify-content-between border-bottom py-2"><span>Lean launch</span><strong>RM15,000–20,000</strong></div><div class="d-flex justify-content-between py-2"><span>Safer reserve</span><strong>RM20,000–25,000</strong></div><p class="small text-body-secondary mt-2 mb-0">Renovation, air-conditioning or additional equipment may increase the total. Keep personal living expenses separate.</p></div>
         </div></div>
         <div class="col-xl-6" id="monthly-costs"><div class="card shadow-sm h-100">
             <div class="card-header bg-body py-3"><h2 class="h5 mb-0">6. Monthly operating expenses</h2></div>
-            <div class="table-responsive"><table class="table table-striped align-middle mb-0"><thead class="table-light"><tr><th>Expense</th><th class="text-end">Monthly estimate</th></tr></thead><tbody>
+            <div class="table-responsive"><table class="table table-striped align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Expense</th><th class="text-end">Monthly estimate</th></tr></thead><tbody>
                 <tr><td>Shop rental</td><td class="text-end">RM1,200</td></tr><tr><td>Electricity and water</td><td class="text-end">RM200</td></tr><tr><td>Internet and phone</td><td class="text-end">RM120</td></tr><tr><td>Marketing</td><td class="text-end">RM200</td></tr><tr><td>Miscellaneous expenses</td><td class="text-end">RM200</td></tr>
             </tbody><tfoot class="table-light"><tr class="fw-bold"><th>Total monthly fixed costs</th><th class="text-end">RM1,920</th></tr></tfoot></table></div>
             <div class="card-body"><p class="small text-body-secondary mb-0">Excludes replacement parts, tax, loan repayments, employee wages and the owner's personal income. Track variable costs separately for each job.</p></div>
@@ -150,7 +150,7 @@
             <div class="col-md-4"><div class="border rounded-3 p-3 h-100"><p class="small text-body-secondary mb-1">Average consumables</p><div class="h3 mb-0">RM15</div></div></div>
             <div class="col-md-4"><div class="bg-primary-subtle rounded-3 p-3 h-100"><p class="small text-primary-emphasis mb-1">Contribution per job</p><div class="h3 text-primary mb-0">RM75</div></div></div>
         </div><p class="text-body-secondary mb-0">RM90 average bill − RM15 consumables = RM75 contribution. This amount helps cover fixed costs first; it is not take-home income. FYP consultations may have different costs and margins, so track them separately.</p></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Standard jobs / day</th><th class="text-end">Monthly jobs</th><th class="text-end">Estimated monthly sales</th><th class="text-end">Estimated operating profit*</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Standard jobs / day</th><th class="text-end">Monthly jobs</th><th class="text-end">Estimated monthly sales</th><th class="text-end">Estimated operating profit*</th></tr></thead><tbody>
             <tr><td>1</td><td class="text-end">26</td><td class="text-end">RM2,340</td><td class="text-end">RM30</td></tr><tr><td>2</td><td class="text-end">52</td><td class="text-end">RM4,680</td><td class="text-end">RM1,980</td></tr><tr><td>3</td><td class="text-end">78</td><td class="text-end">RM7,020</td><td class="text-end">RM3,930</td></tr><tr><td>4</td><td class="text-end">104</td><td class="text-end">RM9,360</td><td class="text-end">RM5,880</td></tr>
         </tbody></table></div>
         <div class="card-footer small text-body-secondary">*After RM15 estimated consumables per job and RM1,920 monthly fixed expenses, but before tax, loan repayments, wages and personal income. Assumes 26 working days.</div>
@@ -164,7 +164,7 @@
     {{-- Marketing --}}
     <div class="card shadow-sm mb-4" id="marketing">
         <div class="card-header bg-body py-3"><h2 class="h5 mb-1">9. Advertising and customer acquisition plan</h2><p class="small text-body-secondary mb-0">Focus on trackable, low-cost channels before increasing paid advertising.</p></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Channel</th><th>Action</th><th>Offer to promote</th><th>How to measure</th><th>Priority</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Channel</th><th>Action</th><th>Offer to promote</th><th>How to measure</th><th>Priority</th></tr></thead><tbody>
             <tr><td class="fw-semibold">Google Business Profile</td><td>Publish accurate hours, service categories, photos and updates after location confirmation.</td><td>Local laptop repair and cleaning</td><td>Calls, directions and enquiries</td><td><span class="badge text-bg-success">High</span></td></tr>
             <tr><td class="fw-semibold">Campus / student groups</td><td>Ask group admins for permission; share helpful tips and a clear service menu.</td><td>Student laptop care bundle and FYP coaching</td><td>Enquiries using a campaign code</td><td><span class="badge text-bg-success">High</span></td></tr>
             <tr><td class="fw-semibold">Facebook / Instagram / TikTok</td><td>Post short repair explainers, before-and-after cleaning photos with consent, and booking details.</td><td>Maintenance bundles and tech clinics</td><td>Messages and paid bookings</td><td><span class="badge text-bg-success">High</span></td></tr>
@@ -179,7 +179,7 @@
     {{-- Roadmap --}}
     <div class="card shadow-sm mb-4" id="roadmap">
         <div class="card-header bg-body py-3"><h2 class="h5 mb-1">10. Launch roadmap and progress tracker</h2><p class="small text-body-secondary mb-0">Use this as a lightweight project plan; update each status as work is completed.</p></div>
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Phase</th><th>Task</th><th>Target timing</th><th>Completion evidence</th><th>Status</th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Phase</th><th>Task</th><th>Target timing</th><th>Completion evidence</th><th>Status</th></tr></thead><tbody>
             <tr><td><span class="badge text-bg-secondary">1 · Validate</span></td><td>Interview students, residents and small businesses; compare local competitors.</td><td>Week 1</td><td>Customer notes and competitor comparison</td><td><span class="badge text-bg-warning">Not started</span></td></tr>
             <tr><td><span class="badge text-bg-secondary">1 · Validate</span></td><td>Compare shop lots, rental terms and licensing requirements.</td><td>Week 1–2</td><td>At least three location quotations</td><td><span class="badge text-bg-warning">Not started</span></td></tr>
             <tr><td><span class="badge text-bg-info">2 · Prepare</span></td><td>Finalize service prices, intake form, quotation and job tracking sheet.</td><td>Week 2</td><td>Ready-to-use forms and service catalogue</td><td><span class="badge text-bg-warning">Not started</span></td></tr>
@@ -191,10 +191,10 @@
 
     {{-- Risk and KPIs --}}
     <div class="row g-4 mb-4">
-        <div class="col-xl-7"><div class="card shadow-sm h-100" id="risks"><div class="card-header bg-body py-3"><h2 class="h5 mb-0">11. Risks and practical controls</h2></div><div class="table-responsive"><table class="table table-striped align-middle mb-0"><thead class="table-light"><tr><th>Risk</th><th>Control</th></tr></thead><tbody>
+        <div class="col-xl-7"><div class="card shadow-sm h-100" id="risks"><div class="card-header bg-body py-3"><h2 class="h5 mb-0">11. Risks and practical controls</h2></div><div class="table-responsive"><table class="table table-striped align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Risk</th><th>Control</th></tr></thead><tbody>
             <tr><td>Low initial demand</td><td>Validate demand before leasing, stage purchases and review enquiries and paid jobs monthly.</td></tr><tr><td>Unexpected repair scope</td><td>Provide written quotations and obtain approval before extra labour or parts.</td></tr><tr><td>Customer data loss or privacy incident</td><td>Obtain consent, limit access, protect credentials and document handovers.</td></tr><tr><td>Parts delays</td><td>Confirm supplier price and availability before taking deposits or promising deadlines.</td></tr><tr><td>Low-margin advertising</td><td>Track cost per paid booking and pause campaigns that do not convert.</td></tr><tr><td>Academic integrity concerns</td><td>Offer explanations, coaching and debugging guidance; do not produce assessed submissions for students.</td></tr>
         </tbody></table></div></div></div>
-        <div class="col-xl-5"><div class="card shadow-sm h-100" id="metrics"><div class="card-header bg-body py-3"><h2 class="h5 mb-0">12. Monthly owner dashboard</h2></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Metric</th><th>What to check</th></tr></thead><tbody>
+        <div class="col-xl-5"><div class="card shadow-sm h-100" id="metrics"><div class="card-header bg-body py-3"><h2 class="h5 mb-0">12. Monthly owner dashboard</h2></div><div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered"><thead class="table-light"><tr><th>Metric</th><th>What to check</th></tr></thead><tbody>
             <tr><td class="fw-semibold">Demand</td><td>Enquiries, bookings and lead source</td></tr><tr><td class="fw-semibold">Conversion</td><td>Enquiries that become approved, paid jobs</td></tr><tr><td class="fw-semibold">Average bill</td><td>Sales divided by completed jobs</td></tr><tr><td class="fw-semibold">Contribution</td><td>Sales less parts and consumables</td></tr><tr><td class="fw-semibold">Advertising</td><td>Spend and cost per paid booking</td></tr><tr><td class="fw-semibold">Repeat business</td><td>Returning customers and referrals</td></tr><tr><td class="fw-semibold">Delivery</td><td>Turnaround time, rework and feedback</td></tr>
         </tbody></table></div></div></div>
     </div>

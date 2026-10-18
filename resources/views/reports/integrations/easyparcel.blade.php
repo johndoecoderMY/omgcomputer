@@ -119,7 +119,7 @@
                         </div>
                         @if ($result['success'])
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
+                                <table class="table table-hover align-middle mb-0 table-bordered">
                                     <thead><tr><th>Courier</th><th>Service</th><th>Delivery estimate</th><th class="text-end">Rate</th></tr></thead>
                                     <tbody>
                                         @forelse ($result['rates'] as $rate)

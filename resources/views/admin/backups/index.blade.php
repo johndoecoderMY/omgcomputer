@@ -66,7 +66,7 @@
             @endif
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 table-bordered">
                     <thead>
                         <tr><th>Archive</th><th>Created</th><th>Size</th><th>Action</th></tr>
                     </thead>

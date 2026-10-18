@@ -54,6 +54,11 @@ class Project extends Model
         return $this->hasMany(ProjectEstimateItem::class);
     }
 
+    public function technologyStack(): HasMany
+    {
+        return $this->hasMany(ProjectTechnology::class);
+    }
+
     public function flowCharts(): BelongsToMany
     {
         return $this->belongsToMany(FlowChart::class)->withTimestamps();

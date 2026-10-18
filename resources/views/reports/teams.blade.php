@@ -57,7 +57,7 @@
             <span class="badge text-bg-light border">{{ $users->count() }} members</span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead><tr><th>Team member</th><th class="text-end">Assigned</th><th class="text-end">Completed</th><th class="text-end">In progress</th><th style="min-width: 180px">Completion rate</th></tr></thead>
                 <tbody>
                     @forelse ($users as $user)

@@ -194,7 +194,7 @@
             <p class="small text-body-secondary mb-0">Manually recorded until Meta API reporting is connected.</p>
         </div>
         <div class="table-responsive">
-            <table class="table align-middle mb-0">
+            <table class="table align-middle mb-0 table-bordered">
                 <thead><tr><th>Campaign</th><th>Channel</th><th>Status</th><th class="text-end">Spend</th><th class="text-end">Impressions</th><th class="text-end">Clicks</th><th class="text-end">Leads</th><th class="text-end">Conversions</th><th class="text-end">Revenue</th></tr></thead>
                 <tbody>
                     @forelse ($campaigns as $campaign)

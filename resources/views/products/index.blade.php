@@ -17,7 +17,7 @@
     </form>
 
     <div class="card p-2">
-        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered">
             <thead><tr><th>Offer</th><th>Category</th><th>Typical scope</th><th>Target customer</th><th class="text-end">Plan estimate</th></tr></thead>
             <tbody>
                 @forelse ($products as $product)

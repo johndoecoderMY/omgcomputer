@@ -11,7 +11,7 @@
     @if ($errors->any())<div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
 
     <div class="card p-2"><div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" data-datatable
+        <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
             data-source="{{ route('inventory.suppliers.datatable') }}"
             data-columns="{{ json_encode([
                 ['data' => 'name', 'name' => 'suppliers.name'],

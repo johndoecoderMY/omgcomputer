@@ -139,7 +139,7 @@
                         </button>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-bordered">
                             <thead>
                                 <tr><th>Module / permission</th><th class="text-center" style="width: 130px">Enabled</th></tr>
                             </thead>
@@ -188,7 +188,7 @@
                         <span class="badge text-bg-primary">{{ $selectedRole->users->count() }} users</span>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 table-bordered">
                             <thead><tr><th>User</th><th>Email</th><th>Status</th><th>Account created</th><th></th></tr></thead>
                             <tbody>
                                 @forelse ($selectedRole->users as $user)
@@ -220,7 +220,7 @@
             <span class="badge text-bg-light border">{{ $permissions->count() }}</span>
         </div>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead><tr><th>Permission</th><th>Assigned to roles</th><th class="text-end">Action</th></tr></thead>
                 <tbody>
                     @forelse ($permissions as $permission)
