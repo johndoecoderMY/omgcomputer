@@ -82,6 +82,7 @@ class BookingTest extends TestCase
             'search' => ['value' => 'Morgan Lee'],
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-success">Confirmed</span>')
             ->assertSee('Morgan Lee')
             ->assertSee($booking->reference);
 

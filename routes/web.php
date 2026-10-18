@@ -31,9 +31,9 @@ use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
-Route::get('/sitemap.xml', fn () => response()
-    ->view('sitemap', [], 200, ['Content-Type' => 'application/xml; charset=UTF-8']))
-    ->name('sitemap');
+// Route::get('/sitemap.xml', fn () => response()
+//     ->view('sitemap', [], 200, ['Content-Type' => 'application/xml; charset=UTF-8']))
+//     ->name('sitemap');
 Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
@@ -47,6 +47,12 @@ Route::redirect('/qa', '/#faq')->name('qa');
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'password.changed'])
     ->name('dashboard');
+
+Route::get('/error-pages/{code}', function (string $code) {
+    abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);
+
+    return response()->view("errors.{$code}", [], 200);
+})->middleware(['auth', 'password.changed', 'not-customer'])->name('error-pages.preview');
 
 Route::prefix('book')->name('bookings.')->controller(BookingController::class)->group(function (): void {
     Route::get('/', 'create')->name('create');
@@ -302,6 +308,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/overview', [DevelopmentController::class, 'index'])->name('overview');
         Route::get('/plan', [DevelopmentController::class, 'plan'])->name('plan');
         Route::get('/sops', [FlowChartController::class, 'sops'])->name('sops');
+        Route::get('/sops/create', [FlowChartController::class, 'createSop'])->name('sops.create');
         Route::get('/sops/datatable', [FlowChartController::class, 'sopsDatatable'])->name('sops.datatable');
         Route::get('/flowcharts/datatable', [FlowChartController::class, 'datatable'])->name('flowcharts.datatable');
         Route::post('/flowcharts/{flowchart}/tasks', [FlowChartController::class, 'addStepsToTasks'])->name('flowcharts.tasks.store');

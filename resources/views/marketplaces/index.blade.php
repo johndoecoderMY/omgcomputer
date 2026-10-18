@@ -112,9 +112,7 @@
                                     <td>{{ ucfirst($shop->platform) }} {{ $shop->region ? '('.$shop->region.')' : '' }}</td>
                                     <td>{{ $shop->external_shop_id }}</td>
                                     <td>
-                                        <span class="badge {{ $shop->access_token ? 'text-bg-success' : 'text-bg-secondary' }}">
-                                            {{ $shop->access_token ? 'Connected' : 'Disconnected' }}
-                                        </span>
+                                        <x-status-badge :status="$shop->access_token ? 'active' : 'disconnected'" :label="$shop->access_token ? 'Connected' : 'Disconnected'" />
                                     </td>
                                     <td>{{ $shop->orders_count }}</td>
                                     <td>{{ $shop->last_order_import_at?->format('Y-m-d H:i') ?? 'Never' }}</td>
@@ -172,7 +170,7 @@
                                 <td>{{ $order->shop->shop_name }}</td>
                                 <td>{{ ucfirst($order->shop->platform) }}</td>
                                 <td>{{ $order->ordered_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                                <td>{{ $order->status ?? '—' }}</td>
+                                <td><x-status-badge :status="$order->status ?: 'unknown'" :label="$order->status ?: 'Unknown'" /></td>
                                 <td>{{ $order->total_amount !== null ? trim(($order->currency ? $order->currency.' ' : '').$order->total_amount) : '—' }}</td>
                             </tr>
                         @empty

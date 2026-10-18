@@ -62,15 +62,40 @@
 
         document.querySelectorAll('table[data-datatable]').forEach((table) => {
             const columns = JSON.parse(table.dataset.columns || '[]');
+            const filters = JSON.parse(table.dataset.datatableFilters || '[]');
             const $table = window.jQuery(table);
             const dataTable = $table.DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: table.dataset.source,
+                ajax: {
+                    url: table.dataset.source,
+                    data: (request) => {
+                        filters.forEach(({ name, selector }) => {
+                            const filter = document.querySelector(selector);
+                            if (filter && filter.value) {
+                                request[name] = filter.value;
+                            }
+                        });
+                    },
+                },
                 columns,
                 pageLength: 25,
                 order: [],
             });
+
+            filters.forEach(({ selector }) => {
+                document.querySelector(selector)?.addEventListener('change', () => {
+                    dataTable.ajax.reload();
+                });
+            });
+            const search = table.dataset.datatableSearch
+                ? document.querySelector(table.dataset.datatableSearch)
+                : null;
+            if (search) {
+                search.addEventListener('input', () => {
+                    dataTable.search(search.value).draw();
+                });
+            }
 
             let retryScheduled = false;
             $table.on('error.dt', function () {

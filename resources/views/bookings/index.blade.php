@@ -16,7 +16,7 @@
                 ['data' => 'customer_contact', 'orderable' => false, 'searchable' => false],
                 ['data' => 'service', 'orderable' => false, 'searchable' => false],
                 ['data' => 'request_notes', 'name' => 'request_notes'],
-                ['data' => 'status', 'name' => 'status'],
+                ['data' => 'status_label', 'name' => 'status'],
                 ['data' => 'management', 'orderable' => false, 'searchable' => false],
             ]) }}">
             <thead><tr><th>When</th><th>Reference</th><th>Customer</th><th>Service</th><th>Request</th><th>Status</th><th>Status / assignee</th></tr></thead>

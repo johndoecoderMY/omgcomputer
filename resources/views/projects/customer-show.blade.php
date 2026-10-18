@@ -21,7 +21,7 @@
                         <tr>
                             <td class="fw-semibold">{{ $ticket->ticket_number }}</td>
                             <td>{{ $ticket->device_model ?: $ticket->device_type ?: '—' }}</td>
-                            <td>{{ \App\Models\RepairTicket::STATUSES[$ticket->status] ?? $ticket->status }}</td>
+                            <td><x-status-badge :status="$ticket->status" :label="\App\Models\RepairTicket::STATUSES[$ticket->status] ?? $ticket->status" /></td>
                             <td>{{ $ticket->received_at->format('M j, Y') }}</td>
                         </tr>
                     @empty

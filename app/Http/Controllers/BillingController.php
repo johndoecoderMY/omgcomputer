@@ -7,6 +7,7 @@ use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Services\InventoryStock;
+use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,10 +53,9 @@ class BillingController extends Controller
                 e(ucfirst($document->type)),
             ))
             ->editColumn('issue_date', fn (BillingDocument $document): string => $document->issue_date->format('M j, Y'))
-            ->addColumn('status_label', fn (BillingDocument $document): string => sprintf(
-                '<span class="badge text-bg-%s">%s</span>',
-                $document->status === 'paid' ? 'success' : ($document->status === 'void' ? 'secondary' : ($document->status === 'draft' ? 'light' : 'warning')),
-                e(str_replace('_', ' ', ucfirst($document->status))),
+            ->addColumn('status_label', fn (BillingDocument $document): string => (string) StatusBadge::make(
+                $document->status,
+                str_replace('_', ' ', ucfirst($document->status)),
             ))
             ->editColumn('total', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->total, 2))
             ->editColumn('paid_amount', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->paid_amount, 2))

@@ -26,7 +26,7 @@ class StudentFypAndProjectScheduleTest extends TestCase
         $this->assertTrue($examples->every(fn (FlowChart $flowChart): bool => count($flowChart->steps) >= 6));
         $this->get(route('development.sops', ['category' => 'education']))
             ->assertOk()
-            ->assertSee('Student FYP SOPs')
+            ->assertSee('SOP Library')
             ->assertSee('Student FYP');
         $this->get(route('development.flowcharts.create', ['category' => 'education']))
             ->assertOk()

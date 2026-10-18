@@ -14,6 +14,9 @@
         $breadcrumbs[] = ['label' => $title];
     }
     $actionDropdownId = 'page-actions-'.\Illuminate\Support\Str::uuid();
+    $actionsHtml = isset($actions) ? (string) $actions : '';
+    preg_match_all('/<(?:a\b[^>]*\bhref\s*=|button\b[^>]*|input\b[^>]*\btype\s*=\s*["\']?submit\b)[^>]*>/i', $actionsHtml, $actionMatches);
+    $hasSingleAction = count($actionMatches[0]) === 1;
 @endphp
 
 @once
@@ -55,34 +58,6 @@
             color: var(--falcon-danger, #e63757);
         }
     </style>
-    <script>
-        const promoteSinglePageHeaderActions = () => {
-            document.querySelectorAll('.page-header-action-dropdown').forEach((dropdown) => {
-                const menu = dropdown.querySelector('.dropdown-menu');
-                const actions = menu?.querySelectorAll('a[href], button:not([type="hidden"]), input[type="submit"]');
-
-                if (actions?.length !== 1) return;
-
-                const singleAction = dropdown.parentElement.querySelector('.page-header-action-single');
-                if (!singleAction) return;
-
-                const action = actions[0];
-                const form = action.closest('form');
-                const standaloneAction = form && menu.contains(form) ? form : action;
-                if (!standaloneAction.classList.contains('btn')) {
-                    action.classList.add('btn', 'btn-primary');
-                }
-                singleAction.append(standaloneAction);
-                dropdown.remove();
-            });
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', promoteSinglePageHeaderActions, { once: true });
-        } else {
-            promoteSinglePageHeaderActions();
-        }
-    </script>
 @endonce
 
 <nav aria-label="breadcrumb">
@@ -109,16 +84,20 @@
     <div class="d-flex flex-wrap align-items-center gap-2">
         @if (isset($actions))
             <div class="page-header-action-single">
-                <div class="dropdown font-sans-serif btn-reveal-trigger page-header-action-dropdown">
-                    <button class="btn btn-primary dropdown-toggle dropdown-caret-none"
-                        id="{{ $actionDropdownId }}-toggle" type="button" data-bs-toggle="dropdown" data-boundary="viewport"
-                        aria-haspopup="true" aria-expanded="false" aria-label="Page actions">
-                        <span class="fas fa-ellipsis-h fs-11" aria-hidden="true"></span>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="{{ $actionDropdownId }}-toggle">
-                        {!! $actions !!}
+                @if ($hasSingleAction)
+                    {!! $actionsHtml !!}
+                @else
+                    <div class="dropdown font-sans-serif btn-reveal-trigger page-header-action-dropdown">
+                        <button class="btn btn-primary dropdown-toggle dropdown-caret-none"
+                            id="{{ $actionDropdownId }}-toggle" type="button" data-bs-toggle="dropdown" data-boundary="viewport"
+                            aria-haspopup="true" aria-expanded="false" aria-label="Page actions">
+                            <span class="fas fa-ellipsis-h fs-11" aria-hidden="true"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="{{ $actionDropdownId }}-toggle">
+                            {!! $actionsHtml !!}
+                        </div>
                     </div>
-                </div>
+                @endif
             </div>
         @endif
         @if ($backUrl)

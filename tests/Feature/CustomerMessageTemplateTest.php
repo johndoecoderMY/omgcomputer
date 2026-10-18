@@ -62,6 +62,7 @@ class CustomerMessageTemplateTest extends TestCase
             'start' => 0,
             'length' => 25,
         ]))->assertOk()
+            ->assertSee('text-bg-success')
             ->assertSee('Booking request received')
             ->assertSee('Diagnosis and approval request')
             ->assertSee('Parts delay update')

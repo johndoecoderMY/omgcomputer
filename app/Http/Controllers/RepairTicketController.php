@@ -8,6 +8,7 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Services\AttachmentStorage;
+use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,9 +67,9 @@ class RepairTicketController extends Controller
             ->addColumn('customer_name', fn (RepairTicket $ticket): string => $ticket->customer->name)
             ->addColumn('device', fn (RepairTicket $ticket): string => $ticket->device_model ?: $ticket->device_type ?: '—')
             ->addColumn('project_name', fn (RepairTicket $ticket): string => $ticket->project?->name ?: '—')
-            ->addColumn('status_label', fn (RepairTicket $ticket): string => sprintf(
-                '<span class="badge text-bg-light border">%s</span>',
-                e(RepairTicket::STATUSES[$ticket->status] ?? $ticket->status),
+            ->addColumn('status_label', fn (RepairTicket $ticket): string => (string) StatusBadge::make(
+                $ticket->status,
+                RepairTicket::STATUSES[$ticket->status] ?? $ticket->status,
             ))
             ->addColumn('priority_label', fn (RepairTicket $ticket): string => RepairTicket::PRIORITIES[$ticket->priority] ?? $ticket->priority)
             ->addColumn('assignee_name', fn (RepairTicket $ticket): string => $ticket->assignee?->name ?: 'Unassigned')

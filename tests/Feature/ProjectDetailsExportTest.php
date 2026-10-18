@@ -17,30 +17,28 @@ class ProjectDetailsExportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_shared_page_header_uses_primary_ellipsis_and_separates_a_single_action(): void
+    public function test_shared_page_header_renders_a_single_action_without_an_ellipsis(): void
     {
         $this->actingAs(User::factory()->create());
 
         $this->get(route('customers.index'))
             ->assertOk()
-            ->assertSee('btn btn-primary dropdown-toggle dropdown-caret-none', false)
-            ->assertDontSee('btn btn-primary btn-sm dropdown-toggle', false)
+            ->assertSee('Add customer')
+            ->assertDontSee('aria-label="Page actions"', false)
             ->assertSee('page-header-action-single', false)
-            ->assertSee('if (actions?.length !== 1) return;', false)
-            ->assertSee('singleAction.append(standaloneAction);', false)
-            ->assertSee("action.classList.add('btn', 'btn-primary');", false)
-            ->assertSee('dropdown.remove();', false);
+            ->assertSee('btn btn-primary', false);
     }
 
-    public function test_project_list_has_one_add_action_that_is_rendered_outside_the_ellipsis(): void
+    public function test_project_list_shows_the_new_project_button_without_an_ellipsis(): void
     {
         $this->actingAs(User::factory()->create());
 
         $this->get(route('projects.index'))
             ->assertOk()
             ->assertSee('New project')
+            ->assertDontSee('aria-label="Page actions"', false)
             ->assertSee('page-header-action-single', false)
-            ->assertSee('if (actions?.length !== 1) return;', false);
+            ->assertSee('btn btn-primary', false);
     }
 
     public function test_project_technology_stack_can_be_created_updated_and_deleted(): void
@@ -170,6 +168,7 @@ class ProjectDetailsExportTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('aria-label="Page actions"', false)
+            ->assertSee('page-header-action-dropdown', false)
             ->assertSee('All projects')
             ->assertSee('Task Gantt chart')
             ->assertSee('Project technology stack')

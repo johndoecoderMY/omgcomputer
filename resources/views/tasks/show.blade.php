@@ -36,7 +36,7 @@
 
     <div class="card mb-4 p-2">        <div class="card-body">
             <div class="d-flex flex-wrap gap-2 mb-3">
-                <span class="badge task-status-{{ $task->status }}">{{ \App\Models\Task::STATUSES[$task->status] }}</span>
+                <x-status-badge :status="$task->status" :label="\App\Models\Task::STATUSES[$task->status] ?? $task->status" />
                 <span class="badge text-bg-light border">{{ \App\Models\Task::PRIORITIES[$task->priority] }} priority</span>
                 @if ($task->due_date)
                     <span class="badge text-bg-light border">Due {{ $task->due_date->format('M j, Y') }}</span>
@@ -68,7 +68,7 @@
                             <div>
                                 <a class="fw-semibold text-decoration-none" href="{{ route('tasks.show', $subtask) }}">{{ $subtask->title }}</a>
                                 <div class="d-flex flex-wrap gap-2 mt-1">
-                                    <span class="badge task-status-{{ $subtask->status }}">{{ \App\Models\Task::STATUSES[$subtask->status] }}</span>
+                                    <x-status-badge :status="$subtask->status" :label="\App\Models\Task::STATUSES[$subtask->status] ?? $subtask->status" />
                                     <span class="badge text-bg-light border">{{ \App\Models\Task::PRIORITIES[$subtask->priority] }} priority</span>
                                     @if ($subtask->due_date)
                                         <span class="small text-body-secondary">Due {{ $subtask->due_date->format('M j, Y') }}</span>

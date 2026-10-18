@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\FlowChart;
-use App\Models\ProductService;
 use App\Support\SopTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,48 +48,43 @@ class FlowChartController extends Controller
             ->toJson();
     }
 
-    public function sops(Request $request): View
+    public function sops(): View
     {
-        $category = $request->query('category', 'product');
-        abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
-        $filters = $request->validate([
-            'type' => ['nullable', Rule::in(['example', 'custom'])],
-            'subject_name' => ['nullable', 'string', Rule::in(ProductService::query()->orderBy('name')->pluck('name')->all())],
-        ]);
-        $type = $filters['type'] ?? '';
-
         return view('development.flowcharts.sops', [
-            'category' => $category,
-            'type' => $type,
-            'subjectName' => $filters['subject_name'] ?? '',
-            'subjects' => ProductService::query()->orderBy('name')->pluck('name'),
-            'categoryLabel' => [
-                'product' => 'Product',
-                'service' => 'Service',
-                'education' => 'Student FYP',
-            ][$category],
+            'subjects' => FlowChart::query()
+                ->whereIn('category', ['product', 'service', 'education'])
+                ->whereNotNull('subject_name')
+                ->distinct()
+                ->orderBy('subject_name')
+                ->pluck('subject_name'),
         ]);
     }
 
     public function sopsDatatable(Request $request)
     {
-        $category = $request->query('category', 'product');
-        abort_unless(in_array($category, ['product', 'service', 'education'], true), 404);
         $filters = $request->validate([
+            'category' => ['nullable', Rule::in(['product', 'service', 'education'])],
             'type' => ['nullable', Rule::in(['example', 'custom'])],
-            'subject_name' => ['nullable', 'string', Rule::in(ProductService::query()->orderBy('name')->pluck('name')->all())],
+            'subject_name' => ['nullable', 'string', 'max:255'],
         ]);
-        $type = $filters['type'] ?? '';
-        $flowCharts = FlowChart::query()->where('category', $category);
+        $flowCharts = FlowChart::query()->whereIn('category', ['product', 'service', 'education']);
 
-        if ($type !== '') {
-            $flowCharts->where('is_example', $type === 'example');
+        if (($filters['category'] ?? '') !== '') {
+            $flowCharts->where('category', $filters['category']);
+        }
+        if (($filters['type'] ?? '') !== '') {
+            $flowCharts->where('is_example', $filters['type'] === 'example');
         }
         if (($filters['subject_name'] ?? '') !== '') {
             $flowCharts->where('subject_name', $filters['subject_name']);
         }
 
         return DataTables::eloquent($flowCharts)
+            ->addColumn('category_label', fn (FlowChart $flowChart): string => [
+                'product' => 'Product',
+                'service' => 'Service',
+                'education' => 'Student FYP',
+            ][$flowChart->category] ?? 'SOP')
             ->addColumn('example_label', fn (FlowChart $flowChart): string => $flowChart->is_example
                 ? '<span class="badge text-bg-info">Example</span>'
                 : '<span class="badge text-bg-light border">Custom</span>')
@@ -107,12 +101,24 @@ class FlowChartController extends Controller
         $category = in_array(request()->query('category'), ['product', 'service', 'education'], true)
             ? request()->query('category')
             : 'website';
+
+        return $this->createForCategory($category);
+    }
+
+    public function createSop(): View
+    {
+        return $this->createForCategory('product', true);
+    }
+
+    private function createForCategory(string $category, bool $isSop = false): View
+    {
         $projectId = request()->validate([
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
         ])['project_id'] ?? null;
 
         return view('development.flowcharts.create', [
             'projectId' => $projectId,
+            'isSop' => $isSop,
             'flowChart' => new FlowChart(['steps' => [
                 ...($category === 'website'
                     ? [

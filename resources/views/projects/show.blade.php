@@ -613,11 +613,11 @@
                                         <a href="{{ route('tasks.show', $ganttTask) }}">{{ $ganttTask->title }}</a>
                                         <div class="small text-body-secondary">{{ \App\Models\Task::PRIORITIES[$ganttTask->priority] }}</div>
                                     </th>
-                                    <td>{{ \App\Models\Task::STATUSES[$ganttTask->status] }}</td>
+                                    <td><x-status-badge :status="$ganttTask->status" :label="\App\Models\Task::STATUSES[$ganttTask->status] ?? $ganttTask->status" /></td>
                                     <td style="min-width: 240px;">
                                         @if ($barStart && $barEnd && $ganttDays > 0)
                                             <div class="position-relative bg-body-tertiary rounded" style="height: 2rem;">
-                                                <div class="position-absolute top-0 h-100 rounded bg-{{ $ganttTask->status === 'done' ? 'success' : ($ganttTask->status === 'in_progress' ? 'primary' : 'secondary') }}"
+                                                <div class="position-absolute top-0 h-100 rounded bg-{{ \App\Support\StatusBadge::colorClass($ganttTask->status) }}"
                                                     style="left: {{ number_format($barLeft, 3, '.', '') }}%; width: {{ number_format(min($barWidth, 100 - $barLeft), 3, '.', '') }}%;"
                                                     title="{{ $barStart->format('M j, Y') }} – {{ $barEnd->format('M j, Y') }}">
                                                 </div>
@@ -653,7 +653,7 @@
                                     <p class="small text-body-secondary mb-2">{{ $task->description }}</p>
                                 @endif
                                 <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge task-status-{{ $task->status }}">{{ \App\Models\Task::STATUSES[$task->status] }}</span>
+                                    <x-status-badge :status="$task->status" :label="\App\Models\Task::STATUSES[$task->status] ?? $task->status" />
                                     <span class="badge text-bg-light border">{{ \App\Models\Task::PRIORITIES[$task->priority] }} priority</span>
                                     @if ($task->due_date)
                                         <span class="small text-body-secondary">Due {{ $task->due_date->format('M j, Y') }}</span>
@@ -672,7 +672,7 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <i class="fas fa-turn-down text-body-tertiary" aria-hidden="true"></i>
                                             <a class="text-decoration-none" href="{{ route('tasks.show', $subtask) }}">{{ $subtask->title }}</a>
-                                            <span class="badge task-status-{{ $subtask->status }}">{{ \App\Models\Task::STATUSES[$subtask->status] }}</span>
+                                            <x-status-badge :status="$subtask->status" :label="\App\Models\Task::STATUSES[$subtask->status] ?? $subtask->status" />
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             @include('tasks._completion-toggle', ['task' => $subtask])

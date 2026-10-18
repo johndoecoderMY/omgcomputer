@@ -41,6 +41,7 @@ class BillingInventoryReportsTest extends TestCase
             'search' => ['value' => $document->number],
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-info">Issued</span>')
             ->assertSee($document->number)
             ->assertSee('RM 20.00');
     }

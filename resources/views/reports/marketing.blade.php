@@ -73,9 +73,9 @@
                             <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
                                 <span>{{ $item['label'] }} <code class="small">{{ $item['env'] }}</code></span>
                                 @if ($whatsAppSetup[$item['key']])
-                                    <span class="badge text-bg-success">Configured</span>
+                                    <x-status-badge status="configured" label="Configured" />
                                 @else
-                                    <span class="badge text-bg-light border">Missing</span>
+                                    <x-status-badge status="missing" label="Missing" />
                                 @endif
                             </li>
                         @endforeach
@@ -107,7 +107,7 @@
                             <span class="small text-body-secondary">Ads insights setup readiness</span>
                         </div>
                     </div>
-                    <span class="badge text-bg-secondary">Not connected</span>
+                    <x-status-badge status="not_connected" label="Not connected" />
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -129,9 +129,9 @@
                             <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
                                 <span>{{ $label }} <code class="small">{{ $envName }}</code></span>
                                 @if ($marketingSetup[$key])
-                                    <span class="badge text-bg-success">Configured</span>
+                                    <x-status-badge status="configured" label="Configured" />
                                 @else
-                                    <span class="badge text-bg-light border">Missing</span>
+                                    <x-status-badge status="missing" label="Missing" />
                                 @endif
                             </li>
                         @endforeach
@@ -200,7 +200,7 @@
                     @forelse ($campaigns as $campaign)
                         <tr>
                             <td>{{ $campaign->name }}<div class="small text-body-secondary">{{ $campaign->starts_on?->format('M j, Y') ?? 'No start date' }}</div></td>
-                            <td>{{ $campaign->channel === 'meta_ads' ? 'Meta Ads' : ($campaign->channel === 'whatsapp' ? 'WhatsApp' : ucfirst($campaign->channel)) }}</td><td>{{ ucfirst($campaign->status) }}</td>
+                            <td>{{ $campaign->channel === 'meta_ads' ? 'Meta Ads' : ($campaign->channel === 'whatsapp' ? 'WhatsApp' : ucfirst($campaign->channel)) }}</td><td><x-status-badge :status="$campaign->status" :label="ucfirst($campaign->status)" /></td>
                             <td class="text-end">RM {{ number_format($campaign->spend, 2) }}</td>
                             <td class="text-end">{{ number_format($campaign->impressions) }}</td>
                             <td class="text-end">{{ number_format($campaign->clicks) }}</td>

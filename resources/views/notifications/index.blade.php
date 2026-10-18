@@ -28,7 +28,7 @@
                     </time>
                 </div>
                 @unless ($notification->read_at)
-                    <span class="badge text-bg-primary">New</span>
+                    <x-status-badge status="new" label="New" />
                 @endunless
             </a>
         @empty

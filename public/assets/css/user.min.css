@@ -67,6 +67,7 @@ a.flow-chart-preview:focus-visible {
 
 .flow-chart-viewport {
     overflow: auto;
+    height: clamp(24rem, 70vh, 48rem);
     min-height: 220px;
     background-color: var(--falcon-body-bg);
     background-image: radial-gradient(var(--falcon-border-color) 1px, transparent 1px);

@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Models\User;
+use App\Support\StatusBadge;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
@@ -221,6 +222,10 @@ class BookingController extends Controller
                     : '',
             ))
             ->editColumn('request_notes', fn (Booking $booking): string => e($booking->request_notes ?: '—'))
+            ->addColumn('status_label', fn (Booking $booking): string => (string) StatusBadge::make(
+                $booking->status,
+                Booking::STATUSES[$booking->status] ?? $booking->status,
+            ))
             ->addColumn('management', function (Booking $booking) use ($users): string {
                 $statusOptions = collect(Booking::STATUSES)->map(fn (string $label, string $value): string => sprintf(
                     '<option value="%s"%s>%s</option>',
@@ -243,7 +248,7 @@ class BookingController extends Controller
                     $userOptions,
                 );
             })
-            ->rawColumns(['customer_contact', 'service', 'management'])
+            ->rawColumns(['customer_contact', 'service', 'status_label', 'management'])
             ->toJson();
     }
 

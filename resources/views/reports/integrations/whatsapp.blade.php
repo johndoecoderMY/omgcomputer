@@ -22,15 +22,11 @@
                     <ul class="list-group list-group-flush mb-3">
                         <li class="list-group-item px-0 d-flex justify-content-between">
                             <span>Access token <code>META_ACCESS_TOKEN</code></span>
-                            <span class="badge {{ filled(config('services.meta.access_token')) ? 'text-bg-success' : 'text-bg-light border' }}">
-                                {{ filled(config('services.meta.access_token')) ? 'Configured' : 'Missing' }}
-                            </span>
+                            <x-status-badge :status="filled(config('services.meta.access_token')) ? 'configured' : 'missing'" :label="filled(config('services.meta.access_token')) ? 'Configured' : 'Missing'" />
                         </li>
                         <li class="list-group-item px-0 d-flex justify-content-between">
                             <span>Phone number ID <code>META_WHATSAPP_PHONE_NUMBER_ID</code></span>
-                            <span class="badge {{ $phoneNumberIdConfigured ? 'text-bg-success' : 'text-bg-light border' }}">
-                                {{ $phoneNumberIdConfigured ? 'Configured' : 'Missing' }}
-                            </span>
+                            <x-status-badge :status="$phoneNumberIdConfigured ? 'configured' : 'missing'" :label="$phoneNumberIdConfigured ? 'Configured' : 'Missing'" />
                         </li>
                     </ul>
                     <form method="POST" action="{{ route('reports.integrations.whatsapp.check') }}">

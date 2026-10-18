@@ -62,15 +62,15 @@
                             <p class="small text-body-secondary mb-0">Recommended starting point: EasyParcel Malaysia</p>
                         </div>
                     </div>
-                    <span class="badge text-bg-secondary">Not connected</span>
+                    <x-status-badge status="not_connected" label="Not connected" />
                 </div>
                 <div class="card-body row g-3 align-items-center">
                     <div class="col-lg-8">
                         <p class="mb-2">EasyParcel is a practical first option to evaluate because its API supports rate checks across courier services from a single integration. Confirm the couriers, coverage, and account terms you need before building the connection.</p>
                         <div class="d-flex flex-wrap gap-2">
-                            <span class="badge {{ $deliverySetup['authentication'] ? 'text-bg-success' : 'text-bg-light border' }}">Authentication {{ $deliverySetup['authentication'] ? 'configured' : 'not set' }}</span>
-                            <span class="badge {{ $deliverySetup['api_key'] ? 'text-bg-success' : 'text-bg-light border' }}">API key {{ $deliverySetup['api_key'] ? 'configured' : 'not set' }}</span>
-                            <span class="badge {{ $deliverySetup['api_url'] ? 'text-bg-success' : 'text-bg-light border' }}">API URL {{ $deliverySetup['api_url'] ? 'configured' : 'not set' }}</span>
+                            <x-status-badge :status="$deliverySetup['authentication'] ? 'configured' : 'missing'" :label="'Authentication '.($deliverySetup['authentication'] ? 'configured' : 'not set')" />
+                            <x-status-badge :status="$deliverySetup['api_key'] ? 'configured' : 'missing'" :label="'API key '.($deliverySetup['api_key'] ? 'configured' : 'not set')" />
+                            <x-status-badge :status="$deliverySetup['api_url'] ? 'configured' : 'missing'" :label="'API URL '.($deliverySetup['api_url'] ? 'configured' : 'not set')" />
                             <span class="badge text-bg-light border">Environment: {{ ucfirst($deliveryEnvironment ?: 'not set') }}</span>
                         </div>
                         <p class="small text-body-secondary mt-2 mb-0">

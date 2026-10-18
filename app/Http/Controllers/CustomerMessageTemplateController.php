@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerMessageTemplate;
+use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -45,9 +46,8 @@ class CustomerMessageTemplateController extends Controller
             ))
             ->addColumn('stage_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::STAGES[$template->stage])
             ->addColumn('channel_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::CHANNELS[$template->channel])
-            ->addColumn('status_label', fn (CustomerMessageTemplate $template): string => sprintf(
-                '<span class="badge text-bg-%s">%s</span>',
-                $template->is_active ? 'success' : 'secondary',
+            ->addColumn('status_label', fn (CustomerMessageTemplate $template): string => (string) StatusBadge::make(
+                $template->is_active ? 'active' : 'archived',
                 $template->is_active ? 'Available' : 'Archived',
             ))
             ->addColumn('actions', fn (CustomerMessageTemplate $template): string => sprintf(

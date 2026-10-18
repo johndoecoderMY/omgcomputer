@@ -180,8 +180,21 @@ class OrganizationInventorySopTest extends TestCase
             'is_example' => true,
             'steps' => [['id' => 'example-step', 'label' => 'Review request', 'kind' => 'action', 'connections' => []]],
         ]);
+        FlowChart::query()->create([
+            'title' => 'Laptop maintenance product SOP',
+            'category' => 'product',
+            'subject_name' => 'Laptop maintenance',
+            'steps' => [['id' => 'product-step', 'label' => 'Inspect item', 'kind' => 'action', 'connections' => []]],
+        ]);
         $this->get(route('development.sops', ['category' => 'service']))
-            ->assertOk()->assertSee('data-datatable', false)->assertSee('sop-type', false)->assertSee('sop-subject', false);
+            ->assertOk()
+            ->assertSee('SOP Library')
+            ->assertSee('data-datatable-filter', false)
+            ->assertSee('Add new SOP')
+            ->assertSee(route('development.sops.datatable'), false);
+        $this->getJson(route('development.sops.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 3);
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('recordsFiltered', 2);
         $this->getJson(route('development.sops.datatable', ['category' => 'service', 'type' => 'custom', 'draw' => 1, 'start' => 0, 'length' => 25]))
@@ -199,7 +212,11 @@ class OrganizationInventorySopTest extends TestCase
             ->assertJsonPath('data.0.subject_name', 'Laptop cleaning');
         $this->getJson(route('development.flowcharts.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('data.0.subject_name', 'Laptop cleaning');
-        $this->get(route('development.sops', ['category' => 'invalid']))->assertNotFound();
+        $this->get(route('development.sops', ['category' => 'invalid']))->assertOk();
+        $this->get(route('development.sops.create'))
+            ->assertOk()
+            ->assertSee('Create SOP')
+            ->assertSee('Product');
 
         $this->put(route('projects.flowcharts.sync', $project), [
             'flow_chart_ids' => [$flowChart->id],
@@ -258,7 +275,7 @@ class OrganizationInventorySopTest extends TestCase
         );
         $this->get(route('development.sops', ['category' => 'service']))
             ->assertOk()
-            ->assertSee('editable SOP workflow template');
+            ->assertSee('Browse all product, service, and student FYP SOPs');
     }
 
     public function test_supplier_table_pages_records_on_the_server(): void

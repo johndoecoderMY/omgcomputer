@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\WorkspaceNotification;
+use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class TaskController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
         return view('tasks.index', [
             'statuses' => Task::STATUSES,
@@ -71,7 +72,10 @@ class TaskController extends Controller
                 e(route('projects.show', $task->project)),
                 e($task->project->name),
             ))
-            ->addColumn('status_label', fn (Task $task): string => e(Task::STATUSES[$task->status] ?? $task->status))
+            ->addColumn('status_label', fn (Task $task): string => (string) StatusBadge::make(
+                $task->status,
+                Task::STATUSES[$task->status] ?? $task->status,
+            ))
             ->addColumn('priority_label', fn (Task $task): string => e(Task::PRIORITIES[$task->priority] ?? $task->priority))
             ->editColumn('due_date', fn (Task $task): string => $task->due_date?->format('M j, Y') ?? '—')
             ->addColumn('actions', fn (Task $task): string => sprintf(
@@ -84,7 +88,7 @@ class TaskController extends Controller
                 e(route('tasks.show', $task)),
                 e(route('tasks.edit', $task)),
             ))
-            ->rawColumns(['task', 'project_name', 'actions'])
+            ->rawColumns(['task', 'project_name', 'status_label', 'actions'])
             ->toJson();
     }
 

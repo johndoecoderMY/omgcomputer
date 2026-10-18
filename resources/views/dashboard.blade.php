@@ -232,9 +232,7 @@
                                             <span
                                                 class="small text-body-secondary">{{ $ticket->device_model ?: $ticket->device_type ?: 'Device not specified' }}</span>
                                         </td>
-                                        <td><span
-                                                class="badge text-bg-light border">{{ \App\Models\RepairTicket::STATUSES[$ticket->status] ?? $ticket->status }}</span>
-                                        </td>
+                                        <td><x-status-badge :status="$ticket->status" :label="\App\Models\RepairTicket::STATUSES[$ticket->status] ?? $ticket->status" /></td>
                                         <td><span
                                                 class="badge {{ in_array($ticket->priority, ['high', 'urgent'], true) ? 'text-bg-warning' : 'text-bg-light border' }}">{{ ucfirst($ticket->priority) }}</span>
                                         </td>

@@ -131,15 +131,15 @@
             <p class="muted">No task dates have been set.</p>
             <ul>
                 @foreach ($ganttTasks as $ganttTask)
-                    <li>{{ $ganttTask->title }} — {{ \App\Models\Task::STATUSES[$ganttTask->status] ?? $ganttTask->status }} — Unscheduled</li>
+                    <li>{{ $ganttTask->title }} — <span style="display:inline-block;padding:2px 6px;border-radius:3px;color:#fff;background-color:{{ \App\Support\StatusBadge::pdfColor($ganttTask->status) }}">{{ \App\Models\Task::STATUSES[$ganttTask->status] ?? $ganttTask->status }}</span> — Unscheduled</li>
                 @endforeach
             </ul>
         @else
             <p class="muted">{{ $ganttStart->format('M j, Y') }} – {{ $ganttEnd->format('M j, Y') }}</p>
             <p class="muted">Status:
-                <span style="color: #198754;">■ Done</span> ·
-                <span style="color: #0d6efd;">■ In progress</span> ·
-                <span style="color: #6c757d;">■ To do</span>
+                <span style="color: {{ \App\Support\StatusBadge::pdfColor('done') }};">■ Done</span> ·
+                <span style="color: {{ \App\Support\StatusBadge::pdfColor('in_progress') }};">■ In progress</span> ·
+                <span style="color: {{ \App\Support\StatusBadge::pdfColor('backlog') }};">■ To do</span>
             </p>
             @foreach ($ganttTaskPages as $ganttPage)
                 @php
@@ -180,17 +180,13 @@
                             $barWidth = max(8, $barDuration / $ganttDays * $ganttPlotWidth);
                             $barWidth = min($barWidth, $ganttPlotX + $ganttPlotWidth - $barX);
                             $rowY = $ganttAxisHeight + $index * $ganttRowHeight;
-                            $barColor = match ($ganttTask->status) {
-                                'done' => '#198754',
-                                'in_progress' => '#0d6efd',
-                                default => '#6c757d',
-                            };
+                            $barColor = \App\Support\StatusBadge::pdfColor($ganttTask->status);
                         @endphp
                         <text x="{{ $ganttTask->parent_task_id ? 18 : 5 }}" y="{{ $rowY + 15 }}"
                             font-family="sans-serif" font-size="12" font-weight="bold" fill="#344050"
                             textLength="260" lengthAdjust="spacingAndGlyphs">{{ $ganttTask->title }}</text>
                         <text x="{{ $ganttTask->parent_task_id ? 18 : 5 }}" y="{{ $rowY + 28 }}"
-                            font-family="sans-serif" font-size="10" fill="#748194">{{ \App\Models\Task::STATUSES[$ganttTask->status] ?? $ganttTask->status }}</text>
+                            font-family="sans-serif" font-size="10" fill="{{ \App\Support\StatusBadge::pdfColor($ganttTask->status) }}">{{ \App\Models\Task::STATUSES[$ganttTask->status] ?? $ganttTask->status }}</text>
                         <rect x="{{ number_format($barX, 2, '.', '') }}" y="{{ $rowY + 7 }}"
                             width="{{ number_format($barWidth, 2, '.', '') }}" height="20" rx="6"
                             fill="{{ $barColor }}">

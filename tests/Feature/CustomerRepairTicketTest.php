@@ -77,7 +77,8 @@ class CustomerRepairTicketTest extends TestCase
         $this->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('Charging port requires replacement.')
-            ->assertSee('Waiting for parts');
+            ->assertSee('Waiting for parts')
+            ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
         $this->get(route('tickets.index', ['status' => 'waiting_parts']))
             ->assertOk()
             ->assertSee('data-datatable', false);
@@ -91,7 +92,8 @@ class CustomerRepairTicketTest extends TestCase
             ->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.customer_name', 'Avery Tan')
-            ->assertJsonPath('data.0.priority_label', 'Urgent');
+            ->assertJsonPath('data.0.priority_label', 'Urgent')
+            ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-warning">Waiting for parts</span>');
 
         $this->get(route('billing.create', ['type' => 'quotation', 'repair_ticket_id' => $ticket->id]))
             ->assertOk()
@@ -123,6 +125,7 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee($quotation->number)
             ->assertSee('Billing documents');
         $this->get(route('customers.show', $customer))
-            ->assertSee($ticket->ticket_number);
+            ->assertSee($ticket->ticket_number)
+            ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
     }
 }

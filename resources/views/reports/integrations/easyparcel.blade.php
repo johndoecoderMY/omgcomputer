@@ -24,21 +24,17 @@
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex justify-content-between align-items-center">
                     <h2 class="h5 mb-0 text-primary">Connection settings</h2>
-                    <span class="badge text-bg-light border">{{ ucfirst($environment) }}</span>
+                    <x-status-badge :status="$environment" :label="ucfirst($environment)" />
                 </div>
                 <div class="card-body">
                     <p class="mb-3">API endpoint: <code>{{ $apiHost }}</code></p>
                     <p class="mb-3">
                         Authentication:
-                        <span class="badge {{ $authenticationConfigured ? 'text-bg-success' : 'text-bg-light border' }}">
-                            {{ $authenticationConfigured ? 'Configured' : 'Missing' }}
-                        </span>
+                        <x-status-badge :status="$authenticationConfigured ? 'configured' : 'missing'" :label="$authenticationConfigured ? 'Configured' : 'Missing'" />
                     </p>
                     <p class="mb-3">
                         API key:
-                        <span class="badge {{ $apiKeyConfigured ? 'text-bg-success' : 'text-bg-light border' }}">
-                            {{ $apiKeyConfigured ? 'Configured' : 'Missing' }}
-                        </span>
+                        <x-status-badge :status="$apiKeyConfigured ? 'configured' : 'missing'" :label="$apiKeyConfigured ? 'Configured' : 'Missing'" />
                     </p>
                     @unless ($apiKeyConfigured)
                         <div class="alert alert-warning mb-0">

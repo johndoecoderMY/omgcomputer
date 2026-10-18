@@ -5,12 +5,33 @@ namespace Tests\Feature;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Database\Seeders\BusinessPlanTaskSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ProjectTaskTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_business_plan_tasks_are_seeded_idempotently_as_a_project_plan(): void
+    {
+        $seeder = new BusinessPlanTaskSeeder;
+        $seeder->run();
+        $seeder->run();
+
+        $project = Project::query()->where('name', 'OMG Computer')->firstOrFail();
+        $tasks = Task::query()->where('project_id', $project->id)->get();
+
+        $this->assertCount(12, $tasks);
+        $this->assertCount(4, $tasks->whereNull('parent_task_id'));
+        $this->assertCount(8, $tasks->whereNotNull('parent_task_id'));
+        $this->assertTrue($tasks->every(fn (Task $task): bool => $task->status === 'backlog'));
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'title' => 'Validate the repair shop location and requirements',
+            'parent_task_id' => null,
+        ]);
+    }
 
     public function test_authenticated_user_can_create_a_task_and_manage_its_subtasks(): void
     {
@@ -129,7 +150,13 @@ class ProjectTaskTest extends TestCase
 
         $this->get(route('tasks.index'))
             ->assertOk()
-            ->assertSee('data-datatable', false);
+            ->assertSee('data-datatable', false)
+            ->assertSee('data-datatable-filters', false)
+            ->assertSee(route('tasks.datatable'), false);
+        $this->get(route('tasks.index', ['status' => 'done', 'priority' => 'urgent']))
+            ->assertOk()
+            ->assertSee('value="">All statuses', false)
+            ->assertSee(route('tasks.datatable'), false);
         $this->getJson(route('tasks.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -137,8 +164,17 @@ class ProjectTaskTest extends TestCase
             'search' => ['value' => 'Build the website'],
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-secondary">To do</span>')
             ->assertSee('Build the website')
             ->assertSee('Main website');
+        $this->getJson(route('tasks.datatable', [
+            'status' => 'done',
+            'priority' => 'low',
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1);
 
         $this->get(route('development.overview'))
             ->assertOk()

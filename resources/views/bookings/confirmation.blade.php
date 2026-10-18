@@ -16,7 +16,7 @@
                         <dt class="col-sm-4 text-700">Reference</dt><dd class="col-sm-8 fw-bold text-1000">{{ $booking->reference }}</dd>
                         <dt class="col-sm-4 text-700">Service</dt><dd class="col-sm-8 text-1000">{{ $booking->service_name }}</dd>
                         <dt class="col-sm-4 text-700">Date and time</dt><dd class="col-sm-8 text-1000">{{ $booking->starts_at->setTimezone('Asia/Kuala_Lumpur')->format('l, F j, Y \a\t g:i A') }} MYT</dd>
-                        <dt class="col-sm-4 text-700">Status</dt><dd class="col-sm-8 text-1000">{{ \App\Models\Booking::STATUSES[$booking->status] }}</dd>
+                        <dt class="col-sm-4 text-700">Status</dt><dd class="col-sm-8 text-1000"><x-status-badge :status="$booking->status" :label="\App\Models\Booking::STATUSES[$booking->status] ?? $booking->status" /></dd>
                     </dl>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-4">

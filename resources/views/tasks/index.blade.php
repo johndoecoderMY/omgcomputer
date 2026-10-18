@@ -17,36 +17,42 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <form class="card card-body mb-3 p-2" method="GET" action="{{ route('tasks.index') }}">
+    <div class="card card-body mb-3 p-2">
         <div class="row g-2 align-items-end">
             <div class="col-sm-5 col-lg-3">
-                <label class="form-label" for="status">Status</label>
-                <select class="form-select" id="status" name="status">
+                <label class="form-label" for="task-status">Status</label>
+                <select class="form-select" id="task-status" data-datatable-filter>
                     <option value="">All statuses</option>
                     @foreach ($statuses as $value => $label)
-                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
             <div class="col-sm-5 col-lg-3">
-                <label class="form-label" for="priority">Priority</label>
-                <select class="form-select" id="priority" name="priority">
+                <label class="form-label" for="task-priority">Priority</label>
+                <select class="form-select" id="task-priority" data-datatable-filter>
                     <option value="">All priorities</option>
                     @foreach ($priorities as $value => $label)
-                        <option value="{{ $value }}" @selected(request('priority') === $value)>{{ $label }}</option>
+                        <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-sm-2 col-lg-2 d-flex gap-2">
-                <button class="btn btn-outline-primary flex-grow-1" type="submit">Filter</button>
-                <a class="btn btn-outline-secondary" href="{{ route('tasks.index') }}">Reset</a>
+            <div class="col-sm-5 col-lg-3">
+                <label class="form-label" for="task-search">Search tasks</label>
+                <input class="form-control" id="task-search" type="search" data-datatable-search
+                    placeholder="Search tasks, projects, or assignees">
             </div>
         </div>
-    </form>
+    </div>
 
     <div class="card p-2"><div class="table-responsive">
         <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
-            data-source="{{ route('tasks.datatable', request()->only(['status', 'priority'])) }}"
+            data-source="{{ route('tasks.datatable') }}"
+            data-datatable-filters="{{ json_encode([
+                ['name' => 'status', 'selector' => '#task-status'],
+                ['name' => 'priority', 'selector' => '#task-priority'],
+            ]) }}"
+            data-datatable-search="#task-search"
             data-columns="{{ json_encode([
                 ['data' => 'task', 'name' => 'tasks.title'],
                 ['data' => 'project_name', 'orderable' => false, 'searchable' => false],

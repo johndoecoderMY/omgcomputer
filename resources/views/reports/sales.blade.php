@@ -73,7 +73,7 @@
                                 <tr>
                                     <td><a class="fw-semibold" href="{{ route('billing.documents.show', $invoice) }}">{{ $invoice->number }}</a><div class="small text-body-secondary">{{ $invoice->issue_date->format('M j, Y') }}</div></td>
                                     <td>{{ $invoice->customer_name }}</td>
-                                    <td><span class="badge text-bg-light border">{{ str_replace('_', ' ', ucfirst($invoice->status)) }}</span></td>
+                                    <td><x-status-badge :status="$invoice->status" :label="str_replace('_', ' ', ucfirst($invoice->status))" /></td>
                                     <td class="text-end">RM {{ number_format($invoice->total, 2) }}</td>
                                     <td class="text-end">RM {{ number_format($invoice->paid_amount, 2) }}</td>
                                 </tr>
