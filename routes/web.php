@@ -16,6 +16,7 @@ use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketplaceShopController;
+use App\Http\Controllers\MetaContentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -251,6 +252,15 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/{platform}/connect', 'connect')->name('connect');
         Route::post('/{marketplaceShop}/disconnect', 'disconnect')->name('disconnect');
         Route::post('/{marketplaceShop}/orders/import', 'importOrders')->name('orders.import');
+    });
+    Route::prefix('meta-content')->name('meta-content.')->middleware('not-customer')->controller(MetaContentController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{metaContentPost}/edit', 'edit')->name('edit');
+        Route::put('/{metaContentPost}', 'update')->name('update');
+        Route::post('/{metaContentPost}/publish', 'publish')->name('publish');
+        Route::delete('/{metaContentPost}', 'destroy')->name('destroy');
     });
 
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');

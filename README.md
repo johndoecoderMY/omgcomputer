@@ -50,6 +50,10 @@ Task assignments and project-linked calendar events create in-app notifications,
 
 Profile pictures use Laravel’s public disk. Run `php artisan storage:link` after setup so uploaded images can be served from `public/storage`.
 
+## Meta Content Publishing
+
+Staff can draft, schedule, and publish text/image/Reel posts to a Facebook Page and image/Reel posts to connected Instagram professional accounts from **OMG Computer → Meta Content**. Configure `META_PAGE_ID`, `META_PAGE_ACCESS_TOKEN`, `META_INSTAGRAM_USER_ID`, and `META_INSTAGRAM_ACCESS_TOKEN`; the existing `META_ACCESS_TOKEN` can be used as a fallback token. Tokens need Meta's publishing permissions, including `pages_manage_posts` for Facebook Pages and `instagram_business_basic` plus `instagram_business_content_publish` for Instagram. Set `META_PUBLIC_MEDIA_BASE_URL` (or `APP_URL`) to a publicly reachable HTTPS application URL and run `php artisan storage:link` so Meta can fetch uploaded media. Configure Laravel's scheduler to run `php artisan schedule:run` every minute to publish scheduled posts. Meta app review, token provisioning, quotas, supported media formats, and account eligibility remain subject to Meta's requirements.
+
 ## Access Control and Error Pages
 
 The **Roles & permissions** page is restricted to users with the `admin` role. Assign that role to an initial administrator with the command shown above; administrators can then manage roles, permissions, and user assignments in the application. Branded error pages are provided for access denied, not found, expired session, rate limited, server error, and maintenance responses.

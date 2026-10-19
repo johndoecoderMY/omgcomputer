@@ -141,8 +141,8 @@
                     </div>
                 </div>
                 <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-                    <span class="small text-body-secondary">Campaign reporting below remains manually maintained.</span>
-                    <span class="badge text-bg-light border">API integration planned</span>
+                            <span class="small text-body-secondary">Campaign analytics below remain manually maintained. Create social posts in the Meta Content manager.</span>
+                            <a class="btn btn-sm btn-outline-primary" href="{{ route('meta-content.index') }}">Manage Meta content</a>
                 </div>
             </div>
         </div>

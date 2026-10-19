@@ -40,7 +40,7 @@
                         <a class="nav-link" href="{{ route('profile.edit') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-cog"></span></span>
-                                <span class="nav-link-text ps-1">My Profile</span>
+                                <span class="nav-link-text ps-1">Profile</span>
                             </div>
                         </a>
                     </li>
@@ -68,7 +68,7 @@
                         data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketsMenu">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
-                            <span class="nav-link-text ps-1">Repair Tickets</span>
+                            <span class="nav-link-text ps-1">Tickets</span>
                         </div>
                     </a>
 
@@ -84,7 +84,7 @@
                             <ul class="nav collapse" id="repairTicketRecordsMenu">
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ route('tickets.index') }}">
-                                        <span class="nav-link-text ps-1">All tickets</span>
+                                        <span class="nav-link-text ps-1">Overview</span>
                                     </a>
                                 </li>
                                 <li class="nav-item">
@@ -94,58 +94,8 @@
                                 </li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link dropdown-indicator" href="#repairTicketAssignmentMenu" role="button"
-                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketAssignmentMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-user-check"></span></span>
-                                    <span class="nav-link-text ps-1">Assignment</span>
-                                </div>
-                            </a>
-                            <ul class="nav collapse" id="repairTicketAssignmentMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'unassigned']) }}">
-                                        <span class="nav-link-text ps-1">Unassigned</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['assigned' => 'mine']) }}">
-                                        <span class="nav-link-text ps-1">Assigned to me</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link dropdown-indicator" href="#repairTicketStatusMenu" role="button"
-                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketStatusMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-list-check"></span></span>
-                                    <span class="nav-link-text ps-1">Status</span>
-                                </div>
-                            </a>
-                            <ul class="nav collapse" id="repairTicketStatusMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_customer']) }}">
-                                        <span class="nav-link-text ps-1">Awaiting customer</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['status' => 'waiting_parts']) }}">
-                                        <span class="nav-link-text ps-1">Waiting for parts</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['status' => 'ready_for_pickup']) }}">
-                                        <span class="nav-link-text ps-1">Ready for pickup</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index', ['status' => 'closed']) }}">
-                                        <span class="nav-link-text ps-1">Closed</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+ 
+                    
                         <li class="nav-item">
                             <a class="nav-link dropdown-indicator" href="#repairTicketBookingsMenu" role="button"
                                 data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketBookingsMenu">
@@ -170,11 +120,7 @@
                                         <span class="nav-link-text ps-1">Public booking calendar</span>
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('customer-messages.index') }}">
-                                        <span class="nav-link-text ps-1">Customer messages</span>
-                                    </a>
-                                </li>
+                            
                             </ul>
                         </li>
                     </ul>
@@ -246,6 +192,19 @@
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-book"></span></span>
                             <span class="nav-link-text ps-1">SOP Library</span>
+                        </div>
+                    </a>
+
+                                     <a class="nav-link" href="{{ route('customer-messages.index') }}">
+                            <span class="nav-link-icon"><span class="fas fa-book"></span></span>
+
+                                        <span class="nav-link-text ps-1">Customer messages</span>
+                                    </a>
+                    
+                    <a class="nav-link" href="{{ route('meta-content.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fab fa-meta"></span></span>
+                            <span class="nav-link-text ps-1">Meta Content</span>
                         </div>
                     </a>
                 </li>
