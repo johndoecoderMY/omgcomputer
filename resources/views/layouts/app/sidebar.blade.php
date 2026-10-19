@@ -130,14 +130,28 @@
                     </a>
                 </li>
 
-                {{-- Customer records --}}
+                {{-- Customers --}}
                 <li class="nav-item">
+                    <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                        <div class="col-auto navbar-vertical-label">Customers</div>
+                        <div class="col ps-0">
+                            <hr class="mb-0 navbar-vertical-divider">
+                        </div>
+                    </div>
                     <a class="nav-link" href="{{ route('customers.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-users"></span></span>
                             <span class="nav-link-text ps-1">Customer records</span>
                         </div>
                     </a>
+                    @role('admin')
+                        <a class="nav-link" href="{{ route('admin.users.customers') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-user-plus"></span></span>
+                                <span class="nav-link-text ps-1">Customer accounts</span>
+                            </div>
+                        </a>
+                    @endrole
                 </li>
 
                 {{-- OMG Computer --}}
@@ -221,11 +235,6 @@
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('admin.users.index') }}">
                                     <span class="nav-link-text ps-1">Members </span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('admin.users.customers') }}">
-                                    <span class="nav-link-text ps-1">Customer accounts</span>
                                 </a>
                             </li>
                         </ul>
@@ -408,6 +417,23 @@
                             <span class="nav-link-text ps-1">My Profile</span>
                         </div>
                     </a>
+
+                    <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"
+                        data-bs-toggle="collapse" aria-expanded="false" aria-controls="errorPagesMenu">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-triangle-exclamation"></span></span>
+                            <span class="nav-link-text ps-1">Error pages</span>
+                        </div>
+                    </a>
+                    <ul class="nav collapse" id="errorPagesMenu">
+                        @foreach (['403' => 'Forbidden', '404' => 'Not found', '419' => 'Session expired', '429' => 'Too many requests', '500' => 'Server error', '503' => 'Unavailable'] as $code => $label)
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('error-pages.preview', $code) }}">
+                                    <span class="nav-link-text ps-1">{{ $code }} · {{ $label }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
                 </li>
                 @endif
             </ul>

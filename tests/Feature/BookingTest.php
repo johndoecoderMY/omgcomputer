@@ -142,6 +142,7 @@ class BookingTest extends TestCase
     public function test_staff_can_create_edit_and_delete_recurring_booking_times(): void
     {
         $this->actingAs(User::factory()->create());
+        $this->assertSame('/booking/slots', parse_url(route('booking-time-slots.index'), PHP_URL_PATH));
         $this->get(route('booking-time-slots.index'))
             ->assertOk()
             ->assertSee('Available booking times')

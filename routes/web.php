@@ -112,7 +112,7 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::put('/{booking}', 'update')->name('update');
     });
-    Route::prefix('booking-time-slots')->name('booking-time-slots.')->middleware('not-customer')->controller(BookingTimeSlotController::class)->group(function (): void {
+    Route::prefix('booking/slots')->name('booking-time-slots.')->middleware('not-customer')->controller(BookingTimeSlotController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');

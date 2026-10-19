@@ -7,6 +7,11 @@
     <title>@yield('title') · OMG Computer</title>
     <link rel="stylesheet" href="{{ asset('assets/css/theme.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/user.min.css') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/favicons/apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/img/favicons/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/img/favicons/favicon-16x16.png') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('assets/img/favicons/favicon.ico') }}">
+   
     <style>
         body { min-height: 100vh; display: grid; place-items: center; background: #f5f7fa; }
         .error-layout { width: min(100% - 2rem, 58rem); display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 1rem; align-items: stretch; }

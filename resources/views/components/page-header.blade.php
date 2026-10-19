@@ -8,7 +8,98 @@
 ])
 
 @php
-    $breadcrumbs = array_values($breadcrumbs);
+    $routeName = \Illuminate\Support\Facades\Route::currentRouteName() ?? '';
+    $sidebarBreadcrumbs = match (true) {
+        str_starts_with($routeName, 'tickets.') => [
+            ['label' => 'Support Desk'],
+            ['label' => 'Tickets', 'url' => route('tickets.index')],
+        ],
+        str_starts_with($routeName, 'bookings.') => [
+            ['label' => 'Bookings'],
+            ['label' => 'Customer bookings', 'url' => route('bookings.index')],
+        ],
+        str_starts_with($routeName, 'booking-time-slots.') => [
+            ['label' => 'Bookings'],
+            ['label' => 'Available times', 'url' => route('booking-time-slots.index')],
+        ],
+        str_starts_with($routeName, 'projects.') => [
+            ['label' => 'Projects', 'url' => route('projects.index')],
+        ],
+        str_starts_with($routeName, 'customers.') => [
+            ['label' => 'Customers'],
+            ['label' => 'Customer records', 'url' => route('customers.index')],
+        ],
+        str_starts_with($routeName, 'admin.users.customers') => [
+            ['label' => 'Customers'],
+            ['label' => 'Customer accounts', 'url' => route('admin.users.customers')],
+        ],
+        str_starts_with($routeName, 'admin.users.') => [
+            ['label' => 'Manage'],
+            ['label' => 'User accounts', 'url' => route('admin.users.index')],
+            ['label' => 'Members', 'url' => route('admin.users.index')],
+        ],
+        str_starts_with($routeName, 'tasks.') => [
+            ['label' => 'OMG Computer'],
+            ['label' => 'Tasks', 'url' => route('tasks.index')],
+        ],
+        str_starts_with($routeName, 'development.flowcharts.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Flow Charts', 'url' => route('development.flowcharts.index')],
+        ],
+        str_starts_with($routeName, 'development.') => [
+            ['label' => 'OMG Computer'],
+        ],
+        str_starts_with($routeName, 'customer-messages.') => [
+            ['label' => 'OMG Computer'],
+            ['label' => 'Customer messages', 'url' => route('customer-messages.index')],
+        ],
+        str_starts_with($routeName, 'teams.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Teams', 'url' => route('teams.index')],
+        ],
+        str_starts_with($routeName, 'departments.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Departments', 'url' => route('departments.index')],
+        ],
+        str_starts_with($routeName, 'products.') || str_starts_with($routeName, 'products_services.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Products & Services', 'url' => route('products.index')],
+        ],
+        str_starts_with($routeName, 'inventory.') || str_starts_with($routeName, 'suppliers.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Parts & Inventory', 'url' => route('inventory.index')],
+        ],
+        str_starts_with($routeName, 'meta-content.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Meta Content', 'url' => route('meta-content.index')],
+        ],
+        str_starts_with($routeName, 'admin.access.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Roles & permissions', 'url' => route('admin.access.index')],
+        ],
+        str_starts_with($routeName, 'admin.backups.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Backups', 'url' => route('admin.backups.index')],
+        ],
+        str_starts_with($routeName, 'billing.') => [
+            ['label' => 'Billing & Payments'],
+        ],
+        str_starts_with($routeName, 'reports.integrations.') => [
+            ['label' => 'Integrations'],
+        ],
+        str_starts_with($routeName, 'reports.') => [
+            ['label' => 'Reports & Analytics'],
+        ],
+        str_starts_with($routeName, 'marketplace-shops.') => [
+            ['label' => 'Integrations'],
+            ['label' => 'E-commerce Shops', 'url' => route('marketplace-shops.index')],
+        ],
+        str_starts_with($routeName, 'profile.') || str_starts_with($routeName, 'error-pages.') => [
+            ['label' => 'System'],
+        ],
+        default => [],
+    };
+    $breadcrumbs = array_values([...$sidebarBreadcrumbs, ...$breadcrumbs]);
     $lastBreadcrumb = $breadcrumbs === [] ? null : end($breadcrumbs);
     if ($lastBreadcrumb === null || (isset($lastBreadcrumb['url']) && ($lastBreadcrumb['label'] ?? null) !== $title)) {
         $breadcrumbs[] = ['label' => $title];
@@ -68,6 +159,8 @@
         @foreach ($breadcrumbs as $breadcrumb)
             @if ($loop->last)
                 <li class="breadcrumb-item active" aria-current="page">{{ $breadcrumb['label'] }}</li>
+            @elseif (! isset($breadcrumb['url']))
+                <li class="breadcrumb-item">{{ $breadcrumb['label'] }}</li>
             @else
                 <li class="breadcrumb-item"><a href="{{ $breadcrumb['url'] }}">{{ $breadcrumb['label'] }}</a></li>
             @endif

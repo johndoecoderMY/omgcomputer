@@ -19,6 +19,12 @@ class ErrorPagesPreviewTest extends TestCase
             ->assertSee('Error page previews')
             ->assertSee('404 · Not found')
             ->assertSee('Page not found');
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('id="errorPagesMenu"', false)
+            ->assertSee(route('error-pages.preview', '403'))
+            ->assertSee(route('error-pages.preview', '503'));
     }
 
     public function test_error_page_previews_require_authentication_and_only_allow_known_codes(): void

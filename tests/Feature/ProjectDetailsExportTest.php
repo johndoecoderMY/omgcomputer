@@ -41,6 +41,31 @@ class ProjectDetailsExportTest extends TestCase
             ->assertSee('btn btn-primary', false);
     }
 
+    public function test_page_header_breadcrumbs_follow_sidebar_sections(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route('tickets.index'))
+            ->assertOk()
+            ->assertSee('Support Desk')
+            ->assertSee('Tickets');
+        $this->get(route('bookings.index'))
+            ->assertOk()
+            ->assertSee('Bookings')
+            ->assertSee('Customer bookings');
+        $this->get(route('customers.index'))
+            ->assertOk()
+            ->assertSee('Customers')
+            ->assertSee('Customer records');
+        $this->get(route('inventory.index'))
+            ->assertOk()
+            ->assertSee('Manage')
+            ->assertSee('Parts & Inventory');
+        $this->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('Reports & Analytics');
+    }
+
     public function test_project_technology_stack_can_be_created_updated_and_deleted(): void
     {
         $this->actingAs(User::factory()->create());
