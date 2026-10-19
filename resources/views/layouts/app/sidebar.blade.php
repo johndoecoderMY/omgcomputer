@@ -74,56 +74,44 @@
 
                     <ul class="nav collapse" id="repairTicketsMenu">
                         <li class="nav-item">
-                            <a class="nav-link dropdown-indicator" href="#repairTicketRecordsMenu" role="button"
-                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketRecordsMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-clipboard-list"></span></span>
-                                    <span class="nav-link-text ps-1">Tickets</span>
-                                </div>
+                            <a class="nav-link" href="{{ route('tickets.index') }}">
+                                <span class="nav-link-text ps-1">All tickets</span>
                             </a>
-                            <ul class="nav collapse" id="repairTicketRecordsMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.index') }}">
-                                        <span class="nav-link-text ps-1">Overview</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('tickets.create') }}">
-                                        <span class="nav-link-text ps-1">New ticket</span>
-                                    </a>
-                                </li>
-                            </ul>
                         </li>
- 
-                    
                         <li class="nav-item">
-                            <a class="nav-link dropdown-indicator" href="#repairTicketBookingsMenu" role="button"
-                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketBookingsMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
-                                    <span class="nav-link-text ps-1">Bookings &messages</span>
-                                </div>
+                            <a class="nav-link" href="{{ route('tickets.create') }}">
+                                <span class="nav-link-text ps-1">New ticket</span>
                             </a>
-                            <ul class="nav collapse" id="repairTicketBookingsMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('bookings.index') }}">
-                                        <span class="nav-link-text ps-1">Customer bookings</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
-                                        <span class="nav-link-text ps-1">Available booking times</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('bookings.create') }}" target="_blank">
-                                        <span class="nav-link-text ps-1">Public booking calendar</span>
-                                    </a>
-                                </li>
-                            
-                            </ul>
                         </li>
                     </ul>
+                </li>
+
+                {{-- Bookings --}}
+                <li class="nav-item">
+                    <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                        <div class="col-auto navbar-vertical-label">Bookings</div>
+                        <div class="col ps-0">
+                            <hr class="mb-0 navbar-vertical-divider">
+                        </div>
+                    </div>
+                    <a class="nav-link" href="{{ route('bookings.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
+                            <span class="nav-link-text ps-1">Customer bookings</span>
+                        </div>
+                    </a>
+                    <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-clock"></span></span>
+                            <span class="nav-link-text ps-1">Available times</span>
+                        </div>
+                    </a>
+                    <a class="nav-link" href="{{ route('bookings.create') }}" target="_blank">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-calendar-plus"></span></span>
+                            <span class="nav-link-text ps-1">Public booking calendar</span>
+                        </div>
+                    </a>
                 </li>
 
                 {{-- Projects --}}
@@ -182,12 +170,6 @@
                         </div>
                     </a>
 
-                    <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span>
-                            <span class="nav-link-text ps-1">Flow Charts</span>
-                        </div>
-                    </a>
                     <a class="nav-link" href="{{ route('development.sops') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-book"></span></span>
@@ -195,16 +177,10 @@
                         </div>
                     </a>
 
-                                     <a class="nav-link" href="{{ route('customer-messages.index') }}">
-                            <span class="nav-link-icon"><span class="fas fa-book"></span></span>
-
-                                        <span class="nav-link-text ps-1">Customer messages</span>
-                                    </a>
-                    
-                    <a class="nav-link" href="{{ route('meta-content.index') }}">
+                    <a class="nav-link" href="{{ route('customer-messages.index') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fab fa-meta"></span></span>
-                            <span class="nav-link-text ps-1">Meta Content</span>
+                            <span class="nav-link-icon"><span class="fas fa-envelope"></span></span>
+                            <span class="nav-link-text ps-1">Customer messages</span>
                         </div>
                     </a>
                 </li>
@@ -271,6 +247,19 @@
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-tags"></span></span>
                             <span class="nav-link-text ps-1">Products & Services</span>
+                        </div>
+                    </a>
+
+                    <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span>
+                            <span class="nav-link-text ps-1">Flow Charts</span>
+                        </div>
+                    </a>
+                    <a class="nav-link" href="{{ route('meta-content.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fab fa-meta"></span></span>
+                            <span class="nav-link-text ps-1">Meta Content</span>
                         </div>
                     </a>
 
@@ -371,25 +360,38 @@
                                 <span class="nav-link-text ps-1">Team Performance</span>
                             </a>
                         </li>
-                        @role('admin')
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('reports.integrations.whatsapp') }}">
-                                    <span class="nav-link-text ps-1">Test WhatsApp API</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
-                                    <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('marketplace-shops.index') }}">
-                                    <span class="nav-link-text ps-1">E-commerce Shops</span>
-                                </a>
-                            </li>
-                        @endrole
                     </ul>
                 </li>
+
+                @role('admin')
+                    {{-- Integrations --}}
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Integrations</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
+                        <a class="nav-link" href="{{ route('reports.integrations.whatsapp') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fab fa-whatsapp"></span></span>
+                                <span class="nav-link-text ps-1">Test WhatsApp API</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-truck"></span></span>
+                                <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('marketplace-shops.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-store"></span></span>
+                                <span class="nav-link-text ps-1">E-commerce Shops</span>
+                            </div>
+                        </a>
+                    </li>
+                @endrole
 
                 {{-- System --}}
                 <li class="nav-item">

@@ -142,7 +142,12 @@ class BookingTest extends TestCase
     public function test_staff_can_create_edit_and_delete_recurring_booking_times(): void
     {
         $this->actingAs(User::factory()->create());
-        $this->get(route('booking-time-slots.index'))->assertOk()->assertSee('Available booking times');
+        $this->get(route('booking-time-slots.index'))
+            ->assertOk()
+            ->assertSee('Available booking times')
+            ->assertSee('id="availability-calendar"', false)
+            ->assertSee("initialView: 'timeGridWeek'", false)
+            ->assertSee('dayGridMonth,timeGridWeek,timeGridDay,listWeek', false);
         $this->get(route('booking-time-slots.create'))->assertOk();
 
         $this->post(route('booking-time-slots.store'), [
@@ -150,6 +155,14 @@ class BookingTest extends TestCase
             'start_time' => '11:30',
         ])->assertRedirect();
         $slot = BookingTimeSlot::query()->where('day_of_week', Carbon::SUNDAY)->firstOrFail();
+        $this->get(route('booking-time-slots.index'))
+            ->assertOk()
+            ->assertSee('11:30 AM')
+            ->assertViewHas('events', function (array $events) use ($slot): bool {
+                return collect($events)->contains(fn (array $event): bool => $event['daysOfWeek'] === [Carbon::SUNDAY]
+                    && $event['startTime'] === '11:30'
+                    && $event['url'] === route('booking-time-slots.show', $slot));
+            });
         $this->get(route('booking-time-slots.show', $slot))->assertOk()->assertSee('Sunday');
         $this->get(route('booking-time-slots.edit', $slot))->assertOk();
         $this->put(route('booking-time-slots.update', $slot), [

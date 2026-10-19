@@ -13,7 +13,19 @@ class BookingTimeSlotController extends Controller
 {
     public function index(): View
     {
-        return view('booking-time-slots.index');
+        $events = BookingTimeSlot::query()
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn (BookingTimeSlot $slot): array => [
+                'title' => date('g:i A', strtotime($slot->start_time)),
+                'daysOfWeek' => [(int) $slot->day_of_week],
+                'startTime' => substr($slot->start_time, 0, 5),
+                'url' => route('booking-time-slots.show', $slot),
+            ])
+            ->all();
+
+        return view('booking-time-slots.index', compact('events'));
     }
 
     public function datatable()

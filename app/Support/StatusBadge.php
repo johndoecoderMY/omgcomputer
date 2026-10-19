@@ -80,4 +80,17 @@ class StatusBadge
             default => '#6c757d',
         };
     }
+
+    public static function ganttPdfColor(string $status): string
+    {
+        return match (self::colorClass($status)) {
+            'success' => '#00d27a',
+            'primary' => '#f34303',
+            'info' => '#27bcfd',
+            'warning' => '#ffb51b',
+            'danger' => '#e63757',
+            'secondary' => '#ffb51b',
+            default => '#ffb51b',
+        };
+    }
 }

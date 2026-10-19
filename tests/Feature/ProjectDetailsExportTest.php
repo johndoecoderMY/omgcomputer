@@ -189,6 +189,20 @@ class ProjectDetailsExportTest extends TestCase
             'start_date' => '2026-11-01',
             'due_date' => '2026-11-05',
         ]);
+        $project->tasks()->create([
+            'title' => 'Completed scheduled task',
+            'status' => 'done',
+            'priority' => 'medium',
+            'start_date' => '2026-11-06',
+            'due_date' => '2026-11-06',
+        ]);
+        $project->tasks()->create([
+            'title' => 'Backlog scheduled task',
+            'status' => 'backlog',
+            'priority' => 'low',
+            'start_date' => '2026-11-07',
+            'due_date' => '2026-11-07',
+        ]);
 
         $queries = [];
         DB::listen(function (QueryExecuted $query) use (&$queries): void {
@@ -212,6 +226,9 @@ class ProjectDetailsExportTest extends TestCase
         $this->assertStringContainsString('class="project-gantt-chart"', $pdfHtml);
         $this->assertStringContainsString('<rect', $pdfHtml);
         $this->assertStringContainsString('Schedule', $pdfHtml);
+        $this->assertStringContainsString('fill="#f34303"', $pdfHtml);
+        $this->assertStringContainsString('fill="#00d27a"', $pdfHtml);
+        $this->assertStringContainsString('fill="#ffb51b"', $pdfHtml);
     }
 
     public function test_project_export_rejects_flowcharts_not_linked_to_the_project(): void
