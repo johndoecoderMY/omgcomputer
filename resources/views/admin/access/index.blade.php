@@ -31,21 +31,7 @@
     @endif
 
     <div class="row g-3 mb-4">
-        <div class="col-lg-6">
-            <form class="card h-100 p-2" method="POST" action="{{ route('admin.access.roles.store') }}">
-                @csrf
-                <div class="card-header bg-body"><h2 class="h5 mb-0">Add role</h2></div>
-                <div class="card-body d-flex flex-wrap align-items-end gap-2">
-                    <div class="flex-grow-1">
-                        <label class="form-label" for="new-role-name">Role name</label>
-                        <input class="form-control" id="new-role-name" name="name" value="{{ old('name') }}"
-                            placeholder="for example, supervisor" maxlength="100" required>
-                    </div>
-                    <button class="btn btn-primary" type="submit">Create role</button>
-                </div>
-            </form>
-        </div>
-        <div class="col-lg-6">
+        <div class="col-lg-12">
             <form class="card h-100 p-2" method="POST" action="{{ route('admin.access.permissions.store') }}">
                 @csrf
                 @if ($selectedRole)
@@ -86,17 +72,6 @@
                                     <span class="small {{ $selectedRole?->is($role) ? 'text-white-50' : 'text-body-secondary' }}">{{ $role->users_count }} assigned user(s)</span>
                                 </span>
                             </a>
-                            @if ($role->name !== 'admin')
-                                <form method="POST" action="{{ route('admin.access.roles.destroy', $role) }}"
-                                    onsubmit="return confirm('Delete the {{ $role->name }} role?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm {{ $selectedRole?->is($role) ? 'btn-outline-light' : 'btn-outline-danger' }}"
-                                        type="submit" aria-label="Delete {{ $role->name }} role">
-                                        <span class="fas fa-trash" aria-hidden="true"></span>
-                                    </button>
-                                </form>
-                            @endif
                         </div>
                     @empty
                         <p class="text-body-secondary p-3 mb-0">No roles have been created yet.</p>

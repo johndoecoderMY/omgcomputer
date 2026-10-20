@@ -10,7 +10,10 @@ class EnsureNotCustomer
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_if($request->user()?->hasRole('customer'), 403);
+        abort_if(
+            $request->user()?->hasRole('customer') && ! $request->user()?->hasRole('admin'),
+            403,
+        );
 
         return $next($request);
     }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\WorkspacePermissions;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -14,25 +15,31 @@ class PlannerRoleSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $manageTeamTasks = Permission::firstOrCreate([
-            'name' => 'planner.manage-team-tasks',
-            'guard_name' => 'web',
-        ]);
+        $permissions = collect(WorkspacePermissions::ALL)
+            ->map(fn (string $name) => Permission::firstOrCreate([
+                'name' => $name,
+                'guard_name' => 'web',
+            ]));
 
         Role::firstOrCreate([
             'name' => 'admin',
             'guard_name' => 'web',
-        ])->syncPermissions([$manageTeamTasks]);
+        ])->syncPermissions($permissions);
 
         $memberRole = Role::firstOrCreate([
             'name' => 'member',
             'guard_name' => 'web',
         ]);
+        $memberRole->syncPermissions($permissions->filter(
+            fn (Permission $permission): bool => in_array($permission->name, WorkspacePermissions::MEMBER, true),
+        ));
 
         Role::firstOrCreate([
             'name' => 'customer',
             'guard_name' => 'web',
-        ]);
+        ])->syncPermissions($permissions->filter(
+            fn (Permission $permission): bool => in_array($permission->name, WorkspacePermissions::CUSTOMER, true),
+        ));
 
         User::query()
             ->whereDoesntHave('roles')

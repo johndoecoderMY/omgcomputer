@@ -8,6 +8,8 @@
         :description="$project->description"
         :back-url="route('projects.index')" back-label="My projects" />
 
+    @include('projects._billing-documents', ['project' => $project, 'billingDocuments' => $billingDocuments, 'canManageBilling' => false])
+
     @if ($project->links->isNotEmpty())
         <section class="card mb-4" aria-labelledby="customer-project-links-heading">
             <div class="card-header bg-body">

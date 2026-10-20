@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BillingDocument;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
+use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Services\InventoryStock;
 use App\Support\StatusBadge;
@@ -21,7 +22,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class BillingController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('billing.index');
     }
@@ -29,6 +30,19 @@ class BillingController extends Controller
     public function datatable(Request $request)
     {
         $query = BillingDocument::query();
+        if ($request->user()->hasRole('customer')) {
+            $email = strtolower(trim($request->user()->email));
+            $query->whereIn('type', ['invoice', 'quotation'])
+                ->where(function ($documents) use ($email): void {
+                    $documents->whereHas('project.customers', fn ($customers) => $customers
+                        ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                        ->orWhereHas('repairTicket.project', fn ($projects) => $projects
+                            ->whereHas('customers', fn ($customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                            ->orWhereHas('repairTickets.customer', fn ($customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email])));
+                });
+        }
         if (in_array($request->input('type'), ['invoice', 'quotation'], true)) {
             $query->where('type', $request->input('type'));
         }
@@ -70,24 +84,29 @@ class BillingController extends Controller
         $ticket = $request->filled('repair_ticket_id')
             ? RepairTicket::query()->with('customer')->findOrFail($request->integer('repair_ticket_id'))
             : null;
+        $project = $request->filled('project_id')
+            ? Project::query()->with(['customers', 'repairTickets.customer'])->findOrFail($request->integer('project_id'))
+            : $ticket?->project;
+        $customer = $ticket?->customer ?? $project?->customers?->first() ?? $project?->repairTickets?->first()?->customer;
 
         return view('billing.create', [
             'parts' => InventoryPart::query()->orderBy('name')->get(),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $ticket,
+            'project' => $project,
             'document' => new BillingDocument([
                 'type' => $type,
-                'customer_name' => $ticket?->customer->name,
-                'customer_email' => $ticket?->customer->email,
-                'customer_phone' => $ticket?->customer->phone,
-                'customer_address' => $ticket?->customer->address,
+                'customer_name' => $customer?->name,
+                'customer_email' => $customer?->email,
+                'customer_phone' => $customer?->phone,
+                'customer_address' => $customer?->address,
                 'issue_date' => now()->toDateString(),
                 'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticket->issue_description}" : null,
             ]),
             'lines' => [[
                 'inventory_part_id' => null,
                 'product_id' => null,
-                'description' => $ticket ? 'Repair service: '.$ticket->issue_description : '',
+                'description' => $ticket ? 'Repair service: '.$ticket->issue_description : ($project ? 'Project: '.$project->name : ''),
                 'quantity' => 1,
                 'unit_price' => null,
             ]],
@@ -106,6 +125,7 @@ class BillingController extends Controller
             'parts' => InventoryPart::query()->orderBy('name')->get(),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $document->repairTicket,
+            'project' => $document->project,
             'document' => $document,
             'lines' => $document->items->map(fn ($item) => [
                 'inventory_part_id' => $item->inventory_part_id,
@@ -125,6 +145,7 @@ class BillingController extends Controller
         $data = $request->validate([
             'type' => ['required', 'in:invoice,quotation,quote'],
             'repair_ticket_id' => ['nullable', 'integer', 'exists:repair_tickets,id'],
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'customer_phone' => ['nullable', 'string', 'max:64'],
@@ -173,6 +194,7 @@ class BillingController extends Controller
                 'status' => 'draft',
                 'user_id' => $request->user()->id,
                 'repair_ticket_id' => $data['repair_ticket_id'] ?? null,
+                'project_id' => $data['project_id'] ?? null,
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?? null,
                 'customer_phone' => $data['customer_phone'] ?? null,
@@ -302,9 +324,37 @@ class BillingController extends Controller
 
     public function show(BillingDocument $document): View
     {
+        $this->authorizeCustomerDocument(request(), $document);
         $document->load(['items.part', 'payments' => fn ($query) => $query->latest('paid_at')]);
 
         return view('billing.show', compact('document'));
+    }
+
+    private function authorizeCustomerDocument(Request $request, BillingDocument $document): void
+    {
+        if ($request->user()->hasRole('admin') || ! $request->user()->hasRole('customer')) {
+            return;
+        }
+
+        $email = strtolower(trim($request->user()->email));
+        abort_unless(
+            in_array($document->type, ['invoice', 'quotation'], true)
+                && (
+                    $document->project()
+                        ->whereHas('customers', fn ($customers) => $customers->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                        ->exists()
+                    || $document->repairTicket()
+                        ->whereHas('project')
+                        ->where(function ($ticket) use ($email): void {
+                            $ticket->whereHas('project.customers', fn ($customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                                ->orWhereHas('customer', fn ($customers) => $customers
+                                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
+                        })
+                        ->exists()
+                ),
+            404,
+        );
     }
 
     public function issue(BillingDocument $document, Request $request, InventoryStock $stock): RedirectResponse
@@ -387,8 +437,9 @@ class BillingController extends Controller
         return back()->with('success', 'Document voided.');
     }
 
-    public function pdf(BillingDocument $document)
+    public function pdf(Request $request, BillingDocument $document)
     {
+        $this->authorizeCustomerDocument($request, $document);
         $document->load(['items', 'payments']);
         $tempDirectory = storage_path('app/mpdf-tmp');
         File::ensureDirectoryExists($tempDirectory);

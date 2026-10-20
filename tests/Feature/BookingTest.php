@@ -7,6 +7,7 @@ use App\Models\BookingTimeSlot;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Carbon\Carbon;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -58,7 +59,9 @@ class BookingTest extends TestCase
             ->assertSessionHasErrors('start_time');
         $this->assertDatabaseCount('bookings', 1);
 
+        $this->seed(PlannerRoleSeeder::class);
         $staff = User::factory()->create();
+        $staff->assignRole('admin');
         $this->actingAs($staff)->put(route('bookings.update', $booking), [
             'status' => 'confirmed',
             'assigned_to' => $staff->id,
@@ -141,7 +144,11 @@ class BookingTest extends TestCase
 
     public function test_staff_can_create_edit_and_delete_recurring_booking_times(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('member');
+        $staff->givePermissionTo('booking_availability.manage');
+        $this->actingAs($staff);
         $this->assertSame('/booking/slots', parse_url(route('booking-time-slots.index'), PHP_URL_PATH));
         $this->get(route('booking-time-slots.index'))
             ->assertOk()

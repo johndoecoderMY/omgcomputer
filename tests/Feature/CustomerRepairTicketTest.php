@@ -17,7 +17,9 @@ class CustomerRepairTicketTest extends TestCase
 
     public function test_customer_profile_links_to_a_project_and_manages_repair_tickets(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('admin');
         $project = Project::query()->create(['name' => 'Student support project']);
         $this->actingAs($user);
 

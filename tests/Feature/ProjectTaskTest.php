@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Database\Seeders\BusinessPlanTaskSeeder;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -46,7 +47,7 @@ class ProjectTaskTest extends TestCase
 
     public function test_authenticated_user_can_create_a_task_and_manage_its_subtasks(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $project = Project::create(['name' => 'Website refresh']);
 
         $this->post(route('projects.tasks.store', $project), [
@@ -122,7 +123,7 @@ class ProjectTaskTest extends TestCase
 
     public function test_projects_show_task_progress_and_subtasks_cannot_be_nested_or_cross_project(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $project = Project::create(['name' => 'Main website']);
         $otherProject = Project::create(['name' => 'Shop upgrade']);
         $parent = $project->tasks()->create([
@@ -199,7 +200,7 @@ class ProjectTaskTest extends TestCase
 
     public function test_projects_can_be_created_updated_and_deleted_with_their_tasks(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
 
         $this->post(route('projects.store'), [
             'name' => 'Storefront',
@@ -232,7 +233,7 @@ class ProjectTaskTest extends TestCase
     public function test_task_edit_form_renders_the_assignee_list(): void
     {
         $assignee = User::factory()->create(['name' => 'Jordan Lee']);
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $project = Project::create(['name' => 'Customer portal']);
         $task = $project->tasks()->create([
             'assigned_to' => $assignee->id,
@@ -249,7 +250,7 @@ class ProjectTaskTest extends TestCase
 
     public function test_standalone_tasks_can_be_created_with_multiple_assignees(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->adminUser();
         $firstAssignee = User::factory()->create(['name' => 'Jordan Lee']);
         $secondAssignee = User::factory()->create(['name' => 'Sam Rivera']);
 
@@ -295,7 +296,7 @@ class ProjectTaskTest extends TestCase
 
     public function test_project_can_be_assigned_to_multiple_people(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->adminUser();
         $assignees = User::factory()->count(2)->create();
 
         $this->actingAs($owner)->post(route('projects.store'), [
@@ -313,5 +314,14 @@ class ProjectTaskTest extends TestCase
             ->assertSee('Assigned people')
             ->assertSee($assignees->first()->name)
             ->assertSee($assignees->last()->name);
+    }
+
+    private function adminUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 }

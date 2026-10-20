@@ -22,6 +22,7 @@
             @error('name')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
 
+        @role('admin')
         <div class="mb-3">
             <label class="form-label" for="description">Description <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="description" name="description" rows="4" maxlength="5000">{{ old('description', $project->description) }}</textarea>
@@ -39,6 +40,7 @@
             @error('assignees')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             @error('assignees.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
+        @endrole
 
         <div class="mb-3">
             <label class="form-label" for="requirements_notes">Requirements notes <span class="text-body-secondary">(optional)</span></label>

@@ -8,6 +8,7 @@ use App\Models\MarketingCampaign;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +18,7 @@ class AnalyticsReportsTest extends TestCase
 
     public function test_team_report_uses_assigned_task_completion(): void
     {
-        $user = User::factory()->create(['name' => 'Mina Chen']);
+        $user = $this->adminUser(['name' => 'Mina Chen']);
         $project = Project::query()->create(['name' => 'Support launch']);
         Task::query()->create([
             'project_id' => $project->id,
@@ -43,7 +44,7 @@ class AnalyticsReportsTest extends TestCase
 
     public function test_inventory_and_marketing_reports_render_saved_data(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         config([
             'services.delivery.api_key' => null,
             'services.delivery.api_url' => null,
@@ -103,7 +104,7 @@ class AnalyticsReportsTest extends TestCase
             'services.delivery.environment' => 'sandbox',
         ]);
 
-        $this->actingAs(User::factory()->create())->get(route('reports.index'))
+        $this->actingAs($this->adminUser())->get(route('reports.index'))
             ->assertOk()
             ->assertSee('Authentication configured')
             ->assertSee('API key configured')
@@ -116,7 +117,7 @@ class AnalyticsReportsTest extends TestCase
 
     public function test_marketing_page_reports_meta_configuration_presence_without_exposing_secrets(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         CustomerMessageTemplate::query()->create([
             'slug' => 'whatsapp-ready',
             'name' => 'WhatsApp ready',
@@ -158,5 +159,14 @@ class AnalyticsReportsTest extends TestCase
             ->assertOk()
             ->assertSee('FYP consultation')
             ->assertDontSee('Laptop cleaning');
+    }
+
+    private function adminUser(array $attributes = []): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create($attributes);
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 }

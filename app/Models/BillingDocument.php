@@ -10,7 +10,7 @@ class BillingDocument extends Model
 {
     protected $fillable = [
         'number', 'type', 'status', 'user_id', 'customer_name', 'customer_email',
-        'repair_ticket_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal',
+        'repair_ticket_id', 'project_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal',
         'tax_rate', 'tax_amount', 'total', 'paid_amount', 'notes',
     ];
 
@@ -45,6 +45,11 @@ class BillingDocument extends Model
     public function repairTicket(): BelongsTo
     {
         return $this->belongsTo(RepairTicket::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 
     public function getBalanceAttribute(): float

@@ -86,7 +86,7 @@
 
     <div class="card mt-4">        <div class="card-header bg-body">
             <h2 class="h5 mb-0">Account roles</h2>
-            <p class="small text-body-secondary mb-0">At least one role is required. The last administrator cannot be demoted.</p>
+            <p class="small text-body-secondary mb-0">Choose one role. The last administrator cannot be demoted.</p>
         </div>
         <form method="POST" action="{{ route('admin.access.users.roles.update', $user) }}">
             @csrf
@@ -94,7 +94,7 @@
             <div class="card-body d-flex flex-wrap gap-3">
                 @foreach ($roles as $role)
                     <label class="form-check">
-                        <input class="form-check-input" type="checkbox" name="role_ids[]" value="{{ $role->id }}"
+                        <input class="form-check-input" type="radio" name="role_ids[]" value="{{ $role->id }}"
                             @checked($user->roles->contains('id', $role->id))>
                         <span class="form-check-label">{{ $role->name }}</span>
                     </label>

@@ -73,6 +73,7 @@ class CustomerMessageTemplateController extends Controller
         $data = $this->validatedData($request);
         $data['slug'] = Str::slug($data['name']).'-'.Str::lower(Str::random(6));
         $data['is_active'] = $request->boolean('is_active');
+        $data['created_by_user_id'] = $request->user()->id;
         $template = CustomerMessageTemplate::create($data);
 
         return redirect()->route('customer-messages.show', $template)->with('success', 'Message template created.');
@@ -84,6 +85,8 @@ class CustomerMessageTemplateController extends Controller
 
         return view('customer-messages.show', [
             'template' => $customerMessage,
+            'canManage' => request()->user()->hasRole('admin')
+                || (int) $customerMessage->created_by_user_id === (int) request()->user()->id,
             'eyebrow' => CustomerMessageTemplate::STAGES[$customerMessage->stage]
                 .' · '.CustomerMessageTemplate::CHANNELS[$customerMessage->channel],
             'subjectPreview' => $customerMessage->render($customerMessage->subject ?? ''),

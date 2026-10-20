@@ -22,7 +22,7 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_task_assignment_notifies_the_assignee(): void
     {
         Notification::fake();
-        $actor = User::factory()->create();
+        $actor = $this->adminUser();
         $assignee = User::factory()->create();
         $project = Project::query()->create(['name' => 'Mentoring portal']);
 
@@ -43,7 +43,7 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_assigned_subtasks_notify_their_assignee(): void
     {
         Notification::fake();
-        $actor = User::factory()->create();
+        $actor = $this->adminUser();
         $assignee = User::factory()->create();
         $project = Project::query()->create(['name' => 'Student prototype']);
         $parent = $project->tasks()->create([
@@ -67,7 +67,7 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_task_completion_notifies_creator_and_assignees_but_not_the_actor(): void
     {
         Notification::fake();
-        $actor = User::factory()->create();
+        $actor = $this->adminUser();
         $creator = User::factory()->create();
         $assignee = User::factory()->create();
         $task = Task::query()->create([
@@ -90,9 +90,9 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_project_updates_notify_the_creator_and_assignees(): void
     {
         Notification::fake();
-        $creator = User::factory()->create();
+        $creator = $this->adminUser();
         $assignee = User::factory()->create();
-        $editor = User::factory()->create();
+        $editor = $this->adminUser();
 
         $this->actingAs($creator)
             ->post(route('projects.store'), [
@@ -211,7 +211,7 @@ class WorkspaceNotificationsTest extends TestCase
     public function test_project_events_notify_project_task_assignees(): void
     {
         Notification::fake();
-        $actor = User::factory()->create();
+        $actor = $this->adminUser();
         $assignee = User::factory()->create();
         $project = Project::query()->create(['name' => 'Student FYP']);
         $project->tasks()->create([
@@ -283,5 +283,14 @@ class WorkspaceNotificationsTest extends TestCase
         $this->actingAs($otherUser)
             ->get(route('notifications.read', $notification))
             ->assertNotFound();
+    }
+
+    private function adminUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 }

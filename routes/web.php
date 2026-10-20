@@ -67,7 +67,7 @@ Route::prefix('book')->name('bookings.')->controller(BookingController::class)->
 Route::get('/marketplaces/callback/{platform}', [MarketplaceShopController::class, 'callback'])
     ->name('marketplace-shops.callback');
 
-Route::middleware(['auth', 'password.changed', 'verified'])->group(function (): void {
+Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
@@ -85,7 +85,7 @@ Route::middleware(['auth', 'password.changed', 'verified'])->group(function (): 
         Route::delete('/permissions/{permission}', 'destroyPermission')->name('permissions.destroy');
         Route::put('/users/{user}/roles', 'updateUserRoles')->name('users.roles.update');
     });
-    Route::prefix('admin/users')->name('admin.users.')->middleware('role:admin')->controller(AdminUserController::class)->group(function (): void {
+    Route::prefix('admin/users')->name('admin.users.')->controller(AdminUserController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/customers', 'customers')->name('customers');

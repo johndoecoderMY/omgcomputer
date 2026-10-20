@@ -29,10 +29,34 @@
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
                 @if (auth()->user()->hasRole('customer'))
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('tickets.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
+                                <span class="nav-link-text ps-1">My Tickets</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('bookings.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
+                                <span class="nav-link-text ps-1">My Bookings</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
                                 <span class="nav-link-text ps-1">My Projects</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('billing.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
+                                <span class="nav-link-text ps-1">Project bills and quotations</span>
                             </div>
                         </a>
                     </li>
@@ -100,12 +124,14 @@
                             <span class="nav-link-text ps-1">Customer bookings</span>
                         </div>
                     </a>
-                    <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-clock"></span></span>
-                            <span class="nav-link-text ps-1">Available times</span>
-                        </div>
-                    </a>
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('booking_availability.manage'))
+                        <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-clock"></span></span>
+                                <span class="nav-link-text ps-1">Available times</span>
+                            </div>
+                        </a>
+                    @endif
                     <a class="nav-link" href="{{ route('bookings.create') }}" target="_blank">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-calendar-plus"></span></span>
@@ -122,12 +148,14 @@
                             <span class="nav-link-text ps-1">Projects</span>
                         </div>
                     </a>
-                    <a class="nav-link" href="{{ route('projects.calendar') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
-                            <span class="nav-link-text ps-1">Calendar</span>
-                        </div>
-                    </a>
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
+                        <a class="nav-link" href="{{ route('projects.calendar') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
+                                <span class="nav-link-text ps-1">Calendar</span>
+                            </div>
+                        </a>
+                    @endif
                 </li>
 
                 {{-- Customers --}}
@@ -163,13 +191,6 @@
                         </div>
                     </div>
 
-                    <a class="nav-link" href="{{ route('development.overview') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-home"></span></span>
-                            <span class="nav-link-text ps-1">Overview</span>
-                        </div>
-                    </a>
-
                     <a class="nav-link" href="{{ route('tasks.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-tasks"></span></span>
@@ -177,12 +198,20 @@
                         </div>
                     </a>
 
-                    <a class="nav-link" href="{{ route('development.plan') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-file-alt"></span></span>
-                            <span class="nav-link-text ps-1">Business Plan</span>
-                        </div>
-                    </a>
+                    @role('admin')
+                        <a class="nav-link" href="{{ route('development.overview') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-home"></span></span>
+                                <span class="nav-link-text ps-1">Overview</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('development.plan') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-file-alt"></span></span>
+                                <span class="nav-link-text ps-1">Business Plan</span>
+                            </div>
+                        </a>
+                    @endrole
 
                     <a class="nav-link" href="{{ route('development.sops') }}">
                         <div class="d-flex align-items-center">
@@ -211,33 +240,36 @@
                         </div>
                     </div>
 
-                      <a class="nav-link" href="{{ route('teams.index') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-users-cog"></span></span>
-                            <span class="nav-link-text ps-1">Teams</span>
-                        </div>
-                    </a>
-                    <a class="nav-link" href="{{ route('departments.index') }}">
-                        <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-sitemap"></span></span>
-                            <span class="nav-link-text ps-1">Departments</span>
-                        </div>
-                    </a>
                     @role('admin')
-                        <a class="nav-link dropdown-indicator" href="#userAccountsMenu" role="button"
-                            data-bs-toggle="collapse" aria-expanded="false" aria-controls="userAccountsMenu">
+                        <a class="nav-link" href="{{ route('teams.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-users"></span></span>
-                                <span class="nav-link-text ps-1">User accounts</span>
+                                <span class="nav-link-icon"><span class="fas fa-users-cog"></span></span>
+                                <span class="nav-link-text ps-1">Teams</span>
                             </div>
                         </a>
-                        <ul class="nav collapse" id="userAccountsMenu">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('admin.users.index') }}">
-                                    <span class="nav-link-text ps-1">Members </span>
-                                </a>
-                            </li>
-                        </ul>
+                        <a class="nav-link" href="{{ route('departments.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-sitemap"></span></span>
+                                <span class="nav-link-text ps-1">Departments</span>
+                            </div>
+                        </a>
+                    @endrole
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('users.view'))
+                        @role('admin')
+                            <a class="nav-link dropdown-indicator" href="#userAccountsMenu" role="button"
+                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="userAccountsMenu">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                    <span class="nav-link-text ps-1">User accounts</span>
+                                </div>
+                            </a>
+                            <ul class="nav collapse" id="userAccountsMenu">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('admin.users.index') }}">
+                                        <span class="nav-link-text ps-1">Members</span>
+                                    </a>
+                                </li>
+                            </ul>
                         <a class="nav-link" href="{{ route('admin.access.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-user-shield"></span></span>
@@ -250,28 +282,43 @@
                                 <span class="nav-link-text ps-1">Backups</span>
                             </div>
                         </a>
-                    @endrole
+                        @else
+                            <a class="nav-link" href="{{ route('admin.users.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                    <span class="nav-link-text ps-1">View user accounts</span>
+                                </div>
+                            </a>
+                        @endrole
+                    @endif
 
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('products.view'))
                     <a class="nav-link" href="{{ route('products.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-tags"></span></span>
                             <span class="nav-link-text ps-1">Products & Services</span>
                         </div>
                     </a>
+                    @endif
 
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
                     <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
                             <span class="nav-link-text ps-1">Flow Charts</span>
                         </div>
                     </a>
+                    @endif
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
                     <a class="nav-link" href="{{ route('meta-content.index') }}">
                         <div class="d-flex align-items-center">
                             <span class="nav-link-icon"><span class="fas fa-share-alt"></span></span>
                             <span class="nav-link-text ps-1">Meta Content</span>
                         </div>
                     </a>
+                    @endif
 
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('inventory.view'))
                     <a class="nav-link dropdown-indicator" href="#inventoryMenu" role="button" data-bs-toggle="collapse"
                         aria-expanded="false" aria-controls="inventoryMenu">
                         <div class="d-flex align-items-center">
@@ -302,10 +349,11 @@
                             </a>
                         </li>
                     </ul>
+                    @endif
                 </li>
 
-                @if (!auth()->user()->hasRole('customer'))
-                    <li class="nav-item">
+                @role('admin')
+                        <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
                             <div class="col-auto navbar-vertical-label">Operating costs</div>
                             <div class="col ps-0"><hr class="mb-0 navbar-vertical-divider"></div>
@@ -329,9 +377,10 @@
                             </div>
                         </a>
                     </li>
-                @endif
+                @endrole
 
                 {{-- Billing & Payments --}}
+                @if (auth()->user()->hasRole('admin') || auth()->user()->can('billing.view'))
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#billingMenu" role="button" data-bs-toggle="collapse"
                         aria-expanded="false" aria-controls="billingMenu">
@@ -359,8 +408,10 @@
                         </li>
                     </ul>
                 </li>
+                @endif
 
                 {{-- Reports --}}
+                @role('admin')
                 <li class="nav-item">
                     <a class="nav-link dropdown-indicator" href="#reportsMenu" role="button"
                         data-bs-toggle="collapse" aria-expanded="false" aria-controls="reportsMenu">
@@ -398,6 +449,7 @@
                         </li>
                     </ul>
                 </li>
+                @endrole
 
                 @role('admin')
                     {{-- Integrations --}}
@@ -445,6 +497,7 @@
                         </div>
                     </a>
 
+                    @role('admin')
                     <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"
                         data-bs-toggle="collapse" aria-expanded="false" aria-controls="errorPagesMenu">
                         <div class="d-flex align-items-center">
@@ -461,6 +514,7 @@
                             </li>
                         @endforeach
                     </ul>
+                    @endrole
                 </li>
                 @endif
             </ul>

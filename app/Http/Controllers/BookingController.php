@@ -182,16 +182,20 @@ class BookingController extends Controller
         return view('bookings.confirmation', compact('booking'));
     }
 
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('bookings.index', [
             'statuses' => Booking::STATUSES,
+            'customerView' => request()->user()->hasRole('customer'),
         ]);
     }
 
     public function datatable(Request $request)
     {
         $query = Booking::query()->with(['assignee', 'repairTicket']);
+        if ($request->user()->hasRole('customer')) {
+            $query->whereRaw('LOWER(TRIM(customer_email)) = ?', [strtolower(trim($request->user()->email))]);
+        }
         $status = $request->input('status');
         if (is_string($status) && isset(Booking::STATUSES[$status])) {
             $query->where('status', $status);
@@ -233,7 +237,10 @@ class BookingController extends Controller
                 $booking->status,
                 Booking::STATUSES[$booking->status] ?? $booking->status,
             ))
-            ->addColumn('management', function (Booking $booking) use ($users): string {
+            ->addColumn('management', function (Booking $booking) use ($users, $request): string {
+                if ($request->user()->hasRole('customer')) {
+                    return '';
+                }
                 $statusOptions = collect(Booking::STATUSES)->map(fn (string $label, string $value): string => sprintf(
                     '<option value="%s"%s>%s</option>',
                     e($value),

@@ -5,11 +5,13 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Support desk" title="Repair tickets">
-        <x-slot:actions>
-            <a class="btn btn-primary" href="{{ route('tickets.create') }}">
-                <span class="fas fa-plus me-2"></span>New ticket
-            </a>
-        </x-slot:actions>
+        @unless (auth()->user()->hasRole('customer'))
+            <x-slot:actions>
+                <a class="btn btn-primary" href="{{ route('tickets.create') }}">
+                    <span class="fas fa-plus me-2"></span>New ticket
+                </a>
+            </x-slot:actions>
+        @endunless
     </x-page-header>
 
     @if (session('success'))
@@ -26,6 +28,7 @@
                 @endforeach
             </select>
         </div>
+        @unless (auth()->user()->hasRole('customer'))
         <div class="col-sm-5 col-md-4">
             <label class="form-label" for="assigned">Assignment</label>
             <select class="form-select" id="assigned" name="assigned">
@@ -34,6 +37,7 @@
                 <option value="mine" @selected(request('assigned') === 'mine')>Assigned to me</option>
             </select>
         </div>
+        @endunless
         <div class="col-auto">
             <button class="btn btn-outline-primary" type="submit">Apply filters</button>
             <a class="btn btn-outline-secondary" href="{{ route('tickets.index') }}">Reset</a>

@@ -79,6 +79,11 @@ class Project extends Model
         return $this->hasMany(RepairTicket::class);
     }
 
+    public function billingDocuments(): HasMany
+    {
+        return $this->hasMany(BillingDocument::class);
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(Event::class);

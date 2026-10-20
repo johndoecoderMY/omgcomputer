@@ -125,7 +125,11 @@ class AdminUserController extends Controller
         return view('admin.users.edit', [
             'user' => $user->load(['teams.department', 'roles', 'permissions']),
             'teams' => Team::query()->with('department')->orderBy('name')->get(),
-            'roles' => Role::query()->where('guard_name', 'web')->orderBy('name')->get(),
+            'roles' => Role::query()
+                ->where('guard_name', 'web')
+                ->whereIn('name', ['admin', 'member', 'customer'])
+                ->orderBy('name')
+                ->get(),
             'permissions' => Permission::query()->where('guard_name', 'web')->orderBy('name')->get(),
             'accountType' => $user->hasRole('customer') && ! $user->hasAnyRole(['admin', 'member']) ? 'customers' : 'members',
         ]);

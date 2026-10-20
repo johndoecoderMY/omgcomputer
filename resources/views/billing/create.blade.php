@@ -4,14 +4,16 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Billing" :title="$editing ? 'Edit draft ' . $document->number : 'Create ' . $type" :back-url="$editing ? route('billing.documents.show', $document) : route('billing.index')" :back-label="$editing ? 'Back to document' : 'Back to billing'" />
+    <x-page-header eyebrow="Billing" :title="$editing ? 'Edit draft ' . $document->number : 'Create ' . $type" :back-url="$editing ? route('billing.documents.show', $document) : ($project ? route('projects.show', $project) : route('billing.index'))" :back-label="$editing ? 'Back to document' : ($project ? 'Back to project' : 'Back to billing')" />
     @if ($ticket)<div class="alert alert-info">Quotation for repair ticket <a href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>. Customer and issue details have been prefilled.</div>@endif
+    @if ($project)<div class="alert alert-info">Billing document for project <a href="{{ route('projects.show', $project) }}">{{ $project->name }}</a>. Customer details have been prefilled where available.</div>@endif
     @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     <form method="POST" action="{{ $formAction }}">
         @csrf
         @if ($editing)@method('PUT')@endif
         <input type="hidden" name="type" value="{{ $type }}">
         @if ($ticket)<input type="hidden" name="repair_ticket_id" value="{{ $ticket->id }}">@endif
+        @if ($project)<input type="hidden" name="project_id" value="{{ $project->id }}">@endif
         <div class="card mb-3"><div class="card-header fw-semibold">Customer and dates</div><div class="card-body row g-3">
             <div class="col-md-6"><label class="form-label" for="customer_name">Customer name</label><input class="form-control" id="customer_name" name="customer_name" value="{{ old('customer_name', $document->customer_name) }}" required></div>
             <div class="col-md-3"><label class="form-label" for="customer_email">Email</label><input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email', $document->customer_email) }}"></div>

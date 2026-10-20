@@ -77,16 +77,27 @@ class TaskController extends Controller
             ))
             ->addColumn('priority_label', fn (Task $task): string => e(Task::PRIORITIES[$task->priority] ?? $task->priority))
             ->editColumn('due_date', fn (Task $task): string => $task->due_date?->format('M j, Y') ?? '—')
-            ->addColumn('actions', fn (Task $task): string => sprintf(
-                '<form method="POST" action="%s" class="d-inline"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PATCH"><input type="hidden" name="done" value="%s"><button class="btn btn-sm btn-outline-%s" type="submit">%s</button></form> <a class="btn btn-sm btn-outline-primary" href="%s">Details</a> <a class="btn btn-sm btn-outline-secondary" href="%s">Edit</a>',
-                e(route('tasks.update-status', $task)),
-                e(csrf_token()),
-                $task->status === 'done' ? '0' : '1',
-                $task->status === 'done' ? 'secondary' : 'success',
-                $task->status === 'done' ? 'Reopen' : 'Mark done',
-                e(route('tasks.show', $task)),
-                e(route('tasks.edit', $task)),
-            ))
+            ->addColumn('actions', function (Task $task) use ($request): string {
+                $details = '<a class="btn btn-sm btn-outline-primary" href="'.e(route('tasks.show', $task)).'">Details</a>';
+                $canManage = $request->user()->hasRole('admin')
+                    || (int) $task->created_by_user_id === (int) $request->user()->id
+                    || (int) $task->assigned_to === (int) $request->user()->id
+                    || $task->assignees()->whereKey($request->user()->id)->exists();
+                if (! $canManage) {
+                    return $details;
+                }
+
+                return sprintf(
+                    '<form method="POST" action="%s" class="d-inline"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PATCH"><input type="hidden" name="done" value="%s"><button class="btn btn-sm btn-outline-%s" type="submit">%s</button></form> %s <a class="btn btn-sm btn-outline-secondary" href="%s">Edit</a>',
+                    e(route('tasks.update-status', $task)),
+                    e(csrf_token()),
+                    $task->status === 'done' ? '0' : '1',
+                    $task->status === 'done' ? 'secondary' : 'success',
+                    $task->status === 'done' ? 'Reopen' : 'Mark done',
+                    $details,
+                    e(route('tasks.edit', $task)),
+                );
+            })
             ->rawColumns(['task', 'project_name', 'status_label', 'actions'])
             ->toJson();
     }
@@ -123,7 +134,7 @@ class TaskController extends Controller
             'parent' => $parent,
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -148,6 +159,9 @@ class TaskController extends Controller
         unset($data['parent_id']);
         $assignees = $data['assignees'];
         unset($data['assignees']);
+        if (! $request->user()->hasRole('admin')) {
+            $assignees = [];
+        }
 
         if ($parent) {
             $project = $parent->project;
@@ -171,11 +185,16 @@ class TaskController extends Controller
             ->with('success', $parent ? 'Subtask created successfully.' : 'Task created successfully.');
     }
 
-    public function show(Task $task): View
+    public function show(Request $request, Task $task): View
     {
         $task->load(['parent', 'project', 'assignees', 'subtasks.assignees', 'attachments.uploader']);
 
-        return view('tasks.show', compact('task'));
+        $canManageTask = $request->user()->hasRole('admin')
+            || (int) $task->created_by_user_id === (int) $request->user()->id
+            || (int) $task->assigned_to === (int) $request->user()->id
+            || $task->assignees->contains('id', $request->user()->id);
+
+        return view('tasks.show', compact('task', 'canManageTask'));
     }
 
     public function edit(Task $task): View
@@ -188,7 +207,7 @@ class TaskController extends Controller
             'parent' => $task->parent,
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -199,7 +218,7 @@ class TaskController extends Controller
         $existingAssigneeIds = $task->assignees->modelKeys();
         $data = $this->validatedData($request);
         unset($data['parent_id']);
-        $assignees = $data['assignees'];
+        $assignees = $request->user()->hasRole('admin') ? $data['assignees'] : $existingAssigneeIds;
         $projectId = array_key_exists('project_id', $data) ? $data['project_id'] : $task->project_id;
         unset($data['assignees'], $data['project_id']);
         if ($task->parent_task_id === null) {
@@ -232,6 +251,9 @@ class TaskController extends Controller
         unset($data['parent_id'], $data['project_id']);
         $assignees = $data['assignees'];
         unset($data['assignees']);
+        if (! $request->user()->hasRole('admin')) {
+            $assignees = [];
+        }
         $subtask = $task->subtasks()->create([
             ...$data,
             'project_id' => $task->project_id,

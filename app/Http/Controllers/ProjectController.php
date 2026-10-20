@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BillingDocument;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\FlowChart;
@@ -26,6 +27,7 @@ class ProjectController extends Controller
     {
         return view('projects.index', [
             'customerView' => $request->user()->hasRole('customer'),
+            'canCreateProjects' => $request->user()->hasRole('admin') || $request->user()->can('projects.create'),
         ]);
     }
 
@@ -57,13 +59,19 @@ class ProjectController extends Controller
             ));
         }
 
-        return $table->addColumn('actions', fn (Project $project): string => $customerView
-                ? sprintf('<a class="btn btn-sm btn-outline-primary" href="%s">View project</a>', e(route('projects.show', $project)))
-                : sprintf(
-                    '<a class="btn btn-sm btn-outline-primary" href="%s">View</a> <a class="btn btn-sm btn-outline-secondary" href="%s">Edit</a>',
-                    e(route('projects.show', $project)),
-                    e(route('projects.edit', $project)),
-                ))
+        return $table->addColumn('actions', function (Project $project) use ($customerView, $request): string {
+            $viewLink = sprintf('<a class="btn btn-sm btn-outline-primary" href="%s">View</a>', e(route('projects.show', $project)));
+            if ($customerView) {
+                return str_replace('>View</a>', '>View project</a>', $viewLink);
+            }
+            $canManage = $request->user()->hasRole('admin')
+                || (int) $project->created_by_user_id === (int) $request->user()->id
+                || $project->assignees()->whereKey($request->user()->id)->exists();
+
+            return $canManage
+                ? $viewLink.' <a class="btn btn-sm btn-outline-secondary" href="'.e(route('projects.edit', $project)).'">Edit</a>'
+                : $viewLink;
+        })
             ->rawColumns($customerView ? ['actions'] : ['progress', 'actions'])
             ->toJson();
     }
@@ -73,7 +81,7 @@ class ProjectController extends Controller
         return view('projects.create', [
             'project' => new Project,
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -82,7 +90,7 @@ class ProjectController extends Controller
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
         $requirements = $data['requirements'] ?? [];
-        $assignees = $data['assignees'] ?? [];
+        $assignees = $request->user()->hasRole('admin') ? ($data['assignees'] ?? []) : [];
         unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
         $project = DB::transaction(function () use ($data, $customerId, $requirements, $assignees, $request): Project {
@@ -123,8 +131,9 @@ class ProjectController extends Controller
                 ->get();
 
             $project->load(['links' => fn ($links) => $links->where('visible_to_customer', true)->orderBy('label')]);
+            $billingDocuments = $this->projectBillingDocuments($project, $email);
 
-            return view('projects.customer-show', compact('project', 'tickets'));
+            return view('projects.customer-show', compact('project', 'tickets', 'billingDocuments'));
         }
 
         $project->load([
@@ -142,6 +151,7 @@ class ProjectController extends Controller
             'requirements',
             'assignees',
         ]);
+        $billingDocuments = $this->projectBillingDocuments($project);
         $project->loadCount('tasks');
         $project->loadCount([
             'tasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done'),
@@ -149,6 +159,11 @@ class ProjectController extends Controller
 
         return view('projects.show', [
             'project' => $project,
+            'canManageProject' => $request->user()->hasRole('admin')
+                || (int) $project->created_by_user_id === (int) $request->user()->id
+                || $project->assignees->contains('id', $request->user()->id),
+            'canManageBilling' => $request->user()->can('billing.manage'),
+            'billingDocuments' => $billingDocuments,
             'availableParts' => InventoryPart::query()->with('supplier')->orderBy('name')->get(),
             'partsEstimateTotal' => $project->inventoryParts->sum(
                 fn (InventoryPart $part): float => $part->pivot->quantity
@@ -167,6 +182,27 @@ class ProjectController extends Controller
                 ->orderBy('title')
                 ->get(['id', 'title', 'category', 'subject_name']),
         ]);
+    }
+
+    private function projectBillingDocuments(Project $project, ?string $customerEmail = null)
+    {
+        return BillingDocument::query()
+            ->where(function (Builder $documents) use ($project): void {
+                $documents->where('project_id', $project->id)
+                    ->orWhereHas('repairTicket', fn (Builder $tickets) => $tickets->where('project_id', $project->id));
+            })
+            ->when($customerEmail !== null, function (Builder $documents) use ($customerEmail): void {
+                $documents->whereIn('type', ['invoice', 'quotation'])
+                    ->where(function (Builder $owned) use ($customerEmail): void {
+                        $owned->whereHas('project.customers', fn (Builder $customers) => $customers
+                            ->whereRaw('LOWER(TRIM(email)) = ?', [$customerEmail]))
+                            ->orWhereHas('repairTicket.customer', fn (Builder $customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$customerEmail]));
+                    });
+            })
+            ->with('repairTicket')
+            ->latest('issue_date')
+            ->get();
     }
 
     public function storeRecommendedPart(Request $request, Project $project): RedirectResponse
@@ -391,7 +427,7 @@ class ProjectController extends Controller
         return view('projects.edit', [
             'project' => $project->load('customers', 'requirements', 'assignees'),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -400,8 +436,9 @@ class ProjectController extends Controller
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
         $requirements = $data['requirements'] ?? [];
-        $shouldSyncAssignees = array_key_exists('assignees', $data) || $request->exists('assignees_present');
-        $assignees = $data['assignees'] ?? [];
+        $shouldSyncAssignees = $request->user()->hasRole('admin')
+            && (array_key_exists('assignees', $data) || $request->exists('assignees_present'));
+        $assignees = $request->user()->hasRole('admin') ? ($data['assignees'] ?? []) : [];
         unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
         $assigneesChanged = false;

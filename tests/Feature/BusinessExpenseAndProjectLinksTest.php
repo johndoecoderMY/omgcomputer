@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\BusinessExpense;
 use App\Models\Customer;
 use App\Models\Project;
+use App\Models\RepairTicket;
+use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +19,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
 
     public function test_recurring_service_payments_advance_the_due_date_and_keep_history(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $this->post(route('expenses.store', 'services'), [
             'name' => 'SSM renewal',
             'vendor' => 'SSM',
@@ -53,7 +55,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
 
     public function test_expenses_are_category_scoped_and_payments_cannot_exceed_the_remaining_balance(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $expense = BusinessExpense::query()->create([
             'category' => 'bills',
             'name' => 'Electricity',
@@ -114,7 +116,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
 
     public function test_project_links_validate_safe_urls_and_are_scoped_to_their_project(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $project = Project::query()->create(['name' => 'Project A']);
         $otherProject = Project::query()->create(['name' => 'Project B']);
 
@@ -178,5 +180,54 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
             ->get(route('attachments.show', $projectAttachment))
             ->assertNotFound();
         $this->get(route('attachments.show', $expenseAttachment))->assertNotFound();
+    }
+
+    public function test_customer_ticket_update_photos_are_scoped_to_their_ticket(): void
+    {
+        Storage::fake('local');
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = Customer::query()->create([
+            'name' => 'Client',
+            'email' => 'client@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000001',
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'device_model' => 'Model X',
+            'issue_description' => 'Repair details',
+            'status' => 'in_repair',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $update = RepairTicketUpdate::query()->create([
+            'repair_ticket_id' => $ticket->id,
+            'title' => 'Repair progress',
+            'status' => 'in_repair',
+        ]);
+        $attachment = $update->attachments()->create([
+            'path' => 'attachments/tickets/update.png',
+            'original_name' => 'update.png',
+            'mime_type' => 'image/png',
+            'size' => 5,
+        ]);
+        Storage::disk('local')->put('attachments/tickets/update.png', 'image');
+
+        $user = User::factory()->create(['email' => 'client@example.test']);
+        $user->assignRole('customer');
+        $this->actingAs($user)->get(route('attachments.show', $attachment))->assertOk();
+
+        $otherCustomer = User::factory()->create(['email' => 'other@example.test']);
+        $otherCustomer->assignRole('customer');
+        $this->actingAs($otherCustomer)->get(route('attachments.show', $attachment))->assertNotFound();
+    }
+
+    private function adminUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 }

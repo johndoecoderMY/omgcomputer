@@ -148,6 +148,8 @@
 
     @include('projects._links', ['project' => $project])
 
+    @include('projects._billing-documents', ['project' => $project, 'billingDocuments' => $billingDocuments, 'canManageBilling' => $canManageBilling])
+
     <section class="card project-panel mb-4" aria-labelledby="project-photos-heading">
         <div class="card-header bg-body">
             <h2 class="h5 mb-0" id="project-photos-heading">Project photos and references</h2>

@@ -18,6 +18,7 @@ class AdminAccessController extends Controller
     {
         $roles = Role::query()
             ->where('guard_name', 'web')
+            ->whereIn('name', ['admin', 'member', 'customer'])
             ->with('permissions')
             ->withCount('users')
             ->orderBy('name')
@@ -43,26 +44,22 @@ class AdminAccessController extends Controller
             'selectedRole' => $selectedRole,
             'selectedRoleDescription' => match ($selectedRole?->name) {
                 'admin' => 'Full administrative access to manage users, roles, and workspace settings.',
-                'member' => 'Staff access for day-to-day project, task, and repair work.',
-                'customer' => 'Customer access to projects and tickets linked to their account.',
-                default => 'Custom access defined by the permissions selected below.',
+                'member' => 'Staff access to tickets, own or assigned projects and tasks, customer records, and read-only workspace sections.',
+                'customer' => 'Read-only access to tickets, bookings, projects, and project-linked billing documents.',
+                default => '',
             },
         ]);
     }
 
     public function storeRole(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:100', 'alpha_dash', Rule::unique('roles')->where('guard_name', 'web')],
-        ]);
-        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
-
-        return $this->backWith('Role created.', 'success', $role->id);
+        abort(403, 'Only the admin, member, and customer roles are supported.');
     }
 
     public function updateRole(Request $request, Role $role): RedirectResponse
     {
         abort_unless($role->guard_name === 'web', 404);
+        abort_unless(in_array($role->name, ['admin', 'member', 'customer'], true), 404);
         $data = $request->validate([
             'name' => [
                 'required',
@@ -74,16 +71,17 @@ class AdminAccessController extends Controller
             'permission_ids' => ['nullable', 'array'],
             'permission_ids.*' => ['required', 'integer', 'distinct', Rule::exists('permissions', 'id')->where('guard_name', 'web')],
         ]);
+        abort_unless($data['name'] === $role->name, 403, 'Built-in role names cannot be changed.');
 
         DB::transaction(function () use ($role, $data): void {
-            if ($role->name !== 'admin') {
-                $role->name = $data['name'];
-                $role->save();
+            if ($role->name === 'admin') {
+                $role->syncPermissions(Permission::query()->where('guard_name', 'web')->get());
+            } else {
+                $role->syncPermissions(Permission::query()
+                    ->where('guard_name', 'web')
+                    ->whereIn('id', $data['permission_ids'] ?? [])
+                    ->get());
             }
-            $role->syncPermissions(Permission::query()
-                ->where('guard_name', 'web')
-                ->whereIn('id', $data['permission_ids'] ?? [])
-                ->get());
         });
 
         return $this->backWith('Role permissions updated.', 'success', $role->id);
@@ -92,13 +90,7 @@ class AdminAccessController extends Controller
     public function destroyRole(Role $role): RedirectResponse
     {
         abort_unless($role->guard_name === 'web', 404);
-        if ($role->name === 'admin' || $role->users()->exists()) {
-            return $this->backWith('The administrator role or a role assigned to users cannot be deleted.', 'error');
-        }
-
-        $role->delete();
-
-        return $this->backWith('Role deleted.');
+        abort(403, 'The admin, member, and customer roles cannot be deleted.');
     }
 
     public function storePermission(Request $request): RedirectResponse
@@ -112,7 +104,8 @@ class AdminAccessController extends Controller
                 Rule::unique('permissions')->where('guard_name', 'web'),
             ],
         ]);
-        Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
+        $permission = Permission::create(['name' => $data['name'], 'guard_name' => 'web']);
+        Role::query()->where('name', 'admin')->where('guard_name', 'web')->firstOrFail()->givePermissionTo($permission);
 
         return $this->backWith('Permission created.', 'success', $request->integer('selected_role_id') ?: null);
     }
@@ -132,9 +125,15 @@ class AdminAccessController extends Controller
     public function updateUserRoles(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate([
-            'role_ids' => ['required', 'array', 'min:1'],
+            'role_ids' => ['required', 'array', 'size:1'],
             'role_ids.*' => ['required', 'integer', 'distinct', Rule::exists('roles', 'id')->where('guard_name', 'web')],
         ]);
+        $allowedRoleIds = Role::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', ['admin', 'member', 'customer'])
+            ->pluck('id')
+            ->all();
+        abort_if(array_diff($data['role_ids'], $allowedRoleIds) !== [], 422, 'Only admin, member, and customer roles can be assigned.');
         $administratorRole = Role::query()
             ->where('name', 'admin')
             ->where('guard_name', 'web')

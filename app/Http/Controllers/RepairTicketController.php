@@ -21,7 +21,7 @@ use Yajra\DataTables\Facades\DataTables;
 
 class RepairTicketController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         return view('tickets.index', [
             'statuses' => RepairTicket::STATUSES,
@@ -31,6 +31,11 @@ class RepairTicketController extends Controller
     public function datatable(Request $request)
     {
         $query = RepairTicket::query()->with(['customer', 'project', 'assignees']);
+        if ($request->user()->hasRole('customer')) {
+            $email = strtolower(trim($request->user()->email));
+            $query->whereHas('customer', fn (Builder $customers) => $customers
+                ->whereRaw('LOWER(email) = ?', [$email]));
+        }
 
         if ($request->filled('status') && isset(RepairTicket::STATUSES[$request->input('status')])) {
             $query->where('status', $request->input('status'));
@@ -85,6 +90,8 @@ class RepairTicketController extends Controller
 
     public function create(Request $request): View
     {
+        abort_if($request->user()->hasRole('customer'), 403);
+
         return view('tickets.create', [
             'ticket' => new RepairTicket([
                 'customer_id' => $request->integer('customer_id') ?: null,
@@ -162,8 +169,15 @@ class RepairTicketController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket created.');
     }
 
-    public function show(RepairTicket $ticket): View
+    public function show(Request $request, RepairTicket $ticket): View
     {
+        if ($request->user()->hasRole('customer')) {
+            abort_unless(
+                strtolower(trim((string) $ticket->customer()->value('email'))) === strtolower(trim($request->user()->email)),
+                404,
+            );
+        }
+
         $ticket->load([
             'customer.project',
             'project',
@@ -176,6 +190,15 @@ class RepairTicketController extends Controller
             'updates.user',
             'updates.attachments.uploader',
         ]);
+        if ($request->user()->hasRole('customer')) {
+            if ($ticket->project_id) {
+                $ticket->load(['billingDocuments' => fn ($documents) => $documents
+                    ->whereIn('type', ['invoice', 'quotation'])
+                    ->whereHas('repairTicket.project')]);
+            } else {
+                $ticket->setRelation('billingDocuments', collect());
+            }
+        }
 
         return view('tickets.show', [
             'ticket' => $ticket,

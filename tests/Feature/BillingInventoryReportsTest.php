@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\BillingDocument;
+use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
+use App\Models\Project;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +18,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $part = $this->createPart($user, 5);
 
         $response = $this->actingAs($user)->post(route('billing.store'), $this->documentData('invoice', $part, 2));
@@ -48,7 +51,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_failed_invoice_stock_deduction_rolls_back_the_document_and_stock_changes(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $part = $this->createPart($user, 1);
 
         $response = $this->actingAs($user)
@@ -64,7 +67,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_quote_conversion_deducts_stock_and_payments_update_invoice_balance(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $part = $this->createPart($user, 5);
         $this->actingAs($user)->post(route('billing.store'), $this->documentData('quote', $part, 2));
         $quote = BillingDocument::query()->firstOrFail();
@@ -93,9 +96,72 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
     }
 
+    public function test_project_can_have_customer_visible_invoices_and_quotations(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Website redesign']);
+        Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Project customer',
+            'email' => 'project-customer@example.test',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Project billing and quotations')
+            ->assertSee('Create quotation')
+            ->assertSee('Create invoice');
+
+        foreach (['quotation', 'invoice'] as $type) {
+            $this->get(route('billing.create', ['type' => $type, 'project_id' => $project->id]))
+                ->assertOk()
+                ->assertSee('Website redesign')
+                ->assertSee('Project customer');
+            $this->post(route('billing.store'), [
+                'type' => $type,
+                'project_id' => $project->id,
+                'customer_name' => 'Project customer',
+                'customer_email' => 'project-customer@example.test',
+                'issue_date' => now()->toDateString(),
+                'tax_rate' => 0,
+                'items' => [[
+                    'description' => 'Project work',
+                    'quantity' => 1,
+                    'unit_price' => 250,
+                ]],
+            ])->assertRedirect();
+        }
+
+        $customer = User::factory()->create(['email' => 'PROJECT-CUSTOMER@example.test']);
+        $customer->assignRole('customer');
+        $this->actingAs($customer)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Project billing and quotations')
+            ->assertSee('QUO-')
+            ->assertSee('INV-')
+            ->assertDontSee('Create invoice')
+            ->assertDontSee('Create quotation');
+
+        $documents = BillingDocument::query()->where('project_id', $project->id)->get();
+        $this->assertCount(2, $documents);
+        $this->assertTrue($documents->every(fn (BillingDocument $document): bool => $document->project_id === $project->id));
+        foreach ($documents as $document) {
+            $this->get(route('billing.documents.show', $document))->assertOk();
+            $this->get(route('billing.documents.pdf', $document))->assertOk();
+        }
+
+        $otherCustomer = User::factory()->create(['email' => 'other-customer@example.test']);
+        $otherCustomer->assignRole('customer');
+        foreach ($documents as $document) {
+            $this->actingAs($otherCustomer)->get(route('billing.documents.show', $document))->assertNotFound();
+        }
+    }
+
     public function test_business_plan_services_can_be_quoted_and_billed_without_stock_deduction(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $item = [
             'product_id' => 'laptop-cleaning',
             'quantity' => 1,
@@ -127,7 +193,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_draft_quotation_can_be_edited_without_issuing_or_deducting_stock(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', null, 1));
         $quotation = BillingDocument::query()->firstOrFail();
 
@@ -159,7 +225,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_invoice_pdf_and_date_filtered_reports_are_available(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $data = $this->documentData('invoice', null, 1);
         $data['customer_name'] = '=HYPERLINK("https://example.test","open")';
         $this->actingAs($user)->post(route('billing.store'), $data);
@@ -186,7 +252,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_inventory_opening_and_manual_movements_are_logged_and_low_stock_is_filterable(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
 
         $this->actingAs($user)->post(route('inventory.store'), [
             'sku' => 'SSD-001',
@@ -225,7 +291,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_inventory_overview_parts_and_movements_are_separate_pages(): void
     {
-        $user = User::factory()->create();
+        $user = $this->adminUser();
         $this->actingAs($user)->get(route('inventory.index'))
             ->assertOk()->assertSee('Inventory overview')->assertSee('Recent stock movements');
         $this->actingAs($user)->get(route('inventory.parts'))
@@ -251,6 +317,15 @@ class BillingInventoryReportsTest extends TestCase
             'sale_price' => 10,
             'is_active' => true,
         ]);
+    }
+
+    private function adminUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 
     private function documentData(string $type, ?InventoryPart $part, int $quantity): array

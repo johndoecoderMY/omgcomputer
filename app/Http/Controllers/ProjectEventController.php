@@ -21,9 +21,16 @@ class ProjectEventController extends Controller
         ]);
         $monthStart = CarbonImmutable::parse(($data['month'] ?? now()->format('Y-m')).'-01')->startOfMonth();
 
+        $projects = Project::query()->orderBy('name');
+        if (! $request->user()->hasRole('admin')) {
+            $projects->where(fn ($query) => $query
+                ->where('created_by_user_id', $request->user()->id)
+                ->orWhereHas('assignees', fn ($assignees) => $assignees->whereKey($request->user()->id)));
+        }
+
         return view('projects.calendar', [
             'monthStart' => $monthStart,
-            'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
+            'projects' => $projects->get(['id', 'name']),
         ]);
     }
 
@@ -41,6 +48,9 @@ class ProjectEventController extends Controller
         ]);
         $returnTo = $data['return_to'] ?? 'calendar';
         unset($data['return_to']);
+        if (! $request->user()->hasRole('admin')) {
+            abort_unless($data['project_id'] ?? null, 403);
+        }
 
         $event = Event::query()->create($data);
         if ($event->project_id) {
@@ -99,6 +109,11 @@ class ProjectEventController extends Controller
             ->orderBy('starts_at');
         if ($request->filled('project_id')) {
             $query->where('project_id', $request->integer('project_id'));
+        }
+        if (! $request->user()->hasRole('admin')) {
+            $query->whereHas('project', fn ($projects) => $projects
+                ->where(fn ($owned) => $owned->where('created_by_user_id', $request->user()->id)
+                    ->orWhereHas('assignees', fn ($assignees) => $assignees->whereKey($request->user()->id))));
         }
 
         $events = $query->get()

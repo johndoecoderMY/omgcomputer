@@ -51,6 +51,7 @@
         </div>
 
         <div class="row g-3">
+            @role('admin')
             <div class="col-md-4">
                 <label class="form-label" for="assignees">Assign people</label>
                 <input type="hidden" name="assignees_present" value="1">
@@ -62,6 +63,7 @@
                 @error('assignees')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 @error('assignees.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
+            @endrole
             <div class="col-md-4">
                 <label class="form-label" for="status">Status</label>
                 <select class="form-select" id="status" name="status" required>

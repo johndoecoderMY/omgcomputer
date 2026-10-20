@@ -17,7 +17,7 @@ class AdminAccessAndProjectManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_planner_administrators_can_manage_roles_permissions_and_user_roles(): void
+    public function test_roles_stay_limited_to_the_three_built_in_roles_and_permissions_remain_editable(): void
     {
         $member = User::factory()->create();
         $this->seed(PlannerRoleSeeder::class);
@@ -39,47 +39,47 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->get(route('admin.users.customers'))->assertOk()->assertSee('Customer accounts');
         $this->get(route('admin.users.edit', $member))->assertOk()->assertSee('Account roles');
 
-        $this->post(route('admin.access.roles.store'), ['name' => 'supervisor'])
-            ->assertRedirect(route('admin.access.index', ['role' => Role::query()->where('name', 'supervisor')->value('id')]));
-        $supervisor = Role::query()->where('name', 'supervisor')->firstOrFail();
+        $this->post(route('admin.access.roles.store'), ['name' => 'supervisor'])->assertForbidden();
+        $this->assertDatabaseMissing('roles', ['name' => 'supervisor']);
+
         $this->post(route('admin.access.permissions.store'), ['name' => 'projects.approve'])
             ->assertRedirect(route('admin.access.index'));
         $permission = Permission::query()->where('name', 'projects.approve')->firstOrFail();
+        $this->assertTrue($admin->fresh()->hasPermissionTo($permission));
 
-        $this->put(route('admin.access.roles.update', $supervisor), [
-            'name' => 'supervisor',
-            'permission_ids' => [$permission->id],
-        ])->assertRedirect(route('admin.access.index', ['role' => $supervisor->id]));
-        $this->assertTrue($supervisor->fresh()->hasPermissionTo($permission));
+        $bookingPermission = Permission::query()->where('name', 'booking_availability.manage')->firstOrFail();
+        $memberRole = Role::query()->where('name', 'member')->firstOrFail();
+        $this->put(route('admin.access.roles.update', $memberRole), [
+            'name' => 'member',
+            'permission_ids' => [
+                Permission::query()->where('name', 'projects.view')->value('id'),
+                $bookingPermission->id,
+            ],
+        ])->assertRedirect(route('admin.access.index', ['role' => $memberRole->id]));
+        $this->assertTrue($memberRole->fresh()->hasPermissionTo($bookingPermission));
 
-        $this->put(route('admin.access.users.roles.update', $member), [
-            'role_ids' => [$supervisor->id],
-        ])->assertRedirect(route('admin.users.edit', $member));
-        $this->assertTrue($member->fresh()->hasRole('supervisor'));
-        $this->get(route('admin.access.index', ['role' => $supervisor->id]))
-            ->assertOk()
-            ->assertSee('projects.approve')
-            ->assertSee($member->email);
-        $this->delete(route('admin.access.roles.destroy', $supervisor))
-            ->assertSessionHas('error');
-        $this->delete(route('admin.access.permissions.destroy', $permission))
-            ->assertSessionHas('error');
-
-        $this->put(route('admin.access.users.roles.update', $admin), [
-            'role_ids' => [$supervisor->id],
-        ])->assertSessionHas('error', 'The last administrator cannot be demoted.');
-        $this->assertTrue($admin->fresh()->hasRole('admin'));
+        $this->put(route('admin.access.roles.update', $memberRole), [
+            'name' => 'manager',
+            'permission_ids' => [],
+        ])->assertForbidden();
 
         $this->put(route('admin.access.users.roles.update', $member), [
-            'role_ids' => [Role::query()->where('name', 'member')->value('id')],
+            'role_ids' => [$memberRole->id, $bookingPermission->id],
+        ])->assertSessionHasErrors('role_ids');
+        $this->put(route('admin.access.users.roles.update', $member), [
+            'role_ids' => [Role::query()->where('name', 'customer')->value('id')],
         ])->assertRedirect(route('admin.users.edit', $member));
-        $this->put(route('admin.access.roles.update', $supervisor), [
-            'name' => 'supervisor',
-        ])->assertRedirect(route('admin.access.index', ['role' => $supervisor->id]));
+        $this->assertTrue($member->fresh()->hasRole('customer'));
+        $this->assertFalse($member->fresh()->hasRole('member'));
+
+        $this->put(route('admin.access.roles.update', $admin->roles()->first()), [
+            'name' => 'admin',
+            'permission_ids' => [],
+        ])->assertRedirect();
+        $this->assertTrue($admin->fresh()->hasPermissionTo($permission));
         $this->delete(route('admin.access.permissions.destroy', $permission))
-            ->assertRedirect(route('admin.access.index'));
-        $this->delete(route('admin.access.roles.destroy', $supervisor))
-            ->assertRedirect(route('admin.access.index'));
+            ->assertSessionHas('error');
+        $this->assertDatabaseHas('permissions', ['id' => $permission->id]);
     }
 
     public function test_admin_can_edit_user_profile_without_requiring_email_verification(): void
@@ -114,12 +114,14 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $member->assignRole('member');
 
         $this->actingAs($member)->get(route('admin.users.index'))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee('Members');
+        $this->get(route('admin.users.create'))->assertForbidden();
     }
 
     public function test_project_edit_can_move_or_clear_its_customer_link(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $existingProject = Project::query()->create(['name' => 'Existing project']);
         $project = Project::query()->create(['name' => 'Student FYP']);
         $previousCustomer = Customer::query()->create([
@@ -153,7 +155,7 @@ class AdminAccessAndProjectManagementTest extends TestCase
 
     public function test_project_flow_chart_datatable_can_link_duplicate_and_create_for_a_project(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->adminUser());
         $project = Project::query()->create(['name' => 'FYP capstone']);
         $source = FlowChart::query()->create([
             'title' => 'Research review flow',
@@ -255,5 +257,14 @@ class AdminAccessAndProjectManagementTest extends TestCase
             ->assertNotFound()
             ->assertSee('Page not found')
             ->assertSee('404');
+    }
+
+    private function adminUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        return $admin;
     }
 }

@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Middleware\EnsureNotCustomer;
+use App\Http\Middleware\EnsurePasswordChanged;
+use App\Http\Middleware\EnsureWorkspacePermission;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\EnsurePasswordChanged;
-use App\Http\Middleware\EnsureNotCustomer;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'password.changed' => EnsurePasswordChanged::class,
             'not-customer' => EnsureNotCustomer::class,
+            'workspace.access' => EnsureWorkspacePermission::class,
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
