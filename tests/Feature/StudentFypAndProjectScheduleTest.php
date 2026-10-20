@@ -63,6 +63,12 @@ class StudentFypAndProjectScheduleTest extends TestCase
             ->assertOk()
             ->assertSee('project-calendar')
             ->assertSee('timeGridWeek');
+        $this->get(route('projects.calendar'))
+            ->assertOk()
+            ->assertSee('event-details-modal')
+            ->assertSee("moreLinkClick: 'popover'", false)
+            ->assertSee('text-overflow: ellipsis', false)
+            ->assertSee('eventClick:', false);
         $this->getJson(route('projects.calendar.events', [
             'start' => $startsAt->copy()->startOfMonth()->toIso8601String(),
             'end' => $startsAt->copy()->endOfMonth()->addDay()->startOfDay()->toIso8601String(),
@@ -71,6 +77,7 @@ class StudentFypAndProjectScheduleTest extends TestCase
             ->assertJsonCount(1)
             ->assertJsonPath('0.title', 'Weekly consultation')
             ->assertJsonPath('0.extendedProps.project', 'FYP Research Project')
+            ->assertJsonPath('0.extendedProps.project_url', route('projects.show', $project).'#project-schedule')
             ->assertJsonPath('0.extendedProps.type', 'Consultation');
         $this->getJson(route('projects.calendar.events', [
             'project_id' => $project->id,

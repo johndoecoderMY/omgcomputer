@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
 
 class Task extends Model
 {
@@ -36,6 +38,26 @@ class Task extends Model
         'due_date',
     ];
 
+    protected static function booted(): void
+    {
+        static::created(function (self $task): void {
+            if ($task->assigned_to) {
+                $task->assignees()->syncWithoutDetaching([$task->assigned_to]);
+            }
+        });
+
+        static::deleting(function (self $task): void {
+            $taskIds = $task->subtasks()->pluck('id')->all();
+            $task->assignees()->detach();
+            if ($taskIds !== []) {
+                DB::table('user_assignments')
+                    ->where('assignable_type', self::class)
+                    ->whereIn('assignable_id', $taskIds)
+                    ->delete();
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -62,6 +84,11 @@ class Task extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function assignees(): MorphToMany
+    {
+        return $this->morphToMany(User::class, 'assignable', 'user_assignments')->withTimestamps();
     }
 
     public function flowChart(): BelongsTo

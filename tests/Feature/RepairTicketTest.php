@@ -90,6 +90,41 @@ class RepairTicketTest extends TestCase
             ->assertSee('OMG-2026-000002');
     }
 
+    public function test_repair_tickets_can_be_assigned_to_multiple_people(): void
+    {
+        $owner = User::factory()->create();
+        $assignees = User::factory()->count(2)->create();
+        $customer = Customer::query()->create([
+            'name' => 'Multiple-assignee customer',
+            'email' => 'multi@example.test',
+        ]);
+
+        $this->actingAs($owner)->post(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'issue_description' => 'The device will not start.',
+            'priority' => 'normal',
+            'assignees_present' => '1',
+            'assignees' => $assignees->pluck('id')->all(),
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $this->assertEqualsCanonicalizing(
+            $assignees->pluck('id')->all(),
+            $ticket->assignees()->pluck('users.id')->all(),
+        );
+        $this->assertSame($assignees->first()->id, $ticket->assigned_to);
+
+        $replacement = User::factory()->create();
+        $this->actingAs($owner)->put(route('tickets.update', $ticket), [
+            'status' => 'diagnosing',
+            'priority' => 'high',
+            'assignees_present' => '1',
+            'assignees' => [$replacement->id],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertEquals([$replacement->id], $ticket->fresh()->assignees()->pluck('users.id')->all());
+    }
+
     public function test_ticket_photos_and_customer_history_are_saved_and_accessible(): void
     {
         Storage::fake('local');

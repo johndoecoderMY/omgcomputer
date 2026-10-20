@@ -31,7 +31,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span>
+                                <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
                                 <span class="nav-link-text ps-1">My Projects</span>
                             </div>
                         </a>
@@ -118,13 +118,13 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('projects.index') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
                             <span class="nav-link-text ps-1">Projects</span>
                         </div>
                     </a>
                     <a class="nav-link" href="{{ route('projects.calendar') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-calendar-days"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
                             <span class="nav-link-text ps-1">Calendar</span>
                         </div>
                     </a>
@@ -172,7 +172,7 @@
 
                     <a class="nav-link" href="{{ route('tasks.index') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-list-check"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-tasks"></span></span>
                             <span class="nav-link-text ps-1">Tasks</span>
                         </div>
                     </a>
@@ -261,13 +261,13 @@
 
                     <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-diagram-project"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
                             <span class="nav-link-text ps-1">Flow Charts</span>
                         </div>
                     </a>
                     <a class="nav-link" href="{{ route('meta-content.index') }}">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fab fa-meta"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-share-alt"></span></span>
                             <span class="nav-link-text ps-1">Meta Content</span>
                         </div>
                     </a>
@@ -303,6 +303,33 @@
                         </li>
                     </ul>
                 </li>
+
+                @if (!auth()->user()->hasRole('customer'))
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Operating costs</div>
+                            <div class="col ps-0"><hr class="mb-0 navbar-vertical-divider"></div>
+                        </div>
+                        <a class="nav-link" href="{{ route('expenses.index', 'rental') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-building"></span></span>
+                                <span class="nav-link-text ps-1">Rental</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('expenses.index', 'bills') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
+                                <span class="nav-link-text ps-1">Bills</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('expenses.index', 'services') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-sync-alt"></span></span>
+                                <span class="nav-link-text ps-1">Services & renewals</span>
+                            </div>
+                        </a>
+                    </li>
+                @endif
 
                 {{-- Billing & Payments --}}
                 <li class="nav-item">
@@ -421,7 +448,7 @@
                     <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"
                         data-bs-toggle="collapse" aria-expanded="false" aria-controls="errorPagesMenu">
                         <div class="d-flex align-items-center">
-                            <span class="nav-link-icon"><span class="fas fa-triangle-exclamation"></span></span>
+                            <span class="nav-link-icon"><span class="fas fa-exclamation-triangle"></span></span>
                             <span class="nav-link-text ps-1">Error pages</span>
                         </div>
                     </a>

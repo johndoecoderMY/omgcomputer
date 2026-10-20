@@ -30,7 +30,7 @@ class TaskController extends Controller
     public function datatable(Request $request)
     {
         $query = Task::query()
-            ->with(['project', 'assignee'])
+            ->with(['project', 'assignees'])
             ->withCount('subtasks')
             ->whereNull('parent_task_id');
 
@@ -58,7 +58,7 @@ class TaskController extends Controller
                     ->where('tasks.title', 'like', "%{$search}%")
                     ->orWhere('tasks.description', 'like', "%{$search}%")
                     ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('assignee', fn (Builder $assignee) => $assignee->where('name', 'like', "%{$search}%"))
+                    ->orWhereHas('assignees', fn (Builder $assignees) => $assignees->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('title', 'like', "%{$search}%")));
             }, true)
             ->addColumn('task', fn (Task $task): string => sprintf(
@@ -67,11 +67,10 @@ class TaskController extends Controller
                 e($task->title),
                 e(Str::limit($task->description ?? '', 120)),
             ))
-            ->addColumn('project_name', fn (Task $task): string => sprintf(
-                '<a href="%s">%s</a>',
-                e(route('projects.show', $task->project)),
-                e($task->project->name),
-            ))
+            ->addColumn('project_name', fn (Task $task): string => $task->project
+                ? '<a href="'.e(route('projects.show', $task->project)).'">'.e($task->project->name).'</a>'
+                : '—')
+            ->addColumn('assignees', fn (Task $task): string => e($task->assignees->pluck('name')->join(', ') ?: 'Unassigned'))
             ->addColumn('status_label', fn (Task $task): string => (string) StatusBadge::make(
                 $task->status,
                 Task::STATUSES[$task->status] ?? $task->status,
@@ -92,19 +91,31 @@ class TaskController extends Controller
             ->toJson();
     }
 
-    public function create(Project $project, Request $request): View
+    public function create(Request $request): View
+    {
+        return $this->createTaskForm($request);
+    }
+
+    public function createForProject(Request $request, Project $project): View
+    {
+        return $this->createTaskForm($request, $project);
+    }
+
+    private function createTaskForm(Request $request, ?Project $project = null): View
     {
         $parent = null;
         if ($request->filled('parent_id')) {
-            $parent = $project->tasks()
-                ->whereNull('parent_task_id')
-                ->findOrFail($request->integer('parent_id'));
+            $parentQuery = $project
+                ? $project->tasks()
+                : Task::query();
+            $parent = $parentQuery->whereNull('parent_task_id')->findOrFail($request->integer('parent_id'));
+            $project ??= $parent->project;
         }
 
         return view('tasks.create', [
             'project' => $project,
             'task' => new Task([
-                'project_id' => $project->id,
+                'project_id' => $project?->id,
                 'parent_task_id' => $parent?->id,
                 'status' => 'backlog',
                 'priority' => 'medium',
@@ -113,36 +124,60 @@ class TaskController extends Controller
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
             'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function store(Project $project, Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
+    {
+        return $this->storeTask($request);
+    }
+
+    public function storeForProject(Request $request, Project $project): RedirectResponse
+    {
+        return $this->storeTask($request, $project);
+    }
+
+    private function storeTask(Request $request, ?Project $project = null): RedirectResponse
     {
         $data = $this->validatedData($request);
-        $parent = $this->validatedParent($project, $data['parent_id'] ?? null);
+        $parentId = $data['parent_id'] ?? null;
+        $parent = $project
+            ? $this->validatedParent($project, $parentId)
+            : ($parentId ? Task::query()->whereNull('parent_task_id')->findOrFail($parentId) : null);
         unset($data['parent_id']);
+        $assignees = $data['assignees'];
+        unset($data['assignees']);
 
-        $task = $project->tasks()->create([
+        if ($parent) {
+            $project = $parent->project;
+        } elseif (! $project && ! empty($data['project_id'])) {
+            $project = Project::query()->findOrFail($data['project_id']);
+        }
+        unset($data['project_id']);
+
+        $task = Task::query()->create([
             ...$data,
+            'project_id' => $project?->id,
             'parent_task_id' => $parent?->id,
         ]);
-        $this->notifyAssignee($task);
+        $this->syncAssignees($task, $assignees);
 
         return redirect()
-            ->route($parent ? 'tasks.show' : 'projects.show', $parent ?? $project)
+            ->route($parent ? 'tasks.show' : ($project ? 'projects.show' : 'tasks.show'), $parent ?? $project ?? $task)
             ->with('success', $parent ? 'Subtask created successfully.' : 'Task created successfully.');
     }
 
     public function show(Task $task): View
     {
-        $task->load(['parent', 'project', 'subtasks', 'attachments.uploader']);
+        $task->load(['parent', 'project', 'assignees', 'subtasks.assignees', 'attachments.uploader']);
 
         return view('tasks.show', compact('task'));
     }
 
     public function edit(Task $task): View
     {
-        $task->load(['parent', 'project']);
+        $task->load(['parent', 'project', 'assignees']);
 
         return view('tasks.edit', [
             'project' => $task->project,
@@ -151,6 +186,7 @@ class TaskController extends Controller
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
             'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -158,11 +194,15 @@ class TaskController extends Controller
     {
         $data = $this->validatedData($request);
         unset($data['parent_id']);
-        $assigneeChanged = (int) $task->assigned_to !== (int) ($data['assigned_to'] ?? 0);
-        $task->update($data);
-        if ($assigneeChanged) {
-            $this->notifyAssignee($task);
+        $assignees = $data['assignees'];
+        $projectId = array_key_exists('project_id', $data) ? $data['project_id'] : $task->project_id;
+        unset($data['assignees'], $data['project_id']);
+        if ($task->parent_task_id === null) {
+            $task->project_id = $projectId;
+            $task->subtasks()->update(['project_id' => $projectId]);
         }
+        $task->update($data);
+        $this->syncAssignees($task, $assignees);
 
         return redirect()
             ->route('tasks.show', $task->parent ?? $task)
@@ -174,12 +214,14 @@ class TaskController extends Controller
         abort_if($task->parent_task_id !== null, 404);
 
         $data = $this->validatedData($request);
-        unset($data['parent_id']);
+        unset($data['parent_id'], $data['project_id']);
+        $assignees = $data['assignees'];
+        unset($data['assignees']);
         $subtask = $task->subtasks()->create([
             ...$data,
             'project_id' => $task->project_id,
         ]);
-        $this->notifyAssignee($subtask);
+        $this->syncAssignees($subtask, $assignees);
 
         return redirect()
             ->route('tasks.show', $task)
@@ -215,7 +257,7 @@ class TaskController extends Controller
         $task->delete();
 
         return redirect()
-            ->route($parent ? 'tasks.show' : 'projects.show', $parent ?? $project)
+            ->route($parent ? 'tasks.show' : ($project ? 'projects.show' : 'tasks.index'), $parent ?? $project)
             ->with('success', $parent ? 'Subtask deleted successfully.' : 'Task and its subtasks deleted successfully.');
     }
 
@@ -228,9 +270,20 @@ class TaskController extends Controller
             'priority' => ['required', Rule::in(array_keys(Task::PRIORITIES))],
             'start_date' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
+            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'assignees' => ['sometimes', 'array'],
+            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees_present' => ['sometimes', 'boolean'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'parent_id' => ['nullable', 'integer', 'exists:tasks,id'],
         ]);
+        $assignees = $request->exists('assignees_present')
+            ? ($data['assignees'] ?? [])
+            : (array_key_exists('assignees', $data)
+                ? $data['assignees']
+                : (isset($data['assigned_to']) ? [(int) $data['assigned_to']] : []));
+        unset($data['assigned_to'], $data['assignees_present']);
+        $data['assignees'] = array_values(array_unique(array_map('intval', $assignees)));
 
         if (! empty($data['start_date']) && ! empty($data['due_date']) && $data['due_date'] < $data['start_date']) {
             throw ValidationException::withMessages([
@@ -253,17 +306,26 @@ class TaskController extends Controller
         return $parent;
     }
 
-    private function notifyAssignee(Task $task): void
+    private function syncAssignees(Task $task, array $assigneeIds): void
     {
-        if (! $task->assigned_to || (int) $task->assigned_to === (int) auth()->id()) {
-            return;
-        }
+        $newAssignees = array_diff($assigneeIds, $task->assignees()->pluck('users.id')->all());
+        $task->assignees()->sync($assigneeIds);
+        $task->update(['assigned_to' => $assigneeIds[0] ?? null]);
 
-        $task->loadMissing('project', 'assignee');
-        $task->assignee?->notify(new WorkspaceNotification(
-            'Task assigned to you',
-            sprintf('You have been assigned “%s” in the %s project.', $task->title, $task->project->name),
-            route('tasks.show', $task),
-        ));
+        $task->load('project');
+        foreach (User::query()->whereKey($newAssignees)->get() as $assignee) {
+            if ((int) $assignee->id === (int) auth()->id()) {
+                continue;
+            }
+            $assignee->notify(new WorkspaceNotification(
+                'Task assigned to you',
+                sprintf(
+                    'You have been assigned “%s”%s.',
+                    $task->title,
+                    $task->project ? ' in the '.$task->project->name.' project' : '',
+                ),
+                route('tasks.show', $task),
+            ));
+        }
     }
 }

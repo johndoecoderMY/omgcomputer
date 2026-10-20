@@ -7,8 +7,8 @@
     <x-page-header eyebrow="Projects" title="Tasks"
         description="Review project tasks and subtasks in one place.">
         <x-slot:actions>
-            <a class="btn btn-primary" href="{{ route('projects.index') }}">
-                <i class="fas fa-folder-open me-2"></i>Choose a project
+            <a class="btn btn-primary" href="{{ route('tasks.create') }}">
+                <i class="fas fa-plus me-2"></i>Add task
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -56,13 +56,14 @@
             data-columns="{{ json_encode([
                 ['data' => 'task', 'name' => 'tasks.title'],
                 ['data' => 'project_name', 'orderable' => false, 'searchable' => false],
+                ['data' => 'assignees', 'orderable' => false, 'searchable' => false],
                 ['data' => 'status_label', 'name' => 'tasks.status'],
                 ['data' => 'priority_label', 'name' => 'tasks.priority'],
                 ['data' => 'due_date', 'name' => 'tasks.due_date'],
                 ['data' => 'subtasks_count', 'name' => 'subtasks_count'],
                 ['data' => 'actions', 'orderable' => false, 'searchable' => false],
             ]) }}">
-            <thead><tr><th>Task</th><th>Project</th><th>Status</th><th>Priority</th><th>Due</th><th>Subtasks</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Task</th><th>Project</th><th>Assigned to</th><th>Status</th><th>Priority</th><th>Due</th><th>Subtasks</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>

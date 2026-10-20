@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -127,5 +128,39 @@ class CustomerRepairTicketTest extends TestCase
         $this->get(route('customers.show', $customer))
             ->assertSee($ticket->ticket_number)
             ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
+    }
+
+    public function test_customer_profile_shows_matching_customer_login_account(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('member');
+        $this->actingAs($staff);
+        $customer = Customer::query()->create([
+            'name' => 'Portal Customer',
+            'email' => 'Portal.Customer@example.test',
+        ]);
+        $account = User::factory()->create([
+            'name' => 'Portal Customer Account',
+            'email' => 'portal.customer@example.test',
+            'email_verified_at' => now(),
+        ]);
+        $account->assignRole('customer');
+
+        $this->get(route('customers.show', $customer))
+            ->assertOk()
+            ->assertSee('Customer login account')
+            ->assertSee('Portal Customer Account')
+            ->assertSee('portal.customer@example.test')
+            ->assertSee('Verified')
+            ->assertDontSee('Manage account');
+
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin)
+            ->get(route('customers.show', $customer))
+            ->assertOk()
+            ->assertSee('Manage account')
+            ->assertSee(route('admin.users.edit', $account), false);
     }
 }

@@ -4,9 +4,18 @@
 
 @section('content')
 <div class="container-fluid py-3 profile-page">
-    <x-page-header eyebrow="Team directory" :title="$user->name"
-        description="Member profile and team contact information."
-        :back-url="route('teams.index')" back-label="Team directory" />
+    <x-page-header :eyebrow="$isCustomerAccount ? 'Customer account' : 'Team directory'" :title="$user->name"
+        :description="$isCustomerAccount ? 'Customer login account details.' : 'Member profile and team contact information.'"
+        :back-url="$isCustomerAccount && $canManageAccount ? route('admin.users.customers') : route('teams.index')"
+        :back-label="$isCustomerAccount && $canManageAccount ? 'Customer accounts' : 'Team directory'">
+        @if ($canManageAccount)
+            <x-slot:actions>
+                <a class="btn btn-primary" href="{{ route('admin.users.edit', $user) }}">
+                    <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Manage account
+                </a>
+            </x-slot:actions>
+        @endif
+    </x-page-header>
 
     <div class="row g-3">
         <aside class="col-12 col-xl-3">

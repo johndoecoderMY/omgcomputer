@@ -15,7 +15,7 @@
     <script src="{{ asset('assets/js/theme.js') }}"></script>
     @vite('resources/js/app.js')
     <script>
-        const fuzzyProjectMatcher = (params, data) => {
+        const fuzzySelectMatcher = (params, data) => {
             const query = $.trim(params.term || '').toLocaleLowerCase();
 
             if (!query) {
@@ -24,7 +24,7 @@
 
             if (data.children) {
                 const matchingChildren = data.children
-                    .map((child) => fuzzyProjectMatcher(params, child))
+                    .map((child) => fuzzySelectMatcher(params, child))
                     .filter(Boolean);
 
                 return matchingChildren.length ? { ...data, children: matchingChildren } : null;
@@ -48,14 +48,16 @@
             return query.split(/\s+/).every(matchesFuzzy) ? data : null;
         };
 
-        $('select.js-project-search').each(function () {
+        $('select.js-project-search, select.js-user-search').each(function () {
             const select = $(this);
             const modal = select.closest('.modal');
 
             select.select2({
                 theme: 'bootstrap-5',
                 width: '100%',
-                matcher: fuzzyProjectMatcher,
+                placeholder: select.data('placeholder'),
+                allowClear: !select.prop('multiple'),
+                matcher: fuzzySelectMatcher,
                 dropdownParent: modal.length ? modal : $(document.body),
             });
         });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Support\FlowChartPngRenderer;
+use App\Support\PdfAttachmentImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -22,10 +23,15 @@ class ProjectExportController extends Controller
         'schedule',
         'gantt',
         'flowcharts',
+        'photos',
     ];
 
-    public function export(Request $request, Project $project, FlowChartPngRenderer $flowChartRenderer)
-    {
+    public function export(
+        Request $request,
+        Project $project,
+        FlowChartPngRenderer $flowChartRenderer,
+        PdfAttachmentImage $attachmentImage,
+    ) {
         $data = $request->validate([
             'sections' => ['required', 'array', 'min:1'],
             'sections.*' => ['required', 'string', Rule::in(self::SECTIONS)],
@@ -69,6 +75,7 @@ class ProjectExportController extends Controller
             ...(in_array('gantt', $sections, true) ? [
                 'tasks' => fn ($query) => $query->whereNull('parent_task_id')->with('subtasks'),
             ] : []),
+            ...(in_array('photos', $sections, true) ? ['attachments'] : []),
         ]);
         foreach ($flowCharts as $flowChart) {
             $flowChart->makeVisible('steps');
@@ -76,13 +83,16 @@ class ProjectExportController extends Controller
         $flowChartImages = $flowCharts->mapWithKeys(fn ($flowChart): array => [
             $flowChart->id => $flowChartRenderer->render($flowChart),
         ]);
+        $projectPhotos = in_array('photos', $sections, true)
+            ? $project->attachments->map(fn ($attachment): array => $attachmentImage->make($attachment))
+            : collect();
 
         $tempDirectory = storage_path('app/mpdf-tmp');
         File::ensureDirectoryExists($tempDirectory);
         $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
         $mpdf->AliasNbPages();
         $mpdf->SetFooter('|Page {PAGENO} of {nb}|');
-        $mpdf->WriteHTML(view('projects.pdf', compact('project', 'sections', 'flowCharts', 'flowChartImages'))->render());
+        $mpdf->WriteHTML(view('projects.pdf', compact('project', 'sections', 'flowCharts', 'flowChartImages', 'projectPhotos'))->render());
         $filename = Str::slug($project->name).'-project-details.pdf';
 
         return response($mpdf->Output($filename, 'S'))

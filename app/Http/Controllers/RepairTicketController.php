@@ -29,15 +29,15 @@ class RepairTicketController extends Controller
 
     public function datatable(Request $request)
     {
-        $query = RepairTicket::query()->with(['customer', 'project', 'assignee']);
+        $query = RepairTicket::query()->with(['customer', 'project', 'assignees']);
 
         if ($request->filled('status') && isset(RepairTicket::STATUSES[$request->input('status')])) {
             $query->where('status', $request->input('status'));
         }
         if ($request->input('assigned') === 'unassigned') {
-            $query->whereNull('assigned_to');
+            $query->whereDoesntHave('assignees');
         } elseif ($request->input('assigned') === 'mine') {
-            $query->where('assigned_to', $request->user()->id);
+            $query->whereHas('assignees', fn (Builder $assignees) => $assignees->whereKey($request->user()->id));
         }
 
         return DataTables::eloquent($query)
@@ -55,7 +55,7 @@ class RepairTicketController extends Controller
                         ->orWhere('issue_description', 'like', "%{$search}%")
                         ->orWhereHas('customer', fn (Builder $customer) => $customer->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('assignee', fn (Builder $assignee) => $assignee->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('assignees', fn (Builder $assignees) => $assignees->where('name', 'like', "%{$search}%"));
                 });
             }, true)
             ->addColumn('ticket', fn (RepairTicket $ticket): string => sprintf(
@@ -72,7 +72,7 @@ class RepairTicketController extends Controller
                 RepairTicket::STATUSES[$ticket->status] ?? $ticket->status,
             ))
             ->addColumn('priority_label', fn (RepairTicket $ticket): string => RepairTicket::PRIORITIES[$ticket->priority] ?? $ticket->priority)
-            ->addColumn('assignee_name', fn (RepairTicket $ticket): string => $ticket->assignee?->name ?: 'Unassigned')
+            ->addColumn('assignee_name', fn (RepairTicket $ticket): string => e($ticket->assignees->pluck('name')->join(', ') ?: 'Unassigned'))
             ->addColumn('due_date', fn (RepairTicket $ticket): string => $ticket->due_at?->format('M j, Y') ?? '—')
             ->addColumn('actions', fn (RepairTicket $ticket): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">Open</a>',
@@ -104,6 +104,9 @@ class RepairTicketController extends Controller
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assignees' => ['sometimes', 'array'],
+            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees_present' => ['sometimes', 'boolean'],
             'device_type' => ['nullable', 'string', 'max:80'],
             'device_model' => ['nullable', 'string', 'max:255'],
             'serial_number' => ['nullable', 'string', 'max:255'],
@@ -111,11 +114,14 @@ class RepairTicketController extends Controller
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'due_at' => ['nullable', 'date'],
         ]);
+        $assignees = $this->assigneeIds($request, $data);
+        unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
 
-        $ticket = DB::transaction(function () use ($data, $request): RepairTicket {
+        $ticket = DB::transaction(function () use ($data, $request, $assignees): RepairTicket {
             $customer = Customer::query()->findOrFail($data['customer_id']);
             $ticket = RepairTicket::create([
                 ...$data,
+                'assigned_to' => $assignees[0] ?? null,
                 'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'project_id' => $data['project_id'] ?? $customer->project_id,
                 'status' => 'new',
@@ -137,6 +143,8 @@ class RepairTicketController extends Controller
                 'notes' => $data['issue_description'],
             ]);
 
+            $ticket->assignees()->sync($assignees);
+
             return $ticket;
         });
 
@@ -148,7 +156,7 @@ class RepairTicketController extends Controller
         $ticket->load([
             'customer.project',
             'project',
-            'assignee',
+            'assignees',
             'billingDocuments',
             'attachments.uploader',
             'updates.user',
@@ -172,14 +180,21 @@ class RepairTicketController extends Controller
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assignees' => ['sometimes', 'array'],
+            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees_present' => ['sometimes', 'boolean'],
             'diagnosis' => ['nullable', 'string', 'max:5000'],
             'due_at' => ['nullable', 'date'],
         ]);
-        DB::transaction(function () use ($ticket, $data, $request): void {
+        $assignees = $this->assigneeIds($request, $data);
+        unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
+        DB::transaction(function () use ($ticket, $data, $request, $assignees): void {
             $statusChanged = $ticket->status !== $data['status'];
-            DB::transaction(function () use ($ticket, $data, $request): void {
+            DB::transaction(function () use ($ticket, $data, $request, $assignees): void {
                 $statusChanged = $ticket->status !== $data['status'];
                 $ticket->update($data);
+                $ticket->assignees()->sync($assignees);
+                $ticket->update(['assigned_to' => $assignees[0] ?? null]);
                 if ($statusChanged) {
                     $ticket->updates()->create([
                         'user_id' => $request->user()->id,
@@ -200,6 +215,17 @@ class RepairTicketController extends Controller
         });
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket updated.');
+    }
+
+    private function assigneeIds(Request $request, array $data): array
+    {
+        $ids = $request->exists('assignees_present')
+            ? ($data['assignees'] ?? [])
+            : (array_key_exists('assignees', $data)
+                ? $data['assignees']
+                : (isset($data['assigned_to']) ? [(int) $data['assigned_to']] : []));
+
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage): RedirectResponse

@@ -2,13 +2,18 @@
 
 @section('title', $task->title)
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendors/glightbox/glightbox.min.css') }}">
+@endpush
+
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header :eyebrow="$task->project->name" :title="$task->title"
-        :back-url="route('projects.show', $task->project)" back-label="Back to project">
+    <x-page-header :eyebrow="$task->project?->name ?? 'Tasks'" :title="$task->title"
+        :back-url="$task->project ? route('projects.show', $task->project) : route('tasks.index')"
+        :back-label="$task->project ? 'Back to project' : 'Back to tasks'">
         <x-slot:actions>
             @if (!$task->parent_task_id)
-                <a class="btn btn-outline-primary" href="{{ route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) }}">
+                <a class="btn btn-outline-primary" href="{{ $task->project ? route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) : route('tasks.create', ['parent_id' => $task->id]) }}">
                     <i class="fas fa-plus me-2"></i>Add subtask
                 </a>
             @endif
@@ -43,6 +48,9 @@
                 @endif
             </div>
             <p class="mb-0 text-body-secondary">{{ $task->description ?: 'No description provided.' }}</p>
+            <div class="small text-body-secondary mt-3">
+                <strong>Assigned to:</strong> {{ $task->assignees->pluck('name')->join(', ') ?: 'Unassigned' }}
+            </div>
         </div>
     </div>
 
@@ -53,7 +61,12 @@
             <div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="task-photos">Photos</label><input class="form-control" id="task-photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple required></div><div class="col-md-5"><label class="form-label" for="task-photo-caption">Caption</label><input class="form-control" id="task-photo-caption" name="caption" maxlength="255" placeholder="What should the team notice?"></div><div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Upload photos</button></div></div>
             <div class="form-text">Upload up to 8 JPG, PNG, or WebP images, up to 10 MB each.</div>
         </form>
-        <div class="card-body">@include('attachments.gallery', ['attachments' => $task->attachments, 'emptyMessage' => 'No task photos yet.'])</div>
+        <div class="card-body">@include('attachments.gallery', [
+            'attachments' => $task->attachments,
+            'emptyMessage' => 'No task photos yet.',
+            'lightbox' => true,
+            'editableCaptions' => true,
+        ])</div>
     </div>
 
     @if (!$task->parent_task_id)
@@ -94,7 +107,7 @@
                 </div>
             @endif
             <div class="card-footer bg-body">
-                <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) }}">
+                <a class="btn btn-sm btn-outline-primary" href="{{ $task->project ? route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) : route('tasks.create', ['parent_id' => $task->id]) }}">
                     <i class="fas fa-plus me-2"></i>Add subtask
                 </a>
             </div>
@@ -102,3 +115,12 @@
     @endif
 </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
+    <script>
+        if (window.GLightbox) {
+            window.GLightbox({ selector: '[data-gallery="task-photos"]' });
+        }
+    </script>
+@endpush

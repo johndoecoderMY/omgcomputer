@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header :eyebrow="$project->name" title="Edit task"
+    <x-page-header :eyebrow="$project?->name ?? 'Tasks'" title="Edit task"
         :back-url="route('tasks.show', $parent ?? $task)" back-label="Back to task" />
 
     @include('tasks._form', [

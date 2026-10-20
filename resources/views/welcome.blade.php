@@ -8,7 +8,7 @@
             <div class="row align-items-center g-5 py-lg-4">
                 <div class="col-lg-6">
                     <span class="badge rounded-pill badge-subtle-primary mb-3 px-3 py-2">
-                        <span class="fas fa-tools me-2"></span>Local computer repair &support
+                        <span class="fas fa-tools me-2"></span>Local computer repair &amp; support
                     </span>
                     <h1 class="display-2 fw-bold text-1000 mb-3">Computer trouble?<br><span class="text-primary">We can help.</span></h1>
                     <p class="lead text-700 mb-4">Friendly, dependable help for slow PCs, broken hardware, upgrades, and everyday tech headaches.</p>
@@ -52,7 +52,7 @@
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-stethoscope text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">Diagnostics &troubleshooting</h5>
+                            <h5 class="text-1000">Diagnostics &amp; troubleshooting</h5>
                             <p class="text-700 mb-0">Find the cause of crashes, slowdowns, startup issues, and other PC problems.</p>
                         </div>
                     </div>
@@ -61,7 +61,7 @@
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-screwdriver-wrench text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">PC &laptop repairs</h5>
+                            <h5 class="text-1000">PC &amp; laptop repairs</h5>
                             <p class="text-700 mb-0">Get help with hardware faults, damaged components, and repair recommendations.</p>
                         </div>
                     </div>
@@ -70,7 +70,7 @@
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-memory text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">Upgrades &tune-ups</h5>
+                            <h5 class="text-1000">Upgrades &amp; tune-ups</h5>
                             <p class="text-700 mb-0">Improve performance with storage, memory, component, and system upgrades.</p>
                         </div>
                     </div>
@@ -79,7 +79,7 @@
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-shield-virus text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">Software &security support</h5>
+                            <h5 class="text-1000">Software &amp; security support</h5>
                             <p class="text-700 mb-0">Resolve software issues and get practical help protecting your devices.</p>
                         </div>
                     </div>
@@ -228,7 +228,7 @@
         <div class="container">
             <div class="row justify-content-center text-center mb-5">
                 <div class="col-lg-8">
-                    <span class="text-primary fw-bold text-uppercase fs-10">Q&amp;A</span>
+                    <span class="text-primary fw-bold text-uppercase fs-10">Q &amp; A</span>
                     <h2 class="display-5 fw-bold text-1000 mt-2">Common computer questions</h2>
                     <p class="lead text-700 mb-0">Quick answers to questions we often hear.</p>
                 </div>

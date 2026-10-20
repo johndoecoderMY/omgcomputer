@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\User;
 use App\Notifications\WorkspaceNotification;
 use Carbon\CarbonImmutable;
@@ -47,10 +46,7 @@ class ProjectEventController extends Controller
         $event = Event::query()->create($data);
         if ($event->project_id) {
             $assignees = User::query()
-                ->whereIn('id', Task::query()
-                    ->where('project_id', $event->project_id)
-                    ->whereNotNull('assigned_to')
-                    ->select('assigned_to'))
+                ->whereHas('assignedTasks', fn ($tasks) => $tasks->where('project_id', $event->project_id))
                 ->get();
             $projectName = Project::query()->whereKey($event->project_id)->value('name');
 
@@ -122,6 +118,9 @@ class ProjectEventController extends Controller
                 'borderColor' => Event::COLORS[$event->event_type] ?? Event::COLORS['other'],
                 'extendedProps' => [
                     'project' => $event->project?->name ?? 'General event',
+                    'project_url' => $event->project
+                        ? route('projects.show', $event->project).'#project-schedule'
+                        : null,
                     'type' => Event::TYPES[$event->event_type] ?? 'Event',
                     'location' => $event->location,
                     'description' => $event->description,

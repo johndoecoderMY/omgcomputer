@@ -27,6 +27,18 @@
         <p><strong>Created:</strong> {{ $project->created_at?->format('F j, Y') ?? '—' }}</p>
     @endif
 
+    @if (in_array('photos', $sections, true))
+        <h2>Project photos and references</h2>
+        @forelse ($projectPhotos as $photo)
+            <div style="page-break-inside: avoid; margin: 12pt 0;">
+                <img src="{{ $photo['src'] }}" alt="{{ $photo['caption'] }}" style="max-width: 100%; max-height: 220mm;">
+                <p class="muted">{{ $photo['caption'] }}</p>
+            </div>
+        @empty
+            <p class="muted">No project photos have been uploaded.</p>
+        @endforelse
+    @endif
+
     @if (in_array('requirements', $sections, true))
         <h2>Project requirements</h2>
         @if ($project->requirements_notes)

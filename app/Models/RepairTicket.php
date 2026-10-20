@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class RepairTicket extends Model
 {
@@ -44,6 +45,19 @@ class RepairTicket extends Model
         'received_at',
     ];
 
+    protected static function booted(): void
+    {
+        static::created(function (self $ticket): void {
+            if ($ticket->assigned_to) {
+                $ticket->assignees()->syncWithoutDetaching([$ticket->assigned_to]);
+            }
+        });
+
+        static::deleting(function (self $ticket): void {
+            $ticket->assignees()->detach();
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -65,6 +79,11 @@ class RepairTicket extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function assignees(): MorphToMany
+    {
+        return $this->morphToMany(User::class, 'assignable', 'user_assignments')->withTimestamps();
     }
 
     public function billingDocuments(): HasMany

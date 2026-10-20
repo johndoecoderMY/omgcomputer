@@ -28,6 +28,7 @@
                     ['data' => 'description', 'name' => 'projects.description'],
                     ...($customerView ? [] : [
                         ['data' => 'tasks_count', 'name' => 'tasks_count'],
+                        ['data' => 'assignees', 'orderable' => false, 'searchable' => false],
                         ['data' => 'progress', 'orderable' => false, 'searchable' => false],
                     ]),
                     ['data' => 'actions', 'orderable' => false, 'searchable' => false],
@@ -35,7 +36,7 @@
                 <thead>
                     <tr>
                         <th>Project</th><th>Description</th>
-                        @unless ($customerView)<th>Tasks</th><th>Progress</th>@endunless
+                        @unless ($customerView)<th>Tasks</th><th>Assigned to</th><th>Progress</th>@endunless
                         <th>Actions</th>
                     </tr>
                 </thead>

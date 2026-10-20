@@ -22,7 +22,17 @@ class MemberManagementTest extends TestCase
 
         $this->assertTrue(User::where('email', 'test@example.com')->firstOrFail()->hasRole('admin'));
         $this->assertTrue(User::where('email', 'member@example.com')->firstOrFail()->hasRole('member'));
-        $this->assertTrue(User::where('email', 'customer@example.com')->firstOrFail()->hasRole('customer'));
+        $customer = User::where('email', 'customer@example.com')->firstOrFail();
+        $this->assertTrue($customer->hasRole('customer'));
+        $this->assertTrue($customer->hasVerifiedEmail());
+        $this->assertFalse($customer->force_password_change);
+
+        $this->post(route('login'), [
+            'email' => 'customer@example.com',
+            'password' => 'password',
+        ])->assertRedirect(route('dashboard', absolute: false));
+        $this->assertAuthenticatedAs($customer);
+        $this->get(route('projects.index'))->assertOk();
     }
 
     public function test_administrator_can_create_members_with_default_role_and_assign_individual_permissions(): void
@@ -91,6 +101,28 @@ class MemberManagementTest extends TestCase
                 'teams_list' => 'Repair, Support',
                 'permissions_list' => 'members.export',
             ]);
+        $memberListRows = $this->getJson(route('admin.users.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'new-member@example.test'],
+        ]))->json('data');
+        $memberListRow = collect($memberListRows)->firstWhere('email', 'new-member@example.test');
+        $this->assertNotNull($memberListRow);
+        $this->assertStringContainsString(route('members.show', $member), $memberListRow['actions']);
+        $this->assertStringNotContainsString(route('admin.users.edit', $member), $memberListRow['actions']);
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertSee('Manage account')
+            ->assertSee(route('admin.users.edit', $member), false);
+
+        $viewer = User::factory()->create(['force_password_change' => false]);
+        $viewer->assignRole('member');
+        $this->actingAs($viewer)
+            ->get(route('members.show', $admin))
+            ->assertOk()
+            ->assertDontSee('Manage account');
+        $this->actingAs($admin);
 
         $this->put(route('admin.users.update', $member), [
             'name' => $member->name,

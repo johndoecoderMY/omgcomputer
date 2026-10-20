@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use Illuminate\Support\Facades\DB;
 
 class Project extends Model
 {
@@ -14,6 +17,25 @@ class Project extends Model
         'description',
         'requirements_notes',
     ];
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $project): void {
+            $taskIds = $project->tasks()->pluck('id')->all();
+            $subtaskIds = $taskIds === []
+                ? []
+                : Task::query()->whereIn('parent_task_id', $taskIds)->pluck('id')->all();
+            $project->assignees()->detach();
+
+            $assignedTaskIds = array_merge($taskIds, $subtaskIds);
+            if ($assignedTaskIds !== []) {
+                DB::table('user_assignments')
+                    ->where('assignable_type', Task::class)
+                    ->whereIn('assignable_id', $assignedTaskIds)
+                    ->delete();
+            }
+        });
+    }
 
     public function scopeVisibleToCustomer(Builder $query, User $user): Builder
     {
@@ -33,6 +55,11 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function assignees(): MorphToMany
+    {
+        return $this->morphToMany(User::class, 'assignable', 'user_assignments')->withTimestamps();
     }
 
     public function customers(): HasMany
@@ -63,6 +90,16 @@ class Project extends Model
     public function requirements(): HasMany
     {
         return $this->hasMany(ProjectRequirement::class)->orderBy('sort_order');
+    }
+
+    public function links(): HasMany
+    {
+        return $this->hasMany(ProjectLink::class);
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable')->latest();
     }
 
     public function flowCharts(): BelongsToMany

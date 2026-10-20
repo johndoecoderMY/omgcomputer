@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration" title="Roles &permissions"
+    <x-page-header eyebrow="Administration" title="Roles &amp; permissions"
         description="Choose a role to review its members and configure its permissions."
         :back-url="route('dashboard')" back-label="Dashboard">
         <x-slot:actions>

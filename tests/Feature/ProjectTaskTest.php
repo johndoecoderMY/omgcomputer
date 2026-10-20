@@ -243,7 +243,75 @@ class ProjectTaskTest extends TestCase
 
         $this->get(route('tasks.edit', $task))
             ->assertOk()
-            ->assertSee('Assignee')
+            ->assertSee('Assign people')
             ->assertSee('Jordan Lee');
+    }
+
+    public function test_standalone_tasks_can_be_created_with_multiple_assignees(): void
+    {
+        $owner = User::factory()->create();
+        $firstAssignee = User::factory()->create(['name' => 'Jordan Lee']);
+        $secondAssignee = User::factory()->create(['name' => 'Sam Rivera']);
+
+        $this->actingAs($owner)
+            ->get(route('tasks.create'))
+            ->assertOk()
+            ->assertSee('Create task')
+            ->assertSee('No project');
+
+        $this->actingAs($owner)->post(route('tasks.store'), [
+            'title' => 'Prepare an independent task',
+            'status' => 'backlog',
+            'priority' => 'medium',
+            'assignees_present' => '1',
+            'assignees' => [$firstAssignee->id, $secondAssignee->id],
+        ])->assertSessionHasNoErrors();
+
+        $task = Task::query()->where('title', 'Prepare an independent task')->firstOrFail();
+        $this->assertNull($task->project_id);
+        $this->assertEqualsCanonicalizing(
+            [$firstAssignee->id, $secondAssignee->id],
+            $task->assignees()->pluck('users.id')->all(),
+        );
+        $this->assertSame($firstAssignee->id, $task->assigned_to);
+
+        $this->actingAs($owner)->get(route('tasks.index'))
+            ->assertOk()
+            ->assertSee('Add task');
+
+        $this->actingAs($owner)->get(route('tasks.show', $task))
+            ->assertOk()
+            ->assertSee('Jordan Lee')
+            ->assertSee('Sam Rivera')
+            ->assertSee('Back to tasks');
+
+        $this->actingAs($owner)->delete(route('tasks.destroy', $task))
+            ->assertRedirect(route('tasks.index'));
+        $this->assertDatabaseMissing('user_assignments', [
+            'assignable_type' => Task::class,
+            'assignable_id' => $task->id,
+        ]);
+    }
+
+    public function test_project_can_be_assigned_to_multiple_people(): void
+    {
+        $owner = User::factory()->create();
+        $assignees = User::factory()->count(2)->create();
+
+        $this->actingAs($owner)->post(route('projects.store'), [
+            'name' => 'Assigned project',
+            'assignees' => $assignees->pluck('id')->all(),
+        ])->assertSessionHasNoErrors();
+
+        $project = Project::query()->where('name', 'Assigned project')->firstOrFail();
+        $this->assertEqualsCanonicalizing(
+            $assignees->pluck('id')->all(),
+            $project->assignees()->pluck('users.id')->all(),
+        );
+        $this->actingAs($owner)->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Assigned people')
+            ->assertSee($assignees->first()->name)
+            ->assertSee($assignees->last()->name);
     }
 }

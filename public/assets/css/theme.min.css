@@ -344,7 +344,7 @@
   --falcon-bg-shape-bg-ltd: linear-gradient(-45deg, #ffb51b, #f34303);
   --falcon-bg-shape-bg-dtl: linear-gradient(-45deg, #f34303, #ffb51b);
   --falcon-line-chart-gradient: linear-gradient(-45deg, #f34303, #ffb51b);
-  --falcon-card-gradient: linear-gradient(-45deg, #f34303, #ffb51b);
+  --falcon-card-gradient: linear-gradient(75deg, #f34303, #ffb51b);
   --falcon-progress-gradient: linear-gradient(-45deg, #f34303, #ffb51b);
   --falcon-bg-circle-shape: none;
   --falcon-bg-circle-shape-bg: #f34303;
@@ -3016,7 +3016,7 @@ progress {
   --falcon-table-bg-state: initial;
   --falcon-table-color: #5e6e82;
   --falcon-table-bg: transparent;
-  --falcon-table-border-color: var(--falcon-body-bg);
+  --falcon-table-border-color: var(--falcon-border-color);
   --falcon-table-accent-bg: transparent;
   --falcon-table-striped-color: #5e6e82;
   --falcon-table-striped-bg: var(--falcon-gray-100);

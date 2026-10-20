@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Insights" title="Reports &analytics"
+    <x-page-header eyebrow="Insights" title="Reports &amp; analytics"
         description="A clear view of sales, stock health, team workload, and campaign performance.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('reports.export', request()->query()) }}">

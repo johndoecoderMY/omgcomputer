@@ -29,9 +29,13 @@ class DatabaseSeeder extends Seeder
                     [
                         'name' => $account['name'],
                         'password' => Hash::make('password'),
+                        'email_verified_at' => now(),
                         'force_password_change' => false,
                     ],
                 );
+                if ($account['role'] === 'customer' && ! $user->hasVerifiedEmail()) {
+                    $user->forceFill(['email_verified_at' => now()])->save();
+                }
                 if (Hash::check('password', $user->password) && ! $user->force_password_change) {
                     // $user->forceFill(['force_password_change' => true])->save();
                 }

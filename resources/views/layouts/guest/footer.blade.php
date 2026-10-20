@@ -13,7 +13,7 @@
                     <a class="link-300" href="{{ url('/') }}#services">Services</a>
                     <a class="link-300" href="{{ url('/') }}#about">About</a>
                     <a class="link-300" href="{{ url('/') }}#help">Help</a>
-                    <a class="link-300" href="{{ url('/') }}#faq">Q&amp;A</a>
+                    <a class="link-300" href="{{ url('/') }}#faq">Q &amp; A</a>
                     <a class="link-300" href="{{ url('/') }}#contact">Contact</a>
                     <a class="link-300" href="{{ route('privacy') }}">Privacy</a>
                     <a class="link-300" href="{{ route('toc') }}">TOC</a>

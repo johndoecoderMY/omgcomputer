@@ -2,6 +2,10 @@
 
 @section('title', $project->name)
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendors/glightbox/glightbox.min.css') }}">
+@endpush
+
 @section('content')
 <div class="container-fluid py-3 project-show">
     <x-page-header eyebrow="Project" :title="$project->name"
@@ -46,6 +50,7 @@
                         <div class="row g-2">
                             @foreach ([
                                 'overview' => 'Project overview',
+                                'photos' => 'Photos and references',
                                 'requirements' => 'Requirements checklist and notes',
                                 'customers' => 'Linked customers',
                                 'technology_stack' => 'Technology stack and versions',
@@ -141,6 +146,41 @@
         </div>
     </div>
 
+    @include('projects._links', ['project' => $project])
+
+    <section class="card project-panel mb-4" aria-labelledby="project-photos-heading">
+        <div class="card-header bg-body">
+            <h2 class="h5 mb-0" id="project-photos-heading">Project photos and references</h2>
+            <p class="small text-body-secondary mb-0">Upload project images, open them in a lightbox, or include them in the project PDF.</p>
+        </div>
+        <form class="card-body border-bottom" method="POST" action="{{ route('projects.attachments.store', $project) }}" enctype="multipart/form-data">
+            @csrf
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label" for="project-photos">Photos</label>
+                    <input class="form-control" id="project-photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label" for="project-photo-caption">Caption</label>
+                    <input class="form-control" id="project-photo-caption" name="caption" maxlength="255" placeholder="What should the team notice?">
+                </div>
+                <div class="col-md-2 d-grid"><button class="btn btn-outline-primary" type="submit">Upload photos</button></div>
+            </div>
+            <div class="form-text">Upload up to 8 JPG, PNG, or WebP images, up to 10 MB each.</div>
+        </form>
+        <div class="card-body">
+            @include('attachments.gallery', [
+                'attachments' => $project->attachments,
+                'emptyMessage' => 'No project photos yet.',
+                'lightbox' => true,
+                'editableCaptions' => true,
+                'galleryName' => 'project-photos',
+                'captionRoute' => 'projects.attachments.caption',
+                'captionRouteParameters' => [$project],
+            ])
+        </div>
+    </section>
+
     <section class="card project-panel mb-4" aria-labelledby="project-requirements-heading">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
@@ -224,7 +264,7 @@
     @include('projects._event-modal', ['fixedProject' => $project])
 
     <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h2 class="h5 mb-0">Flow charts &SOPs</h2>
+            <h2 class="h5 mb-0">Flow charts &amp; SOPs</h2>
             <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['project_id' => $project->id]) }}">
                 <i class="fas fa-plus me-1"></i>Create for this project
             </a>
@@ -507,7 +547,7 @@
 
     <div class="card project-panel mb-4" id="project-estimate">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Software &other project costs</h2>
+                <h2 class="h5 mb-0">Software &amp; other project costs</h2>
                 <p class="small text-body-secondary mb-0">Add software licenses, labor, or other estimated costs to the project total.</p>
             </div>
             <span class="badge text-bg-light border">{{ $project->estimateItems->count() }} items</span>
@@ -573,7 +613,7 @@
             @endforelse
         </div>
         <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-            <span class="fw-semibold">Software &other subtotal</span>
+            <span class="fw-semibold">Software &amp; other subtotal</span>
             <strong>RM {{ number_format($otherEstimateTotal, 2) }}</strong>
         </div>
     </div>
@@ -590,6 +630,21 @@
         @empty
             <div class="card-body text-body-secondary">No customer is linked to this project. You can change this from Edit project.</div>
         @endforelse
+    </div>
+
+    <div class="card project-panel mb-4">
+        <div class="card-header bg-body fw-semibold">Assigned people</div>
+        <div class="card-body">
+            @if ($project->assignees->isNotEmpty())
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach ($project->assignees as $assignee)
+                        <span class="badge text-bg-light border">{{ $assignee->name }}</span>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-body-secondary mb-0">No people assigned to this project.</p>
+            @endif
+        </div>
     </div>
 
     @php
@@ -689,6 +744,9 @@
                                     @if ($task->due_date)
                                         <span class="small text-body-secondary">Due {{ $task->due_date->format('M j, Y') }}</span>
                                     @endif
+                                    @if ($task->assignees->isNotEmpty())
+                                        <span class="small text-body-secondary">Assigned to {{ $task->assignees->pluck('name')->join(', ') }}</span>
+                                    @endif
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
@@ -704,6 +762,9 @@
                                             <i class="fas fa-turn-down text-body-tertiary" aria-hidden="true"></i>
                                             <a class="text-decoration-none" href="{{ route('tasks.show', $subtask) }}">{{ $subtask->title }}</a>
                                             <x-status-badge :status="$subtask->status" :label="\App\Models\Task::STATUSES[$subtask->status] ?? $subtask->status" />
+                                            @if ($subtask->assignees->isNotEmpty())
+                                                <span class="small text-body-secondary">{{ $subtask->assignees->pluck('name')->join(', ') }}</span>
+                                            @endif
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
                                             @include('tasks._completion-toggle', ['task' => $subtask])
@@ -738,6 +799,17 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.GLightbox) {
+                window.GLightbox({ selector: '.attachment-lightbox' });
+            }
+        });
+    </script>
+@endpush
 
 @push('scripts')
 <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>

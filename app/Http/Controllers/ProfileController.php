@@ -30,8 +30,12 @@ class ProfileController extends Controller
             return redirect()->route('profile.edit');
         }
 
+        $isCustomerAccount = $member->hasRole('customer') && ! $member->hasAnyRole(['admin', 'member']);
+
         return view('profile.member', [
             'user' => $member->load('teams.department'),
+            'canManageAccount' => auth()->user()->hasRole('admin'),
+            'isCustomerAccount' => $isCustomerAccount,
         ]);
     }
 

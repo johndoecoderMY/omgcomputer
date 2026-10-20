@@ -37,7 +37,7 @@
                     ['data' => 'permissions_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'actions', 'orderable' => false, 'searchable' => false],
                 ]) }}">
-                <thead><tr><th>Name</th><th>Email</th><th>Teams</th><th>Roles</th><th>Additional permissions</th><th>Manage</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Teams</th><th>Roles</th><th>Additional permissions</th><th>Profile</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>

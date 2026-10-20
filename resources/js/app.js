@@ -9,6 +9,40 @@ window.Pusher = Pusher;
 
 Alpine.start();
 
+const headerPageSearch = document.querySelector('[data-header-page-search]');
+
+if (headerPageSearch) {
+    const input = headerPageSearch.querySelector('.search-input');
+    const form = headerPageSearch.querySelector('form');
+    const links = Array.from(headerPageSearch.querySelectorAll('[data-header-search-item]'));
+    const prompt = headerPageSearch.querySelector('[data-header-search-prompt]');
+    const emptyState = headerPageSearch.querySelector('[data-header-search-empty]');
+
+    const filterPages = () => {
+        const query = input.value.trim().toLocaleLowerCase();
+        let visibleCount = 0;
+
+        links.forEach((link) => {
+            const searchableText = `${link.textContent} ${link.dataset.searchTerms || ''}`.toLocaleLowerCase();
+            const matches = query.length > 0
+                && query.split(/\s+/).every((term) => searchableText.includes(term));
+
+            link.classList.toggle('d-none', !matches);
+            visibleCount += matches ? 1 : 0;
+        });
+
+        prompt.classList.toggle('d-none', query.length > 0);
+        emptyState.classList.toggle('d-none', query.length === 0 || visibleCount > 0);
+    };
+
+    input.addEventListener('input', filterPages);
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        headerPageSearch.querySelector('[data-header-search-item]:not(.d-none)')?.click();
+    });
+    filterPages();
+}
+
 const page = document.body;
 const userId = page.dataset.notificationsUser;
 const pusherKey = page.dataset.pusherKey;

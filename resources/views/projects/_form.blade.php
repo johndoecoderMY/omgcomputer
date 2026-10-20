@@ -29,6 +29,18 @@
         </div>
 
         <div class="mb-3">
+            <label class="form-label" for="assignees">Assign people</label>
+            <input type="hidden" name="assignees_present" value="1">
+            <select class="form-select js-user-search" id="assignees" name="assignees[]" multiple data-placeholder="Search and select people">
+                @foreach ($users as $user)
+                    <option value="{{ $user->id }}" @selected(in_array((string) $user->id, array_map('strval', old('assignees', $project->assignees->pluck('id')->all())), true))>{{ $user->name }}</option>
+                @endforeach
+            </select>
+            @error('assignees')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            @error('assignees.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+
+        <div class="mb-3">
             <label class="form-label" for="requirements_notes">Requirements notes <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="requirements_notes" name="requirements_notes" rows="3" maxlength="5000">{{ old('requirements_notes', $project->requirements_notes) }}</textarea>
             @error('requirements_notes')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror

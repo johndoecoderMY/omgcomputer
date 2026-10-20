@@ -13,7 +13,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#how-it-works">How it works</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#about">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#help">Help</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q&amp;A</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q &amp; A</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#contact">Contact</a></li>
                 <li class="nav-item ms-lg-3"><a class="nav-link" href="{{ route('login') }}">Sign in</a></li>
                 <li class="nav-item ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a></li>

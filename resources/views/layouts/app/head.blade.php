@@ -26,6 +26,26 @@
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
      <link href="{{ asset('vendors/select2/select2.min.css') }}" rel="stylesheet">
      <link href="{{ asset('vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css') }}" rel="stylesheet">
+     <style>
+         .card-header {
+             display: flex;
+             flex-wrap: wrap;
+             align-items: center;
+             gap: .5rem;
+         }
+
+         .card-header > a.btn,
+         .card-header > button.btn {
+             margin-inline-start: auto;
+         }
+
+         .card-header > a.btn ~ a.btn,
+         .card-header > a.btn ~ button.btn,
+         .card-header > button.btn ~ a.btn,
+         .card-header > button.btn ~ button.btn {
+             margin-inline-start: 0;
+         }
+     </style>
      @stack('styles')
     <script>
       var isRTL = JSON.parse(localStorage.getItem('isRTL'));

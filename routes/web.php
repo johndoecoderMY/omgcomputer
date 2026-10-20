@@ -7,6 +7,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
+use App\Http\Controllers\BusinessExpenseController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerMessageTemplateController;
 use App\Http\Controllers\DashboardController;
@@ -46,14 +47,14 @@ Route::redirect('/qna', '/#faq')->name('qna');
 Route::redirect('/qa', '/#faq')->name('qa');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'password.changed'])
+    ->middleware(['auth', 'password.changed', 'verified'])
     ->name('dashboard');
 
 Route::get('/error-pages/{code}', function (string $code) {
     abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);
 
     return response()->view("errors.{$code}", [], 200);
-})->middleware(['auth', 'password.changed', 'not-customer'])->name('error-pages.preview');
+})->middleware(['auth', 'password.changed', 'verified', 'not-customer'])->name('error-pages.preview');
 
 Route::prefix('book')->name('bookings.')->controller(BookingController::class)->group(function (): void {
     Route::get('/', 'create')->name('create');
@@ -66,7 +67,7 @@ Route::prefix('book')->name('bookings.')->controller(BookingController::class)->
 Route::get('/marketplaces/callback/{platform}', [MarketplaceShopController::class, 'callback'])
     ->name('marketplace-shops.callback');
 
-Route::middleware(['auth', 'password.changed'])->group(function (): void {
+Route::middleware(['auth', 'password.changed', 'verified'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
@@ -183,6 +184,21 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/{document}/pdf', 'pdf')->name('documents.pdf');
     });
 
+    Route::prefix('expenses')->name('expenses.')->middleware('not-customer')->controller(BusinessExpenseController::class)->group(function (): void {
+        Route::post('/{category}/{expense}/attachments', [AttachmentController::class, 'storeExpense'])
+            ->whereIn('category', ['rental', 'bills', 'services'])->name('attachments.store');
+        Route::patch('/{category}/{expense}/attachments/{attachment}/caption', [AttachmentController::class, 'updateExpenseCaption'])
+            ->whereIn('category', ['rental', 'bills', 'services'])->name('attachments.caption');
+        Route::get('/{category}/{expense}/pdf', 'pdf')->whereIn('category', ['rental', 'bills', 'services'])->name('pdf');
+        Route::get('/{category}/create', 'create')->whereIn('category', ['rental', 'bills', 'services'])->name('create');
+        Route::post('/{category}', 'store')->whereIn('category', ['rental', 'bills', 'services'])->name('store');
+        Route::get('/{category}/{expense}/edit', 'edit')->whereIn('category', ['rental', 'bills', 'services'])->name('edit');
+        Route::put('/{category}/{expense}', 'update')->whereIn('category', ['rental', 'bills', 'services'])->name('update');
+        Route::delete('/{category}/{expense}', 'destroy')->whereIn('category', ['rental', 'bills', 'services'])->name('destroy');
+        Route::post('/{category}/{expense}/payments', 'storePayment')->whereIn('category', ['rental', 'bills', 'services'])->name('payments.store');
+        Route::get('/{category}', 'index')->whereIn('category', ['rental', 'bills', 'services'])->name('index');
+    });
+
     Route::prefix('inventory')->name('inventory.')->middleware('not-customer')->controller(InventoryController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/parts/datatable', 'partsDatatable')->name('parts.datatable');
@@ -276,6 +292,8 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
         Route::get('/', [ProjectController::class, 'index'])->name('index');
         Route::get('/{project}', [ProjectController::class, 'show'])->name('show');
         Route::middleware('not-customer')->group(function (): void {
+            Route::post('/{project}/attachments', [AttachmentController::class, 'storeProject'])->name('attachments.store');
+            Route::patch('/{project}/attachments/{attachment}/caption', [AttachmentController::class, 'updateProjectCaption'])->name('attachments.caption');
             Route::post('/{project}/export', [ProjectExportController::class, 'export'])->name('export');
             Route::post('/{project}/technology-stack', [ProjectTechnologyController::class, 'store'])->name('technology-stack.store');
             Route::put('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'update'])->name('technology-stack.update');
@@ -291,20 +309,26 @@ Route::middleware(['auth', 'password.changed'])->group(function (): void {
             Route::delete('/{project}/estimate-items/{item}', [ProjectController::class, 'destroyEstimateItem'])->name('estimate-items.destroy');
             Route::post('/{project}/events', [ProjectController::class, 'storeEvent'])->name('events.store');
             Route::delete('/{project}/events/{event}', [ProjectController::class, 'destroyEvent'])->name('events.destroy');
+            Route::post('/{project}/links', [ProjectController::class, 'storeLink'])->name('links.store');
+            Route::put('/{project}/links/{link}', [ProjectController::class, 'updateLink'])->name('links.update');
+            Route::delete('/{project}/links/{link}', [ProjectController::class, 'destroyLink'])->name('links.destroy');
             Route::post('/', [ProjectController::class, 'store'])->name('store');
             Route::get('/{project}/edit', [ProjectController::class, 'edit'])->name('edit');
             Route::put('/{project}', [ProjectController::class, 'update'])->name('update');
             Route::delete('/{project}', [ProjectController::class, 'destroy'])->name('destroy');
             Route::put('/{project}/flowcharts', [ProjectController::class, 'syncFlowCharts'])->name('flowcharts.sync');
-            Route::get('/{project}/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
-            Route::post('/{project}/tasks', [TaskController::class, 'store'])->name('tasks.store');
+            Route::get('/{project}/tasks/create', [TaskController::class, 'createForProject'])->name('tasks.create');
+            Route::post('/{project}/tasks', [TaskController::class, 'storeForProject'])->name('tasks.store');
         });
     });
 
     Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->middleware('not-customer')->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
         Route::post('/{task}/attachments', [AttachmentController::class, 'storeTask'])->name('attachments.store');
+        Route::patch('/{task}/attachments/{attachment}/caption', [AttachmentController::class, 'updateTaskAttachmentCaption'])->name('attachments.caption');
         Route::post('/{task}/subtasks', 'storeSubtask')->name('subtasks.store');
         Route::patch('/{task}/status', 'updateStatus')->name('update-status');
         Route::get('/{task}', 'show')->name('show');

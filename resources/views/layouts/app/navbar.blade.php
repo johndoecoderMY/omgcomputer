@@ -9,128 +9,211 @@
                 width="80" />
         </div>
     </a>
-    <ul class="navbar-nav align-items-center d-none d-lg-block">
-        <li class="nav-item">
-            <div class="search-box" data-list='{"valueNames":["title"]}'>
-                <form class="position-relative" data-bs-toggle="search" data-bs-display="static"><input
-                        class="form-control search-input fuzzy-search" type="search" placeholder="Search..."
-                        aria-label="Search" />
-                    <span class="fas fa-search search-box-icon"></span>
-                </form>
-                <div class="btn-close-falcon-container position-absolute end-0 top-50 translate-middle shadow-none"
-                    data-bs-dismiss="search"><button class="btn btn-link btn-close-falcon p-0"
-                        aria-label="Close"></button></div>
-                <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100">
-                    <div class="scrollbar list py-3" style="max-height: 24rem;">
-                        <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">
-                            Recently Browsed</h6><a class="dropdown-item fs-10 px-x1 py-1 hover-primary"
-                            href="../app/events/event-detail.html">
-                            <div class="d-flex align-items-center">
-                                <span class="fas fa-circle me-2 text-300 fs-11"></span>
-                                <div class="fw-normal title">Pages <span
-                                        class="fas fa-chevron-right mx-1 text-500 fs-11"
-                                        data-fa-transform="shrink-2"></span> Events</div>
-                            </div>
+    <div class="flex-grow-1 mx-2 mx-lg-3" style="min-width: 0; max-width: 32rem;">
+        <div class="search-box" data-header-page-search style="width: 100%;">
+            <form class="position-relative" role="search" data-bs-toggle="search" data-bs-display="static">
+                <input class="form-control search-input" type="search" placeholder="Search pages..."
+                    aria-label="Search pages" aria-controls="header-page-search-results" autocomplete="off" />
+                <button class="btn btn-link search-box-icon" type="submit" aria-label="Open first matching page">
+                    <span class="fas fa-search" aria-hidden="true"></span>
+                </button>
+            </form>
+            <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100"
+                id="header-page-search-results" role="listbox">
+                <div class="scrollbar py-2" style="max-height: 24rem;">
+                    <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">Pages</h6>
+                    @if (auth()->user()->hasRole('customer'))
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('projects.index') }}" role="option"
+                            data-header-search-item data-search-terms="my projects customer">
+                            <span class="fas fa-project-diagram me-2 text-primary" aria-hidden="true"></span>My Projects
                         </a>
-                        <a class="dropdown-item fs-10 px-x1 py-1 hover-primary" href="../app/e-commerce/customers.html">
-                            <div class="d-flex align-items-center">
-                                <span class="fas fa-circle me-2 text-300 fs-11"></span>
-                                <div class="fw-normal title">E-commerce <span
-                                        class="fas fa-chevron-right mx-1 text-500 fs-11"
-                                        data-fa-transform="shrink-2"></span> Customers</div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('profile.edit') }}" role="option"
+                            data-header-search-item data-search-terms="profile account settings">
+                            <span class="fas fa-user me-2 text-primary" aria-hidden="true"></span>Profile
                         </a>
-                        <hr class="text-200 dark__text-900" />
-                        <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">
-                            Suggested Filter</h6><a class="dropdown-item px-x1 py-1 fs-9"
-                            href="../app/e-commerce/customers.html">
-                            <div class="d-flex align-items-center"><span
-                                    class="badge fw-medium text-decoration-none me-2 badge-subtle-warning">customers:</span>
-                                <div class="flex-1 fs-10 title">All customers list</div>
-                            </div>
+                    @else
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('dashboard') }}" role="option"
+                            data-header-search-item data-search-terms="home overview">
+                            <span class="fas fa-chart-pie me-2 text-primary" aria-hidden="true"></span>Dashboard
                         </a>
-                        <a class="dropdown-item px-x1 py-1 fs-9" href="../app/events/event-detail.html">
-                            <div class="d-flex align-items-center"><span
-                                    class="badge fw-medium text-decoration-none me-2 badge-subtle-success">events:</span>
-                                <div class="flex-1 fs-10 title">Latest events in current month</div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('tickets.index') }}" role="option"
+                            data-header-search-item data-search-terms="support repair help desk">
+                            <span class="fas fa-ticket-alt me-2 text-primary" aria-hidden="true"></span>Tickets
                         </a>
-                        <a class="dropdown-item px-x1 py-1 fs-9" href="../app/e-commerce/product/product-grid.html">
-                            <div class="d-flex align-items-center"><span
-                                    class="badge fw-medium text-decoration-none me-2 badge-subtle-info">products:</span>
-                                <div class="flex-1 fs-10 title">Most popular products</div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('tickets.create') }}" role="option"
+                            data-header-search-item data-search-terms="support repair new create">
+                            <span class="fas fa-plus me-2 text-primary" aria-hidden="true"></span>New ticket
                         </a>
-                        <hr class="text-200 dark__text-900" />
-                        <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">Files
-                        </h6><a class="dropdown-item px-x1 py-2" href="navbar-vertical.html#!">
-                            <div class="d-flex align-items-center">
-                                <div class="file-thumbnail me-2"><img
-                                        class="border h-100 w-100 object-fit-cover rounded-3"
-                                        src="../assets/img/products/3-thumb.png" alt="" /></div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0 title">iPhone</h6>
-                                    <p class="fs-11 mb-0 d-flex"><span class="fw-semi-bold">Antony</span><span
-                                            class="fw-medium text-600 ms-2">27 Sep at 10:30 AM</span>
-                                    </p>
-                                </div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('bookings.index') }}" role="option"
+                            data-header-search-item data-search-terms="appointments schedule calendar">
+                            <span class="fas fa-calendar-check me-2 text-primary" aria-hidden="true"></span>Customer bookings
                         </a>
-                        <a class="dropdown-item px-x1 py-2" href="navbar-vertical.html#!">
-                            <div class="d-flex align-items-center">
-                                <div class="file-thumbnail me-2"><img class="img-fluid"
-                                        src="../assets/img/icons/zip.png" alt="" /></div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0 title">Falcon v1.8.2</h6>
-                                    <p class="fs-11 mb-0 d-flex"><span class="fw-semi-bold">John</span><span
-                                            class="fw-medium text-600 ms-2">30 Sep at 12:30 PM</span>
-                                    </p>
-                                </div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('booking-time-slots.index') }}" role="option"
+                            data-header-search-item data-search-terms="appointments schedule availability">
+                            <span class="fas fa-clock me-2 text-primary" aria-hidden="true"></span>Available times
                         </a>
-                        <hr class="text-200 dark__text-900" />
-                        <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">
-                            Members</h6><a class="dropdown-item px-x1 py-2" href="../pages/user/profile.html">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar avatar-l status-online me-2">
-                                    <img class="rounded-circle" src="../assets/img/team/1.jpg" alt="" />
-                                </div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0 title">Anna Karinina</h6>
-                                    <p class="fs-11 mb-0 d-flex">Technext Limited</p>
-                                </div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('bookings.create') }}" role="option"
+                            data-header-search-item data-search-terms="appointments public calendar schedule">
+                            <span class="fas fa-calendar-plus me-2 text-primary" aria-hidden="true"></span>Public booking calendar
                         </a>
-                        <a class="dropdown-item px-x1 py-2" href="../pages/user/profile.html">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar avatar-l me-2">
-                                    <img class="rounded-circle" src="../assets/img/team/2.jpg" alt="" />
-                                </div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0 title">Antony Hopkins</h6>
-                                    <p class="fs-11 mb-0 d-flex">Brain Trust</p>
-                                </div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('projects.index') }}" role="option"
+                            data-header-search-item data-search-terms="work">
+                            <span class="fas fa-project-diagram me-2 text-primary" aria-hidden="true"></span>Projects
                         </a>
-                        <a class="dropdown-item px-x1 py-2" href="../pages/user/profile.html">
-                            <div class="d-flex align-items-center">
-                                <div class="avatar avatar-l me-2">
-                                    <img class="rounded-circle" src="../assets/img/team/3.jpg" alt="" />
-                                </div>
-                                <div class="flex-1">
-                                    <h6 class="mb-0 title">Emma Watson</h6>
-                                    <p class="fs-11 mb-0 d-flex">Google</p>
-                                </div>
-                            </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('projects.calendar') }}" role="option"
+                            data-header-search-item data-search-terms="work schedule events">
+                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>Project calendar
                         </a>
-                    </div>
-                    <div class="text-center mt-n3">
-                        <p class="fallback fw-bold fs-8 d-none">No Result Found.</p>
-                    </div>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('customers.index') }}" role="option"
+                            data-header-search-item data-search-terms="clients">
+                            <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>Customers
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('development.overview') }}" role="option"
+                            data-header-search-item data-search-terms="company business">
+                            <span class="fas fa-home me-2 text-primary" aria-hidden="true"></span>OMG Computer overview
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('tasks.index') }}" role="option"
+                            data-header-search-item data-search-terms="to do work">
+                            <span class="fas fa-tasks me-2 text-primary" aria-hidden="true"></span>Tasks
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('development.plan') }}" role="option"
+                            data-header-search-item data-search-terms="business">
+                            <span class="fas fa-file-alt me-2 text-primary" aria-hidden="true"></span>Business plan
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('development.sops') }}" role="option"
+                            data-header-search-item data-search-terms="procedures documentation">
+                            <span class="fas fa-book me-2 text-primary" aria-hidden="true"></span>SOP library
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('customer-messages.index') }}" role="option"
+                            data-header-search-item data-search-terms="templates communication">
+                            <span class="fas fa-envelope me-2 text-primary" aria-hidden="true"></span>Customer messages
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('expenses.index', 'rental') }}" role="option"
+                            data-header-search-item data-search-terms="rental rent operating costs">
+                            <span class="fas fa-building me-2 text-primary" aria-hidden="true"></span>Rental
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('expenses.index', 'bills') }}" role="option"
+                            data-header-search-item data-search-terms="bills utilities expenses">
+                            <span class="fas fa-file-invoice-dollar me-2 text-primary" aria-hidden="true"></span>Bills
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('expenses.index', 'services') }}" role="option"
+                            data-header-search-item data-search-terms="services renewal domain server SSM operating costs">
+                            <span class="fas fa-sync-alt me-2 text-primary" aria-hidden="true"></span>Services and renewals
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('teams.index') }}" role="option"
+                            data-header-search-item data-search-terms="staff members">
+                            <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>Teams
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('departments.index') }}" role="option"
+                            data-header-search-item data-search-terms="organization">
+                            <span class="fas fa-sitemap me-2 text-primary" aria-hidden="true"></span>Departments
+                        </a>
+                        @role('admin')
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('admin.users.customers') }}" role="option"
+                                data-header-search-item data-search-terms="customer accounts">
+                                <span class="fas fa-user-plus me-2 text-primary" aria-hidden="true"></span>Customer accounts
+                            </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('admin.users.index') }}" role="option"
+                                data-header-search-item data-search-terms="members staff users">
+                                <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>User accounts
+                            </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('admin.access.index') }}" role="option"
+                                data-header-search-item data-search-terms="roles permissions security">
+                                <span class="fas fa-user-shield me-2 text-primary" aria-hidden="true"></span>Roles and permissions
+                            </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('admin.backups.index') }}" role="option"
+                                data-header-search-item data-search-terms="database restore">
+                                <span class="fas fa-database me-2 text-primary" aria-hidden="true"></span>Backups
+                            </a>
+                        @endrole
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('products.index') }}" role="option"
+                            data-header-search-item data-search-terms="services catalog">
+                            <span class="fas fa-tags me-2 text-primary" aria-hidden="true"></span>Products and services
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('development.flowcharts.index') }}" role="option"
+                            data-header-search-item data-search-terms="process diagrams">
+                            <span class="fas fa-project-diagram me-2 text-primary" aria-hidden="true"></span>Flow charts
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('meta-content.index') }}" role="option"
+                            data-header-search-item data-search-terms="social media posts">
+                            <span class="fas fa-share-alt me-2 text-primary" aria-hidden="true"></span>Meta content
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.index') }}" role="option"
+                            data-header-search-item data-search-terms="stock parts">
+                            <span class="fas fa-boxes me-2 text-primary" aria-hidden="true"></span>Inventory overview
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.parts') }}" role="option"
+                            data-header-search-item data-search-terms="stock spare parts">
+                            <span class="fas fa-cubes me-2 text-primary" aria-hidden="true"></span>Spare parts
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.suppliers.index') }}" role="option"
+                            data-header-search-item data-search-terms="vendors">
+                            <span class="fas fa-truck me-2 text-primary" aria-hidden="true"></span>Suppliers
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.movements') }}" role="option"
+                            data-header-search-item data-search-terms="stock transactions">
+                            <span class="fas fa-exchange-alt me-2 text-primary" aria-hidden="true"></span>Stock movements
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('billing.index') }}" role="option"
+                            data-header-search-item data-search-terms="invoices quotations payments">
+                            <span class="fas fa-file-invoice-dollar me-2 text-primary" aria-hidden="true"></span>Billing and payments
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('reports.index') }}" role="option"
+                            data-header-search-item data-search-terms="analytics statistics">
+                            <span class="fas fa-chart-line me-2 text-primary" aria-hidden="true"></span>Reports and analytics
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('reports.marketing') }}" role="option"
+                            data-header-search-item data-search-terms="marketing whatsapp campaigns">
+                            <span class="fas fa-bullhorn me-2 text-primary" aria-hidden="true"></span>Marketing and WhatsApp
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('reports.sales') }}" role="option"
+                            data-header-search-item data-search-terms="revenue">
+                            <span class="fas fa-chart-bar me-2 text-primary" aria-hidden="true"></span>Sales report
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('reports.inventory') }}" role="option"
+                            data-header-search-item data-search-terms="stock">
+                            <span class="fas fa-boxes me-2 text-primary" aria-hidden="true"></span>Inventory report
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('reports.teams') }}" role="option"
+                            data-header-search-item data-search-terms="staff performance">
+                            <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>Team performance
+                        </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('profile.edit') }}" role="option"
+                            data-header-search-item data-search-terms="account settings">
+                            <span class="fas fa-user me-2 text-primary" aria-hidden="true"></span>My Profile
+                        </a>
+                        @foreach (['403' => 'Forbidden', '404' => 'Not found', '419' => 'Session expired', '429' => 'Too many requests', '500' => 'Server error', '503' => 'Unavailable'] as $code => $label)
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('error-pages.preview', $code) }}" role="option"
+                                data-header-search-item data-search-terms="error {{ $code }} {{ $label }}">
+                                <span class="fas fa-exclamation-triangle me-2 text-primary" aria-hidden="true"></span>
+                                Error page: {{ $code }} - {{ $label }}
+                            </a>
+                        @endforeach
+                        @role('admin')
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('reports.integrations.whatsapp') }}" role="option"
+                                data-header-search-item data-search-terms="integration api">
+                                <span class="fab fa-whatsapp me-2 text-primary" aria-hidden="true"></span>WhatsApp API test
+                            </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('reports.integrations.easyparcel') }}" role="option"
+                                data-header-search-item data-search-terms="integration shipping delivery">
+                                <span class="fas fa-truck me-2 text-primary" aria-hidden="true"></span>EasyParcel rate checker
+                            </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('marketplace-shops.index') }}" role="option"
+                                data-header-search-item data-search-terms="integration ecommerce stores">
+                                <span class="fas fa-store me-2 text-primary" aria-hidden="true"></span>E-commerce shops
+                            </a>
+                        @endrole
+                    @endif
+                    <p class="px-x1 py-2 mb-0 small text-body-secondary d-none" data-header-search-prompt>
+                        Type to search pages.
+                    </p>
+                    <p class="px-x1 py-2 mb-0 small text-body-secondary d-none" data-header-search-empty role="status">
+                        No matching pages.
+                    </p>
                 </div>
             </div>
-        </li>
-    </ul>
+        </div>
+    </div>
     <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
         <li class="nav-item ps-2 pe-0">
             <div class="dropdown theme-control-dropdown"><a
@@ -157,189 +240,11 @@
                 </div>
             </div>
         </li>
-        <li class="nav-item d-none d-sm-block">
-            <a class="nav-link px-0 notification-indicator notification-indicator-warning notification-indicator-fill fa-icon-wait"
-                href="../app/e-commerce/shopping-cart.html"><span class="fas fa-shopping-cart"
-                    data-fa-transform="shrink-7" style="font-size: 33px;"></span><span
-                    class="notification-indicator-number">1</span></a>
-        </li>
+       
         @auth
             @include('notifications._navbar')
         @endauth
-        <li class="nav-item dropdown px-1">
-            <a class="nav-link fa-icon-wait nine-dots p-1" id="navbarDropdownMenu" role="button"
-                data-hide-on-body-scroll="data-hide-on-body-scroll" data-bs-toggle="dropdown" aria-haspopup="true"
-                aria-expanded="false"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="43" viewBox="0 0 16 16"
-                    fill="none">
-                    <circle cx="2" cy="2" r="2" fill="#6C6E71"></circle>
-                    <circle cx="2" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="2" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="8" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="14" r="2" fill="#6C6E71"></circle>
-                    <circle cx="8" cy="2" r="2" fill="#6C6E71"></circle>
-                    <circle cx="14" cy="2" r="2" fill="#6C6E71"></circle>
-                </svg></a>
-            <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end dropdown-menu-card dropdown-caret-bg"
-                aria-labelledby="navbarDropdownMenu">
-                <div class="card shadow-none p-2">
-                    <div class="scrollbar-overlay nine-dots-dropdown">
-                        <div class="card-body px-3">
-                            <div class="row text-center gx-0 gy-0">
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="../pages/user/profile.html" target="_blank">
-                                        <div class="avatar avatar-2xl"> <img class="rounded-circle"
-                                                src="../assets/img/team/3.jpg" alt="" /></div>
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11">Account
-                                        </p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="https://themewagon.com/" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/themewagon.png" alt="" width="40"
-                                            height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Themewagon</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="https://mailbluster.com/" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/mailbluster.png" alt="" width="40"
-                                            height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Mailbluster</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/google.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Google</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/spotify.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Spotify</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/steam.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Steam</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/github-light.png" alt="" width="40"
-                                            height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Github</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/discord.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Discord</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/xbox.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">xbox
-                                        </p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/trello.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Kanban</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/hp.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">Hp
-                                        </p>
-                                    </a></div>
-                                <div class="col-12">
-                                    <hr class="my-3 mx-n3 bg-200" />
-                                </div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/linkedin.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Linkedin</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/twitter.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Twitter</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/facebook.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Facebook</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/instagram.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Instagram</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/pinterest.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Pinterest</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/slack.png" alt="" width="40" height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Slack</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="navbar-vertical.html#!" target="_blank"><img class="rounded"
-                                            src="../assets/img/nav-icons/deviantart.png" alt="" width="40"
-                                            height="40" />
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11 pt-1">
-                                            Deviantart</p>
-                                    </a></div>
-                                <div class="col-4"><a
-                                        class="d-block hover-bg-200 px-2 py-3 rounded-3 text-center text-decoration-none"
-                                        href="../app/events/event-detail.html" target="_blank">
-                                        <div class="avatar avatar-2xl">
-                                            <div class="avatar-name rounded-circle bg-primary-subtle text-primary">
-                                                <span class="fs-7">E</span>
-                                            </div>
-                                        </div>
-                                        <p class="mb-0 fw-medium text-800 text-truncate fs-11">Events
-                                        </p>
-                                    </a></div>
-                                <div class="col-12"><a class="btn btn-outline-primary btn-sm mt-4"
-                                        href="navbar-vertical.html#!">Show more</a></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </li>
+     
         <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button"
                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <div class="avatar avatar-xl">
@@ -359,7 +264,7 @@
                             class="fas fa-crown me-1"></span><span>Go Pro</span></a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="navbar-vertical.html#!">Set status</a>
-                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile &account</a>
+                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile &amp; account</a>
                     <a class="dropdown-item" href="navbar-vertical.html#!">Feedback</a>
                     <div class="dropdown-divider"></div>
                     <a class="dropdown-item" href="../pages/user/settings.html">Settings</a>

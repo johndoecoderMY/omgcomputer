@@ -71,8 +71,8 @@ class AdminUserController extends Controller
                 $user->getDirectPermissions()->pluck('name')->join(', ') ?: 'Role permissions only',
             ))
             ->addColumn('actions', fn (User $user): string => sprintf(
-                '<a class="btn btn-sm btn-outline-primary" href="%s">Manage account</a>',
-                e(route('admin.users.edit', $user)),
+                '<a class="btn btn-sm btn-outline-primary" href="%s">View profile</a>',
+                e(route('members.show', $user)),
             ))
             ->rawColumns(['actions'])
             ->toJson();

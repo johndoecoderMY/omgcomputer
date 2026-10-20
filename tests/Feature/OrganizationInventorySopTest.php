@@ -25,7 +25,12 @@ class OrganizationInventorySopTest extends TestCase
         $this->actingAs($user);
         $this->get(route('departments.index'))->assertOk()->assertSee('Departments');
         $this->get(route('departments.create'))->assertOk();
-        $this->get(route('teams.index'))->assertOk()->assertSee('Teams');
+        $this->get(route('teams.index'))
+            ->assertOk()
+            ->assertSee('Teams')
+            ->assertSee('data-bs-target="#create-team-modal"', false)
+            ->assertSee('id="create-team-modal"', false)
+            ->assertDontSee('<details class="card mb-3">', false);
         $this->post(route('departments.store'), ['name' => 'Operations'])
             ->assertRedirect();
         $department = Department::query()->firstOrFail();
@@ -224,7 +229,7 @@ class OrganizationInventorySopTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Flow charts &SOPs', false)
+            ->assertSee('Flow charts &amp; SOPs', false)
             ->assertSee('data-datatable', false);
         $this->getJson(route('projects.flowcharts.datatable', [
             'project' => $project->id,

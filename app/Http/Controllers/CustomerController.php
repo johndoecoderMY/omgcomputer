@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -68,10 +69,17 @@ class CustomerController extends Controller
     {
         $customer->load([
             'project',
-            'repairTickets' => fn ($query) => $query->with(['project', 'assignee'])->latest(),
+            'repairTickets' => fn ($query) => $query->with(['project', 'assignees'])->latest(),
         ]);
 
-        return view('customers.show', compact('customer'));
+        $account = $customer->email
+            ? User::query()
+                ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($customer->email))])
+                ->whereHas('roles', fn ($roles) => $roles->where('name', 'customer'))
+                ->first()
+            : null;
+
+        return view('customers.show', compact('customer', 'account'));
     }
 
     public function edit(Customer $customer): View

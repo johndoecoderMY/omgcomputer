@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
@@ -77,14 +79,14 @@ class User extends Authenticatable
         return $this->hasMany(PlanningTask::class, 'assigned_to');
     }
 
-    public function assignedTasks(): HasMany
+    public function assignedTasks(): MorphToMany
     {
-        return $this->hasMany(Task::class, 'assigned_to');
+        return $this->morphedByMany(Task::class, 'assignable', 'user_assignments')->withTimestamps();
     }
 
-    public function assignedRepairTickets(): HasMany
+    public function assignedRepairTickets(): MorphToMany
     {
-        return $this->hasMany(RepairTicket::class, 'assigned_to');
+        return $this->morphedByMany(RepairTicket::class, 'assignable', 'user_assignments')->withTimestamps();
     }
 
     public function teams(): BelongsToMany

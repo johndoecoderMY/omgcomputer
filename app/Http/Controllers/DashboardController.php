@@ -67,11 +67,11 @@ class DashboardController extends Controller
             'openTaskCount' => Task::query()->where('status', '!=', 'done')->count(),
             'overdueTaskCount' => Task::query()->where('status', '!=', 'done')
                 ->whereNotNull('due_date')->whereDate('due_date', '<', today())->count(),
-            'assignedTaskCount' => Task::query()->where('assigned_to', auth()->id())->where('status', '!=', 'done')->count(),
+            'assignedTaskCount' => auth()->user()->assignedTasks()->where('status', '!=', 'done')->count(),
             'openTicketCount' => RepairTicket::query()->whereNotIn('status', ['closed', 'cancelled'])->count(),
             'urgentTicketCount' => RepairTicket::query()->whereNotIn('status', ['closed', 'cancelled'])
                 ->whereIn('priority', ['high', 'urgent'])->count(),
-            'recentTickets' => RepairTicket::query()->with(['customer', 'assignee'])
+            'recentTickets' => RepairTicket::query()->with(['customer', 'assignees'])
                 ->whereNotIn('status', ['closed', 'cancelled'])
                 ->latest('received_at')->limit(6)->get(),
             'upcomingEvents' => Event::query()->with('project:id,name')

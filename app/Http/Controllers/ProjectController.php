@@ -8,6 +8,7 @@ use App\Models\FlowChart;
 use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\ProjectEstimateItem;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,12 +35,16 @@ class ProjectController extends Controller
         if ($customerView) {
             $projects->visibleToCustomer($request->user());
         } else {
-            $projects->withCount('tasks')
+            $projects->with('assignees')
+                ->withCount('tasks')
                 ->withCount(['tasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')]);
         }
 
         $table = DataTables::eloquent($projects);
         if (! $customerView) {
+            $table->addColumn('assignees', fn (Project $project): string => e(
+                $project->assignees->pluck('name')->join(', ') ?: 'Unassigned',
+            ));
             $table->addColumn('progress', fn (Project $project): string => sprintf(
                 '<div class="d-flex justify-content-between small mb-1"><span>%d of %d tasks</span><strong>%d%%</strong></div><div class="progress" role="progressbar" aria-label="%s progress" aria-valuenow="%d" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-success" style="width: %d%%"></div></div>',
                 $project->completed_tasks_count,
@@ -67,6 +72,7 @@ class ProjectController extends Controller
         return view('projects.create', [
             'project' => new Project,
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
+            'users' => User::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -75,13 +81,14 @@ class ProjectController extends Controller
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
         $requirements = $data['requirements'] ?? [];
-        unset($data['customer_id']);
-        unset($data['requirements']);
+        $assignees = $data['assignees'] ?? [];
+        unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
-        $project = DB::transaction(function () use ($data, $customerId, $requirements): Project {
+        $project = DB::transaction(function () use ($data, $customerId, $requirements, $assignees): Project {
             $project = Project::create($data);
             $this->syncCustomer($project, $customerId);
             $this->syncRequirements($project, $requirements);
+            $project->assignees()->sync($assignees);
 
             return $project;
         });
@@ -106,20 +113,25 @@ class ProjectController extends Controller
                 ->latest('received_at')
                 ->get();
 
+            $project->load(['links' => fn ($links) => $links->where('visible_to_customer', true)->orderBy('label')]);
+
             return view('projects.customer-show', compact('project', 'tickets'));
         }
 
         $project->load([
-            'tasks' => fn ($query) => $query->whereNull('parent_task_id')->with('subtasks'),
+            'tasks' => fn ($query) => $query->whereNull('parent_task_id')->with(['assignees', 'subtasks.assignees']),
             'customers',
             'technologyStack' => fn ($query) => $query->orderBy('name'),
             'flowCharts' => fn ($query) => $query->orderBy('title'),
             'inventoryParts.supplier',
             'estimateItems' => fn ($query) => $query->orderBy('category')->orderBy('description'),
+            'links' => fn ($query) => $query->orderBy('label'),
+            'attachments',
             'events' => fn ($query) => $query->where('starts_at', '>=', now()->startOfDay())
                 ->orderBy('starts_at')
                 ->limit(10),
             'requirements',
+            'assignees',
         ]);
         $project->loadCount('tasks');
         $project->loadCount([
@@ -327,6 +339,27 @@ class ProjectController extends Controller
             ->with('success', 'Project event removed.');
     }
 
+    public function storeLink(Request $request, Project $project): RedirectResponse
+    {
+        $project->links()->create($this->validatedLink($request));
+
+        return redirect()->route('projects.show', $project)->with('success', 'Project link added.');
+    }
+
+    public function updateLink(Request $request, Project $project, int $link): RedirectResponse
+    {
+        $project->links()->findOrFail($link)->update($this->validatedLink($request));
+
+        return redirect()->route('projects.show', $project)->with('success', 'Project link updated.');
+    }
+
+    public function destroyLink(Project $project, int $link): RedirectResponse
+    {
+        $project->links()->findOrFail($link)->delete();
+
+        return redirect()->route('projects.show', $project)->with('success', 'Project link removed.');
+    }
+
     public function syncFlowCharts(Request $request, Project $project): RedirectResponse
     {
         $data = $request->validate([
@@ -347,8 +380,9 @@ class ProjectController extends Controller
     public function edit(Project $project): View
     {
         return view('projects.edit', [
-            'project' => $project->load('customers', 'requirements'),
+            'project' => $project->load('customers', 'requirements', 'assignees'),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
+            'users' => User::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -357,13 +391,17 @@ class ProjectController extends Controller
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
         $requirements = $data['requirements'] ?? [];
-        unset($data['customer_id']);
-        unset($data['requirements']);
+        $shouldSyncAssignees = array_key_exists('assignees', $data) || $request->exists('assignees_present');
+        $assignees = $data['assignees'] ?? [];
+        unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
-        DB::transaction(function () use ($project, $data, $customerId, $requirements): void {
+        DB::transaction(function () use ($project, $data, $customerId, $requirements, $assignees, $shouldSyncAssignees): void {
             $project->update($data);
             $this->syncCustomer($project, $customerId);
             $this->syncRequirements($project, $requirements);
+            if ($shouldSyncAssignees) {
+                $project->assignees()->sync($assignees);
+            }
         });
 
         return redirect()
@@ -391,7 +429,19 @@ class ProjectController extends Controller
             'requirements.*.requirement' => ['required', 'string', 'max:500'],
             'requirements.*.is_completed' => ['sometimes', 'boolean'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'assignees' => ['sometimes', 'array'],
+            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees_present' => ['sometimes', 'boolean'],
         ]);
+    }
+
+    private function validatedLink(Request $request): array
+    {
+        return $request->validate([
+            'label' => ['required', 'string', 'max:120'],
+            'url' => ['required', 'url:http,https', 'max:2048'],
+            'visible_to_customer' => ['sometimes', 'boolean'],
+        ]) + ['visible_to_customer' => $request->boolean('visible_to_customer')];
     }
 
     private function syncRequirements(Project $project, array $requirements): void

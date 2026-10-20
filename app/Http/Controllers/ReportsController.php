@@ -110,7 +110,7 @@ class ReportsController extends Controller
 
         return view('reports.teams', [
             'users' => $users,
-            'unassignedTasks' => Task::query()->whereNull('assigned_to')->count(),
+            'unassignedTasks' => Task::query()->whereDoesntHave('assignees')->count(),
             'teamChart' => $users->sortByDesc('assigned_tasks_count')->take(8)->map(fn (User $user): array => [
                 'name' => $user->name,
                 'assigned' => (int) $user->assigned_tasks_count,

@@ -6,11 +6,24 @@
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-7 col-xl-5">
-            <div class="card">                <div class="card-header bg-body">
+            <div class="text-center mb-4">
+                <img src="{{ asset('assets/img/omg/logoex2.png') }}" alt="OMG Computer" width="150">
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-body px-4 pt-4">
                     <h1 class="h4 mb-1">Choose a new password</h1>
-                    <p class="small text-body-secondary mb-0">For your security, change the temporary password before continuing.</p>
+                    <p class="small text-body-secondary mb-0">
+                        For your security, change your temporary password before continuing.
+                    </p>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
+                    @if ($errors->any())
+                        <div class="alert alert-danger" role="alert">
+                            @foreach ($errors->all() as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
                     <form method="POST" action="{{ route('password.first-login.update') }}">
                         @csrf
                         @method('PUT')

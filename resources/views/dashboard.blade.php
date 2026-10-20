@@ -114,7 +114,7 @@
                         <h2 class="h5 mb-1 text-primary">Repair queue</h2>
                         <p class="small text-body-secondary mb-0">Tickets by repair stage.</p>
                     </div>
-                    <div class="card-body"><div id="dashboard-ticket-status-chart" role="img" aria-label="Repair tickets by status chart" style="height: 280px"></div></div>
+                    <div class="card-body"><div id="dashboard-ticket-status-chart" role="img" aria-label="Tickets by status chart" style="height: 280px"></div></div>
                 </div>
             </div>
             <div class="col-12 col-lg-4">
@@ -123,7 +123,7 @@
                         <h2 class="h5 mb-1 text-primary">New tickets</h2>
                         <p class="small text-body-secondary mb-0">Tickets received in the last 7 days.</p>
                     </div>
-                    <div class="card-body"><div id="dashboard-ticket-arrivals-chart" role="img" aria-label="New repair tickets over the last seven days" style="height: 280px"></div></div>
+                    <div class="card-body"><div id="dashboard-ticket-arrivals-chart" role="img" aria-label="New tickets over the last seven days" style="height: 280px"></div></div>
                 </div>
             </div>
         </div>
@@ -206,7 +206,7 @@
                 <div class="card h-100">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
                         <div>
-                            <h4 class="mb-0 text-primary">Repair tickets</h4>
+                            <h4 class="mb-0 text-primary">Tickets</h4>
                             <p class="small text-body-secondary mb-0">Recently received cases in the active queue.</p>
                         </div>
                         <a class="btn btn-sm btn-primary" href="{{ route('tickets.index') }}">All tickets</a>
@@ -253,7 +253,7 @@
                 <div class="card h-100">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
                         <div>
-                            <h4 class="mb-0 text-primary">SOP &technical examples</h4>
+                            <h4 class="mb-0 text-primary">SOP &amp; technical examples</h4>
                             <p class="small text-body-secondary mb-0">Reusable web, database, and service structures.</p>
                         </div>
                         <a class="btn btn-sm btn-primary" href="{{ route('development.sops') }}">Browse library</a>

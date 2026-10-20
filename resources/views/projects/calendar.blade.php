@@ -19,10 +19,12 @@
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <div class="card p-2">        <div class="card-body">
+    <div class="card p-2">
+        <div class="card-body">
             <div id="project-calendar" aria-label="Project events calendar"></div>
         </div>
     </div>
+    @include('projects._event-details-modal')
     @include('projects._event-modal', ['projects' => $projects])
 </div>
 @endsection
@@ -31,6 +33,29 @@
 <style>
     #project-calendar .fc-project-event-project {
         font-weight: 700;
+        flex: 0 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #project-calendar .fc-project-event-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #project-calendar .fc-project-event-content {
+        display: flex;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    #project-calendar .fc-daygrid-event .fc-event-main,
+    #project-calendar .fc-daygrid-event .fc-event-title-container {
+        min-width: 0;
+        overflow: hidden;
     }
 </style>
 <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>
@@ -46,6 +71,7 @@
             nowIndicator: true,
             navLinks: true,
             dayMaxEvents: true,
+            moreLinkClick: 'popover',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -67,9 +93,11 @@
                 const project = document.createElement('span');
                 const title = document.createElement('span');
 
+                content.className = 'fc-project-event-content';
                 project.className = 'fc-project-event-project';
                 project.textContent = info.event.extendedProps.project || 'General event';
                 title.textContent = `: ${info.event.title}`;
+                title.className = 'fc-project-event-title';
                 content.append(project, title);
 
                 return { domNodes: [content] };
@@ -81,6 +109,34 @@
                     type,
                     location,
                 ].filter(Boolean).join(' · ');
+            },
+            eventClick: (info) => {
+                info.jsEvent.preventDefault();
+                const event = info.event;
+                const props = event.extendedProps;
+                const modal = document.getElementById('event-details-modal');
+                const projectLink = modal.querySelector('[data-event-project-link]');
+                const deleteForm = modal.querySelector('[data-event-delete-form]');
+
+                modal.querySelector('[data-event-title]').textContent = event.title;
+                modal.querySelector('[data-event-type]').textContent = props.type || 'Event';
+                modal.querySelector('[data-event-project]').textContent = props.project || 'General event';
+                projectLink.classList.toggle('d-none', !props.project_url);
+                if (props.project_url) {
+                    projectLink.href = props.project_url;
+                    projectLink.textContent = props.project;
+                }
+                modal.querySelector('[data-event-start]').textContent = event.start
+                    ? FullCalendar.formatDate(event.start, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                    : '—';
+                modal.querySelector('[data-event-end]').textContent = event.end
+                    ? FullCalendar.formatDate(event.end, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                    : '—';
+                modal.querySelector('[data-event-location]').textContent = props.location || '—';
+                modal.querySelector('[data-event-description]').textContent = props.description || '—';
+                deleteForm.action = deleteForm.dataset.eventDeleteUrl.replace('__EVENT__', encodeURIComponent(event.id));
+
+                bootstrap.Modal.getOrCreateInstance(modal).show();
             },
         });
 

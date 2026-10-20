@@ -6,6 +6,19 @@
     @if ($parent)
         <input type="hidden" name="parent_id" value="{{ $parent->id }}">
     @endif
+
+    @if (!$parent && (!isset($project) || !$project || request()->routeIs('tasks.create') || isset($task->id)))
+        <div class="mb-3">
+            <label class="form-label" for="project_id">Project <span class="text-body-secondary">(optional)</span></label>
+            <select class="form-select js-project-search" id="project_id" name="project_id">
+                <option value="">No project</option>
+                @foreach ($projects as $availableProject)
+                    <option value="{{ $availableProject->id }}" @selected((string) old('project_id', $task->project_id) === (string) $availableProject->id)>{{ $availableProject->name }}</option>
+                @endforeach
+            </select>
+            @error('project_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+        </div>
+    @endif
     <div class="card-body">
         @if ($errors->any())
             <div class="alert alert-danger" role="alert">
@@ -39,14 +52,15 @@
 
         <div class="row g-3">
             <div class="col-md-4">
-                <label class="form-label" for="assigned_to">Assignee</label>
-                <select class="form-select" id="assigned_to" name="assigned_to">
-                    <option value="">Unassigned</option>
+                <label class="form-label" for="assignees">Assign people</label>
+                <input type="hidden" name="assignees_present" value="1">
+                <select class="form-select js-user-search" id="assignees" name="assignees[]" multiple data-placeholder="Search and select people">
                     @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected((string) old('assigned_to', $task->assigned_to) === (string) $user->id)>{{ $user->name }}</option>
+                        <option value="{{ $user->id }}" @selected(in_array((string) $user->id, array_map('strval', old('assignees', $task->assignees->pluck('id')->all())), true))>{{ $user->name }}</option>
                     @endforeach
                 </select>
-                @error('assigned_to')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @error('assignees')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @error('assignees.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-4">
                 <label class="form-label" for="status">Status</label>
