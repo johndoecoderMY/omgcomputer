@@ -365,6 +365,47 @@ class ProjectDetailsExportTest extends TestCase
         $this->assertLessThanOrEqual(185, $image['height']);
     }
 
+    public function test_flow_chart_arrows_use_a_dark_high_contrast_color(): void
+    {
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Arrow contrast',
+            'category' => 'service',
+            'steps' => [
+                [
+                    'id' => 'start',
+                    'label' => 'Start',
+                    'kind' => 'start',
+                    'connections' => ['finish'],
+                ],
+                [
+                    'id' => 'finish',
+                    'label' => 'Finish',
+                    'kind' => 'end',
+                    'connections' => [],
+                ],
+            ],
+        ]);
+
+        $image = app(FlowChartPngRenderer::class)->render($flowChart);
+        $png = base64_decode(substr($image['src'], strlen('data:image/png;base64,')), true);
+        $this->assertNotFalse($png);
+        $resource = imagecreatefromstring($png);
+        $this->assertNotFalse($resource);
+
+        $darkArrowPixelCount = 0;
+        for ($y = 0; $y < imagesy($resource); $y++) {
+            for ($x = 0; $x < imagesx($resource); $x++) {
+                $pixel = imagecolorat($resource, $x, $y);
+                if (($pixel >> 16 & 0xff) === 51 && ($pixel >> 8 & 0xff) === 65 && ($pixel & 0xff) === 85) {
+                    $darkArrowPixelCount++;
+                }
+            }
+        }
+        imagedestroy($resource);
+
+        $this->assertGreaterThan(0, $darkArrowPixelCount);
+    }
+
     public function test_flow_chart_that_fits_at_readable_size_stays_on_one_page(): void
     {
         $this->actingAs(User::factory()->create());

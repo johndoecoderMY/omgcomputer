@@ -433,6 +433,7 @@ class FlowChartPngRenderer
 
     private function drawArrow(\GdImage $image, int $x1, int $y1, int $x2, int $y2, int $color, float $scale): void
     {
+        imagesetthickness($image, max(2, (int) round(1.2 * $scale)));
         $controlY1 = $y1 + max((int) round(28 * $scale), (int) round(($y2 - $y1) / 2));
         $controlY2 = $y2 - max((int) round(28 * $scale), (int) round(($y2 - $y1) / 2));
         $previousX = $x1;
@@ -455,6 +456,7 @@ class FlowChartPngRenderer
             $x2 - $arrowSize, $baseY,
             $x2 + $arrowSize, $baseY,
         ], 3, $color);
+        imagesetthickness($image, 1);
     }
 
     private function drawRoundedRectangle(
@@ -505,7 +507,7 @@ class FlowChartPngRenderer
             'white' => imagecolorallocate($image, 255, 255, 255),
             'text' => imagecolorallocate($image, 30, 41, 59),
             'muted' => imagecolorallocate($image, 100, 116, 139),
-            'wire' => imagecolorallocate($image, 100, 116, 139),
+            'wire' => imagecolorallocate($image, 51, 65, 85),
             'pageFill' => imagecolorallocate($image, 239, 246, 255),
             'pageBorder' => imagecolorallocate($image, 71, 85, 105),
             'startFill' => imagecolorallocate($image, 220, 252, 231),
