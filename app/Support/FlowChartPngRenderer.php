@@ -20,9 +20,15 @@ class FlowChartPngRenderer
 
     private const PIXEL_RATIO = 3;
 
+    private const NODE_SCALE_MM = 0.18;
+
+    private const MIN_FIT_SCALE = 0.65;
+
     private const PAGE_WIDTH_MM = 170;
 
     private const PAGE_HEIGHT_MM = 185;
+
+    private const MAX_IMAGE_HEIGHT = 6000;
 
     public function render(FlowChart $flowChart): array
     {
@@ -42,6 +48,7 @@ class FlowChartPngRenderer
                 'src' => '',
                 'width' => 0,
                 'height' => 0,
+                'pages' => [],
             ];
         }
 
@@ -70,14 +77,11 @@ class FlowChartPngRenderer
         ));
         $canvasWidth = max(1, $maxX - $minX + self::PADDING * 2);
         $canvasHeight = max(1, $maxY - $minY + self::PADDING * 2);
-        $physicalScale = min(
-            self::PAGE_WIDTH_MM / $canvasWidth,
-            self::PAGE_HEIGHT_MM / $canvasHeight,
-        );
+        $physicalScale = self::NODE_SCALE_MM;
         $scale = min(
             self::PIXEL_RATIO,
             1800 / $canvasWidth,
-            2400 / $canvasHeight,
+            self::MAX_IMAGE_HEIGHT / $canvasHeight,
         );
         $imageWidth = max(1, (int) ceil($canvasWidth * $scale));
         $imageHeight = max(1, (int) ceil($canvasHeight * $scale));
@@ -95,6 +99,7 @@ class FlowChartPngRenderer
             $pixelPositions[$id] = [
                 'x' => (int) round((self::PADDING + $position['x'] - $minX) * $scale),
                 'y' => (int) round((self::PADDING + $position['y'] - $minY) * $scale),
+                'width' => (int) round(self::NODE_WIDTH * $scale),
                 'height' => (int) round($nodeHeights[$position['index']] * $scale),
                 'index' => $position['index'],
             ];
@@ -161,20 +166,135 @@ class FlowChartPngRenderer
             }
         }
 
+        $pages = $this->fitImagesToPages($image, $physicalScale, $scale, $pixelPositions);
+        imagedestroy($image);
+
+        return [
+            'src' => $pages[0]['src'],
+            'width' => $pages[0]['width'],
+            'height' => $pages[0]['height'],
+            'pages' => $pages,
+        ];
+    }
+
+    private function fitImagesToPages(
+        \GdImage $image,
+        float $physicalScale,
+        float $pixelScale,
+        array $nodePositions,
+    ): array {
+        $imageWidth = imagesx($image);
+        $imageHeight = imagesy($image);
+        $fitScale = min(
+            1,
+            self::PAGE_WIDTH_MM * $pixelScale / ($imageWidth * $physicalScale),
+            self::PAGE_HEIGHT_MM * $pixelScale / ($imageHeight * $physicalScale),
+        );
+
+        if ($fitScale >= self::MIN_FIT_SCALE) {
+            return [$this->fitImageToPage($image, $physicalScale, $pixelScale)];
+        }
+
+        $widthOverflow = $imageWidth * $physicalScale / $pixelScale / self::PAGE_WIDTH_MM;
+        $heightOverflow = $imageHeight * $physicalScale / $pixelScale / self::PAGE_HEIGHT_MM;
+        $axis = $heightOverflow >= $widthOverflow ? 'y' : 'x';
+        $splitAt = $this->findSplitPosition($nodePositions, $axis, $imageWidth, $imageHeight);
+        $imageLength = $axis === 'y' ? $imageHeight : $imageWidth;
+        $overlapUnits = $axis === 'y'
+            ? (self::GAP_Y - self::NODE_MIN_HEIGHT) / 2
+            : (self::GAP_X - self::NODE_WIDTH) / 2;
+        $overlap = max(240, (int) round($overlapUnits * $pixelScale));
+        $ranges = $axis === 'y'
+            ? [[0, min($imageHeight, $splitAt + $overlap)], [max(0, $splitAt - $overlap), $imageHeight]]
+            : [[0, min($imageWidth, $splitAt + $overlap)], [max(0, $splitAt - $overlap), $imageWidth]];
+        $pages = [];
+
+        foreach ($ranges as [$start, $end]) {
+            $width = $axis === 'x' ? $end - $start : $imageWidth;
+            $height = $axis === 'y' ? $end - $start : $imageHeight;
+            $pageImage = imagecreatetruecolor($width, $height);
+            if ($pageImage === false || ! imagecopy(
+                $pageImage,
+                $image,
+                0,
+                0,
+                $axis === 'x' ? $start : 0,
+                $axis === 'y' ? $start : 0,
+                $width,
+                $height,
+            )) {
+                if ($pageImage !== false) {
+                    imagedestroy($pageImage);
+                }
+
+                throw new RuntimeException('Unable to split the oversized project flow chart image.');
+            }
+
+            $pages[] = $this->fitImageToPage($pageImage, $physicalScale, $pixelScale);
+            imagedestroy($pageImage);
+        }
+
+        return $pages;
+    }
+
+    private function fitImageToPage(\GdImage $image, float $physicalScale, float $pixelScale): array
+    {
+        $imageWidth = imagesx($image);
+        $imageHeight = imagesy($image);
+        $fitScale = min(
+            1,
+            self::PAGE_WIDTH_MM * $pixelScale / ($imageWidth * $physicalScale),
+            self::PAGE_HEIGHT_MM * $pixelScale / ($imageHeight * $physicalScale),
+        );
+
+        return [
+            'src' => $this->encodeImage($image),
+            'width' => round($imageWidth * $physicalScale / $pixelScale * $fitScale, 2),
+            'height' => round($imageHeight * $physicalScale / $pixelScale * $fitScale, 2),
+        ];
+    }
+
+    private function findSplitPosition(array $nodePositions, string $axis, int $imageWidth, int $imageHeight): int
+    {
+        $positionKey = $axis;
+        $lengthKey = $axis === 'x' ? 'width' : 'height';
+        $imageLength = $axis === 'x' ? $imageWidth : $imageHeight;
+        $intervals = array_map(fn (array $position): array => [
+            'start' => $position[$positionKey],
+            'end' => $position[$positionKey] + $position[$lengthKey],
+        ], array_values($nodePositions));
+        usort($intervals, fn (array $left, array $right): int => $left['start'] <=> $right['start']);
+
+        $gaps = [];
+        $previousEnd = null;
+        foreach ($intervals as $interval) {
+            if ($previousEnd !== null && $interval['start'] > $previousEnd) {
+                $gaps[] = (int) floor(($previousEnd + $interval['start']) / 2);
+            }
+            $previousEnd = max($previousEnd ?? 0, $interval['end']);
+        }
+
+        $middle = (int) floor($imageLength / 2);
+        if ($gaps === []) {
+            return $middle;
+        }
+
+        usort($gaps, fn (int $left, int $right): int => abs($left - $middle) <=> abs($right - $middle));
+
+        return $gaps[0];
+    }
+
+    private function encodeImage(\GdImage $image): string
+    {
         ob_start();
         $written = imagepng($image);
-        imagedestroy($image);
         $png = ob_get_clean();
 
         if (! $written || ! is_string($png)) {
             throw new RuntimeException('Unable to encode the project flow chart image.');
         }
 
-        return [
-            'src' => 'data:image/png;base64,'.base64_encode($png),
-            'width' => round($canvasWidth * $physicalScale, 2),
-            'height' => round($canvasHeight * $physicalScale, 2),
-        ];
+        return 'data:image/png;base64,'.base64_encode($png);
     }
 
     private function positions(Collection $steps, Collection $labels): array

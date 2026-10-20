@@ -260,6 +260,13 @@ class ProjectDetailsExportTest extends TestCase
             ],
         ]);
         $project->flowCharts()->attach($secondChart);
+        $renderedPageCounts = collect([$chart, $secondChart])
+            ->map(function (FlowChart $flowChart): int {
+                $flowChart->makeVisible('steps');
+
+                return count(app(FlowChartPngRenderer::class)->render($flowChart)['pages']);
+            });
+        $this->assertSame([1, 2], $renderedPageCounts->all());
 
         $queries = [];
         DB::listen(function (QueryExecuted $query) use (&$queries): void {
@@ -274,7 +281,7 @@ class ProjectDetailsExportTest extends TestCase
         $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-', $response->getContent());
         preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $pageMatches);
-        $this->assertCount(3, $pageMatches[0], 'Project details followed by two flow charts should have no empty pages.');
+        $this->assertCount(4, $pageMatches[0], 'Project details followed by an oversized chart should include its continuation page.');
         $this->assertFalse(collect($queries)->contains(fn (string $sql): bool => str_contains(strtolower($sql), 'from "tasks"')));
 
         $flowChartOnlyResponse = $this->post(route('projects.export', $project), [
@@ -283,7 +290,7 @@ class ProjectDetailsExportTest extends TestCase
         ]);
         $flowChartOnlyResponse->assertOk();
         preg_match_all('/\/Type\s*\/Page\b/', $flowChartOnlyResponse->getContent(), $flowChartOnlyPages);
-        $this->assertCount(2, $flowChartOnlyPages[0], 'Each flow chart should use one page, with no blank pages between or after them.');
+        $this->assertCount(3, $flowChartOnlyPages[0], 'The oversized flow chart should continue on a second page.');
 
         $flowCharts = FlowChart::query()->whereIn('id', [$chart->id, $secondChart->id])->get();
         $flowCharts->each(fn (FlowChart $flowChart) => $flowChart->makeVisible('steps'));
@@ -296,9 +303,10 @@ class ProjectDetailsExportTest extends TestCase
             'flowCharts' => $flowCharts,
             'flowChartImages' => $flowChartImages,
         ])->render();
-        $this->assertSame(2, substr_count($pdfHtml, 'class="flow-chart-page"'));
+        $this->assertSame(3, substr_count($pdfHtml, 'class="flow-chart-page"'));
         $this->assertStringContainsString('<pagebreak />', $pdfHtml);
-        $this->assertSame(2, substr_count($pdfHtml, 'src="data:image/png;base64,'));
+        $this->assertSame(3, substr_count($pdfHtml, 'src="data:image/png;base64,'));
+        $this->assertSame(3, substr_count($pdfHtml, '<div align="center">'));
         $this->assertStringContainsString('Flow chart: Booking process flow', $pdfHtml);
         $this->assertStringNotContainsString('<svg', $pdfHtml);
 
@@ -348,12 +356,92 @@ class ProjectDetailsExportTest extends TestCase
         $imageSize = getimagesizefromstring($png);
         $this->assertIsArray($imageSize);
         $this->assertSame(IMAGETYPE_PNG, $imageSize[2]);
+        $this->assertGreaterThan(0, count($image['pages']));
 
         $shortImage = $renderer->render($shortFlowChart);
         $shortPng = base64_decode(substr($shortImage['src'], strlen('data:image/png;base64,')), true);
         $shortImageSize = getimagesizefromstring($shortPng);
         $this->assertGreaterThan($shortImageSize[1], $imageSize[1]);
         $this->assertLessThanOrEqual(185, $image['height']);
+    }
+
+    public function test_flow_chart_that_fits_at_readable_size_stays_on_one_page(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $project = Project::query()->create(['name' => 'Long chart export project']);
+        $steps = collect(range(1, 4))->map(fn (int $index): array => [
+            'id' => 'step-'.$index,
+            'label' => 'Flow chart step '.$index,
+            'kind' => 'page',
+            'connections' => $index < 4 ? ['step-'.($index + 1)] : [],
+        ])->all();
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Long workflow',
+            'category' => 'service',
+            'steps' => $steps,
+        ]);
+        $project->flowCharts()->attach($flowChart);
+
+        $flowChart->makeVisible('steps');
+        $rendered = app(FlowChartPngRenderer::class)->render($flowChart);
+        $this->assertCount(1, $rendered['pages']);
+        foreach ($rendered['pages'] as $page) {
+            $this->assertLessThanOrEqual(185, $page['height']);
+            $this->assertLessThanOrEqual(170, $page['width']);
+        }
+
+        $response = $this->post(route('projects.export', $project), [
+            'sections' => ['flowcharts'],
+            'flowchart_mode' => 'all',
+        ]);
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $pageMatches);
+        $this->assertCount(count($rendered['pages']), $pageMatches[0]);
+    }
+
+    public function test_flow_chart_that_would_be_unreadable_is_split_into_two_pages(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $project = Project::query()->create(['name' => 'Oversized chart export project']);
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Tall workflow',
+            'category' => 'service',
+            'steps' => [
+                [
+                    'id' => 'start',
+                    'label' => 'Start',
+                    'kind' => 'start',
+                    'x' => 0,
+                    'y' => 0,
+                    'connections' => ['finish'],
+                ],
+                [
+                    'id' => 'finish',
+                    'label' => 'Finish',
+                    'kind' => 'end',
+                    'x' => 0,
+                    'y' => 3000,
+                    'connections' => [],
+                ],
+            ],
+        ]);
+        $project->flowCharts()->attach($flowChart);
+
+        $flowChart->makeVisible('steps');
+        $rendered = app(FlowChartPngRenderer::class)->render($flowChart);
+        $this->assertCount(2, $rendered['pages']);
+        foreach ($rendered['pages'] as $page) {
+            $this->assertLessThanOrEqual(185, $page['height']);
+            $this->assertLessThanOrEqual(170, $page['width']);
+        }
+
+        $response = $this->post(route('projects.export', $project), [
+            'sections' => ['flowcharts'],
+            'flowchart_mode' => 'all',
+        ]);
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $pageMatches);
+        $this->assertCount(2, $pageMatches[0]);
     }
 
     public function test_project_pdf_can_include_a_task_gantt_chart_when_selected(): void
@@ -406,9 +494,10 @@ class ProjectDetailsExportTest extends TestCase
         $this->assertStringContainsString('Exportable scheduled task', $pdfHtml);
         $this->assertStringContainsString('Nov 1, 2026', $pdfHtml);
         $this->assertStringContainsString('class="project-gantt-chart"', $pdfHtml);
-        $this->assertStringContainsString('.project-gantt-chart { display: block; margin: 0 auto; }', $pdfHtml);
-        $this->assertStringContainsString('.flow-chart-diagram { display: block; margin: 8pt auto 0; }', $pdfHtml);
+        $this->assertStringContainsString('<td align="center">', $pdfHtml);
         $this->assertStringContainsString('<div class="gantt-section">', $pdfHtml);
+        $this->assertStringContainsString('.project-gantt-chart { display: inline; }', $pdfHtml);
+        $this->assertStringContainsString('.flow-chart-diagram { display: inline; margin-top: 8pt; }', $pdfHtml);
         $this->assertStringNotContainsString('page-break-before: always;', $pdfHtml);
         $this->assertStringContainsString('<rect', $pdfHtml);
         $this->assertStringContainsString('Schedule', $pdfHtml);

@@ -13,8 +13,8 @@
         th, td { border: 1px solid #bbb; text-align: left; padding: 5pt; vertical-align: top; }
         th { background: #f0f0f0; }
         .muted { color: #666; }
-        .project-gantt-chart { display: block; margin: 0 auto; }
-        .flow-chart-diagram { display: block; margin: 8pt auto 0; }
+        .project-gantt-chart { display: inline; }
+        .flow-chart-diagram { display: inline; margin-top: 8pt; }
     </style>
 </head>
 <body>
@@ -174,6 +174,8 @@
                     $ganttPageHeightMm = $ganttPageHeight * .18;
                 @endphp
                 <div class="gantt-chart-page" style="{{ $loop->first ? '' : 'page-break-before: always;' }}">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr><td align="center">
                 <svg class="project-gantt-chart" xmlns="http://www.w3.org/2000/svg"
                     width="175mm" height="{{ number_format($ganttPageHeightMm, 2, '.', '') }}mm"
                     viewBox="0 0 {{ $ganttViewWidth }} {{ $ganttPageHeight }}">
@@ -221,6 +223,8 @@
                         </rect>
                     @endforeach
                 </svg>
+                    </td></tr>
+                </table>
                 </div>
             @endforeach
             @php
@@ -251,21 +255,35 @@
             @if (! $loop->first || $hasEarlierSections)
                 <pagebreak />
             @endif
-            <div class="flow-chart-page">
-                @php
-                    $diagramSteps = collect($flowChart->steps ?? []);
-                @endphp
-                <h2>{{ $flowChart->title }}</h2>
-                <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
-                @if ($flowChart->description)<p>{{ $flowChart->description }}</p>@endif
-                @if ($diagramSteps->isEmpty())
+            @php
+                $diagramSteps = collect($flowChart->steps ?? []);
+            @endphp
+            @if ($diagramSteps->isEmpty())
+                <div class="flow-chart-page">
+                    <h2>{{ $flowChart->title }}</h2>
+                    <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
+                    @if ($flowChart->description)<p>{{ $flowChart->description }}</p>@endif
                     <p class="muted">No steps are recorded for this flow chart.</p>
-                @else
-                    <img class="flow-chart-diagram" src="{{ $flowChartImages[$flowChart->id]['src'] }}"
-                        alt="Flow chart: {{ $flowChart->title }}"
-                        style="width: {{ $flowChartImages[$flowChart->id]['width'] }}mm; height: {{ $flowChartImages[$flowChart->id]['height'] }}mm;">
-                @endif
-            </div>
+                </div>
+            @else
+                @foreach ($flowChartImages[$flowChart->id]['pages'] as $imagePage)
+                    @if (! $loop->first)
+                        <pagebreak />
+                    @endif
+                    <div class="flow-chart-page">
+                        <h2>{{ $flowChart->title }}@if (! $loop->first) (continued)@endif</h2>
+                        @if ($loop->first)
+                            <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
+                            @if ($flowChart->description)<p>{{ $flowChart->description }}</p>@endif
+                        @endif
+                        <div align="center">
+                            <img class="flow-chart-diagram" src="{{ $imagePage['src'] }}"
+                                alt="Flow chart: {{ $flowChart->title }}"
+                                style="width: {{ $imagePage['width'] }}mm; height: {{ $imagePage['height'] }}mm;">
+                        </div>
+                    </div>
+                @endforeach
+            @endif
         @empty
             <p class="muted">No selected flow charts are linked to this project.</p>
         @endforelse
