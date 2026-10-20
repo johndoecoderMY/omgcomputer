@@ -13,7 +13,7 @@
         th, td { border: 1px solid #bbb; text-align: left; padding: 5pt; vertical-align: top; }
         th { background: #f0f0f0; }
         .muted { color: #666; }
-        .flow-chart-page { page-break-before: always; }
+        .project-gantt-chart { display: block; margin: 0 auto; }
         .flow-chart-diagram { display: block; margin: 8pt auto 0; }
     </style>
 </head>
@@ -25,6 +25,18 @@
         <h2>Project overview</h2>
         <p>{{ $project->description ?: 'No project description provided.' }}</p>
         <p><strong>Created:</strong> {{ $project->created_at?->format('F j, Y') ?? '—' }}</p>
+    @endif
+
+    @if (in_array('requirements', $sections, true))
+        <h2>Project requirements</h2>
+        @if ($project->requirements_notes)
+            <p style="white-space: pre-wrap">{{ $project->requirements_notes }}</p>
+        @endif
+        @forelse ($project->requirements as $requirement)
+            <p>[{{ $requirement->is_completed ? 'Complete' : 'Incomplete' }}] {{ $requirement->requirement }}</p>
+        @empty
+            <p class="muted">No requirements have been recorded for this project.</p>
+        @endforelse
     @endif
 
     @if (in_array('customers', $sections, true))
@@ -55,6 +67,7 @@
                 </tbody>
             </table>
         @endif
+        </div>
     @endif
 
     @if (in_array('estimates', $sections, true))
@@ -107,6 +120,20 @@
     @endif
 
     @if (in_array('gantt', $sections, true))
+        @php
+            $hasEarlierGanttSections = collect([
+                'overview',
+                'requirements',
+                'customers',
+                'technology_stack',
+                'estimates',
+                'schedule',
+            ])->contains(fn (string $section): bool => in_array($section, $sections, true));
+        @endphp
+        @if ($hasEarlierGanttSections)
+            <pagebreak />
+        @endif
+        <div class="gantt-section">
         <h2>Task Gantt chart</h2>
         @php
             $ganttTasks = $project->tasks->flatMap(fn ($task) => collect([$task])->concat($task->subtasks))->values();
@@ -146,10 +173,10 @@
                     $ganttPageHeight = $ganttAxisHeight + $ganttPage->count() * $ganttRowHeight;
                     $ganttPageHeightMm = $ganttPageHeight * .18;
                 @endphp
+                <div class="gantt-chart-page" style="{{ $loop->first ? '' : 'page-break-before: always;' }}">
                 <svg class="project-gantt-chart" xmlns="http://www.w3.org/2000/svg"
                     width="175mm" height="{{ number_format($ganttPageHeightMm, 2, '.', '') }}mm"
-                    viewBox="0 0 {{ $ganttViewWidth }} {{ $ganttPageHeight }}"
-                    style="{{ $loop->first ? '' : 'page-break-before: always;' }}">
+                    viewBox="0 0 {{ $ganttViewWidth }} {{ $ganttPageHeight }}">
                     <rect x="{{ $ganttPlotX }}" y="0" width="{{ $ganttPlotWidth }}" height="{{ $ganttPageHeight }}" fill="#ffffff"></rect>
                     <text x="5" y="20" font-family="sans-serif" font-size="14" font-weight="bold" fill="#344050">Task</text>
                     <text x="{{ $ganttPlotX }}" y="20" font-family="sans-serif" font-size="14" font-weight="bold" fill="#344050">Schedule</text>
@@ -194,6 +221,7 @@
                         </rect>
                     @endforeach
                 </svg>
+                </div>
             @endforeach
             @php
                 $unscheduledGanttTasks = $ganttTasks->reject(fn ($task) => $task->start_date || $task->due_date);
@@ -205,29 +233,27 @@
     @endif
 
     @if (in_array('flowcharts', $sections, true))
+        @php
+            $hasEarlierSections = collect([
+                'overview',
+                'requirements',
+                'customers',
+                'technology_stack',
+                'estimates',
+                'schedule',
+                'gantt',
+            ])->contains(fn (string $section): bool => in_array($section, $sections, true));
+        @endphp
         @if ($flowCharts->isEmpty())
             <h2>Flow charts and SOPs</h2>
         @endif
         @forelse ($flowCharts as $flowChart)
+            @if (! $loop->first || $hasEarlierSections)
+                <pagebreak />
+            @endif
             <div class="flow-chart-page">
                 @php
-                    $diagramSteps = collect($flowChart->steps ?? [])->values();
-                    $diagramNodeWidth = 190;
-                    $diagramNodeHeight = 58;
-                    $diagramPositions = [];
-                    foreach ($diagramSteps as $index => $step) {
-                        $diagramPositions[$step['id'] ?? (string) $index] = [
-                            'x' => isset($step['x']) ? (int) $step['x'] : 255,
-                            'y' => isset($step['y']) ? (int) $step['y'] : 24 + $index * 100,
-                        ];
-                    }
-                    $diagramMinX = $diagramSteps->isEmpty() ? 0 : min(array_column($diagramPositions, 'x'));
-                    $diagramMinY = $diagramSteps->isEmpty() ? 0 : min(array_column($diagramPositions, 'y'));
-                    $diagramWidth = $diagramSteps->isEmpty() ? 1 : max(array_column($diagramPositions, 'x')) + $diagramNodeWidth + 20 - $diagramMinX;
-                    $diagramHeight = $diagramSteps->isEmpty() ? 1 : max(array_column($diagramPositions, 'y')) + $diagramNodeHeight + 20 - $diagramMinY;
-                    $diagramScale = min(175 / $diagramWidth, 230 / $diagramHeight);
-                    $diagramPhysicalWidth = $diagramWidth * $diagramScale;
-                    $diagramPhysicalHeight = $diagramHeight * $diagramScale;
+                    $diagramSteps = collect($flowChart->steps ?? []);
                 @endphp
                 <h2>{{ $flowChart->title }}</h2>
                 <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
@@ -235,56 +261,9 @@
                 @if ($diagramSteps->isEmpty())
                     <p class="muted">No steps are recorded for this flow chart.</p>
                 @else
-                    <svg class="flow-chart-diagram" xmlns="http://www.w3.org/2000/svg"
-                        width="{{ number_format($diagramPhysicalWidth, 2, '.', '') }}mm"
-                        height="{{ number_format($diagramPhysicalHeight, 2, '.', '') }}mm"
-                        viewBox="0 0 {{ $diagramWidth }} {{ $diagramHeight }}">
-                        <defs>
-                            <marker id="arrow-{{ $flowChart->id }}" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                                <path d="M0,0 L8,4 L0,8 Z" fill="#64748b"></path>
-                            </marker>
-                        </defs>
-                        @foreach ($diagramSteps as $index => $step)
-                            @php
-                                $sourceId = $step['id'] ?? (string) $index;
-                                $sourcePosition = $diagramPositions[$sourceId];
-                                $sourceX = $sourcePosition['x'] - $diagramMinX + $diagramNodeWidth / 2;
-                                $sourceY = $sourcePosition['y'] - $diagramMinY + $diagramNodeHeight;
-                            @endphp
-                            @foreach ($step['connections'] ?? [] as $targetId)
-                                @if (isset($diagramPositions[$targetId]))
-                                    @php
-                                        $targetPosition = $diagramPositions[$targetId];
-                                        $targetX = $targetPosition['x'] - $diagramMinX + $diagramNodeWidth / 2;
-                                        $targetY = $targetPosition['y'] - $diagramMinY;
-                                    @endphp
-                                    <path d="M {{ $sourceX }} {{ $sourceY }} C {{ $sourceX }} {{ $sourceY + 24 }}, {{ $targetX }} {{ $targetY - 24 }}, {{ $targetX }} {{ $targetY }}"
-                                        fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow-{{ $flowChart->id }})"></path>
-                                @endif
-                            @endforeach
-                        @endforeach
-                        @foreach ($diagramSteps as $index => $step)
-                            @php
-                                $nodeId = $step['id'] ?? (string) $index;
-                                $position = $diagramPositions[$nodeId];
-                                $nodeX = $position['x'] - $diagramMinX;
-                                $nodeY = $position['y'] - $diagramMinY;
-                                $nodeFill = match ($step['kind'] ?? 'page') {
-                                    'start' => '#dcfce7',
-                                    'end' => '#fee2e2',
-                                    'decision' => '#fef3c7',
-                                    default => '#eff6ff',
-                                };
-                            @endphp
-                            <rect x="{{ $nodeX }}" y="{{ $nodeY }}" width="{{ $diagramNodeWidth }}" height="{{ $diagramNodeHeight }}"
-                                rx="8" fill="{{ $nodeFill }}" stroke="#475569" stroke-width="1.5"></rect>
-                            <text x="{{ $nodeX + $diagramNodeWidth / 2 }}" y="{{ $nodeY + 24 }}"
-                                text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="bold"
-                                fill="#1e293b" textLength="{{ $diagramNodeWidth - 20 }}" lengthAdjust="spacingAndGlyphs">{{ $step['label'] ?? 'Step' }}</text>
-                            <text x="{{ $nodeX + $diagramNodeWidth / 2 }}" y="{{ $nodeY + 44 }}"
-                                text-anchor="middle" font-family="sans-serif" font-size="10" fill="#64748b">{{ ucfirst($step['kind'] ?? 'page') }}</text>
-                        @endforeach
-                    </svg>
+                    <img class="flow-chart-diagram" src="{{ $flowChartImages[$flowChart->id]['src'] }}"
+                        alt="Flow chart: {{ $flowChart->title }}"
+                        style="width: {{ $flowChartImages[$flowChart->id]['width'] }}mm; height: {{ $flowChartImages[$flowChart->id]['height'] }}mm;">
                 @endif
             </div>
         @empty
@@ -292,12 +271,5 @@
         @endforelse
     @endif
 
-    <p class="muted" style="margin-top: 24pt;">
-        @if (in_array('gantt', $sections, true))
-            Task details are not included; the selected Gantt chart shows schedule dates only.
-        @else
-            Tasks and task timelines are not included in this export.
-        @endif
-    </p>
 </body>
 </html>

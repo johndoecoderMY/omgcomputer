@@ -12,6 +12,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'description',
+        'requirements_notes',
     ];
 
     public function scopeVisibleToCustomer(Builder $query, User $user): Builder
@@ -57,6 +58,11 @@ class Project extends Model
     public function technologyStack(): HasMany
     {
         return $this->hasMany(ProjectTechnology::class);
+    }
+
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(ProjectRequirement::class)->orderBy('sort_order');
     }
 
     public function flowCharts(): BelongsToMany

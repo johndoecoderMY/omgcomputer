@@ -46,6 +46,7 @@
                         <div class="row g-2">
                             @foreach ([
                                 'overview' => 'Project overview',
+                                'requirements' => 'Requirements checklist and notes',
                                 'customers' => 'Linked customers',
                                 'technology_stack' => 'Technology stack and versions',
                                 'estimates' => 'Software and other estimates',
@@ -139,6 +140,36 @@
             </div>
         </div>
     </div>
+
+    <section class="card project-panel mb-4" aria-labelledby="project-requirements-heading">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+                <h2 class="h5 mb-0" id="project-requirements-heading">Project requirements</h2>
+                <p class="small text-body-secondary mb-0">Keep the project scope and requirements in one place.</p>
+            </div>
+            <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.edit', $project) }}">
+                <i class="fas fa-pen me-1" aria-hidden="true"></i>Edit requirements
+            </a>
+        </div>
+        <div class="card-body">
+            @if ($project->requirements_notes)
+                <p class="mb-4" style="white-space: pre-line">{{ $project->requirements_notes }}</p>
+            @endif
+            <h3 class="h6">Checklist</h3>
+            @forelse ($project->requirements as $requirement)
+                <div class="d-flex align-items-start gap-2 py-2 border-bottom">
+                    <i class="fas {{ $requirement->is_completed ? 'fa-check-square text-success' : 'fa-square text-body-secondary' }} mt-1"
+                        aria-hidden="true"></i>
+                    <span @class(['text-decoration-line-through text-body-secondary' => $requirement->is_completed])>
+                        {{ $requirement->requirement }}
+                    </span>
+                    <span class="visually-hidden">{{ $requirement->is_completed ? 'Complete' : 'Incomplete' }}</span>
+                </div>
+            @empty
+                <p class="text-body-secondary mb-0">No requirements have been added yet.</p>
+            @endforelse
+        </div>
+    </section>
 
     <div class="card project-panel mb-4" id="project-schedule">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">

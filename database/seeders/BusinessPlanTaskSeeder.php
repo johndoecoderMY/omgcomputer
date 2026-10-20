@@ -22,6 +22,7 @@ class BusinessPlanTaskSeeder extends Seeder
                 'subtasks' => [
                     'Compare premises rent, utilities, deposits, and lease terms',
                     'Confirm business registration and local council requirements',
+                    'Register OMG Computer with SSM',
                 ],
             ],
             [
@@ -46,6 +47,9 @@ class BusinessPlanTaskSeeder extends Seeder
                 'subtasks' => [
                     'Prepare local launch materials and business profile information',
                     'Publish the student consultation and technical mentoring service menu',
+                    'Register OMG Computer on Meta for business pages and social media',
+                    'Register the shop on an e-commerce platform',
+                    'Register for a payment gateway',
                 ],
             ],
         ];

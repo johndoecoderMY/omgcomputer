@@ -74,11 +74,14 @@ class ProjectController extends Controller
     {
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
+        $requirements = $data['requirements'] ?? [];
         unset($data['customer_id']);
+        unset($data['requirements']);
 
-        $project = DB::transaction(function () use ($data, $customerId): Project {
+        $project = DB::transaction(function () use ($data, $customerId, $requirements): Project {
             $project = Project::create($data);
             $this->syncCustomer($project, $customerId);
+            $this->syncRequirements($project, $requirements);
 
             return $project;
         });
@@ -116,6 +119,7 @@ class ProjectController extends Controller
             'events' => fn ($query) => $query->where('starts_at', '>=', now()->startOfDay())
                 ->orderBy('starts_at')
                 ->limit(10),
+            'requirements',
         ]);
         $project->loadCount('tasks');
         $project->loadCount([
@@ -343,7 +347,7 @@ class ProjectController extends Controller
     public function edit(Project $project): View
     {
         return view('projects.edit', [
-            'project' => $project->load('customers'),
+            'project' => $project->load('customers', 'requirements'),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
         ]);
     }
@@ -352,11 +356,14 @@ class ProjectController extends Controller
     {
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
+        $requirements = $data['requirements'] ?? [];
         unset($data['customer_id']);
+        unset($data['requirements']);
 
-        DB::transaction(function () use ($project, $data, $customerId): void {
+        DB::transaction(function () use ($project, $data, $customerId, $requirements): void {
             $project->update($data);
             $this->syncCustomer($project, $customerId);
+            $this->syncRequirements($project, $requirements);
         });
 
         return redirect()
@@ -378,8 +385,46 @@ class ProjectController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:5000'],
+            'requirements_notes' => ['nullable', 'string', 'max:5000'],
+            'requirements' => ['sometimes', 'array', 'max:100'],
+            'requirements.*.id' => ['nullable', 'integer', 'distinct'],
+            'requirements.*.requirement' => ['required', 'string', 'max:500'],
+            'requirements.*.is_completed' => ['sometimes', 'boolean'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
         ]);
+    }
+
+    private function syncRequirements(Project $project, array $requirements): void
+    {
+        $existingIds = $project->requirements()->pluck('id')->all();
+        $submittedIds = array_values(array_filter(array_map(
+            fn (array $requirement): ?int => isset($requirement['id']) ? (int) $requirement['id'] : null,
+            $requirements,
+        )));
+
+        if (array_diff($submittedIds, $existingIds) !== []) {
+            throw ValidationException::withMessages([
+                'requirements' => 'Requirements must belong to this project.',
+            ]);
+        }
+
+        $keptIds = [];
+        foreach ($requirements as $index => $requirement) {
+            $values = [
+                'requirement' => $requirement['requirement'],
+                'is_completed' => (bool) ($requirement['is_completed'] ?? false),
+                'sort_order' => $index,
+            ];
+
+            if (isset($requirement['id'])) {
+                $project->requirements()->whereKey($requirement['id'])->update($values);
+                $keptIds[] = (int) $requirement['id'];
+            } else {
+                $keptIds[] = $project->requirements()->create($values)->id;
+            }
+        }
+
+        $project->requirements()->whereNotIn('id', $keptIds)->delete();
     }
 
     private function syncCustomer(Project $project, ?int $customerId): void

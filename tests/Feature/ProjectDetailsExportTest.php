@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\ProjectTechnology;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\FlowChartPngRenderer;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +97,103 @@ class ProjectDetailsExportTest extends TestCase
         $this->assertDatabaseMissing('project_technologies', ['id' => $technology->id]);
     }
 
+    public function test_project_requirements_can_be_saved_listed_and_exported(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->post(route('projects.store'), [
+            'name' => 'Repair booking portal',
+            'requirements_notes' => 'Customer must be able to book online.',
+            'requirements' => [
+                ['requirement' => 'Allow customers to select a repair slot.'],
+                ['requirement' => 'Send a booking confirmation.', 'is_completed' => '1'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $project = Project::query()->where('name', 'Repair booking portal')->firstOrFail();
+        $requirements = $project->requirements()->orderBy('sort_order')->get();
+        $this->assertCount(2, $requirements);
+        $this->assertTrue($requirements[1]->is_completed);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Project requirements')
+            ->assertSee('Requirements checklist and notes')
+            ->assertSee('Customer must be able to book online.')
+            ->assertSee('Allow customers to select a repair slot.')
+            ->assertSee('Send a booking confirmation.');
+
+        $this->get(route('projects.edit', $project))
+            ->assertOk()
+            ->assertSee('Requirements checklist')
+            ->assertSee('Allow customers to select a repair slot.');
+
+        $this->put(route('projects.update', $project), [
+            'name' => $project->name,
+            'requirements_notes' => 'Updated scope notes.',
+            'requirements' => [
+                ['id' => $requirements[0]->id, 'requirement' => 'Support online repair bookings.', 'is_completed' => '1'],
+                ['requirement' => 'Notify customers by email.'],
+            ],
+        ])->assertSessionHasNoErrors()
+            ->assertRedirect(route('projects.show', $project));
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'requirements_notes' => 'Updated scope notes.',
+        ]);
+        $this->assertDatabaseHas('project_requirements', [
+            'id' => $requirements[0]->id,
+            'requirement' => 'Support online repair bookings.',
+            'is_completed' => true,
+        ]);
+        $this->assertDatabaseMissing('project_requirements', ['id' => $requirements[1]->id]);
+        $this->assertDatabaseHas('project_requirements', [
+            'project_id' => $project->id,
+            'requirement' => 'Notify customers by email.',
+        ]);
+
+        $project->requirements_notes = 'Updated scope notes.';
+        $project->setRelation('requirements', $project->requirements()->orderBy('sort_order')->get());
+        $pdfHtml = view('projects.pdf', [
+            'project' => $project,
+            'sections' => ['requirements'],
+            'flowCharts' => collect(),
+        ])->render();
+        $this->assertStringContainsString('Updated scope notes.', $pdfHtml);
+        $this->assertStringContainsString('Support online repair bookings.', $pdfHtml);
+        $this->assertStringContainsString('Notify customers by email.', $pdfHtml);
+
+        $this->post(route('projects.export', $project), [
+            'sections' => ['requirements'],
+            'flowchart_mode' => 'all',
+        ])->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_project_requirements_cannot_be_reassigned_from_another_project(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $project = Project::query()->create(['name' => 'Original project']);
+        $otherProject = Project::query()->create(['name' => 'Other project']);
+        $requirement = $otherProject->requirements()->create([
+            'requirement' => 'Keep this requirement on its project.',
+        ]);
+
+        $this->put(route('projects.update', $project), [
+            'name' => $project->name,
+            'requirements' => [
+                ['id' => $requirement->id, 'requirement' => 'Attempted reassignment.'],
+            ],
+        ])->assertSessionHasErrors('requirements');
+
+        $this->assertDatabaseHas('project_requirements', [
+            'id' => $requirement->id,
+            'project_id' => $otherProject->id,
+            'requirement' => 'Keep this requirement on its project.',
+        ]);
+    }
+
     public function test_project_pdf_can_include_selected_sections_and_linked_flowcharts_but_not_tasks_by_default(): void
     {
         $user = User::factory()->create();
@@ -176,19 +274,33 @@ class ProjectDetailsExportTest extends TestCase
         $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-', $response->getContent());
         preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $pageMatches);
-        $this->assertGreaterThanOrEqual(3, count($pageMatches[0]));
+        $this->assertCount(3, $pageMatches[0], 'Project details followed by two flow charts should have no empty pages.');
         $this->assertFalse(collect($queries)->contains(fn (string $sql): bool => str_contains(strtolower($sql), 'from "tasks"')));
+
+        $flowChartOnlyResponse = $this->post(route('projects.export', $project), [
+            'sections' => ['flowcharts'],
+            'flowchart_mode' => 'all',
+        ]);
+        $flowChartOnlyResponse->assertOk();
+        preg_match_all('/\/Type\s*\/Page\b/', $flowChartOnlyResponse->getContent(), $flowChartOnlyPages);
+        $this->assertCount(2, $flowChartOnlyPages[0], 'Each flow chart should use one page, with no blank pages between or after them.');
 
         $flowCharts = FlowChart::query()->whereIn('id', [$chart->id, $secondChart->id])->get();
         $flowCharts->each(fn (FlowChart $flowChart) => $flowChart->makeVisible('steps'));
+        $flowChartImages = $flowCharts->mapWithKeys(fn (FlowChart $flowChart): array => [
+            $flowChart->id => app(FlowChartPngRenderer::class)->render($flowChart),
+        ]);
         $pdfHtml = view('projects.pdf', [
             'project' => $project,
             'sections' => ['flowcharts'],
             'flowCharts' => $flowCharts,
+            'flowChartImages' => $flowChartImages,
         ])->render();
         $this->assertSame(2, substr_count($pdfHtml, 'class="flow-chart-page"'));
-        $this->assertStringContainsString('.flow-chart-page { page-break-before: always; }', $pdfHtml);
-        $this->assertStringContainsString('width="175.00mm"', $pdfHtml);
+        $this->assertStringContainsString('<pagebreak />', $pdfHtml);
+        $this->assertSame(2, substr_count($pdfHtml, 'src="data:image/png;base64,'));
+        $this->assertStringContainsString('Flow chart: Booking process flow', $pdfHtml);
+        $this->assertStringNotContainsString('<svg', $pdfHtml);
 
         $this->get(route('projects.show', $project))
             ->assertOk()
@@ -201,6 +313,47 @@ class ProjectDetailsExportTest extends TestCase
             ->assertSee('8.3')
             ->assertSee('FullCalendar')
             ->assertSee('Secret internal task title');
+    }
+
+    public function test_flow_chart_pdf_images_wrap_long_labels_without_clipping(): void
+    {
+        $flowChart = FlowChart::query()->create([
+            'title' => 'Long flow chart labels',
+            'category' => 'service',
+            'steps' => [
+                [
+                    'id' => 'start',
+                    'label' => 'Identifies a goal or current challenge for the project',
+                    'kind' => 'start',
+                    'connections' => [],
+                ],
+            ],
+        ]);
+        $shortFlowChart = FlowChart::query()->create([
+            'title' => 'Short flow chart labels',
+            'category' => 'service',
+            'steps' => [[
+                'id' => 'start',
+                'label' => 'Start',
+                'kind' => 'start',
+                'connections' => [],
+            ]],
+        ]);
+
+        $renderer = app(FlowChartPngRenderer::class);
+        $image = $renderer->render($flowChart);
+        $this->assertStringStartsWith('data:image/png;base64,', $image['src']);
+        $png = base64_decode(substr($image['src'], strlen('data:image/png;base64,')), true);
+        $this->assertNotFalse($png);
+        $imageSize = getimagesizefromstring($png);
+        $this->assertIsArray($imageSize);
+        $this->assertSame(IMAGETYPE_PNG, $imageSize[2]);
+
+        $shortImage = $renderer->render($shortFlowChart);
+        $shortPng = base64_decode(substr($shortImage['src'], strlen('data:image/png;base64,')), true);
+        $shortImageSize = getimagesizefromstring($shortPng);
+        $this->assertGreaterThan($shortImageSize[1], $imageSize[1]);
+        $this->assertLessThanOrEqual(185, $image['height']);
     }
 
     public function test_project_pdf_can_include_a_task_gantt_chart_when_selected(): void
@@ -239,16 +392,24 @@ class ProjectDetailsExportTest extends TestCase
         ]);
 
         $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $ganttPages);
+        $this->assertCount(1, $ganttPages[0], 'A Gantt-only export should not include a blank leading or trailing page.');
         $this->assertTrue(collect($queries)->contains(fn (string $sql): bool => str_contains(strtolower($sql), 'tasks')));
         $project->load('tasks.subtasks');
+        $flowCharts = collect();
         $pdfHtml = view('projects.pdf', [
             'project' => $project,
             'sections' => ['gantt'],
-            'flowCharts' => collect(),
+            'flowCharts' => $flowCharts,
+            'flowChartImages' => collect(),
         ])->render();
         $this->assertStringContainsString('Exportable scheduled task', $pdfHtml);
         $this->assertStringContainsString('Nov 1, 2026', $pdfHtml);
         $this->assertStringContainsString('class="project-gantt-chart"', $pdfHtml);
+        $this->assertStringContainsString('.project-gantt-chart { display: block; margin: 0 auto; }', $pdfHtml);
+        $this->assertStringContainsString('.flow-chart-diagram { display: block; margin: 8pt auto 0; }', $pdfHtml);
+        $this->assertStringContainsString('<div class="gantt-section">', $pdfHtml);
+        $this->assertStringNotContainsString('page-break-before: always;', $pdfHtml);
         $this->assertStringContainsString('<rect', $pdfHtml);
         $this->assertStringContainsString('Schedule', $pdfHtml);
         $this->assertStringContainsString('fill="#f34303"', $pdfHtml);

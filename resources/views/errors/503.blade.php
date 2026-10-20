@@ -1,5 +1,6 @@
 @extends('errors.layout')
-@section('title', 'Temporarily unavailable')
+
+@section('title', 'Service unavailable')
 @section('code', '503')
-@section('heading', 'We’ll be back soon')
-@section('message', 'The service is temporarily unavailable. Please try again shortly.')
+@section('heading', 'We will be back soon')
+@section('message', 'The service is temporarily unavailable. Please try again in a little while.')
