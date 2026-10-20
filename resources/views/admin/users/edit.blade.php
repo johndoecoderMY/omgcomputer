@@ -66,8 +66,8 @@
             </div>
             <div class="col-md-8">
                 <label class="form-label" for="photo">Profile photo</label>
-                <input class="form-control" id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
-                <div class="form-text">JPG, PNG, or WebP; maximum 2 MB.</div>
+                <x-image-upload-input id="photo" name="photo" :multiple="false" :required="false" />
+                <div class="form-text">JPG, PNG, or WebP; maximum 10 MB.</div>
             </div>
             @if ($user->profile_photo_path)
                 <div class="col-md-4 d-flex align-items-end">

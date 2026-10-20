@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\ProfileActivity;
 use App\Models\Team;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -26,8 +27,26 @@ class ProfileTest extends TestCase
         $response->assertOk()
             ->assertSee('Overview')
             ->assertSee('Edit profile')
+            ->assertSee('Take photo')
             ->assertSee('Security')
             ->assertSee('Activity');
+    }
+
+    public function test_customer_profile_hides_team_and_department_information(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $this->actingAs($customer)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertDontSee('Team member')
+            ->assertDontSee('No department assigned')
+            ->assertDontSee('Not assigned')
+            ->assertDontSee('>Team<', false)
+            ->assertDontSee('>Department<', false)
+            ->assertDontSee('Team directory');
     }
 
     public function test_member_profiles_show_phone_but_hide_private_address(): void
@@ -134,10 +153,22 @@ class ProfileTest extends TestCase
         Storage::disk('public')->assertMissing($replacementPath);
     }
 
-    public function test_profile_photo_must_be_a_supported_image_under_two_megabytes(): void
+    public function test_profile_photo_upload_accepts_camera_sized_images_and_rejects_unsupported_files(): void
     {
         Storage::fake('public');
         $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => $user->email,
+                'photo' => UploadedFile::fake()->image('camera-photo.jpg')->size(3500),
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertNotNull($user->fresh()->profile_photo_path);
+        $cameraPhotoPath = $user->fresh()->profile_photo_path;
 
         $this->actingAs($user)
             ->from(route('profile.edit'))
@@ -149,7 +180,7 @@ class ProfileTest extends TestCase
             ->assertRedirect(route('profile.edit'))
             ->assertSessionHasErrors('photo');
 
-        $this->assertNull($user->fresh()->profile_photo_path);
+        $this->assertSame($cameraPhotoPath, $user->fresh()->profile_photo_path);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

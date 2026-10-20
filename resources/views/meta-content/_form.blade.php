@@ -33,8 +33,8 @@
         </div>
         <div class="col-12">
             <label class="form-label" for="meta-media">Image or video</label>
-            <input class="form-control" id="meta-media" name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4">
-            <div class="form-text">Images: JPEG, PNG, or WebP (Instagram requires JPEG). Reels: MP4. Maximum upload size: 100 MB.</div>
+            <x-image-upload-input id="meta-media" name="media" :multiple="false" :required="false" accept="image/jpeg,image/png,image/webp,video/mp4" camera-label="Take photo for image posts" camera-media-type-id="meta-media-type" camera-media-type-value="image" />
+            <div class="form-text">Choose a file for images or MP4 reels. Use the camera for image posts. Images: JPEG, PNG, or WebP (Instagram requires JPEG). Maximum upload size: 100 MB.</div>
             @if ($post?->media_path)
                 <div class="small text-body-secondary mt-2">A media file is already attached. Upload a replacement only if needed.</div>
             @endif

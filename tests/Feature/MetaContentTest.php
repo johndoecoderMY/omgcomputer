@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\MetaContentPost;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\UploadedFile;
@@ -30,6 +31,20 @@ class MetaContentTest extends TestCase
             'services.meta.instagram_user_id' => 'instagram-456',
             'services.meta.graph_api_version' => 'v25.0',
         ]);
+    }
+
+    public function test_image_media_form_offers_camera_capture_and_file_upload(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->get(route('meta-content.create'))
+            ->assertOk()
+            ->assertSee('Take photo for image posts')
+            ->assertSee('Choose a file for images or MP4 reels.')
+            ->assertSee('capture', false);
     }
 
     public function test_staff_can_save_and_schedule_meta_content_and_view_it_in_the_sidebar_section(): void

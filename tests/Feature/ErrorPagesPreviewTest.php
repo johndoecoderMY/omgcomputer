@@ -12,13 +12,20 @@ class ErrorPagesPreviewTest extends TestCase
 
     public function test_non_customer_users_can_preview_error_pages_from_the_error_sidebar(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->seed(\Database\Seeders\PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
 
         $this->get(route('error-pages.preview', '404'))
-            ->assertOk()
+            ->assertNotFound()
             ->assertSee('Error page previews')
             ->assertSee('404 · Not found')
             ->assertSee('Page not found');
+
+        $this->get(route('error-pages.preview', '403'))
+            ->assertForbidden()
+            ->assertSee('Access denied');
 
         $this->get(route('dashboard'))
             ->assertOk()
@@ -34,5 +41,14 @@ class ErrorPagesPreviewTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('error-pages.preview', '999'))
             ->assertNotFound();
+    }
+
+    public function test_real_not_found_errors_do_not_show_the_preview_navigation(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/route-that-does-not-exist')
+            ->assertNotFound()
+            ->assertSee('Page not found')
+            ->assertDontSee('Error page previews');
     }
 }

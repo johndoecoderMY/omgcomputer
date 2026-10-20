@@ -164,7 +164,7 @@ class AdminUserController extends Controller
             'address' => ['nullable', 'string', 'max:2000'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['required', 'integer', 'distinct', 'exists:teams,id'],
-            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'remove_photo' => ['sometimes', 'boolean'],
         ]);
 

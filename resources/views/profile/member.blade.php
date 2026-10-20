@@ -19,7 +19,7 @@
 
     <div class="row g-3">
         <aside class="col-12 col-xl-3">
-            @include('profile._identity-card', ['isSelf' => false])
+            @include('profile._identity-card', ['isSelf' => false, 'isCustomerAccount' => $isCustomerAccount])
         </aside>
         <main class="col-12 col-xl-9">
             <div class="card p-2">
@@ -44,14 +44,16 @@
                                 <span class="profile-info-value text-body-secondary">Not provided</span>
                             @endif
                         </div>
-                        <div class="col-sm-6 profile-info-item">
-                            <span class="profile-info-label">Team</span>
-                            <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
-                        </div>
-                        <div class="col-sm-6 profile-info-item">
-                            <span class="profile-info-label">Department</span>
-                            <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
-                        </div>
+                        @unless ($isCustomerAccount)
+                            <div class="col-sm-6 profile-info-item">
+                                <span class="profile-info-label">Team</span>
+                                <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
+                            </div>
+                            <div class="col-sm-6 profile-info-item">
+                                <span class="profile-info-label">Department</span>
+                                <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
+                            </div>
+                        @endunless
                         <div class="col-sm-6 profile-info-item">
                             <span class="profile-info-label">Member since</span>
                             <span class="profile-info-value">{{ $user->created_at->format('F Y') }}</span>

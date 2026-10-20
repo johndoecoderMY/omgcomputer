@@ -53,7 +53,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::get('/error-pages/{code}', function (string $code) {
     abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);
 
-    return response()->view("errors.{$code}", [], 200);
+    return response()->view("errors.{$code}", [], (int) $code);
 })->middleware(['auth', 'password.changed', 'verified', 'not-customer'])->name('error-pages.preview');
 
 Route::prefix('book')->name('bookings.')->controller(BookingController::class)->group(function (): void {

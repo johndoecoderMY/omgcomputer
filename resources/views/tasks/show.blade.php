@@ -61,7 +61,7 @@
         <form class="card-body border-bottom" method="POST" action="{{ route('tasks.attachments.store', $task) }}" enctype="multipart/form-data">
             @csrf
             @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
-            <div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="task-photos">Photos</label><input class="form-control" id="task-photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple required></div><div class="col-md-5"><label class="form-label" for="task-photo-caption">Caption</label><input class="form-control" id="task-photo-caption" name="caption" maxlength="255" placeholder="What should the team notice?"></div><div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Upload photos</button></div></div>
+            <div class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label" for="task-photos">Photos</label><x-image-upload-input id="task-photos" name="photos[]" :multiple="true" :required="true" /></div><div class="col-md-5"><label class="form-label" for="task-photo-caption">Caption</label><input class="form-control" id="task-photo-caption" name="caption" maxlength="255" placeholder="What should the team notice?"></div><div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Upload photos</button></div></div>
             <div class="form-text">Upload up to 8 JPG, PNG, or WebP images, up to 10 MB each.</div>
         </form>
         @endif

@@ -34,6 +34,10 @@ class AdminAccessAndProjectManagementTest extends TestCase
             ->assertSee('Roles & permissions', false)
             ->assertSee('Permissions matrix')
             ->assertSee('Role information')
+            ->assertSee('data-bs-target="#add-permission-modal"', false)
+            ->assertSee('id="role-permissions-tab"', false)
+            ->assertSee('id="role-users-tab"', false)
+            ->assertSee('id="all-permissions-tab"', false)
             ->assertDontSee('User roles');
         $this->get(route('admin.users.index'))->assertOk()->assertSee('Members');
         $this->get(route('admin.users.customers'))->assertOk()->assertSee('Customer accounts');

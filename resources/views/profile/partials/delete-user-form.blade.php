@@ -3,7 +3,7 @@
     @csrf
     @method('DELETE')
     <label class="form-label" for="delete-account-password">Current password</label>
-    <div class="d-flex flex-wrap gap-2">
+    <div class="d-flex flex-wrap justify-content-end gap-2">
         <input class="form-control @error('password', 'userDeletion') is-invalid @enderror"
             id="delete-account-password" name="password" type="password" autocomplete="current-password" required
             style="max-width: 24rem">

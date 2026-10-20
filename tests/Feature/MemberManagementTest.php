@@ -203,4 +203,21 @@ class MemberManagementTest extends TestCase
         $customers->assertJsonFragment(['email' => $createdCustomer->email]);
         $customers->assertJsonFragment(['email' => $customer->email]);
     }
+
+    public function test_customer_account_profile_hides_team_and_department_fields(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+        $this->actingAs($admin)
+            ->get(route('members.show', $customer))
+            ->assertOk()
+            ->assertSee('Customer account')
+            ->assertDontSee('Team member')
+            ->assertDontSee('No department assigned')
+            ->assertDontSee('Not assigned')
+            ->assertDontSee('Team directory');
+    }
 }

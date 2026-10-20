@@ -164,6 +164,8 @@ class ProjectTaskTest extends TestCase
             ->assertOk()
             ->assertSee('data-datatable', false)
             ->assertSee('data-datatable-filters', false)
+            ->assertSee('Could not load this table.')
+            ->assertSee('timeout: 30000', false)
             ->assertSee(route('tasks.datatable'), false);
         $this->get(route('tasks.index', ['status' => 'done', 'priority' => 'urgent']))
             ->assertOk()
@@ -284,6 +286,7 @@ class ProjectTaskTest extends TestCase
             ->assertOk()
             ->assertSee('Jordan Lee')
             ->assertSee('Sam Rivera')
+            ->assertSee('Take photo')
             ->assertSee('Back to tasks');
 
         $this->actingAs($owner)->delete(route('tasks.destroy', $task))

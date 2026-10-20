@@ -160,7 +160,7 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-5">
                     <label class="form-label" for="project-photos">Photos</label>
-                    <input class="form-control" id="project-photos" name="photos[]" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                    <x-image-upload-input id="project-photos" name="photos[]" :multiple="true" :required="true" />
                 </div>
                 <div class="col-md-5">
                     <label class="form-label" for="project-photo-caption">Caption</label>

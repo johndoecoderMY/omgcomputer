@@ -8,6 +8,9 @@
         description="Choose a role to review its members and configure its permissions."
         :back-url="route('dashboard')" back-label="Dashboard">
         <x-slot:actions>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#add-permission-modal">
+                <span class="fas fa-plus me-2" aria-hidden="true"></span>Add permission
+            </button>
             <a class="btn btn-outline-primary" href="{{ route('admin.users.index') }}">
                 <span class="fas fa-users me-2" aria-hidden="true"></span>Members
             </a>
@@ -30,23 +33,30 @@
         </div>
     @endif
 
-    <div class="row g-3 mb-4">
-        <div class="col-lg-12">
-            <form class="card h-100 p-2" method="POST" action="{{ route('admin.access.permissions.store') }}">
-                @csrf
-                @if ($selectedRole)
-                    <input type="hidden" name="selected_role_id" value="{{ $selectedRole->id }}">
-                @endif
-                <div class="card-header bg-body"><h2 class="h5 mb-0">Add permission</h2></div>
-                <div class="card-body d-flex flex-wrap align-items-end gap-2">
-                    <div class="flex-grow-1">
-                        <label class="form-label" for="new-permission-name">Permission name</label>
-                        <input class="form-control" id="new-permission-name" name="name" value="{{ old('name') }}"
-                            placeholder="for example, projects.approve" maxlength="150" required>
+    <div class="modal fade" id="add-permission-modal" tabindex="-1" aria-labelledby="add-permission-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('admin.access.permissions.store') }}">
+                    @csrf
+                    @if ($selectedRole)
+                        <input type="hidden" name="selected_role_id" value="{{ $selectedRole->id }}">
+                    @endif
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="add-permission-title">Add permission</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <button class="btn btn-primary" type="submit">Create permission</button>
-                </div>
-            </form>
+                    <div class="modal-body">
+                        <label class="form-label" for="new-permission-name">Permission name</label>
+                        <input class="form-control @error('name') is-invalid @enderror" id="new-permission-name" name="name"
+                            value="{{ old('name') }}" placeholder="for example, projects.approve" maxlength="150" required>
+                        @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" type="submit">Create permission</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -62,9 +72,9 @@
                         <div class="list-group-item d-flex align-items-center justify-content-between gap-2 {{ $selectedRole?->is($role) ? 'active' : '' }}">
                             <a class="d-flex align-items-center gap-3 text-decoration-none flex-grow-1 {{ $selectedRole?->is($role) ? 'text-white' : 'text-body' }}"
                                 href="{{ route('admin.access.index', ['role' => $role->id]) }}">
-                                <span class="avatar avatar-l">
-                                    <span class="avatar-name rounded-circle {{ $role->name === 'admin' ? 'bg-danger-subtle text-danger' : ($role->name === 'customer' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary') }}">
-                                        <span class="fas {{ $role->name === 'admin' ? 'fa-shield-alt' : ($role->name === 'customer' ? 'fa-user-tag' : 'fa-user') }}"></span>
+                                <span class="avatar avatar-l d-flex align-items-center justify-content-center flex-shrink-0">
+                                    <span class="avatar-name rounded-circle d-flex align-items-center justify-content-center w-100 h-100 {{ $role->name === 'admin' ? 'bg-danger-subtle text-danger' : ($role->name === 'customer' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary') }}">
+                                        <span class="fas {{ $role->name === 'admin' ? 'fa-shield-alt' : ($role->name === 'customer' ? 'fa-user-tag' : 'fa-user') }}" aria-hidden="true"></span>
                                     </span>
                                 </span>
                                 <span>
@@ -100,6 +110,26 @@
 
         <div class="col-xl-8">
             @if ($selectedRole)
+                <div class="card p-2">
+                    <ul class="nav nav-tabs card-header-tabs" id="role-access-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="role-permissions-tab" data-bs-toggle="tab"
+                                data-bs-target="#role-permissions-pane" type="button" role="tab"
+                                aria-controls="role-permissions-pane" aria-selected="true">Permission matrix</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="role-users-tab" data-bs-toggle="tab"
+                                data-bs-target="#role-users-pane" type="button" role="tab"
+                                aria-controls="role-users-pane" aria-selected="false">Users <span class="badge text-bg-light border ms-1">{{ $selectedRole->users->count() }}</span></button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="all-permissions-tab" data-bs-toggle="tab"
+                                data-bs-target="#all-permissions-pane" type="button" role="tab"
+                                aria-controls="all-permissions-pane" aria-selected="false">All permissions <span class="badge text-bg-light border ms-1">{{ $permissions->count() }}</span></button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="role-permissions-pane" role="tabpanel" aria-labelledby="role-permissions-tab" tabindex="0">
                 <form class="card p-2 mb-3" method="POST" action="{{ route('admin.access.roles.update', $selectedRole) }}">
                     @csrf
                     @method('PUT')
@@ -156,7 +186,8 @@
                         <button class="btn btn-primary" type="submit">Save permissions</button>
                     </div>
                 </form>
-
+                        </div>
+                        <div class="tab-pane fade" id="role-users-pane" role="tabpanel" aria-labelledby="role-users-tab" tabindex="0">
                 <div class="card p-2">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center">
                         <h2 class="h5 mb-0">Users with {{ ucfirst($selectedRole->name) }} role</h2>
@@ -183,17 +214,8 @@
                         </table>
                     </div>
                 </div>
-            @else
-                <div class="card p-2"><div class="card-body text-center text-body-secondary">Create a role to configure its permissions.</div></div>
-            @endif
-        </div>
-    </div>
-
-    <div class="card p-2 mt-4">
-        <div class="card-header bg-body d-flex justify-content-between align-items-center">
-            <h2 class="h5 mb-0">All permissions</h2>
-            <span class="badge text-bg-light border">{{ $permissions->count() }}</span>
-        </div>
+                        </div>
+                        <div class="tab-pane fade" id="all-permissions-pane" role="tabpanel" aria-labelledby="all-permissions-tab" tabindex="0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead><tr><th>Permission</th><th>Assigned to roles</th><th class="text-end">Action</th></tr></thead>
@@ -221,6 +243,14 @@
             </table>
         </div>
     </div>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="card p-2"><div class="card-body text-center text-body-secondary">Create a role to configure its permissions.</div></div>
+        @endif
+    </div>
+    </div>
 </div>
 @endsection
 
@@ -243,4 +273,14 @@
         refresh();
     });
 </script>
+@if ($errors->has('name'))
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('add-permission-modal');
+            if (modal && window.bootstrap) {
+                window.bootstrap.Modal.getOrCreateInstance(modal).show();
+            }
+        });
+    </script>
+@endif
 @endpush

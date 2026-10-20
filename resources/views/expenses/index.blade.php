@@ -121,8 +121,7 @@
                                     <form class="mt-2" method="POST" action="{{ route('expenses.attachments.store', [$category, $expense]) }}" enctype="multipart/form-data">
                                         @csrf
                                         <label class="form-label small" for="expense-photos-{{ $expense->id }}">Photos</label>
-                                        <input class="form-control form-control-sm" id="expense-photos-{{ $expense->id }}" name="photos[]"
-                                            type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                                        <x-image-upload-input id="expense-photos-{{ $expense->id }}" name="photos[]" :multiple="true" :required="true" input-class="form-control-sm" />
                                         <label class="form-label small mt-2" for="expense-caption-{{ $expense->id }}">Caption</label>
                                         <div class="input-group input-group-sm">
                                             <input class="form-control" id="expense-caption-{{ $expense->id }}" name="caption"

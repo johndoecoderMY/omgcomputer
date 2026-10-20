@@ -5,9 +5,8 @@
     <div class="row g-3">
         <div class="col-12">
             <label class="form-label" for="photo">Profile photo</label>
-            <input class="form-control @error('photo') is-invalid @enderror" id="photo" name="photo" type="file"
-                accept="image/jpeg,image/png,image/webp">
-            <div class="form-text">Upload a JPG, PNG, or WebP image up to 2 MB.</div>
+            <x-image-upload-input id="photo" name="photo" :multiple="false" :required="false" input-class="@error('photo') is-invalid @enderror" />
+            <div class="form-text">Upload a JPG, PNG, or WebP image up to 10 MB.</div>
             @error('photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
             @if ($user->profile_photo_path)
                 <div class="form-check mt-2">
@@ -41,5 +40,5 @@
             @error('address')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
     </div>
-    <div class="mt-3"><button class="btn btn-primary" type="submit">Save profile</button></div>
+    <div class="d-flex justify-content-end mt-3"><button class="btn btn-primary" type="submit">Save profile</button></div>
 </form>

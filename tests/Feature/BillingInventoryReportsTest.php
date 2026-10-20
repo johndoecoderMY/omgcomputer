@@ -111,7 +111,8 @@ class BillingInventoryReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Project billing and quotations')
             ->assertSee('Create quotation')
-            ->assertSee('Create invoice');
+            ->assertSee('Create invoice')
+            ->assertSee('Take photo');
 
         foreach (['quotation', 'invoice'] as $type) {
             $this->get(route('billing.create', ['type' => $type, 'project_id' => $project->id]))

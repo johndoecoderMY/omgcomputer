@@ -10,11 +10,13 @@
             @endif
         </div>
         <h2 class="h4 mb-1">{{ $user->name }}</h2>
-        <p class="profile-role mb-2">{{ $user->teams->pluck('name')->join(', ') ?: 'Team member' }}</p>
-        <p class="profile-location mb-0">
-            <span class="fas fa-building me-1" aria-hidden="true"></span>
-            {{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'No department assigned' }}
-        </p>
+        @unless ($user->hasRole('customer'))
+            <p class="profile-role mb-2">{{ $user->teams->pluck('name')->join(', ') ?: 'Team member' }}</p>
+            <p class="profile-location mb-0">
+                <span class="fas fa-building me-1" aria-hidden="true"></span>
+                {{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'No department assigned' }}
+            </p>
+        @endunless
     </div>
     @if ($isSelf)
         <div class="list-group list-group-flush text-start">
@@ -28,9 +30,9 @@
                 <span class="fas fa-shield-halved me-2" aria-hidden="true"></span>Security
             </button>
         </div>
-    @else
-        <div class="card-footer bg-body">
-            <a class="btn btn-outline-primary w-100" href="{{ route('teams.index') }}">
+    @elseif (!$user->hasRole('customer'))
+        <div class="card-footer bg-body d-flex justify-content-end">
+            <a class="btn btn-outline-primary" href="{{ route('teams.index') }}">
                 <span class="fas fa-users me-2" aria-hidden="true"></span>Team directory
             </a>
         </div>

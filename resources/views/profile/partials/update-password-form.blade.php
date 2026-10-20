@@ -15,5 +15,7 @@
             @error('password', 'updatePassword')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
     </div>
-    <button class="btn btn-primary mt-3" type="submit">Change password</button>
+    <div class="d-flex justify-content-end mt-3">
+        <button class="btn btn-primary" type="submit">Change password</button>
+    </div>
 </form>

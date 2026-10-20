@@ -62,15 +62,75 @@
             });
         });
 
+        window.jQuery.fn.dataTable.ext.errMode = 'none';
+
         document.querySelectorAll('table[data-datatable]').forEach((table) => {
             const columns = JSON.parse(table.dataset.columns || '[]');
             const filters = JSON.parse(table.dataset.datatableFilters || '[]');
             const $table = window.jQuery(table);
-            const dataTable = $table.DataTable({
+            const tableContainer = table.closest('.table-responsive') || table;
+            const retryNotice = document.createElement('div');
+            retryNotice.className = 'alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2';
+            retryNotice.setAttribute('role', 'alert');
+            retryNotice.hidden = true;
+
+            const retryMessage = document.createElement('span');
+            retryMessage.textContent = 'Could not load this table.';
+            const retryButton = document.createElement('button');
+            retryButton.className = 'btn btn-sm btn-warning';
+            retryButton.type = 'button';
+            retryButton.textContent = 'Retry';
+            retryNotice.append(retryMessage, retryButton);
+            tableContainer.parentNode.insertBefore(retryNotice, tableContainer);
+
+            let dataTable;
+            let retryCount = 0;
+            let retryTimer = null;
+
+            const clearRetry = () => {
+                if (retryTimer !== null) {
+                    window.clearTimeout(retryTimer);
+                    retryTimer = null;
+                }
+                retryCount = 0;
+                retryNotice.hidden = true;
+                retryButton.disabled = false;
+                retryButton.textContent = 'Retry';
+            };
+
+            const handleLoadFailure = () => {
+                retryNotice.hidden = false;
+                retryButton.disabled = false;
+                retryButton.textContent = 'Retry';
+
+                if (retryTimer !== null || retryCount >= 2) {
+                    return;
+                }
+
+                retryCount += 1;
+                retryButton.disabled = true;
+                retryButton.textContent = 'Retrying...';
+                retryTimer = window.setTimeout(() => {
+                    retryTimer = null;
+                    dataTable.ajax.reload(null, false);
+                }, 1000 * retryCount);
+            };
+
+            $table.on('xhr.dt', (_event, _settings, json) => {
+                if (json !== null) {
+                    clearRetry();
+                } else {
+                    handleLoadFailure();
+                }
+            });
+            $table.on('error.dt', handleLoadFailure);
+
+            dataTable = $table.DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
                     url: table.dataset.source,
+                    timeout: 30000,
                     data: (request) => {
                         filters.forEach(({ name, selector }) => {
                             const filter = document.querySelector(selector);
@@ -83,6 +143,17 @@
                 columns,
                 pageLength: 25,
                 order: [],
+            });
+
+            retryButton.addEventListener('click', () => {
+                if (retryTimer !== null) {
+                    window.clearTimeout(retryTimer);
+                    retryTimer = null;
+                }
+                retryCount = 0;
+                retryButton.disabled = true;
+                retryButton.textContent = 'Loading...';
+                dataTable.ajax.reload(null, false);
             });
 
             filters.forEach(({ selector }) => {
@@ -98,17 +169,5 @@
                     dataTable.search(search.value).draw();
                 });
             }
-
-            let retryScheduled = false;
-            $table.on('error.dt', function () {
-                if (retryScheduled) {
-                    return;
-                }
-
-                retryScheduled = true;
-                setTimeout(() => {
-                    dataTable.ajax.reload(null, false);
-                }, 1200);
-            });
         });
     </script>

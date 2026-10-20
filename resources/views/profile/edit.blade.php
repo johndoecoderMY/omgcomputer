@@ -48,7 +48,7 @@
                                     <h2 class="h5 mb-0">About</h2>
                                 </div>
                                 <p class="mb-0 text-body-secondary">
-                                    {{ $user->teams->pluck('description')->filter()->join(' · ') ?: 'Your profile keeps your contact details and account information in one place.' }}
+                                    {{ !$user->hasRole('customer') ? ($user->teams->pluck('description')->filter()->join(' · ') ?: 'Your profile keeps your contact details and account information in one place.') : 'Your profile keeps your contact details and account information in one place.' }}
                                 </p>
                             </div>
 
@@ -77,14 +77,16 @@
                                         <span class="profile-info-label">Address</span>
                                         <span class="profile-info-value">{{ $user->address ?: 'Not provided' }}</span>
                                     </div>
-                                    <div class="col-sm-6 profile-info-item">
-                                        <span class="profile-info-label">Team</span>
-                                        <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
-                                    </div>
-                                    <div class="col-sm-6 profile-info-item">
-                                        <span class="profile-info-label">Department</span>
-                                        <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
-                                    </div>
+                                    @unless ($user->hasRole('customer'))
+                                        <div class="col-sm-6 profile-info-item">
+                                            <span class="profile-info-label">Team</span>
+                                            <span class="profile-info-value">{{ $user->teams->pluck('name')->join(', ') ?: 'Not assigned' }}</span>
+                                        </div>
+                                        <div class="col-sm-6 profile-info-item">
+                                            <span class="profile-info-label">Department</span>
+                                            <span class="profile-info-value">{{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'Not assigned' }}</span>
+                                        </div>
+                                    @endunless
                                 </div>
                             </div>
                         </section>
