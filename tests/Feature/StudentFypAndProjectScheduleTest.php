@@ -68,6 +68,9 @@ class StudentFypAndProjectScheduleTest extends TestCase
             ->assertSee('event-details-modal')
             ->assertSee("moreLinkClick: 'popover'", false)
             ->assertSee('text-overflow: ellipsis', false)
+            ->assertSee("setProperty('background-color', backgroundColor, 'important')", false)
+            ->assertSee("setProperty('opacity', '1', 'important')", false)
+            ->assertSee("setProperty('color', textColor, 'important')", false)
             ->assertSee('eventClick:', false);
         $this->getJson(route('projects.calendar.events', [
             'start' => $startsAt->copy()->startOfMonth()->toIso8601String(),
@@ -77,6 +80,9 @@ class StudentFypAndProjectScheduleTest extends TestCase
             ->assertJsonCount(1)
             ->assertJsonPath('0.title', 'Weekly consultation')
             ->assertJsonPath('0.extendedProps.project', 'FYP Research Project')
+            ->assertJsonPath('0.backgroundColor', Event::BACKGROUND_COLORS['consultation'])
+            ->assertJsonPath('0.borderColor', Event::BACKGROUND_COLORS['consultation'])
+            ->assertJsonPath('0.textColor', Event::COLORS['consultation'])
             ->assertJsonPath('0.extendedProps.project_url', route('projects.show', $project).'#project-schedule')
             ->assertJsonPath('0.extendedProps.type', 'Consultation');
         $this->getJson(route('projects.calendar.events', [

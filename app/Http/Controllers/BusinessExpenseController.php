@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessExpense;
+use App\Services\WorkspaceNotifier;
 use App\Support\PdfAttachmentImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,14 +52,20 @@ class BusinessExpenseController extends Controller
         ]);
     }
 
-    public function store(Request $request, string $category): RedirectResponse
+    public function store(Request $request, string $category, WorkspaceNotifier $notifier): RedirectResponse
     {
         $this->ensureCategory($category);
         $data = $this->validateExpense($request);
         $data['category'] = $category;
         $data['user_id'] = $request->user()->id;
         $data['cycle_paid_amount'] = 0;
-        BusinessExpense::query()->create($data);
+        $expense = BusinessExpense::query()->create($data);
+        $notifier->notifyAdmins(
+            $request->user(),
+            BusinessExpense::CATEGORIES[$category].' added',
+            sprintf('%s was added: %s.', BusinessExpense::CATEGORIES[$category], $expense->name),
+            route('expenses.index', $category),
+        );
 
         return redirect()->route('expenses.index', $category)->with('success', 'Expense or renewal added.');
     }
@@ -76,24 +83,37 @@ class BusinessExpenseController extends Controller
         ]);
     }
 
-    public function update(Request $request, string $category, BusinessExpense $expense): RedirectResponse
+    public function update(Request $request, string $category, BusinessExpense $expense, WorkspaceNotifier $notifier): RedirectResponse
     {
         $this->ensureExpenseCategory($category, $expense);
         $data = $this->validateExpense($request);
         $expense->update($data);
+        $notifier->notifyAdmins(
+            $request->user(),
+            BusinessExpense::CATEGORIES[$category].' updated',
+            sprintf('%s was updated: %s.', BusinessExpense::CATEGORIES[$category], $expense->name),
+            route('expenses.index', $category),
+        );
 
         return redirect()->route('expenses.index', $category)->with('success', 'Expense or renewal updated.');
     }
 
-    public function destroy(string $category, BusinessExpense $expense): RedirectResponse
+    public function destroy(Request $request, string $category, BusinessExpense $expense, WorkspaceNotifier $notifier): RedirectResponse
     {
         $this->ensureExpenseCategory($category, $expense);
+        $expenseName = $expense->name;
         $expense->delete();
+        $notifier->notifyAdmins(
+            $request->user(),
+            BusinessExpense::CATEGORIES[$category].' removed',
+            sprintf('%s was removed: %s.', BusinessExpense::CATEGORIES[$category], $expenseName),
+            route('expenses.index', $category),
+        );
 
         return redirect()->route('expenses.index', $category)->with('success', 'Expense or renewal deleted.');
     }
 
-    public function storePayment(Request $request, string $category, BusinessExpense $expense): RedirectResponse
+    public function storePayment(Request $request, string $category, BusinessExpense $expense, WorkspaceNotifier $notifier): RedirectResponse
     {
         $this->ensureExpenseCategory($category, $expense);
         $data = $request->validate([
@@ -128,6 +148,12 @@ class BusinessExpenseController extends Controller
 
             $lockedExpense->save();
         });
+        $notifier->notifyAdmins(
+            $request->user(),
+            BusinessExpense::CATEGORIES[$category].' payment recorded',
+            sprintf('A payment was recorded for %s.', $expense->name),
+            route('expenses.index', $category),
+        );
 
         return redirect()->route('expenses.index', $category)->with('success', 'Payment recorded.');
     }

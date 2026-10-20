@@ -27,6 +27,16 @@ class Event extends Model
         'other' => '#748194',
     ];
 
+    public const BACKGROUND_COLORS = [
+        'consultation' => '#e7f1ff',
+        'debugging' => '#fbdbe1',
+        'mentoring' => '#d9f8eb',
+        'setup_workshop' => '#eee7f7',
+        'progress_review' => '#ffe6d5',
+        'tech_clinic' => '#d8f3ff',
+        'other' => '#e6e8ec',
+    ];
+
     protected $fillable = [
         'project_id',
         'title',

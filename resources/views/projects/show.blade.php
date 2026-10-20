@@ -827,6 +827,22 @@
                     url: @json(route('projects.calendar.events')),
                     extraParams: { project_id: @json($project->id) },
                 },
+                eventDidMount: (info) => {
+                    const backgroundColor = info.event.backgroundColor;
+                    const textColor = info.event.textColor;
+                    if (backgroundColor) {
+                        info.el.style.setProperty('background-color', backgroundColor, 'important');
+                        info.el.style.setProperty('border-color', backgroundColor, 'important');
+                    }
+                    info.el.style.setProperty('opacity', '1', 'important');
+                    if (textColor) {
+                        info.el.style.setProperty('color', textColor, 'important');
+                        info.el.querySelector('.fc-event-main')?.style.setProperty('color', textColor, 'important');
+                        info.el.querySelectorAll('.fc-event-title, .fc-event-time').forEach((element) => {
+                            element.style.setProperty('color', textColor, 'important');
+                        });
+                    }
+                },
                 dateClick: (info) => {
                     document.getElementById('calendar-event-start').value = `${info.dateStr.slice(0, 10)}T09:00`;
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('create-event-modal')).show();

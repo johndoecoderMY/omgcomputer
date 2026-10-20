@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Models\User;
+use App\Services\WorkspaceNotifier;
 use App\Support\StatusBadge;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -76,7 +77,7 @@ class BookingController extends Controller
                     'start' => $dateString,
                     'allDay' => true,
                     'display' => 'background',
-                    'color' => '#d1e7dd',
+                    'color' => '#d9f8eb',
                     'extendedProps' => ['available' => true],
                 ];
             }
@@ -98,7 +99,7 @@ class BookingController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         $serviceIds = ProductService::query()->pluck('id')->all();
         $data = $request->validate([
@@ -164,6 +165,12 @@ class BookingController extends Controller
 
             throw $exception;
         }
+        $notifier->notifyAdmins(
+            null,
+            'New booking received',
+            sprintf('%s booked %s for %s.', $booking->customer_name, $booking->service_name, $booking->starts_at->setTimezone(self::TIMEZONE)->format('M j, Y g:i A')),
+            route('bookings.index'),
+        );
 
         return redirect()->route('bookings.confirmation', $booking->reference);
     }
@@ -252,12 +259,14 @@ class BookingController extends Controller
             ->toJson();
     }
 
-    public function update(Request $request, Booking $booking): RedirectResponse
+    public function update(Request $request, Booking $booking, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(Booking::STATUSES))],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+        $previousAssigneeId = $booking->assigned_to;
+        $previousStatus = $booking->status;
         DB::transaction(function () use ($booking, $data, $request): void {
             $booking = Booking::query()->with('customer')->lockForUpdate()->findOrFail($booking->id);
             $booking->update($data);
@@ -268,6 +277,7 @@ class BookingController extends Controller
                     'customer_id' => $booking->customer_id,
                     'project_id' => $booking->customer?->project_id,
                     'assigned_to' => $data['assigned_to'] ?? null,
+                    'created_by_user_id' => $request->user()->id,
                     'device_type' => 'Computer',
                     'device_model' => $booking->device_model,
                     'issue_description' => trim($booking->service_name.".\n".($booking->request_notes ?? 'Appointment request converted to a repair ticket.')),
@@ -287,6 +297,25 @@ class BookingController extends Controller
                 $booking->update(['repair_ticket_id' => $ticket->id]);
             }
         });
+        $booking->refresh();
+        $notifier->notifyAdmins(
+            $request->user(),
+            'Booking updated',
+            sprintf('Booking %s for %s was updated to %s.', $booking->reference, $booking->customer_name, Booking::STATUSES[$booking->status]),
+            route('bookings.index'),
+        );
+        if ($booking->assigned_to && (
+            (int) $booking->assigned_to !== (int) $previousAssigneeId
+            || $booking->status !== $previousStatus
+        )) {
+            $notifier->notifyUsers(
+                User::query()->whereKey($booking->assigned_to)->get(),
+                $request->user(),
+                'Booking assigned to you',
+                sprintf('Booking %s for %s is assigned to you.', $booking->reference, $booking->customer_name),
+                route('bookings.index'),
+            );
+        }
 
         return back()->with('success', 'Booking updated.');
     }

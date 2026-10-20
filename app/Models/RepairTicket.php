@@ -34,6 +34,7 @@ class RepairTicket extends Model
         'customer_id',
         'project_id',
         'assigned_to',
+        'created_by_user_id',
         'device_type',
         'device_model',
         'serial_number',
@@ -69,6 +70,11 @@ class RepairTicket extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     public function project(): BelongsTo

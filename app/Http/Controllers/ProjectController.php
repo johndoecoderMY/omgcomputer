@@ -9,6 +9,7 @@ use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\ProjectEstimateItem;
 use App\Models\User;
+use App\Services\WorkspaceNotifier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,7 +77,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
@@ -84,14 +85,22 @@ class ProjectController extends Controller
         $assignees = $data['assignees'] ?? [];
         unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
-        $project = DB::transaction(function () use ($data, $customerId, $requirements, $assignees): Project {
-            $project = Project::create($data);
+        $project = DB::transaction(function () use ($data, $customerId, $requirements, $assignees, $request): Project {
+            $project = Project::create([...$data, 'created_by_user_id' => $request->user()->id]);
             $this->syncCustomer($project, $customerId);
             $this->syncRequirements($project, $requirements);
             $project->assignees()->sync($assignees);
 
             return $project;
         });
+        $project->load(['creator', 'assignees']);
+        $notifier->notifyUsers(
+            collect([$project->creator])->merge($project->assignees),
+            $request->user(),
+            'Project created',
+            sprintf('Project “%s” was created.', $project->name),
+            route('projects.show', $project),
+        );
 
         return redirect()
             ->route('projects.show', $project)
@@ -386,7 +395,7 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function update(Request $request, Project $project): RedirectResponse
+    public function update(Request $request, Project $project, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $this->validatedData($request);
         $customerId = $data['customer_id'] ?? null;
@@ -395,14 +404,28 @@ class ProjectController extends Controller
         $assignees = $data['assignees'] ?? [];
         unset($data['customer_id'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
-        DB::transaction(function () use ($project, $data, $customerId, $requirements, $assignees, $shouldSyncAssignees): void {
+        $assigneesChanged = false;
+        $projectChanged = false;
+        DB::transaction(function () use ($project, $data, $customerId, $requirements, $assignees, $shouldSyncAssignees, &$assigneesChanged, &$projectChanged): void {
             $project->update($data);
+            $projectChanged = $project->wasChanged();
             $this->syncCustomer($project, $customerId);
             $this->syncRequirements($project, $requirements);
             if ($shouldSyncAssignees) {
-                $project->assignees()->sync($assignees);
+                $changes = $project->assignees()->sync($assignees);
+                $assigneesChanged = $changes['attached'] !== [] || $changes['detached'] !== [];
             }
         });
+        if ($projectChanged || $assigneesChanged) {
+            $project->load(['creator', 'assignees']);
+            $notifier->notifyUsers(
+                collect([$project->creator])->merge($project->assignees),
+                $request->user(),
+                'Project updated',
+                sprintf('Project “%s” was updated.', $project->name),
+                route('projects.show', $project),
+            );
+        }
 
         return redirect()
             ->route('projects.show', $project)

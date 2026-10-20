@@ -26,6 +26,15 @@
 @endsection
 
 @push('scripts')
+<style>
+    #availability-calendar .fc-v-event .fc-event-main {
+        padding-left: 1rem;
+    }
+
+    #availability-calendar .fc-v-event .fc-event-main::after {
+        background-color: #00875a !important;
+    }
+</style>
 <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -46,6 +55,22 @@
                 right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
             },
             events: @json($events),
+            eventDidMount: (info) => {
+                const backgroundColor = info.event.backgroundColor;
+                const textColor = info.event.textColor;
+                if (backgroundColor) {
+                    info.el.style.setProperty('background-color', backgroundColor, 'important');
+                    info.el.style.setProperty('border-color', info.event.borderColor || backgroundColor, 'important');
+                }
+                info.el.style.setProperty('opacity', '1', 'important');
+                if (textColor) {
+                    info.el.style.setProperty('color', textColor, 'important');
+                    info.el.querySelector('.fc-event-main')?.style.setProperty('color', textColor, 'important');
+                    info.el.querySelectorAll('.fc-event-title, .fc-event-time').forEach((element) => {
+                        element.style.setProperty('color', textColor, 'important');
+                    });
+                }
+            },
             eventTimeFormat: {
                 hour: 'numeric',
                 minute: '2-digit',

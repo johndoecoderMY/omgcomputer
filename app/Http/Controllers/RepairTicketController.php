@@ -8,6 +8,7 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Services\AttachmentStorage;
+use App\Services\WorkspaceNotifier;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -98,7 +99,7 @@ class RepairTicketController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
@@ -122,6 +123,7 @@ class RepairTicketController extends Controller
             $ticket = RepairTicket::create([
                 ...$data,
                 'assigned_to' => $assignees[0] ?? null,
+                'created_by_user_id' => $request->user()->id,
                 'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'project_id' => $data['project_id'] ?? $customer->project_id,
                 'status' => 'new',
@@ -136,17 +138,26 @@ class RepairTicketController extends Controller
                 'status' => 'new',
                 'notes' => $data['issue_description'],
             ]);
-            $ticket->updates()->create([
-                'user_id' => $request->user()->id,
-                'title' => 'Device received',
-                'status' => 'new',
-                'notes' => $data['issue_description'],
-            ]);
 
             $ticket->assignees()->sync($assignees);
 
             return $ticket;
         });
+        $ticket->load(['creator', 'assignees']);
+        $notifier->notifyUsers(
+            $ticket->assignees,
+            $request->user(),
+            'Repair ticket assigned',
+            sprintf('You have been assigned repair ticket %s.', $ticket->ticket_number),
+            route('tickets.show', $ticket),
+        );
+        $notifier->notifyUsers(
+            collect([$ticket->creator]),
+            $request->user(),
+            'Repair ticket created',
+            sprintf('Repair ticket %s was created.', $ticket->ticket_number),
+            route('tickets.show', $ticket),
+        );
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket created.');
     }
@@ -174,8 +185,10 @@ class RepairTicketController extends Controller
         ]);
     }
 
-    public function update(Request $request, RepairTicket $ticket): RedirectResponse
+    public function update(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse
     {
+        $ticket->loadMissing(['creator', 'assignees']);
+        $existingAssigneeIds = $ticket->assignees->modelKeys();
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
@@ -188,22 +201,11 @@ class RepairTicketController extends Controller
         ]);
         $assignees = $this->assigneeIds($request, $data);
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
-        DB::transaction(function () use ($ticket, $data, $request, $assignees): void {
-            $statusChanged = $ticket->status !== $data['status'];
-            DB::transaction(function () use ($ticket, $data, $request, $assignees): void {
-                $statusChanged = $ticket->status !== $data['status'];
-                $ticket->update($data);
-                $ticket->assignees()->sync($assignees);
-                $ticket->update(['assigned_to' => $assignees[0] ?? null]);
-                if ($statusChanged) {
-                    $ticket->updates()->create([
-                        'user_id' => $request->user()->id,
-                        'title' => 'Status changed to '.RepairTicket::STATUSES[$data['status']],
-                        'status' => $data['status'],
-                        'notes' => $data['diagnosis'] ?? null,
-                    ]);
-                }
-            });
+        $statusChanged = $ticket->status !== $data['status'];
+        DB::transaction(function () use ($ticket, $data, $request, $assignees, $statusChanged): void {
+            $ticket->update($data);
+            $ticket->assignees()->sync($assignees);
+            $ticket->update(['assigned_to' => $assignees[0] ?? null]);
             if ($statusChanged) {
                 $ticket->updates()->create([
                     'user_id' => $request->user()->id,
@@ -213,6 +215,24 @@ class RepairTicketController extends Controller
                 ]);
             }
         });
+        $ticket->load(['creator', 'assignees']);
+        $newAssigneeIds = array_diff($assignees, $existingAssigneeIds);
+        $notifier->notifyUsers(
+            $newAssigneeIds === [] ? [] : User::query()->whereKey($newAssigneeIds)->get(),
+            $request->user(),
+            'Repair ticket assigned',
+            sprintf('You have been assigned repair ticket %s.', $ticket->ticket_number),
+            route('tickets.show', $ticket),
+        );
+        $existingRecipients = collect([$ticket->creator])
+            ->merge($existingAssigneeIds === [] ? collect() : User::query()->whereKey($existingAssigneeIds)->get());
+        $notifier->notifyUsers(
+            $existingRecipients,
+            $request->user(),
+            $statusChanged ? 'Repair ticket updated' : 'Repair ticket details updated',
+            sprintf('Repair ticket %s was updated%s.', $ticket->ticket_number, $statusChanged ? ' to '.RepairTicket::STATUSES[$ticket->status] : ''),
+            route('tickets.show', $ticket),
+        );
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket updated.');
     }
@@ -228,7 +248,7 @@ class RepairTicketController extends Controller
         return array_values(array_unique(array_map('intval', $ids)));
     }
 
-    public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage): RedirectResponse
+    public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
@@ -253,6 +273,14 @@ class RepairTicketController extends Controller
         if ($photos) {
             $storage->store($update->attachments(), $photos, $request->user(), $request->input('caption'));
         }
+        $ticket->load(['creator', 'assignees']);
+        $notifier->notifyUsers(
+            collect([$ticket->creator])->merge($ticket->assignees),
+            $request->user(),
+            'Repair ticket update',
+            sprintf('Repair ticket %s: %s.', $ticket->ticket_number, $update->title),
+            route('tickets.show', $ticket),
+        );
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket work step added.');
     }

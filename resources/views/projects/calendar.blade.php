@@ -104,6 +104,20 @@
             },
             eventDidMount: (info) => {
                 const { type, location } = info.event.extendedProps;
+                const backgroundColor = info.event.backgroundColor;
+                const textColor = info.event.textColor;
+                if (backgroundColor) {
+                    info.el.style.setProperty('background-color', backgroundColor, 'important');
+                    info.el.style.setProperty('border-color', backgroundColor, 'important');
+                }
+                info.el.style.setProperty('opacity', '1', 'important');
+                if (textColor) {
+                    info.el.style.setProperty('color', textColor, 'important');
+                    info.el.querySelector('.fc-event-main')?.style.setProperty('color', textColor, 'important');
+                    info.el.querySelectorAll('.fc-event-title, .fc-event-time').forEach((element) => {
+                        element.style.setProperty('color', textColor, 'important');
+                    });
+                }
                 info.el.title = [
                     info.event.extendedProps.project || 'General event',
                     type,

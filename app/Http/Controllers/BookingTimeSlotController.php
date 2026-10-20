@@ -22,6 +22,9 @@ class BookingTimeSlotController extends Controller
                 'daysOfWeek' => [(int) $slot->day_of_week],
                 'startTime' => substr($slot->start_time, 0, 5),
                 'url' => route('booking-time-slots.show', $slot),
+                'backgroundColor' => '#d9f8eb',
+                'borderColor' => '#b6efd9',
+                'textColor' => '#00875a',
             ])
             ->all();
 

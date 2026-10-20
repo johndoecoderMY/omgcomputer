@@ -162,7 +162,9 @@ class BookingTest extends TestCase
             ->assertViewHas('events', function (array $events) use ($slot): bool {
                 return collect($events)->contains(fn (array $event): bool => $event['daysOfWeek'] === [Carbon::SUNDAY]
                     && $event['startTime'] === '11:30'
-                    && $event['url'] === route('booking-time-slots.show', $slot));
+                    && $event['url'] === route('booking-time-slots.show', $slot)
+                    && $event['backgroundColor'] === '#d9f8eb'
+                    && $event['textColor'] === '#00875a');
             });
         $this->get(route('booking-time-slots.show', $slot))->assertOk()->assertSee('Sunday');
         $this->get(route('booking-time-slots.edit', $slot))->assertOk();

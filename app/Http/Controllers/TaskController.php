@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
-use App\Notifications\WorkspaceNotification;
+use App\Services\WorkspaceNotifier;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -128,17 +128,17 @@ class TaskController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
-        return $this->storeTask($request);
+        return $this->storeTask($request, null, $notifier);
     }
 
-    public function storeForProject(Request $request, Project $project): RedirectResponse
+    public function storeForProject(Request $request, Project $project, WorkspaceNotifier $notifier): RedirectResponse
     {
-        return $this->storeTask($request, $project);
+        return $this->storeTask($request, $project, $notifier);
     }
 
-    private function storeTask(Request $request, ?Project $project = null): RedirectResponse
+    private function storeTask(Request $request, ?Project $project, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $this->validatedData($request);
         $parentId = $data['parent_id'] ?? null;
@@ -160,8 +160,11 @@ class TaskController extends Controller
             ...$data,
             'project_id' => $project?->id,
             'parent_task_id' => $parent?->id,
+            'created_by_user_id' => $request->user()->id,
         ]);
-        $this->syncAssignees($task, $assignees);
+        $newAssignees = $this->syncAssignees($task, $assignees);
+        $this->notifyTaskAssignees($task, $newAssignees, $request->user(), $notifier, 'Task assigned to you');
+        $this->notifyTaskCreator($task, $request->user(), $notifier, 'Task created');
 
         return redirect()
             ->route($parent ? 'tasks.show' : ($project ? 'projects.show' : 'tasks.show'), $parent ?? $project ?? $task)
@@ -190,8 +193,10 @@ class TaskController extends Controller
         ]);
     }
 
-    public function update(Request $request, Task $task): RedirectResponse
+    public function update(Request $request, Task $task, WorkspaceNotifier $notifier): RedirectResponse
     {
+        $task->loadMissing(['creator', 'assignees']);
+        $existingAssigneeIds = $task->assignees->modelKeys();
         $data = $this->validatedData($request);
         unset($data['parent_id']);
         $assignees = $data['assignees'];
@@ -202,14 +207,24 @@ class TaskController extends Controller
             $task->subtasks()->update(['project_id' => $projectId]);
         }
         $task->update($data);
-        $this->syncAssignees($task, $assignees);
+        $newAssignees = $this->syncAssignees($task, $assignees);
+        $this->notifyTaskAssignees($task, $newAssignees, $request->user(), $notifier, 'Task assigned to you');
+        $recipients = collect([$task->creator])
+            ->merge($existingAssigneeIds ? User::query()->whereKey($existingAssigneeIds)->get() : collect());
+        $notifier->notifyUsers(
+            $recipients,
+            $request->user(),
+            'Task updated',
+            sprintf('Task “%s” was updated.', $task->title),
+            route('tasks.show', $task),
+        );
 
         return redirect()
             ->route('tasks.show', $task->parent ?? $task)
             ->with('success', 'Task updated successfully.');
     }
 
-    public function storeSubtask(Request $request, Task $task): RedirectResponse
+    public function storeSubtask(Request $request, Task $task, WorkspaceNotifier $notifier): RedirectResponse
     {
         abort_if($task->parent_task_id !== null, 404);
 
@@ -220,20 +235,23 @@ class TaskController extends Controller
         $subtask = $task->subtasks()->create([
             ...$data,
             'project_id' => $task->project_id,
+            'created_by_user_id' => $request->user()->id,
         ]);
-        $this->syncAssignees($subtask, $assignees);
+        $newAssignees = $this->syncAssignees($subtask, $assignees);
+        $this->notifyTaskAssignees($subtask, $newAssignees, $request->user(), $notifier, 'Task assigned to you');
 
         return redirect()
             ->route('tasks.show', $task)
             ->with('success', 'Subtask created successfully.');
     }
 
-    public function updateStatus(Request $request, Task $task): RedirectResponse
+    public function updateStatus(Request $request, Task $task, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'done' => ['sometimes', 'boolean'],
         ]);
         $status = $request->boolean('done') ? 'done' : 'backlog';
+        $previousStatus = $task->status;
 
         DB::transaction(function () use ($task, $status): void {
             $task->update(['status' => $status]);
@@ -242,6 +260,28 @@ class TaskController extends Controller
                 $task->subtasks()->update(['status' => 'done']);
             }
         });
+        if ($previousStatus !== $status) {
+            $task->load(['creator', 'assignees']);
+            $notifier->notifyUsers(
+                collect([$task->creator])->merge($task->assignees),
+                $request->user(),
+                $status === 'done' ? 'Task marked done' : 'Task reopened',
+                sprintf('Task “%s” was marked %s.', $task->title, $status === 'done' ? 'done' : 'to do'),
+                route('tasks.show', $task),
+            );
+            if ($status === 'done' && $task->parent_task_id === null) {
+                foreach ($task->subtasks as $subtask) {
+                    $subtask->load(['creator', 'assignees']);
+                    $notifier->notifyUsers(
+                        collect([$subtask->creator])->merge($subtask->assignees),
+                        $request->user(),
+                        'Task marked done',
+                        sprintf('Task “%s” was marked done with its parent task.', $subtask->title),
+                        route('tasks.show', $task),
+                    );
+                }
+            }
+        }
 
         return redirect()
             ->back()
@@ -306,26 +346,48 @@ class TaskController extends Controller
         return $parent;
     }
 
-    private function syncAssignees(Task $task, array $assigneeIds): void
+    private function syncAssignees(Task $task, array $assigneeIds): array
     {
         $newAssignees = array_diff($assigneeIds, $task->assignees()->pluck('users.id')->all());
         $task->assignees()->sync($assigneeIds);
         $task->update(['assigned_to' => $assigneeIds[0] ?? null]);
 
-        $task->load('project');
-        foreach (User::query()->whereKey($newAssignees)->get() as $assignee) {
-            if ((int) $assignee->id === (int) auth()->id()) {
-                continue;
-            }
-            $assignee->notify(new WorkspaceNotification(
-                'Task assigned to you',
-                sprintf(
-                    'You have been assigned “%s”%s.',
-                    $task->title,
-                    $task->project ? ' in the '.$task->project->name.' project' : '',
-                ),
-                route('tasks.show', $task),
-            ));
+        return $newAssignees;
+    }
+
+    private function notifyTaskAssignees(
+        Task $task,
+        array $assigneeIds,
+        User $actor,
+        WorkspaceNotifier $notifier,
+        string $title,
+    ): void {
+        if ($assigneeIds === []) {
+            return;
         }
+        $task->loadMissing('project');
+        $notifier->notifyUsers(
+            User::query()->whereKey($assigneeIds)->get(),
+            $actor,
+            $title,
+            sprintf(
+                'You have been assigned “%s”%s.',
+                $task->title,
+                $task->project ? ' in the '.$task->project->name.' project' : '',
+            ),
+            route('tasks.show', $task),
+        );
+    }
+
+    private function notifyTaskCreator(Task $task, User $actor, WorkspaceNotifier $notifier, string $title): void
+    {
+        $task->loadMissing('creator');
+        $notifier->notifyUsers(
+            collect([$task->creator]),
+            $actor,
+            $title,
+            sprintf('Task “%s” was created.', $task->title),
+            route('tasks.show', $task),
+        );
     }
 }

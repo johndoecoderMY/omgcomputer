@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\Project;
-use App\Models\User;
-use App\Notifications\WorkspaceNotification;
+use App\Services\WorkspaceNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +27,7 @@ class ProjectEventController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
@@ -45,22 +44,19 @@ class ProjectEventController extends Controller
 
         $event = Event::query()->create($data);
         if ($event->project_id) {
-            $assignees = User::query()
-                ->whereHas('assignedTasks', fn ($tasks) => $tasks->where('project_id', $event->project_id))
-                ->get();
-            $projectName = Project::query()->whereKey($event->project_id)->value('name');
-
-            foreach ($assignees as $assignee) {
-                if ((int) $assignee->id === (int) auth()->id()) {
-                    continue;
-                }
-
-                $assignee->notify(new WorkspaceNotification(
-                    'Project event scheduled',
-                    sprintf('“%s” was scheduled for %s on %s.', $event->title, $projectName, $event->starts_at->format('M j, Y g:i A')),
-                    route('projects.show', $event->project_id),
-                ));
-            }
+            $project = Project::query()
+                ->with(['creator', 'assignees', 'tasks.assignees'])
+                ->findOrFail($event->project_id);
+            $recipients = collect([$project->creator])
+                ->merge($project->assignees)
+                ->merge($project->tasks->flatMap(fn ($task) => $task->assignees));
+            $notifier->notifyUsers(
+                $recipients,
+                $request->user(),
+                'Project event scheduled',
+                sprintf('“%s” was scheduled for %s on %s.', $event->title, $project->name, $event->starts_at->format('M j, Y g:i A')),
+                route('projects.show', $event->project_id),
+            );
         }
 
         if ($returnTo === 'project' && ! empty($data['project_id'])) {
@@ -114,8 +110,9 @@ class ProjectEventController extends Controller
                 'url' => $event->project
                     ? route('projects.show', $event->project).'#project-schedule'
                     : null,
-                'backgroundColor' => Event::COLORS[$event->event_type] ?? Event::COLORS['other'],
-                'borderColor' => Event::COLORS[$event->event_type] ?? Event::COLORS['other'],
+                'backgroundColor' => Event::BACKGROUND_COLORS[$event->event_type] ?? Event::BACKGROUND_COLORS['other'],
+                'borderColor' => Event::BACKGROUND_COLORS[$event->event_type] ?? Event::BACKGROUND_COLORS['other'],
+                'textColor' => Event::COLORS[$event->event_type] ?? Event::COLORS['other'],
                 'extendedProps' => [
                     'project' => $event->project?->name ?? 'General event',
                     'project_url' => $event->project
