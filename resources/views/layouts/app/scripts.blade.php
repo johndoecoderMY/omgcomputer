@@ -64,97 +64,106 @@
 
         window.jQuery.fn.dataTable.ext.errMode = 'none';
 
+        const dataTableRetryStates = new WeakMap();
+        const retryDataTable = (settings) => {
+            const state = dataTableRetryStates.get(settings.nTable);
+            if (!state) {
+                return;
+            }
+
+            if (state.timer !== null) {
+                return;
+            }
+
+            if (state.retryCount >= 2) {
+                state.button.classList.remove('d-none');
+                state.button.disabled = false;
+                state.button.textContent = 'Retry';
+                return;
+            }
+
+            state.retryCount += 1;
+            state.button.disabled = true;
+            state.button.textContent = 'Loading...';
+            state.timer = window.setTimeout(() => {
+                state.timer = null;
+                settings.oInstance.api().ajax.reload(null, false);
+            }, 1000 * state.retryCount);
+        };
+
+        window.jQuery(document)
+            .on('preInit.dt', (_event, settings) => {
+                const table = settings.nTable;
+                const tableContainer = table.closest('.table-responsive') || table;
+                const button = document.createElement('button');
+                button.className = 'btn btn-sm btn-outline-warning mb-2 d-none';
+                button.type = 'button';
+                button.textContent = 'Retry';
+                button.setAttribute('aria-label', 'Retry loading table');
+                tableContainer.parentNode.insertBefore(button, tableContainer);
+
+                const state = { button, retryCount: 0, timer: null };
+                dataTableRetryStates.set(table, state);
+
+                button.addEventListener('click', () => {
+                    if (state.timer !== null) {
+                        window.clearTimeout(state.timer);
+                        state.timer = null;
+                    }
+                    state.retryCount = 0;
+                    button.classList.add('d-none');
+                    button.disabled = true;
+                    button.textContent = 'Loading...';
+                    settings.oInstance.api().ajax.reload(null, false);
+                });
+            })
+            .on('xhr.dt', (_event, settings, json) => {
+                const state = dataTableRetryStates.get(settings.nTable);
+                if (!state) {
+                    return;
+                }
+
+                if (json === null) {
+                    retryDataTable(settings);
+                    return;
+                }
+
+                if (state.timer !== null) {
+                    window.clearTimeout(state.timer);
+                    state.timer = null;
+                }
+                state.retryCount = 0;
+                state.button.classList.add('d-none');
+                state.button.disabled = false;
+                state.button.textContent = 'Retry';
+            })
+            .on('error.dt', (_event, settings) => retryDataTable(settings));
+
         document.querySelectorAll('table[data-datatable]').forEach((table) => {
             const columns = JSON.parse(table.dataset.columns || '[]');
             const filters = JSON.parse(table.dataset.datatableFilters || '[]');
             const $table = window.jQuery(table);
-            const tableContainer = table.closest('.table-responsive') || table;
-            const retryNotice = document.createElement('div');
-            retryNotice.className = 'alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2';
-            retryNotice.setAttribute('role', 'alert');
-            retryNotice.hidden = true;
-
-            const retryMessage = document.createElement('span');
-            retryMessage.textContent = 'Could not load this table.';
-            const retryButton = document.createElement('button');
-            retryButton.className = 'btn btn-sm btn-warning';
-            retryButton.type = 'button';
-            retryButton.textContent = 'Retry';
-            retryNotice.append(retryMessage, retryButton);
-            tableContainer.parentNode.insertBefore(retryNotice, tableContainer);
-
-            let dataTable;
-            let retryCount = 0;
-            let retryTimer = null;
-
-            const clearRetry = () => {
-                if (retryTimer !== null) {
-                    window.clearTimeout(retryTimer);
-                    retryTimer = null;
-                }
-                retryCount = 0;
-                retryNotice.hidden = true;
-                retryButton.disabled = false;
-                retryButton.textContent = 'Retry';
-            };
-
-            const handleLoadFailure = () => {
-                retryNotice.hidden = false;
-                retryButton.disabled = false;
-                retryButton.textContent = 'Retry';
-
-                if (retryTimer !== null || retryCount >= 2) {
-                    return;
-                }
-
-                retryCount += 1;
-                retryButton.disabled = true;
-                retryButton.textContent = 'Retrying...';
-                retryTimer = window.setTimeout(() => {
-                    retryTimer = null;
-                    dataTable.ajax.reload(null, false);
-                }, 1000 * retryCount);
-            };
-
-            $table.on('xhr.dt', (_event, _settings, json) => {
-                if (json !== null) {
-                    clearRetry();
-                } else {
-                    handleLoadFailure();
-                }
-            });
-            $table.on('error.dt', handleLoadFailure);
-
-            dataTable = $table.DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: table.dataset.source,
-                    timeout: 30000,
-                    data: (request) => {
-                        filters.forEach(({ name, selector }) => {
-                            const filter = document.querySelector(selector);
-                            if (filter && filter.value) {
-                                request[name] = filter.value;
-                            }
-                        });
+            const dataTable = window.jQuery.fn.DataTable.isDataTable(table)
+                ? $table.DataTable()
+                : $table.DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ajax: {
+                        url: table.dataset.source,
+                        timeout: 30000,
+                        data: (request) => {
+                            filters.forEach(({ name, selector }) => {
+                                const filter = document.querySelector(selector);
+                                if (filter && filter.value) {
+                                    request[name] = filter.value;
+                                }
+                            });
+                        },
                     },
-                },
-                columns,
-                pageLength: 25,
-                order: [],
-            });
-
-            retryButton.addEventListener('click', () => {
-                if (retryTimer !== null) {
-                    window.clearTimeout(retryTimer);
-                    retryTimer = null;
-                }
-                retryCount = 0;
-                retryButton.disabled = true;
-                retryButton.textContent = 'Loading...';
-                dataTable.ajax.reload(null, false);
-            });
+                    columns,
+                    pageLength: 25,
+                    order: [],
+                });
 
             filters.forEach(({ selector }) => {
                 document.querySelector(selector)?.addEventListener('change', () => {

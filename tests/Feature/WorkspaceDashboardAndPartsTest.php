@@ -63,6 +63,9 @@ class WorkspaceDashboardAndPartsTest extends TestCase
             ->assertSee('dashboard-task-status-chart', false)
             ->assertSee('dashboard-ticket-status-chart', false)
             ->assertSee('dashboard-ticket-arrivals-chart', false)
+            ->assertSee('text-bg-secondary')
+            ->assertSee('text-bg-primary')
+            ->assertSee('text-bg-success')
             ->assertSee('Website Structure & Build SOP')
             ->assertSee('Database Design & Migration SOP');
     }

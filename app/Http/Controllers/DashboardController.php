@@ -7,6 +7,7 @@ use App\Models\FlowChart;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\Task;
+use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,11 +48,13 @@ class DashboardController extends Controller
                 ->map(fn (string $label, string $status): array => [
                     'name' => $label,
                     'value' => (int) ($taskStatusCounts[$status] ?? 0),
+                    'badgeClass' => 'text-bg-'.StatusBadge::colorClass($status),
                 ])->values(),
             'ticketStatusChart' => collect(RepairTicket::STATUSES)
                 ->map(fn (string $label, string $status): array => [
                     'name' => $label,
                     'value' => (int) ($ticketStatusCounts[$status] ?? 0),
+                    'badgeClass' => 'text-bg-'.StatusBadge::colorClass($status),
                 ])->values(),
             'ticketArrivalChart' => collect(range(6, 0))
                 ->map(function (int $daysAgo) use ($ticketArrivals): array {

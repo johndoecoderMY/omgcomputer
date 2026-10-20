@@ -285,6 +285,20 @@
         if (!window.echarts) return;
 
         const palette = ['#2c7be5', '#00d27a', '#f5803e', '#e63757', '#39afd1', '#6f42c1', '#748194', '#f6c343'];
+        const statusBadgeColors = new Map();
+        const colorForStatusBadge = (badgeClass) => {
+            if (!statusBadgeColors.has(badgeClass)) {
+                const badge = document.createElement('span');
+                badge.className = `badge ${badgeClass}`;
+                badge.style.position = 'absolute';
+                badge.style.visibility = 'hidden';
+                document.body.append(badge);
+                statusBadgeColors.set(badgeClass, window.getComputedStyle(badge).backgroundColor);
+                badge.remove();
+            }
+
+            return statusBadgeColors.get(badgeClass);
+        };
         const charts = [
             {
                 element: document.getElementById('dashboard-task-status-chart'),
@@ -302,7 +316,6 @@
             if (!element) return;
             const chart = window.echarts.init(element);
             chart.setOption({
-                color: palette,
                 tooltip: { trigger: 'item' },
                 legend: { bottom: 0, left: 'center', type: 'scroll' },
                 series: [{
@@ -313,7 +326,10 @@
                     itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
                     label: { show: false },
                     emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
-                    data,
+                    data: data.map(({ badgeClass, ...item }) => ({
+                        ...item,
+                        itemStyle: { color: colorForStatusBadge(badgeClass) },
+                    })),
                 }],
             });
             window.addEventListener('resize', () => chart.resize());
