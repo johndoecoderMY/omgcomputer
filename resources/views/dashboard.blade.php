@@ -7,7 +7,7 @@
         <x-page-header eyebrow="Workspace" title="Dashboard"
             description="A live overview of your projects, repair queue, schedules, and working examples.">
             <x-slot:actions>
-                <a class="btn btn-outline-primary" href="{{ route('projects.calendar') }}">
+                <a class="btn btn-outline-primary" href="{{ route('calendar') }}">
                     <i class="fas fa-calendar-days me-2" aria-hidden="true"></i>Calendar
                 </a>
                 <a class="btn btn-primary" href="{{ route('projects.create') }}">
@@ -172,7 +172,7 @@
                             <h4 class="mb-0 text-primary">Upcoming events</h4>
                             <p class="small text-body-secondary mb-0">Your next scheduled project sessions.</p>
                         </div>
-                        <a class="btn btn-sm btn-primary" href="{{ route('projects.calendar') }}">Calendar</a>
+                        <a class="btn btn-sm btn-primary" href="{{ route('calendar') }}">Calendar</a>
                     </div>
                     <div class="card-body">
                         @forelse ($upcomingEvents as $event)
@@ -193,7 +193,7 @@
                         @empty
                             <div class="text-center py-4">
                                 <p class="small text-body-secondary">No upcoming sessions.</p>
-                                <a class="btn btn-sm btn-primary" href="{{ route('projects.calendar') }}">Schedule an event</a>
+                                <a class="btn btn-sm btn-primary" href="{{ route('calendar') }}">Schedule an event</a>
                             </div>
                         @endforelse
                     </div>

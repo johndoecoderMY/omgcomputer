@@ -31,6 +31,8 @@ class DramaScriptController extends Controller
                     'id' => (string) Str::uuid(),
                     'title' => '',
                     'setting' => '',
+                    'scheduled_at' => null,
+                    'duration_minutes' => null,
                     'script' => '',
                     'ai_prompt' => '',
                     'character_ids' => [],
@@ -124,7 +126,8 @@ class DramaScriptController extends Controller
             'scenes.*.id' => ['required', 'uuid'],
             'scenes.*.title' => ['required', 'string', 'max:180'],
             'scenes.*.setting' => ['nullable', 'string', 'max:500'],
-            'scenes.*.time' => ['nullable', 'date_format:H:i'],
+            'scenes.*.scheduled_at' => ['nullable', 'date_format:Y-m-d\TH:i'],
+            'scenes.*.duration_minutes' => ['nullable', 'integer', 'min:1', 'max:1440'],
             'scenes.*.script' => ['required', 'string', 'max:20000'],
             'scenes.*.ai_prompt' => ['nullable', 'string', 'max:10000'],
             'scenes.*.character_ids' => ['nullable', 'array'],
@@ -141,7 +144,8 @@ class DramaScriptController extends Controller
                 abort(422, 'Each scene must use characters from this drama.');
             }
             $scene['character_ids'] = array_values(array_unique($sceneCharacterIds));
-            $scene['time'] = $scene['time'] ?? null;
+            $scene['scheduled_at'] = $scene['scheduled_at'] ?? null;
+            $scene['duration_minutes'] = isset($scene['duration_minutes']) ? (int) $scene['duration_minutes'] : null;
             $scene['references'] = collect(preg_split('/\r\n|\r|\n/', $scene['references'] ?? ''))
                 ->map(fn (string $reference): string => trim($reference))
                 ->filter()

@@ -78,6 +78,27 @@ class BookingTest extends TestCase
         $this->actingAs($staff)->get(route('bookings.index'))
             ->assertOk()
             ->assertSee('data-datatable', false);
+        $this->assertSame('/bookings/calendar', parse_url(route('bookings.calendar'), PHP_URL_PATH));
+        $this->actingAs($staff)->get(route('bookings.calendar'))
+            ->assertOk()
+            ->assertSee('id="bookings-calendar"', false)
+            ->assertSee('id="booking-details-modal"', false)
+            ->assertSee('eventClick: (info)', false);
+        $this->actingAs($staff)->getJson(route('bookings.calendar.events', [
+            'start' => $booking->starts_at->copy()->subDay()->setTimezone('UTC')->toIso8601String(),
+            'end' => $booking->starts_at->copy()->addDay()->setTimezone('UTC')->toIso8601String(),
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.extendedProps.reference', $booking->reference)
+            ->assertJsonPath('0.backgroundColor', Booking::CALENDAR_COLORS['confirmed']['background'])
+            ->assertJsonPath('0.textColor', Booking::CALENDAR_COLORS['confirmed']['text'])
+            ->assertJsonPath('0.extendedProps.booking_url', route('bookings.show', $booking))
+            ->assertJsonPath('0.extendedProps.customer_url', route('customers.show', $booking->customer));
+        $this->actingAs($staff)->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee($booking->reference)
+            ->assertSee('Morgan Lee');
         $this->actingAs($staff)->getJson(route('bookings.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -86,6 +107,8 @@ class BookingTest extends TestCase
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-success">Confirmed</span>')
+            ->assertJsonPath('data.0.management', fn (string $management): bool => str_contains($management, 'js-user-search')
+                && str_contains($management, 'Search staff by name'))
             ->assertSee('Morgan Lee')
             ->assertSee($booking->reference);
 
@@ -103,6 +126,45 @@ class BookingTest extends TestCase
             ->assertSee(route('bookings.create'))
             ->assertSee('Choose the service you need')
             ->assertDontSee('Online service booking is coming soon.');
+    }
+
+    public function test_customer_calendar_only_returns_the_signed_in_customers_appointments(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create(['email' => 'customer@example.test']);
+        $customer->assignRole('customer');
+        $startsAt = Carbon::now('UTC')->addDays(7)->startOfHour();
+
+        $createdBookings = collect();
+        foreach ([
+            ['reference' => 'BK-CUSTOMER-1', 'customer_email' => $customer->email, 'starts_at' => $startsAt],
+            ['reference' => 'BK-OTHER-1', 'customer_email' => 'other@example.test', 'starts_at' => $startsAt->copy()->addHour()],
+        ] as $booking) {
+            $createdBookings->push(Booking::query()->create([
+                ...$booking,
+                'customer_name' => 'Calendar Customer',
+                'customer_phone' => '+60112223333',
+                'service_id' => 'laptop-cleaning',
+                'service_name' => 'Laptop cleaning',
+                'duration_minutes' => 60,
+                'status' => 'confirmed',
+            ]));
+        }
+
+        $this->actingAs($customer)->get(route('bookings.calendar'))
+            ->assertOk()
+            ->assertSee('Bookings Calendar');
+        $this->get(route('bookings.show', $createdBookings[1]))->assertNotFound();
+        $this->get(route('bookings.show', $createdBookings[0]))
+            ->assertOk()
+            ->assertSee('BK-CUSTOMER-1');
+        $this->getJson(route('bookings.calendar.events', [
+            'start' => $startsAt->copy()->subHour()->toIso8601String(),
+            'end' => $startsAt->copy()->addHours(2)->toIso8601String(),
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.extendedProps.reference', 'BK-CUSTOMER-1');
     }
 
     public function test_booking_calendar_is_basic_and_availability_comes_from_the_database(): void

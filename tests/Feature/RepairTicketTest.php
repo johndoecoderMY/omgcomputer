@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Models\RepairTicket;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +23,9 @@ class RepairTicketTest extends TestCase
 
     public function test_user_can_create_and_manage_a_repair_ticket(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('admin');
 
         $this->actingAs($user)->post(route('tickets.store'), [
             'customer_name' => 'Jamie Customer',
@@ -92,8 +95,11 @@ class RepairTicketTest extends TestCase
 
     public function test_repair_tickets_can_be_assigned_to_multiple_people(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         $owner = User::factory()->create();
+        $owner->assignRole('admin');
         $assignees = User::factory()->count(2)->create();
+        $assignees->each(fn (User $assignee) => $assignee->assignRole('member'));
         $customer = Customer::query()->create([
             'name' => 'Multiple-assignee customer',
             'email' => 'multi@example.test',
@@ -115,6 +121,7 @@ class RepairTicketTest extends TestCase
         $this->assertSame($assignees->first()->id, $ticket->assigned_to);
 
         $replacement = User::factory()->create();
+        $replacement->assignRole('member');
         $this->actingAs($owner)->put(route('tickets.update', $ticket), [
             'status' => 'diagnosing',
             'priority' => 'high',

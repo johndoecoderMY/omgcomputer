@@ -7,6 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Booking extends Model
 {
+    public const CALENDAR_COLORS = [
+        'pending' => [
+            'background' => '#ffe6d5',
+            'text' => '#f5803e',
+        ],
+        'confirmed' => [
+            'background' => '#e7f1ff',
+            'text' => '#2c7be5',
+        ],
+        'completed' => [
+            'background' => '#d9f8eb',
+            'text' => '#00a884',
+        ],
+    ];
+
     public const STATUSES = [
         'pending' => 'Pending',
         'confirmed' => 'Confirmed',
@@ -51,5 +66,4 @@ class Booking extends Model
     {
         return $this->belongsTo(RepairTicket::class);
     }
-
 }

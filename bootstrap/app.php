@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', 'auth']])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/meta/whatsapp',
+        ]);
+
         $middleware->alias([
             'password.changed' => EnsurePasswordChanged::class,
             'not-customer' => EnsureNotCustomer::class,

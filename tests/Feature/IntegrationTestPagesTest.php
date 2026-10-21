@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\IntegrationTestMail;
+use App\Models\WhatsAppInboundMessage;
 use App\Notifications\IntegrationTestNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,6 +42,8 @@ class IntegrationTestPagesTest extends TestCase
         $this->actingAs($admin)->get(route('reports.integrations.whatsapp'))
             ->assertOk()
             ->assertSee('WhatsApp Cloud API')
+            ->assertSee('Webhook callback URL')
+            ->assertSee('META_APP_SECRET')
             ->assertSee('Test connection');
         $this->actingAs($admin)->post(route('reports.integrations.whatsapp.check'))
             ->assertRedirect(route('reports.integrations.whatsapp'));
@@ -55,6 +58,109 @@ class IntegrationTestPagesTest extends TestCase
             ->assertSee('Example Repairs')
             ->assertSee('+60 12-345 6789')
             ->assertDontSee('test-meta-token');
+    }
+
+    public function test_meta_can_verify_the_whatsapp_webhook_with_the_configured_token(): void
+    {
+        config(['services.meta.webhook_verify_token' => 'verify-secret']);
+
+        $this->get('/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=verify-secret&hub.challenge=test-challenge')
+            ->assertOk()
+            ->assertSeeText('test-challenge');
+
+        $this->get('/webhooks/meta/whatsapp?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=test-challenge')
+            ->assertForbidden();
+    }
+
+    public function test_signed_whatsapp_webhook_stores_inbound_messages_once(): void
+    {
+        config([
+            'services.meta.app_secret' => 'webhook-app-secret',
+            'services.meta.whatsapp_phone_number_id' => 'phone-id-123',
+        ]);
+        $payload = json_encode([
+            'object' => 'whatsapp_business_account',
+            'entry' => [[
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'metadata' => ['phone_number_id' => 'phone-id-123'],
+                        'contacts' => [[
+                            'wa_id' => '60123456789',
+                            'profile' => ['name' => 'Example Customer'],
+                        ]],
+                        'messages' => [[
+                            'id' => 'wamid.example-message-1',
+                            'from' => '60123456789',
+                            'timestamp' => '1792580000',
+                            'type' => 'text',
+                            'text' => ['body' => 'I need help with my laptop.'],
+                        ]],
+                    ],
+                ]],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+        $signature = 'sha256='.hash_hmac('sha256', $payload, 'webhook-app-secret');
+
+        foreach ([1, 2] as $_) {
+            $this->call('POST', route('webhooks.whatsapp.receive'), [], [], [], [
+                'CONTENT_TYPE' => 'application/json',
+                'HTTP_X_HUB_SIGNATURE_256' => $signature,
+            ], $payload)->assertOk();
+        }
+
+        $this->assertDatabaseCount('whatsapp_inbound_messages', 1);
+        $this->assertDatabaseHas('whatsapp_inbound_messages', [
+            'meta_message_id' => 'wamid.example-message-1',
+            'wa_id' => '60123456789',
+            'contact_name' => 'Example Customer',
+            'message_type' => 'text',
+            'message_body' => 'I need help with my laptop.',
+        ]);
+    }
+
+    public function test_whatsapp_webhook_rejects_invalid_signatures(): void
+    {
+        config([
+            'services.meta.app_secret' => 'webhook-app-secret',
+            'services.meta.whatsapp_phone_number_id' => 'phone-id-123',
+        ]);
+        $payload = json_encode(['object' => 'whatsapp_business_account'], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', route('webhooks.whatsapp.receive'), [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256=invalid',
+        ], $payload)->assertUnauthorized();
+
+        $this->assertDatabaseCount('whatsapp_inbound_messages', 0);
+    }
+
+    public function test_admin_can_view_and_poll_the_whatsapp_inbox(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        WhatsAppInboundMessage::query()->create([
+            'meta_message_id' => 'wamid.inbox-test',
+            'phone_number_id' => 'phone-id-123',
+            'wa_id' => '60123456789',
+            'contact_name' => 'Inbox Customer',
+            'message_type' => 'text',
+            'message_body' => 'Are you open today?',
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.whatsapp.inbox'))
+            ->assertOk()
+            ->assertSee('WhatsApp Inbox')
+            ->assertSee('Inbox Customer')
+            ->assertSee('Are you open today?');
+
+        $this->actingAs($admin)->getJson(route('reports.integrations.whatsapp.inbox.poll'))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('messages.0.wa_id', '60123456789')
+            ->assertJsonPath('messages.0.message_body', 'Are you open today?');
     }
 
     public function test_whatsapp_check_reports_meta_auth_failure_without_exposing_token(): void
@@ -145,6 +251,7 @@ class IntegrationTestPagesTest extends TestCase
         $customer->assignRole('customer');
 
         $this->actingAs($customer)->get(route('reports.integrations.whatsapp'))->assertForbidden();
+        $this->actingAs($customer)->get(route('reports.integrations.whatsapp.inbox'))->assertForbidden();
         $this->actingAs($customer)->get(route('reports.integrations.easyparcel'))->assertForbidden();
         $this->actingAs($customer)->get(route('reports.integrations.notifications'))->assertForbidden();
         $this->actingAs($customer)->post(route('reports.integrations.notifications.send'))->assertForbidden();
@@ -160,7 +267,7 @@ class IntegrationTestPagesTest extends TestCase
 
         $this->actingAs($admin)->get(route('reports.integrations.notifications'))
             ->assertOk()
-            ->assertSee('Notification &amp; Email Tests')
+            ->assertSee('Notification & Email Tests')
             ->assertSee('Send test notification')
             ->assertSee($admin->email);
 

@@ -10,8 +10,12 @@
             </div>
             <div class="modal-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-4">Project</dt>
+                    <dt class="col-sm-4" data-event-project-label>Project</dt>
                     <dd class="col-sm-8"><a data-event-project-link class="d-none"></a><span data-event-project></span></dd>
+                    <dt class="col-sm-4 d-none" data-event-reference-label>Reference</dt>
+                    <dd class="col-sm-8 d-none" data-event-reference></dd>
+                    <dt class="col-sm-4 d-none" data-event-status-label>Status</dt>
+                    <dd class="col-sm-8 d-none" data-event-status></dd>
                     <dt class="col-sm-4">Starts</dt>
                     <dd class="col-sm-8" data-event-start></dd>
                     <dt class="col-sm-4">Ends</dt>
@@ -23,6 +27,7 @@
                 </dl>
             </div>
             <div class="modal-footer">
+                <a class="btn btn-primary d-none" data-event-record-link></a>
                 <form method="POST" data-event-delete-form
                     data-event-delete-url="{{ route('events.destroy', ['event' => '__EVENT__']) }}"
                     onsubmit="return confirm('Remove this event?');">

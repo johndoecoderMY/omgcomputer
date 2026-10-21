@@ -10,7 +10,9 @@ use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\ProjectEstimateItem;
 use App\Models\User;
+use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
+use App\Support\AssignmentAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,7 +83,7 @@ class ProjectController extends Controller
         return view('projects.create', [
             'project' => new Project,
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
-            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -427,7 +429,7 @@ class ProjectController extends Controller
         return view('projects.edit', [
             'project' => $project->load('customers', 'requirements', 'assignees'),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'project_id']),
-            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
         ]);
     }
 
@@ -480,6 +482,8 @@ class ProjectController extends Controller
 
     private function validatedData(Request $request): array
     {
+        AssignmentAccess::preventNonAdminAssignment($request, ['assignees', 'assignees_present']);
+
         return $request->validate([
             'name' => ['required', 'string', 'max:180'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -490,7 +494,7 @@ class ProjectController extends Controller
             'requirements.*.is_completed' => ['sometimes', 'boolean'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'assignees' => ['sometimes', 'array'],
-            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees.*' => ['integer', 'distinct', new AssignableUser],
             'assignees_present' => ['sometimes', 'boolean'],
         ]);
     }

@@ -28,6 +28,14 @@
                             <span>Phone number ID <code>META_WHATSAPP_PHONE_NUMBER_ID</code></span>
                             <x-status-badge :status="$phoneNumberIdConfigured ? 'configured' : 'missing'" :label="$phoneNumberIdConfigured ? 'Configured' : 'Missing'" />
                         </li>
+                        <li class="list-group-item px-0 d-flex justify-content-between">
+                            <span>Webhook signing secret <code>META_APP_SECRET</code></span>
+                            <x-status-badge :status="filled(config('services.meta.app_secret')) ? 'configured' : 'missing'" :label="filled(config('services.meta.app_secret')) ? 'Configured' : 'Missing'" />
+                        </li>
+                        <li class="list-group-item px-0 d-flex justify-content-between">
+                            <span>Webhook verify token <code>META_WEBHOOK_VERIFY_TOKEN</code></span>
+                            <x-status-badge :status="filled(config('services.meta.webhook_verify_token')) ? 'configured' : 'missing'" :label="filled(config('services.meta.webhook_verify_token')) ? 'Configured' : 'Missing'" />
+                        </li>
                     </ul>
                     <form method="POST" action="{{ route('reports.integrations.whatsapp.check') }}">
                         @csrf
@@ -35,6 +43,16 @@
                             <span class="fas fa-plug me-2" aria-hidden="true"></span>Test connection
                         </button>
                     </form>
+                    <div class="mt-3">
+                        <a class="btn btn-outline-success" href="{{ route('reports.integrations.whatsapp.inbox') }}">
+                            <span class="fab fa-whatsapp me-2" aria-hidden="true"></span>Open inbound inbox
+                        </a>
+                    </div>
+                    <div class="mt-3 small">
+                        <div class="fw-semibold">Webhook callback URL</div>
+                        <code class="user-select-all">{{ route('webhooks.whatsapp.verify') }}</code>
+                        <p class="text-body-secondary mt-2 mb-0">Subscribe the Meta app to the WhatsApp <code>messages</code> webhook field. Incoming messages appear in the admin inbox after Meta verifies and calls this URL.</p>
+                    </div>
                     @unless ($whatsappReady)
                         <p class="small text-body-secondary mt-3 mb-0">
                             Set the missing values in the server environment, then clear Laravel's cached configuration before testing.

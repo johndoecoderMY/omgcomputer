@@ -14,6 +14,10 @@
             ['label' => 'Support Desk'],
             ['label' => 'Tickets', 'url' => route('tickets.index')],
         ],
+        $routeName === 'bookings.calendar' => [
+            ['label' => 'Bookings', 'url' => route('bookings.index')],
+            ['label' => 'Bookings Calendar'],
+        ],
         str_starts_with($routeName, 'bookings.') => [
             ['label' => 'Bookings'],
             ['label' => 'Customer bookings', 'url' => route('bookings.index')],
@@ -21,6 +25,14 @@
         str_starts_with($routeName, 'booking-time-slots.') => [
             ['label' => 'Bookings'],
             ['label' => 'Available times', 'url' => route('booking-time-slots.index')],
+        ],
+        $routeName === 'projects.calendar' => [
+            ['label' => 'Projects', 'url' => route('projects.index')],
+            ['label' => 'Project calendar'],
+        ],
+        $routeName === 'calendar' => [
+            ['label' => 'System'],
+            ['label' => 'All Events Calendar'],
         ],
         str_starts_with($routeName, 'projects.') => [
             ['label' => 'Projects', 'url' => route('projects.index')],
@@ -35,7 +47,6 @@
         ],
         str_starts_with($routeName, 'admin.users.') => [
             ['label' => 'Manage'],
-            ['label' => 'User accounts', 'url' => route('admin.users.index')],
             ['label' => 'Members', 'url' => route('admin.users.index')],
         ],
         str_starts_with($routeName, 'tasks.') => [

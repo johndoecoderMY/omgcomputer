@@ -214,4 +214,63 @@ class AttachmentUploadTest extends TestCase
             ->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF', substr($expensePdf->getContent(), 0, 4));
     }
+
+    public function test_rental_bills_and_services_accept_private_pdf_and_image_uploads(): void
+    {
+        Storage::fake('local');
+        $this->actingAs(User::factory()->create());
+
+        foreach (['rental', 'bills', 'services'] as $category) {
+            $expense = BusinessExpense::query()->create([
+                'category' => $category,
+                'name' => ucfirst($category).' document test',
+                'amount' => 80,
+                'frequency' => 'yearly',
+                'due_date' => today()->addMonth(),
+            ]);
+
+            $this->post(route('expenses.attachments.store', [$category, $expense]), [
+                'documents' => [
+                    UploadedFile::fake()->createWithContent('proof.pdf', "%PDF-1.4\nTest document\n%%EOF"),
+                    UploadedFile::fake()->image('proof.png'),
+                ],
+                'caption' => ucfirst($category).' bill or renewal proof',
+            ])->assertRedirect()->assertSessionHasNoErrors();
+
+            $attachments = $expense->attachments()->get();
+            $this->assertCount(2, $attachments);
+            $pdf = $attachments->firstWhere('mime_type', 'application/pdf');
+            $this->assertNotNull($pdf);
+            Storage::disk('local')->assertExists($pdf->path);
+
+            $this->get(route('attachments.show', $pdf))
+                ->assertOk()
+                ->assertHeader('content-type', 'application/pdf')
+                ->assertHeader('x-content-type-options', 'nosniff');
+        }
+
+        $this->get(route('expenses.index', 'rental'))
+            ->assertOk()
+            ->assertSee('PDFs or pictures')
+            ->assertSee('Open PDF');
+    }
+
+    public function test_expense_upload_rejects_non_pdf_and_non_image_files(): void
+    {
+        Storage::fake('local');
+        $this->actingAs(User::factory()->create());
+        $expense = BusinessExpense::query()->create([
+            'category' => 'bills',
+            'name' => 'Unsupported upload test',
+            'amount' => 80,
+            'frequency' => 'monthly',
+            'due_date' => today()->addMonth(),
+        ]);
+
+        $this->post(route('expenses.attachments.store', ['bills', $expense]), [
+            'documents' => [UploadedFile::fake()->createWithContent('script.php', '<?php echo "no";')],
+        ])->assertSessionHasErrors('documents.0');
+
+        $this->assertSame(0, $expense->attachments()->count());
+    }
 }

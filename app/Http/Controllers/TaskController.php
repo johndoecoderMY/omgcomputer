@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
+use App\Support\AssignmentAccess;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,33 @@ class TaskController extends Controller
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
         ]);
+    }
+
+    public function kanban(Request $request): JsonResponse
+    {
+        $tasks = Task::query()
+            ->with(['project:id,name', 'assignees:id,name'])
+            ->whereNull('parent_task_id')
+            ->orderByRaw('due_date IS NULL')
+            ->orderBy('due_date')
+            ->orderBy('priority')
+            ->get()
+            ->map(fn (Task $task): array => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'description' => Str::limit($task->description ?? '', 180),
+                'status' => $task->status,
+                'status_label' => Task::STATUSES[$task->status] ?? $task->status,
+                'priority' => Task::PRIORITIES[$task->priority] ?? $task->priority,
+                'due_date' => $task->due_date?->format('M j, Y'),
+                'project' => $task->project?->name,
+                'assignees' => $task->assignees->pluck('name')->values(),
+                'url' => route('tasks.show', $task),
+                'status_url' => route('tasks.update-status', $task),
+                'can_update' => $this->canUpdateTaskStatus($task, $request->user()),
+            ]);
+
+        return response()->json($tasks);
     }
 
     public function datatable(Request $request)
@@ -134,7 +164,7 @@ class TaskController extends Controller
             'parent' => $parent,
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
-            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -207,7 +237,7 @@ class TaskController extends Controller
             'parent' => $task->parent,
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
-            'users' => auth()->user()->hasRole('admin') ? User::query()->orderBy('name')->get(['id', 'name']) : collect(),
+            'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -267,12 +297,13 @@ class TaskController extends Controller
             ->with('success', 'Subtask created successfully.');
     }
 
-    public function updateStatus(Request $request, Task $task, WorkspaceNotifier $notifier): RedirectResponse
+    public function updateStatus(Request $request, Task $task, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'done' => ['sometimes', 'boolean'],
+            'status' => ['sometimes', Rule::in(array_keys(Task::STATUSES))],
         ]);
-        $status = $request->boolean('done') ? 'done' : 'backlog';
+        $status = $data['status'] ?? ($request->boolean('done') ? 'done' : 'backlog');
         $previousStatus = $task->status;
 
         DB::transaction(function () use ($task, $status): void {
@@ -287,8 +318,20 @@ class TaskController extends Controller
             $notifier->notifyUsers(
                 collect([$task->creator])->merge($task->assignees),
                 $request->user(),
-                $status === 'done' ? 'Task marked done' : 'Task reopened',
-                sprintf('Task “%s” was marked %s.', $task->title, $status === 'done' ? 'done' : 'to do'),
+                match ($status) {
+                    'done' => 'Task marked done',
+                    'in_progress' => 'Task started',
+                    default => 'Task reopened',
+                },
+                sprintf(
+                    'Task “%s” was marked %s.',
+                    $task->title,
+                    match ($status) {
+                        'done' => 'done',
+                        'in_progress' => 'in progress',
+                        default => 'to do',
+                    },
+                ),
                 route('tasks.show', $task),
             );
             if ($status === 'done' && $task->parent_task_id === null) {
@@ -305,11 +348,27 @@ class TaskController extends Controller
             }
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id' => $task->id,
+                'status' => $status,
+                'status_label' => Task::STATUSES[$status],
+            ]);
+        }
+
         return redirect()
             ->back()
             ->with('success', $status === 'done'
                 ? 'Task marked done'.($task->parent_task_id === null ? '; all subtasks marked done.' : '.')
                 : 'Task marked not done.');
+    }
+
+    private function canUpdateTaskStatus(Task $task, User $user): bool
+    {
+        return $user->hasRole('admin')
+            || (int) $task->created_by_user_id === (int) $user->id
+            || (int) $task->assigned_to === (int) $user->id
+            || $task->assignees->contains('id', $user->id);
     }
 
     public function destroy(Task $task): RedirectResponse
@@ -325,6 +384,8 @@ class TaskController extends Controller
 
     private function validatedData(Request $request): array
     {
+        AssignmentAccess::preventNonAdminAssignment($request, ['assignees', 'assignees_present', 'assigned_to']);
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -334,9 +395,9 @@ class TaskController extends Controller
             'due_date' => ['nullable', 'date'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'assignees' => ['sometimes', 'array'],
-            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees.*' => ['integer', 'distinct', new AssignableUser],
             'assignees_present' => ['sometimes', 'boolean'],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'parent_id' => ['nullable', 'integer', 'exists:tasks,id'],
         ]);
         $assignees = $request->exists('assignees_present')

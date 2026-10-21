@@ -165,6 +165,26 @@
                     order: [],
                 });
 
+            const initializeUserSearch = () => {
+                $table.find('select.js-user-search').each(function () {
+                    const select = window.jQuery(this);
+                    if (select.hasClass('select2-hidden-accessible')) {
+                        return;
+                    }
+
+                    select.select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: select.data('placeholder'),
+                        allowClear: true,
+                        matcher: fuzzySelectMatcher,
+                        dropdownParent: window.jQuery(document.body),
+                    });
+                });
+            };
+            dataTable.on('draw', initializeUserSearch);
+            initializeUserSearch();
+
             filters.forEach(({ selector }) => {
                 document.querySelector(selector)?.addEventListener('change', () => {
                     dataTable.ajax.reload();

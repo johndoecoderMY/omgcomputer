@@ -52,6 +52,7 @@
                     @endif
                     <p class="mb-3">Send a test message to <strong>{{ auth()->user()->email }}</strong>.</p>
                     <p class="small text-body-secondary">From address: {{ $fromAddress ?: 'Not configured' }}</p>
+                    <p><a href="{{ route('email.settings') }}">Configure an SMTP server</a> to send mail through your existing account.</p>
                     <form method="POST" action="{{ route('reports.integrations.email.send') }}">
                         @csrf
                         <button class="btn btn-outline-primary" type="submit">

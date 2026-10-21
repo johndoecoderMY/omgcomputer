@@ -29,6 +29,22 @@ class EnsureWorkspacePermission
             return $next($request);
         }
 
+        if (in_array((string) $request->route()?->getName(), [
+            'email.inbox',
+            'email.poll',
+            'email.compose',
+            'email.send',
+            'email.show',
+            'email.action',
+            'email.bulk-action',
+            'email.mailbox-settings',
+            'email.mailbox-settings.update',
+            'email.mailbox-settings.test',
+            'email.mailbox-settings.delete',
+        ], true)) {
+            return $next($request);
+        }
+
         $permission = $this->permissionForRoute($request);
         if (! $permission || ! $this->userHasPermission($user, $permission)) {
             abort(403);
@@ -48,6 +64,9 @@ class EnsureWorkspacePermission
         }
         if (str_starts_with($name, 'notifications.') || str_starts_with($name, 'profile.')) {
             return 'profile.manage_own';
+        }
+        if (in_array($name, ['calendar', 'calendar.events'], true)) {
+            return 'projects.calendar.manage';
         }
         if (str_starts_with($name, 'projects.')) {
             if (in_array($name, ['projects.index', 'projects.datatable', 'projects.show', 'projects.calendar.events'], true)) {
@@ -77,7 +96,7 @@ class EnsureWorkspacePermission
             return 'projects.update';
         }
         if (str_starts_with($name, 'tasks.')) {
-            if (in_array($name, ['tasks.index', 'tasks.datatable', 'tasks.show'], true)) {
+            if (in_array($name, ['tasks.index', 'tasks.datatable', 'tasks.kanban', 'tasks.show'], true)) {
                 return 'tasks.view';
             }
             if (in_array($name, ['tasks.create', 'tasks.store', 'tasks.subtasks.store'], true)) {
@@ -98,7 +117,7 @@ class EnsureWorkspacePermission
                 : 'tickets.manage';
         }
         if (str_starts_with($name, 'bookings.')) {
-            if (in_array($name, ['bookings.index', 'bookings.datatable'], true)) {
+            if (in_array($name, ['bookings.index', 'bookings.datatable', 'bookings.show', 'bookings.calendar', 'bookings.calendar.events'], true)) {
                 return 'bookings.view';
             }
 

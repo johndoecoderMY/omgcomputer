@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 use Yajra\DataTables\Facades\DataTables;
 
 class CustomerController extends Controller
@@ -28,7 +29,8 @@ class CustomerController extends Controller
                         ->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('company', 'like', "%{$search}%"));
+                        ->orWhere('company', 'like', "%{$search}%")
+                        ->orWhere('notes', 'like', "%{$search}%"));
                 }
             }, true)
             ->addColumn('customer', fn (Customer $customer): string => sprintf(
@@ -42,11 +44,14 @@ class CustomerController extends Controller
             ->addColumn('project_name', fn (Customer $customer): string => $customer->project
                 ? sprintf('<a href="%s">%s</a>', e(route('projects.show', $customer->project)), e($customer->project->name))
                 : '<span class="text-body-secondary">—</span>')
+            ->addColumn('notes', fn (Customer $customer): string => $customer->notes
+                ? sprintf('<span title="%s">%s</span>', e($customer->notes), e(Str::limit($customer->notes, 120)))
+                : '<span class="text-body-secondary">—</span>')
             ->addColumn('actions', fn (Customer $customer): string => sprintf(
                 '<a class="btn btn-sm btn-outline-secondary" href="%s">View profile</a>',
                 e(route('customers.show', $customer)),
             ))
-            ->rawColumns(['customer', 'contact', 'project_name', 'actions'])
+            ->rawColumns(['customer', 'contact', 'project_name', 'notes', 'actions'])
             ->toJson();
     }
 

@@ -7,8 +7,10 @@ use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
+use App\Rules\AssignableUser;
 use App\Services\AttachmentStorage;
 use App\Services\WorkspaceNotifier;
+use App\Support\AssignmentAccess;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -100,7 +102,7 @@ class RepairTicketController extends Controller
             ]),
             'customers' => Customer::query()->orderBy('name')->get(),
             'projects' => Project::query()->orderBy('name')->get(),
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => AssignmentAccess::users()->get(['id', 'name']),
             'statuses' => RepairTicket::STATUSES,
             'priorities' => RepairTicket::PRIORITIES,
         ]);
@@ -108,12 +110,14 @@ class RepairTicketController extends Controller
 
     public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
+        AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
+
         $data = $request->validate([
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'assignees' => ['sometimes', 'array'],
-            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees.*' => ['integer', 'distinct', new AssignableUser],
             'assignees_present' => ['sometimes', 'boolean'],
             'device_type' => ['nullable', 'string', 'max:80'],
             'device_model' => ['nullable', 'string', 'max:255'],
@@ -202,7 +206,7 @@ class RepairTicketController extends Controller
 
         return view('tickets.show', [
             'ticket' => $ticket,
-            'users' => User::query()->orderBy('name')->get(['id', 'name']),
+            'users' => AssignmentAccess::users()->get(['id', 'name']),
             'statuses' => RepairTicket::STATUSES,
             'priorities' => RepairTicket::PRIORITIES,
         ]);
@@ -212,17 +216,21 @@ class RepairTicketController extends Controller
     {
         $ticket->loadMissing(['creator', 'assignees']);
         $existingAssigneeIds = $ticket->assignees->modelKeys();
+        AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
+
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'assignees' => ['sometimes', 'array'],
-            'assignees.*' => ['integer', 'distinct', 'exists:users,id'],
+            'assignees.*' => ['integer', 'distinct', new AssignableUser],
             'assignees_present' => ['sometimes', 'boolean'],
             'diagnosis' => ['nullable', 'string', 'max:5000'],
             'due_at' => ['nullable', 'date'],
         ]);
-        $assignees = $this->assigneeIds($request, $data);
+        $assignees = $request->user()->hasRole('admin')
+            ? $this->assigneeIds($request, $data)
+            : $existingAssigneeIds;
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
         $statusChanged = $ticket->status !== $data['status'];
         DB::transaction(function () use ($ticket, $data, $request, $assignees, $statusChanged): void {

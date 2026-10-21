@@ -45,6 +45,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(DepartmentTeamSeeder::class);
         $this->call(OmgComputerProjectSeeder::class);
+        // $this->call(SiemProjectSeeder::class);
         $this->call(CustomerMessageTemplateSeeder::class);
         $this->call(ServiceSopExampleSeeder::class);
         $this->call(StudentFypSopSeeder::class);

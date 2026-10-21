@@ -14,6 +14,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\DramaScriptController;
+use App\Http\Controllers\EmailMailboxController;
+use App\Http\Controllers\EmailServerSettingsController;
 use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
@@ -31,6 +33,8 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\WhatsAppInboxController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
@@ -67,6 +71,10 @@ Route::prefix('book')->name('bookings.')->controller(BookingController::class)->
 
 Route::get('/marketplaces/callback/{platform}', [MarketplaceShopController::class, 'callback'])
     ->name('marketplace-shops.callback');
+Route::get('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'verify'])
+    ->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'receive'])
+    ->name('webhooks.whatsapp.receive');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -77,6 +85,28 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/activity', [ProfileController::class, 'activity'])->name('profile.activity');
     Route::get('/members/{member}', [ProfileController::class, 'showMember'])->name('members.show');
+    Route::prefix('email')->name('email.')->group(function (): void {
+        Route::get('/', [EmailMailboxController::class, 'index'])->name('inbox');
+        Route::get('/poll', [EmailMailboxController::class, 'poll'])->name('poll');
+        Route::post('/bulk-action', [EmailMailboxController::class, 'bulkAction'])->name('bulk-action');
+        Route::get('/compose', [EmailMailboxController::class, 'compose'])->name('compose');
+        Route::post('/send', [EmailMailboxController::class, 'send'])->name('send');
+        Route::get('/{uid}', [EmailMailboxController::class, 'show'])->whereNumber('uid')->name('show');
+        Route::post('/{uid}/actions/{action}', [EmailMailboxController::class, 'action'])
+            ->whereNumber('uid')
+            ->where('action', 'archive|delete|read|unread|flag|unflag')
+            ->name('action');
+        Route::get('/mailbox/settings', [EmailMailboxController::class, 'mailboxSettings'])->name('mailbox-settings');
+        Route::put('/mailbox/settings', [EmailMailboxController::class, 'updateMailboxSettings'])->name('mailbox-settings.update');
+        Route::post('/mailbox/settings/test', [EmailMailboxController::class, 'testMailboxConnection'])->name('mailbox-settings.test');
+        Route::delete('/mailbox/settings', [EmailMailboxController::class, 'deleteMailboxSettings'])->name('mailbox-settings.delete');
+    });
+    Route::prefix('email')->name('email.')->middleware('role:admin')->group(function (): void {
+        Route::get('/settings/server', [EmailServerSettingsController::class, 'edit'])->name('settings');
+        Route::put('/settings/server', [EmailServerSettingsController::class, 'update'])->name('settings.update');
+        Route::post('/settings/test-smtp', [EmailServerSettingsController::class, 'sendTest'])->name('settings.test-smtp');
+        Route::post('/settings/test-imap', [EmailServerSettingsController::class, 'testImap'])->name('settings.test-imap');
+    });
     Route::prefix('admin/access')->name('admin.access.')->middleware('role:admin')->controller(AdminAccessController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/roles', 'storeRole')->name('roles.store');
@@ -110,8 +140,11 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     });
 
     Route::prefix('bookings')->name('bookings.')->controller(BookingController::class)->group(function (): void {
+        Route::get('/calendar', 'calendar')->name('calendar');
+        Route::get('/calendar/events', 'calendarEvents')->name('calendar.events');
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/{booking}', 'show')->name('show');
         Route::put('/{booking}', 'update')->name('update');
     });
     Route::prefix('booking/slots')->name('booking-time-slots.')->middleware('not-customer')->controller(BookingTimeSlotController::class)->group(function (): void {
@@ -267,6 +300,10 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/easyparcel', 'easyParcel')->name('easyparcel');
         Route::post('/easyparcel/rates', 'checkEasyParcel')->name('easyparcel.rates');
     });
+    Route::prefix('reports/integrations/whatsapp')->name('reports.integrations.whatsapp.')->middleware('role:admin')->controller(WhatsAppInboxController::class)->group(function (): void {
+        Route::get('/inbox', 'index')->name('inbox');
+        Route::get('/inbox/poll', 'poll')->name('inbox.poll');
+    });
     Route::prefix('marketplace-shops')->name('marketplace-shops.')->middleware('role:admin')->controller(MarketplaceShopController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/{platform}/connect', 'connect')->name('connect');
@@ -286,11 +323,14 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');
     Route::delete('/events/{event}', [ProjectEventController::class, 'destroy'])->middleware('not-customer')->name('events.destroy');
 
+    Route::get('/calendar', [ProjectEventController::class, 'index'])->middleware('not-customer')->name('calendar');
+    Route::get('/calendar/events', [ProjectEventController::class, 'events'])->middleware('not-customer')->name('calendar.events');
+
     Route::prefix('projects')->name('projects.')->group(function (): void {
         Route::get('/datatable', [ProjectController::class, 'datatable'])->name('datatable');
         Route::middleware('not-customer')->group(function (): void {
-            Route::get('/calendar/events', [ProjectEventController::class, 'events'])->name('calendar.events');
-            Route::get('/calendar', [ProjectEventController::class, 'index'])->name('calendar');
+            Route::get('/{project}/calendar/events', [ProjectEventController::class, 'projectEvents'])->name('calendar.events');
+            Route::get('/{project}/calendar', [ProjectEventController::class, 'projectIndex'])->name('calendar');
             Route::get('/create', [ProjectController::class, 'create'])->name('create');
         });
         Route::get('/', [ProjectController::class, 'index'])->name('index');
@@ -328,6 +368,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
 
     Route::prefix('tasks')->name('tasks.')->controller(TaskController::class)->middleware('not-customer')->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('/kanban', 'kanban')->name('kanban');
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');

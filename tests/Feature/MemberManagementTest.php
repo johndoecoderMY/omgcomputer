@@ -8,8 +8,11 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Tests\TestCase;
 
 class MemberManagementTest extends TestCase
@@ -47,6 +50,8 @@ class MemberManagementTest extends TestCase
         $department = Department::create(['name' => 'Operations']);
         $repairTeam = Team::create(['department_id' => $department->id, 'name' => 'Repair']);
         $supportTeam = Team::create(['department_id' => $department->id, 'name' => 'Support']);
+        Notification::fake();
+        config(['services.cpanel.enabled' => false]);
 
         $this->get(route('admin.users.index'))
             ->assertOk()
@@ -56,21 +61,22 @@ class MemberManagementTest extends TestCase
         $this->get(route('admin.users.create'))
             ->assertOk()
             ->assertSee('member')
-            ->assertSee('Temporary password');
+            ->assertSee('password setup link')
+            ->assertSee('js-user-search', false);
 
         $this->post(route('admin.users.store'), [
             'name' => 'New Team Member',
             'email' => 'new-member@example.test',
             'phone' => '555-0102',
             'team_ids' => [$repairTeam->id, $supportTeam->id],
-            'password' => 'temporary-password-123',
-            'password_confirmation' => 'temporary-password-123',
-        ])->assertRedirect();
+        ])->assertRedirect()
+            ->assertSessionHas('success')
+            ->assertSessionHas('warning');
 
         $member = User::query()->where('email', 'new-member@example.test')->firstOrFail();
         $this->assertTrue($member->hasRole('member'));
-        $this->assertTrue($member->force_password_change);
-        $this->assertTrue(Hash::check('temporary-password-123', $member->password));
+        $this->assertFalse($member->force_password_change);
+        Notification::assertSentTo($member, ResetPassword::class);
         $this->assertEqualsCanonicalizing(
             [$repairTeam->id, $supportTeam->id],
             $member->teams->modelKeys(),
@@ -134,6 +140,85 @@ class MemberManagementTest extends TestCase
         $this->delete(route('admin.users.destroy', $member))
             ->assertRedirect(route('admin.users.index'));
         $this->assertDatabaseMissing('users', ['id' => $member->id]);
+    }
+
+    public function test_member_creation_provisions_a_cpanel_mailbox_and_saves_its_credentials_encrypted(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+        Notification::fake();
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+            'services.cpanel.email_quota' => 1024,
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
+                'result' => ['status' => 1],
+            ]),
+        ]);
+
+        $this->post(route('admin.users.store'), [
+            'name' => 'Provisioned Member',
+            'email' => 'personal@example.test',
+            'mailbox_username' => 'provisioned.member',
+        ])->assertRedirect()
+            ->assertSessionHas('success')
+            ->assertSessionMissing('warning');
+
+        $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
+        $this->assertSame('provisioned.member@example.test', $member->emailMailbox->email);
+        $this->assertNotSame(
+            $member->emailMailbox->password,
+            \Illuminate\Support\Facades\DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
+        );
+        Http::assertSent(fn (HttpRequest $request): bool => $request->url() === 'https://cpanel.example.test:2083/execute/Email/add_pop'
+            && $request->hasHeader('Authorization', 'cpanel cpanel-user:private-api-token')
+            && $request['email'] === 'provisioned.member'
+            && $request['domain'] === 'example.test'
+            && $request['quota'] === 1024
+            && filled($request['password']));
+        Notification::assertSentTo($member, ResetPassword::class);
+    }
+
+    public function test_member_creation_reports_cpanel_uapi_rejection_without_hiding_the_error(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+        Notification::fake();
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+            'services.cpanel.email_quota' => 1024,
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
+                'result' => ['status' => 0, 'errors' => ['Mailbox already exists']],
+            ]),
+        ]);
+
+        $this->post(route('admin.users.store'), [
+            'name' => 'Member with Existing Mailbox',
+            'email' => 'personal@example.test',
+            'mailbox_username' => 'existing.member',
+        ])->assertRedirect()
+            ->assertSessionHas('warning', fn (string $warning): bool => str_contains($warning, 'cPanel could not create the mailbox'));
+
+        $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
+        $this->assertNull($member->emailMailbox);
+        Notification::assertSentTo($member, ResetPassword::class);
     }
 
     public function test_member_management_is_restricted_and_administrator_cannot_delete_themselves(): void

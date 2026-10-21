@@ -29,7 +29,13 @@ class ProfileTest extends TestCase
             ->assertSee('Edit profile')
             ->assertSee('Take photo')
             ->assertSee('Security')
-            ->assertSee('Activity');
+            ->assertSee('Activity')
+            ->assertSee('id="navbarDropdownUser"', false)
+            ->assertSee('aria-label="Open account menu for '.$user->name.'"', false)
+            ->assertSee('Profile and account')
+            ->assertSee('action="'.route('logout').'"', false)
+            ->assertDontSee('navbar-vertical.html#!')
+            ->assertDontSee('../pages/user/settings.html');
     }
 
     public function test_customer_profile_hides_team_and_department_information(): void

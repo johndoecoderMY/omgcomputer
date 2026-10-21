@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration / Accounts" :title="$user->name"
+    <x-page-header :eyebrow="$accountType === 'customers' ? 'Manage / Customer accounts' : 'Manage / Members'" :title="$user->name"
         :description="$accountType === 'customers'
             ? 'Update this customer account, its role assignments, and individual permissions.'
             : 'Update this member’s contact details, roles, and individual permissions.'"
@@ -13,6 +13,9 @@
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
+    @endif
+    @if (session('warning'))
+        <div class="alert alert-warning" role="alert">{{ session('warning') }}</div>
     @endif
     @if ($errors->any())
         <div class="alert alert-danger" role="alert">
@@ -50,14 +53,14 @@
             @if ($accountType !== 'customers')
             <div class="col-md-6">
                 <label class="form-label" for="team_ids">Teams</label>
-                <select class="form-select" id="team_ids" name="team_ids[]" multiple>
+                <select class="form-select js-user-search" id="team_ids" name="team_ids[]" multiple data-placeholder="Select one or more teams">
                     @foreach ($teams as $team)
                         <option value="{{ $team->id }}" @selected(in_array((string) $team->id, array_map('strval', old('team_ids', $user->teams->modelKeys())), true))>
                             {{ $team->department->name }} · {{ $team->name }}
                         </option>
                     @endforeach
                 </select>
-                <div class="form-text">Select all teams this member belongs to. Hold Ctrl (Windows) or Command (Mac) to select multiple teams.</div>
+                <div class="form-text">Select all teams this member belongs to.</div>
             </div>
             @endif
             <div class="col-12">

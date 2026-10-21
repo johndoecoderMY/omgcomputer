@@ -117,23 +117,25 @@
                                     </form>
                                 @endif
                                 <details class="mt-2">
-                                    <summary>{{ $expense->attachments->count() }} photo(s) and references</summary>
+                                    <summary>{{ $expense->attachments->count() }} file(s) and references</summary>
                                     <form class="mt-2" method="POST" action="{{ route('expenses.attachments.store', [$category, $expense]) }}" enctype="multipart/form-data">
                                         @csrf
-                                        <label class="form-label small" for="expense-photos-{{ $expense->id }}">Photos</label>
-                                        <x-image-upload-input id="expense-photos-{{ $expense->id }}" name="photos[]" :multiple="true" :required="true" input-class="form-control-sm" />
+                                        <label class="form-label small" for="expense-documents-{{ $expense->id }}">PDFs or pictures</label>
+                                        <input class="form-control form-control-sm" id="expense-documents-{{ $expense->id }}"
+                                            name="documents[]" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                                            multiple required>
                                         <label class="form-label small mt-2" for="expense-caption-{{ $expense->id }}">Caption</label>
                                         <div class="input-group input-group-sm">
                                             <input class="form-control" id="expense-caption-{{ $expense->id }}" name="caption"
-                                                maxlength="255" placeholder="Receipt or renewal proof">
+                                                maxlength="255" placeholder="Bill, receipt, or renewal proof">
                                             <button class="btn btn-outline-primary" type="submit">Upload</button>
                                         </div>
-                                        <div class="form-text">Up to 8 JPG, PNG, or WebP images, up to 10 MB each.</div>
+                                        <div class="form-text">Up to 8 PDF, JPG, PNG, or WebP files, up to 10 MB each.</div>
                                     </form>
                                     <div class="mt-3">
                                         @include('attachments.gallery', [
                                             'attachments' => $expense->attachments,
-                                            'emptyMessage' => 'No expense photos yet.',
+                                            'emptyMessage' => 'No files attached yet.',
                                             'lightbox' => true,
                                             'editableCaptions' => true,
                                             'galleryName' => 'expense-'.$expense->id,

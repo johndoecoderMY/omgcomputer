@@ -121,6 +121,39 @@ class ProjectTaskTest extends TestCase
         $this->assertDatabaseMissing('tasks', ['id' => $subtask->id]);
     }
 
+    public function test_tasks_page_includes_a_kanban_board_and_allows_authorized_status_moves(): void
+    {
+        $admin = $this->adminUser();
+        $task = Task::query()->create([
+            'created_by_user_id' => $admin->id,
+            'title' => 'Kanban card test',
+            'status' => 'backlog',
+            'priority' => 'medium',
+        ]);
+
+        $this->actingAs($admin)->get(route('tasks.index'))
+            ->assertOk()
+            ->assertSee('Kanban')
+            ->assertSee('data-task-kanban-view', false)
+            ->assertSee('Recently Browsed')
+            ->assertSee('data-bs-dismiss="search"', false)
+            ->assertSee('placeholder="Search..."', false)
+            ->assertSee(route('tasks.kanban'), false);
+        $this->getJson(route('tasks.kanban'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $task->id,
+                'title' => 'Kanban card test',
+                'status' => 'backlog',
+                'can_update' => true,
+            ]);
+
+        $this->patchJson(route('tasks.update-status', $task), ['status' => 'in_progress'])
+            ->assertOk()
+            ->assertJsonPath('status', 'in_progress');
+        $this->assertSame('in_progress', $task->fresh()->status);
+    }
+
     public function test_projects_show_task_progress_and_subtasks_cannot_be_nested_or_cross_project(): void
     {
         $this->actingAs($this->adminUser());
@@ -255,6 +288,8 @@ class ProjectTaskTest extends TestCase
         $owner = $this->adminUser();
         $firstAssignee = User::factory()->create(['name' => 'Jordan Lee']);
         $secondAssignee = User::factory()->create(['name' => 'Sam Rivera']);
+        $firstAssignee->assignRole('member');
+        $secondAssignee->assignRole('member');
 
         $this->actingAs($owner)
             ->get(route('tasks.create'))
@@ -301,6 +336,7 @@ class ProjectTaskTest extends TestCase
     {
         $owner = $this->adminUser();
         $assignees = User::factory()->count(2)->create();
+        $assignees->each(fn (User $assignee) => $assignee->assignRole('member'));
 
         $this->actingAs($owner)->post(route('projects.store'), [
             'name' => 'Assigned project',

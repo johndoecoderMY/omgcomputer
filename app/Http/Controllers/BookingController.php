@@ -8,11 +8,14 @@ use App\Models\Customer;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Models\User;
+use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
+use App\Support\AssignmentAccess;
 use App\Support\StatusBadge;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -190,6 +193,74 @@ class BookingController extends Controller
         ]);
     }
 
+    public function calendar(Request $request): View
+    {
+        return view('bookings.calendar', [
+            'customerView' => $request->user()->hasRole('customer'),
+        ]);
+    }
+
+    public function show(Request $request, Booking $booking): View
+    {
+        if ($request->user()->hasRole('customer')) {
+            abort_unless(
+                strtolower(trim($booking->customer_email)) === strtolower(trim($request->user()->email)),
+                404,
+            );
+        }
+        $booking->load(['customer', 'repairTicket']);
+
+        return view('bookings.show', compact('booking'));
+    }
+
+    public function calendarEvents(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
+        ]);
+        $start = Carbon::parse($data['start'])->setTimezone('UTC');
+        $end = Carbon::parse($data['end'])->setTimezone('UTC');
+        $query = Booking::query()
+            ->with('customer')
+            ->where('starts_at', '<', $end)
+            ->where('starts_at', '>=', $start)
+            ->whereIn('status', ['pending', 'confirmed', 'completed'])
+            ->orderBy('starts_at');
+
+        if ($request->user()->hasRole('customer')) {
+            $query->whereRaw('LOWER(TRIM(customer_email)) = ?', [strtolower(trim($request->user()->email))]);
+        }
+
+        $events = $query->get()->map(fn (Booking $booking): array => [
+            'id' => $booking->id,
+            'title' => $booking->customer_name.' · '.$booking->service_name,
+            'start' => $booking->starts_at->copy()->setTimezone('UTC')->toIso8601String(),
+            'end' => $booking->starts_at->copy()->setTimezone('UTC')->addMinutes($booking->duration_minutes)->toIso8601String(),
+            'backgroundColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
+            'borderColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
+            'textColor' => Booking::CALENDAR_COLORS[$booking->status]['text'] ?? Booking::CALENDAR_COLORS['pending']['text'],
+            'url' => $request->user()->hasRole('customer') ? null : route('bookings.index'),
+            'extendedProps' => [
+                'kind' => 'booking',
+                'reference' => $booking->reference,
+                'status' => Booking::STATUSES[$booking->status] ?? $booking->status,
+                'customer' => $booking->customer_name,
+                'email' => $booking->customer_email,
+                'phone' => $booking->customer_phone,
+                'service' => $booking->service_name,
+                'device' => $booking->device_model,
+                'notes' => $booking->request_notes,
+                'booking_url' => route('bookings.show', $booking),
+                'customer_url' => ! $request->user()->hasRole('customer') && $booking->customer
+                    ? route('customers.show', $booking->customer)
+                    : null,
+            ],
+        ]);
+
+        return response()->json($events);
+    }
+
     public function datatable(Request $request)
     {
         $query = Booking::query()->with(['assignee', 'repairTicket']);
@@ -200,7 +271,9 @@ class BookingController extends Controller
         if (is_string($status) && isset(Booking::STATUSES[$status])) {
             $query->where('status', $status);
         }
-        $users = User::query()->orderBy('name')->get(['id', 'name']);
+        $users = $request->user()->hasRole('admin')
+            ? AssignmentAccess::users()->get(['id', 'name'])
+            : collect();
 
         return DataTables::eloquent($query)
             ->filter(function (Builder $bookings) use ($request): void {
@@ -247,19 +320,26 @@ class BookingController extends Controller
                     $booking->status === $value ? ' selected' : '',
                     e($label),
                 ))->implode('');
-                $userOptions = '<option value="">Unassigned</option>'.$users->map(fn (User $user): string => sprintf(
-                    '<option value="%d"%s>%s</option>',
-                    $user->id,
-                    $booking->assigned_to === $user->id ? ' selected' : '',
-                    e($user->name),
-                ))->implode('');
+                $assignmentField = '';
+                if ($request->user()->hasRole('admin')) {
+                    $userOptions = '<option value="">Unassigned</option>'.$users->map(fn (User $user): string => sprintf(
+                        '<option value="%d"%s>%s</option>',
+                        $user->id,
+                        $booking->assigned_to === $user->id ? ' selected' : '',
+                        e($user->name),
+                    ))->implode('');
+                    $assignmentField = sprintf(
+                        '<select class="form-select form-select-sm js-user-search" name="assigned_to" aria-label="Assigned staff" data-placeholder="Search staff by name">%s</select>',
+                        $userOptions,
+                    );
+                }
 
                 return sprintf(
-                    '<form class="d-flex flex-column gap-2" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PUT"><select class="form-select form-select-sm" name="status" aria-label="Booking status">%s</select><select class="form-select form-select-sm" name="assigned_to" aria-label="Assigned staff">%s</select><button class="btn btn-sm btn-outline-primary">Save</button></form>',
+                    '<form class="d-flex flex-column gap-2" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PUT"><select class="form-select form-select-sm" name="status" aria-label="Booking status">%s</select>%s<button class="btn btn-sm btn-outline-primary">Save</button></form>',
                     e(route('bookings.update', $booking)),
                     e(csrf_token()),
                     $statusOptions,
-                    $userOptions,
+                    $assignmentField,
                 );
             })
             ->rawColumns(['customer_contact', 'service', 'status_label', 'management'])
@@ -268,9 +348,11 @@ class BookingController extends Controller
 
     public function update(Request $request, Booking $booking, WorkspaceNotifier $notifier): RedirectResponse
     {
+        AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to']);
+
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(Booking::STATUSES))],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
+            'assigned_to' => ['nullable', 'integer', new AssignableUser],
         ]);
         $previousAssigneeId = $booking->assigned_to;
         $previousStatus = $booking->status;
@@ -283,7 +365,7 @@ class BookingController extends Controller
                     'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
                     'customer_id' => $booking->customer_id,
                     'project_id' => $booking->customer?->project_id,
-                    'assigned_to' => $data['assigned_to'] ?? null,
+                    'assigned_to' => $booking->assigned_to,
                     'created_by_user_id' => $request->user()->id,
                     'device_type' => 'Computer',
                     'device_model' => $booking->device_model,

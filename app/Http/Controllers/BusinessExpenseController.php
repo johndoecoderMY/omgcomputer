@@ -162,7 +162,10 @@ class BusinessExpenseController extends Controller
     {
         $this->ensureExpenseCategory($category, $expense);
         $expense->load(['payments.user', 'attachments']);
-        $photos = $expense->attachments->map(fn ($attachment): array => $attachmentImage->make($attachment));
+        $photos = $expense->attachments
+            ->filter(fn ($attachment): bool => str_starts_with($attachment->mime_type, 'image/'))
+            ->map(fn ($attachment): array => $attachmentImage->make($attachment));
+        $documents = $expense->attachments->where('mime_type', 'application/pdf');
 
         $tempDirectory = storage_path('app/mpdf-tmp');
         File::ensureDirectoryExists($tempDirectory);

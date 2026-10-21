@@ -9,19 +9,31 @@
                 width="80" />
         </div>
     </a>
-    <div class="flex-grow-1 mx-2 mx-lg-3" style="min-width: 0; max-width: 32rem;">
-        <div class="search-box" data-header-page-search style="width: 100%;">
-            <form class="position-relative" role="search" data-bs-toggle="search" data-bs-display="static">
-                <input class="form-control search-input" type="search" placeholder="Search pages..."
+    <ul class="navbar-nav flex-grow-1 mx-2 mx-lg-3" style="min-width: 0; max-width: 32rem;">
+        <li class="nav-item flex-grow-1" style="min-width: 0;">
+        <div class="search-box" data-header-page-search style="max-width: 100%;">
+            <form class="position-relative" role="search" data-bs-toggle="search" data-bs-display="static"
+                aria-expanded="false">
+                <input class="form-control search-input fuzzy-search" type="search" placeholder="Search..."
                     aria-label="Search pages" aria-controls="header-page-search-results" autocomplete="off" />
-                <button class="btn btn-link search-box-icon" type="submit" aria-label="Open first matching page">
-                    <span class="fas fa-search" aria-hidden="true"></span>
-                </button>
+                <span class="fas fa-search search-box-icon" aria-hidden="true"></span>
             </form>
+            <div class="btn-close-falcon-container position-absolute end-0 top-50 translate-middle shadow-none"
+                data-bs-dismiss="search">
+                <button class="btn btn-link btn-close-falcon p-0" type="button" aria-label="Close search"></button>
+            </div>
             <div class="dropdown-menu border font-base start-0 mt-2 py-0 overflow-hidden w-100"
                 id="header-page-search-results" role="listbox">
-                <div class="scrollbar py-2" style="max-height: 24rem;">
-                    <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">Pages</h6>
+                <div class="scrollbar list py-3" style="max-height: 24rem;">
+                    <section data-header-search-recent-section>
+                        <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2">Recently Browsed</h6>
+                        <div data-header-search-recent></div>
+                        <p class="dropdown-item fs-10 px-x1 py-1 mb-0 text-body-secondary"
+                            data-header-search-recent-empty>No recently browsed pages yet.</p>
+                        <hr class="text-200 dark__text-900 my-2">
+                    </section>
+                    <h6 class="dropdown-header fw-medium text-uppercase px-x1 fs-11 pt-0 pb-2 d-none"
+                        data-header-search-pages-heading>Pages</h6>
                     @if (auth()->user()->hasRole('customer'))
                         <a class="dropdown-item px-x1 py-2" href="{{ route('projects.index') }}" role="option"
                             data-header-search-item data-search-terms="my projects customer">
@@ -48,6 +60,10 @@
                             data-header-search-item data-search-terms="appointments schedule calendar">
                             <span class="fas fa-calendar-check me-2 text-primary" aria-hidden="true"></span>Customer bookings
                         </a>
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('bookings.calendar') }}" role="option"
+                            data-header-search-item data-search-terms="appointments schedule booking calendar">
+                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>Bookings calendar
+                        </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('booking-time-slots.index') }}" role="option"
                             data-header-search-item data-search-terms="appointments schedule availability">
                             <span class="fas fa-clock me-2 text-primary" aria-hidden="true"></span>Available times
@@ -60,9 +76,9 @@
                             data-header-search-item data-search-terms="work">
                             <span class="fas fa-project-diagram me-2 text-primary" aria-hidden="true"></span>Projects
                         </a>
-                        <a class="dropdown-item px-x1 py-2" href="{{ route('projects.calendar') }}" role="option"
-                            data-header-search-item data-search-terms="work schedule events">
-                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>Project calendar
+                        <a class="dropdown-item px-x1 py-2" href="{{ route('calendar') }}" role="option"
+                            data-header-search-item data-search-terms="all events system calendar schedule">
+                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>All Events Calendar
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('customers.index') }}" role="option"
                             data-header-search-item data-search-terms="clients">
@@ -208,16 +224,15 @@
                             </a>
                         @endrole
                     @endif
-                    <p class="px-x1 py-2 mb-0 small text-body-secondary d-none" data-header-search-prompt>
-                        Type to search pages.
-                    </p>
+                    <p class="px-x1 py-2 mb-0 small text-body-secondary d-none" data-header-search-prompt>Type to search pages.</p>
                     <p class="px-x1 py-2 mb-0 small text-body-secondary d-none" data-header-search-empty role="status">
                         No matching pages.
                     </p>
-                </div>
+                    </div>
             </div>
         </div>
-    </div>
+        </li>
+    </ul>
     <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
         <li class="nav-item ps-2 pe-0">
             <div class="dropdown theme-control-dropdown"><a
@@ -249,8 +264,10 @@
             @include('notifications._navbar')
         @endauth
      
-        <li class="nav-item dropdown"><a class="nav-link pe-0 ps-2" id="navbarDropdownUser" role="button"
-                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        <li class="nav-item dropdown">
+            <a class="nav-link pe-0 ps-2" href="{{ route('profile.edit') }}" id="navbarDropdownUser" role="button"
+                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                aria-label="Open account menu for {{ auth()->user()->name }}">
                 <div class="avatar avatar-xl">
                     @if (auth()->user()?->profile_photo_url)
                         <img class="rounded-circle" src="{{ auth()->user()->profile_photo_url }}" alt="{{ auth()->user()->name }} profile photo">
@@ -261,17 +278,17 @@
                     @endif
                 </div>
             </a>
-            <div class="dropdown-menu dropdown-caret dropdown-caret dropdown-menu-end py-0"
+            <div class="dropdown-menu dropdown-caret dropdown-menu-end py-0"
                 aria-labelledby="navbarDropdownUser">
                 <div class="bg-white dark__bg-1000 rounded-2 py-2">
-                    <a class="dropdown-item fw-bold text-warning" href="navbar-vertical.html#!"><span
-                            class="fas fa-crown me-1"></span><span>Go Pro</span></a>
+                    <div class="px-3 py-2">
+                        <div class="fw-semibold text-body">{{ auth()->user()->name }}</div>
+                        <div class="small text-body-secondary text-break">{{ auth()->user()->email }}</div>
+                    </div>
                     <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="navbar-vertical.html#!">Set status</a>
-                    <a class="dropdown-item" href="{{ route('profile.edit') }}">Profile &amp; account</a>
-                    <a class="dropdown-item" href="navbar-vertical.html#!">Feedback</a>
-                    <div class="dropdown-divider"></div>
-                    <a class="dropdown-item" href="../pages/user/settings.html">Settings</a>
+                    <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                        <span class="fas fa-user me-2 text-body-secondary" aria-hidden="true"></span>Profile and account
+                    </a>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="dropdown-item" type="submit">

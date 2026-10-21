@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Administration" :title="$accountType === 'customers' ? 'Customer accounts' : 'Members'"
+    <x-page-header eyebrow="Manage" :title="$accountType === 'customers' ? 'Customer accounts' : 'Members'"
         :description="$accountType === 'customers'
             ? 'Manage sign-in accounts with customer access.'
             : 'Manage staff accounts with admin or member roles, teams, and permissions.'"

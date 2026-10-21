@@ -124,6 +124,12 @@
                             <span class="nav-link-text ps-1">Customer bookings</span>
                         </div>
                     </a>
+                    <a class="nav-link" href="{{ route('bookings.calendar') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
+                            <span class="nav-link-text ps-1">Bookings calendar</span>
+                        </div>
+                    </a>
                     @if (auth()->user()->hasRole('admin') || auth()->user()->can('booking_availability.manage'))
                         <a class="nav-link" href="{{ route('booking-time-slots.index') }}">
                             <div class="d-flex align-items-center">
@@ -148,14 +154,6 @@
                             <span class="nav-link-text ps-1">Projects</span>
                         </div>
                     </a>
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
-                        <a class="nav-link" href="{{ route('projects.calendar') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
-                                <span class="nav-link-text ps-1">Calendar</span>
-                            </div>
-                        </a>
-                    @endif
                 </li>
 
                 {{-- Customers --}}
@@ -256,20 +254,12 @@
                     @endrole
                     @if (auth()->user()->hasRole('admin') || auth()->user()->can('users.view'))
                         @role('admin')
-                            <a class="nav-link dropdown-indicator" href="#userAccountsMenu" role="button"
-                                data-bs-toggle="collapse" aria-expanded="false" aria-controls="userAccountsMenu">
+                            <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="fas fa-users"></span></span>
-                                    <span class="nav-link-text ps-1">User accounts</span>
+                                    <span class="nav-link-text ps-1">Members</span>
                                 </div>
                             </a>
-                            <ul class="nav collapse" id="userAccountsMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('admin.users.index') }}">
-                                        <span class="nav-link-text ps-1">Members</span>
-                                    </a>
-                                </li>
-                            </ul>
                         <a class="nav-link" href="{{ route('admin.access.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-user-shield"></span></span>
@@ -480,6 +470,12 @@
                                 <span class="nav-link-text ps-1">Test Notifications & Email</span>
                             </div>
                         </a>
+                        <a class="nav-link" href="{{ route('email.settings') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-cog"></span></span>
+                                <span class="nav-link-text ps-1">Email Server Settings</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-truck"></span></span>
@@ -510,6 +506,20 @@
                             <span class="nav-link-text ps-1">My Profile</span>
                         </div>
                     </a>
+                    <a class="nav-link" href="{{ route('email.inbox') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-envelope"></span></span>
+                            <span class="nav-link-text ps-1">My Email Inbox</span>
+                        </div>
+                    </a>
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
+                        <a class="nav-link" href="{{ route('calendar') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
+                                <span class="nav-link-text ps-1">All Events Calendar</span>
+                            </div>
+                        </a>
+                    @endif
 
                     @role('admin')
                     <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"

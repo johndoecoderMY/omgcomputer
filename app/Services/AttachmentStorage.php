@@ -29,6 +29,15 @@ class AttachmentStorage
         ];
     }
 
+    public static function documentValidationRules(): array
+    {
+        return [
+            'documents' => ['required', 'array', 'min:1', 'max:8'],
+            'documents.*' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'caption' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
     public function store(MorphMany $attachments, array $photos, User $user, ?string $caption = null): void
     {
         foreach ($photos as $photo) {
@@ -37,7 +46,7 @@ class AttachmentStorage
             }
 
             [$contents, $mimeType, $extension] = $this->compress($photo);
-            $path = 'attachments/' . $attachments->getParent()->getTable() . '/' . Str::uuid() . '.' . $extension;
+            $path = 'attachments/'.$attachments->getParent()->getTable().'/'.Str::uuid().'.'.$extension;
             if (! Storage::disk('local')->put($path, $contents)) {
                 throw ValidationException::withMessages(['photos' => 'The server could not save the uploaded image. Check storage permissions.']);
             }
@@ -52,11 +61,45 @@ class AttachmentStorage
         }
     }
 
-    private function compress(UploadedFile $photo): array
+    public function storeDocuments(MorphMany $attachments, array $documents, User $user, ?string $caption = null): void
+    {
+        foreach ($documents as $document) {
+            if (! $document instanceof UploadedFile) {
+                continue;
+            }
+
+            $mimeType = $document->getMimeType();
+            if (str_starts_with((string) $mimeType, 'image/')) {
+                [$contents, $mimeType, $extension] = $this->compress($document, 'documents');
+            } else {
+                $contents = file_get_contents($document->getPathname());
+                if ($contents === false) {
+                    throw ValidationException::withMessages(['documents' => 'One of the uploaded files could not be read.']);
+                }
+                $mimeType = 'application/pdf';
+                $extension = 'pdf';
+            }
+
+            $path = 'attachments/'.$attachments->getParent()->getTable().'/'.Str::uuid().'.'.$extension;
+            if (! Storage::disk('local')->put($path, $contents)) {
+                throw ValidationException::withMessages(['documents' => 'The server could not save the uploaded file. Check storage permissions.']);
+            }
+            $attachments->create([
+                'uploaded_by' => $user->id,
+                'path' => $path,
+                'original_name' => $document->getClientOriginalName(),
+                'mime_type' => $mimeType,
+                'size' => strlen($contents),
+                'caption' => $caption,
+            ]);
+        }
+    }
+
+    private function compress(UploadedFile $photo, string $field = 'photos'): array
     {
         $originalContents = file_get_contents($photo->getPathname());
         if ($originalContents === false) {
-            throw ValidationException::withMessages(['photos' => 'One of the uploaded images could not be read.']);
+            throw ValidationException::withMessages([$field => 'One of the uploaded images could not be read.']);
         }
 
         $original = [

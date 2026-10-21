@@ -54,14 +54,16 @@ class DramaContentTest extends TestCase
         $sceneImagePath = $script->scenes[0]['image_path'];
         Storage::disk('public')->assertExists($characterImagePath);
         Storage::disk('public')->assertExists($sceneImagePath);
-        $this->assertSame('21:30', $script->scenes[0]['time']);
+        $this->assertSame('2026-10-22T21:30', $script->scenes[0]['scheduled_at']);
+        $this->assertSame(30, $script->scenes[0]['duration_minutes']);
 
         $this->get(route('drama-content.edit', $script))
             ->assertOk()
             ->assertSee('Mara')
             ->assertSee('Rainy street with blue neon reflections')
             ->assertSee('AI generation prompt')
-            ->assertSee('type="time"', false)
+            ->assertSee('name="scenes[0][scheduled_at]" type="datetime-local"', false)
+            ->assertSee('name="scenes[0][duration_minutes]" type="number"', false)
             ->assertSee('character_images[', false)
             ->assertSee('scene_images[', false);
 
@@ -109,7 +111,8 @@ class DramaContentTest extends TestCase
                     'id' => $firstSceneId,
                     'title' => 'The signal',
                     'setting' => 'Workshop at night',
-                    'time' => '21:30',
+                    'scheduled_at' => '2026-10-22T21:30',
+                    'duration_minutes' => '30',
                     'script' => 'Mara tunes the receiver. A voice answers.',
                     'ai_prompt' => 'Cinematic close-up, quiet suspense.',
                     'character_ids' => [$leadId, $friendId],
@@ -119,7 +122,8 @@ class DramaContentTest extends TestCase
                     'id' => $secondSceneId,
                     'title' => 'The choice',
                     'setting' => 'Rooftop before dawn',
-                    'time' => '05:45',
+                    'scheduled_at' => '2026-10-23T05:45',
+                    'duration_minutes' => '15',
                     'script' => 'Jon asks Mara to follow the signal.',
                     'ai_prompt' => 'Wide shot at blue hour.',
                     'character_ids' => [$leadId],

@@ -4,16 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Services\CpanelEmailProvisioner;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Yajra\DataTables\Facades\DataTables;
 
 class AdminUserController extends Controller
@@ -28,11 +33,12 @@ class AdminUserController extends Controller
         return view('admin.users.index', ['accountType' => 'customers']);
     }
 
-    public function create(): View
+    public function create(CpanelEmailProvisioner $provisioner): View
     {
         return view('admin.users.create', [
             'teams' => Team::query()->with('department')->orderBy('name')->get(),
             'accountType' => 'members',
+            'cpanelProvisioningEnabled' => $provisioner->configured(),
         ]);
     }
 
@@ -41,6 +47,7 @@ class AdminUserController extends Controller
         return view('admin.users.create', [
             'teams' => collect(),
             'accountType' => 'customers',
+            'cpanelProvisioningEnabled' => false,
         ]);
     }
 
@@ -78,37 +85,61 @@ class AdminUserController extends Controller
             ->toJson();
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, CpanelEmailProvisioner $provisioner): RedirectResponse
     {
-        return $this->storeAccount($request, 'member');
+        return $this->storeAccount($request, 'member', $provisioner);
     }
 
-    public function storeCustomer(Request $request): RedirectResponse
+    public function storeCustomer(Request $request, CpanelEmailProvisioner $provisioner): RedirectResponse
     {
-        return $this->storeAccount($request, 'customer');
+        return $this->storeAccount($request, 'customer', $provisioner);
     }
 
-    private function storeAccount(Request $request, string $roleName): RedirectResponse
+    private function storeAccount(Request $request, string $roleName, CpanelEmailProvisioner $provisioner): RedirectResponse
     {
+        $isMember = $roleName === 'member';
+        $cpanelEnabled = $isMember && $provisioner->configured();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users', 'email')],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email'),
+                function (string $attribute, mixed $value, \Closure $fail) use ($request, $cpanelEnabled): void {
+                    $mailboxUsername = trim((string) $request->input('mailbox_username'));
+                    $mailboxEmail = $mailboxUsername.'@'.config('services.cpanel.email_domain');
+                    if ($cpanelEnabled && $mailboxUsername !== '' && strcasecmp((string) $value, $mailboxEmail) === 0) {
+                        $fail('Use a separate personal contact email so the member can receive the password setup link.');
+                    }
+                },
+            ],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:2000'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['required', 'integer', 'distinct', 'exists:teams,id'],
-            'password' => ['required', 'string', 'min:12', 'confirmed'],
+            'mailbox_username' => [
+                Rule::requiredIf($cpanelEnabled),
+                'nullable',
+                'string',
+                'max:64',
+                'regex:/^[A-Za-z0-9](?:[A-Za-z0-9._+-]*[A-Za-z0-9])?$/',
+            ],
+            'password' => $isMember ? ['prohibited'] : ['required', 'string', 'min:12', 'confirmed'],
         ]);
+        $accountPassword = $isMember ? Str::random(64) : $data['password'];
         $role = Role::query()->firstOrCreate([
             'name' => $roleName,
             'guard_name' => 'web',
         ]);
 
-        $user = DB::transaction(function () use ($data, $role): User {
+        $user = DB::transaction(function () use ($data, $role, $accountPassword, $isMember): User {
             $user = User::query()->create([
-                ...collect($data)->except(['password', 'team_ids'])->all(),
-                'password' => Hash::make($data['password']),
-                'force_password_change' => true,
+                ...collect($data)->except(['password', 'team_ids', 'mailbox_username'])->all(),
+                'password' => Hash::make($accountPassword),
+                'force_password_change' => ! $isMember,
             ]);
             $user->teams()->sync($data['team_ids'] ?? []);
             $user->assignRole($role);
@@ -116,8 +147,44 @@ class AdminUserController extends Controller
             return $user;
         });
 
-        return redirect()->route('admin.users.edit', $user)
-            ->with('success', ucfirst($roleName).' account created. They must change their password at first sign-in.');
+        if (! $isMember) {
+            return redirect()->route('admin.users.edit', $user)
+                ->with('success', 'Customer account created.');
+        }
+
+        $warnings = [];
+        if ($cpanelEnabled) {
+            try {
+                $mailbox = $provisioner->provision($data['mailbox_username']);
+                $user->emailMailbox()->create($mailbox);
+            } catch (\RuntimeException $exception) {
+                Log::warning('cPanel mailbox provisioning failed for a new member.', [
+                    'user_id' => $user->id,
+                    'exception' => $exception::class,
+                ]);
+                $warnings[] = $exception->getMessage();
+            }
+        } else {
+            $warnings[] = 'cPanel provisioning is not configured; create the mailbox manually if the member needs one.';
+        }
+
+        try {
+            $inviteStatus = Password::sendResetLink(['email' => $user->email]);
+            if ($inviteStatus !== Password::RESET_LINK_SENT) {
+                $warnings[] = 'The account was created, but the password setup email could not be sent. Use the password reset page to send it again.';
+            }
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('Member password setup email could not be delivered.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+            $warnings[] = 'The account was created, but the password setup email could not be delivered. Check SMTP settings and resend the reset link.';
+        }
+
+        $response = redirect()->route('admin.users.edit', $user)
+            ->with('success', 'Member account created. A secure password setup link was sent to the contact email; no password was emailed.');
+
+        return $warnings === [] ? $response : $response->with('warning', implode(' ', $warnings));
     }
 
     public function edit(User $user): View

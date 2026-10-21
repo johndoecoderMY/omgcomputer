@@ -1,12 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Calendar')
+@section('title', $selectedProject ? $selectedProject->name.' Calendar' : 'All Events Calendar')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Projects" title="Calendar"
-        description="See consultations, mentoring, workshops, reviews, and technical clinics across every project."
-        :back-url="route('projects.index')" back-label="All projects">
+    <x-page-header :eyebrow="$selectedProject ? 'Project schedule' : 'System calendar'" :title="$selectedProject ? $selectedProject->name.' calendar' : 'All Events Calendar'"
+        :description="$selectedProject ? 'See all events scheduled for this project.' : 'See events across projects and general workspace events.'"
+        :back-url="$selectedProject ? route('projects.show', $selectedProject) : route('dashboard')"
+        :back-label="$selectedProject ? 'Back to project' : 'Dashboard'">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('projects.index') }}">Browse projects</a>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create-event-modal">
@@ -21,11 +22,11 @@
 
     <div class="card p-2">
         <div class="card-body">
-            <div id="project-calendar" aria-label="Project events calendar"></div>
+            <div id="project-calendar" aria-label="{{ $selectedProject ? $selectedProject->name.' calendar' : 'All events calendar' }}"></div>
         </div>
     </div>
     @include('projects._event-details-modal')
-    @include('projects._event-modal', ['projects' => $projects])
+    @include('projects._event-modal', ['projects' => $projects, 'fixedProject' => $selectedProject])
 </div>
 @endsection
 
@@ -82,7 +83,11 @@
                 document.getElementById('calendar-event-start').value = `${date}T09:00`;
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('create-event-modal')).show();
             },
-            events: @json(route('projects.calendar.events')),
+            events: {
+                url: @json($selectedProject
+                    ? route('projects.calendar.events', $selectedProject)
+                    : route('calendar.events')),
+            },
             eventTimeFormat: {
                 hour: 'numeric',
                 minute: '2-digit',
@@ -130,15 +135,44 @@
                 const props = event.extendedProps;
                 const modal = document.getElementById('event-details-modal');
                 const projectLink = modal.querySelector('[data-event-project-link]');
+                const projectValue = modal.querySelector('[data-event-project]');
                 const deleteForm = modal.querySelector('[data-event-delete-form]');
+                const isBooking = props.kind === 'booking';
+                const isTask = props.kind === 'task';
+                const recordLink = modal.querySelector('[data-event-record-link]');
+                const relatedLinkUrl = isBooking ? props.customer_url : props.project_url;
+                const relatedLinkText = isBooking ? props.customer : props.project;
 
                 modal.querySelector('[data-event-title]').textContent = event.title;
                 modal.querySelector('[data-event-type]').textContent = props.type || 'Event';
-                modal.querySelector('[data-event-project]').textContent = props.project || 'General event';
-                projectLink.classList.toggle('d-none', !props.project_url);
-                if (props.project_url) {
-                    projectLink.href = props.project_url;
-                    projectLink.textContent = props.project;
+                modal.querySelector('[data-event-project-label]').textContent = isBooking
+                    ? 'Customer'
+                    : (isTask && !props.project_url ? 'Task' : 'Project');
+                projectValue.textContent = isBooking
+                    ? props.customer
+                    : (isTask && !props.project_url ? props.task_title : (props.project || 'General event'));
+                projectLink.classList.toggle('d-none', !relatedLinkUrl);
+                projectValue.classList.toggle('d-none', Boolean(relatedLinkUrl));
+                if (relatedLinkUrl) {
+                    projectLink.href = relatedLinkUrl;
+                    projectLink.textContent = isBooking && !props.customer_url
+                        ? ''
+                        : (isBooking || isTask ? relatedLinkText : props.project);
+                }
+                modal.querySelector('[data-event-reference-label]').classList.toggle('d-none', !isBooking);
+                modal.querySelector('[data-event-reference]').classList.toggle('d-none', !isBooking);
+                modal.querySelector('[data-event-reference]').textContent = props.reference || '';
+                modal.querySelector('[data-event-status-label]').classList.toggle('d-none', !isBooking);
+                modal.querySelector('[data-event-status]').classList.toggle('d-none', !isBooking);
+                modal.querySelector('[data-event-status]').textContent = props.status || '';
+                deleteForm.classList.toggle('d-none', isBooking || isTask);
+                recordLink.classList.toggle('d-none', !(isBooking && props.booking_url) && !(isTask && props.task_url));
+                if (isBooking && props.booking_url) {
+                    recordLink.href = props.booking_url;
+                    recordLink.textContent = 'Open booking';
+                } else if (isTask && props.task_url) {
+                    recordLink.href = props.task_url;
+                    recordLink.textContent = 'Open task';
                 }
                 modal.querySelector('[data-event-start]').textContent = event.start
                     ? FullCalendar.formatDate(event.start, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -148,7 +182,9 @@
                     : '—';
                 modal.querySelector('[data-event-location]').textContent = props.location || '—';
                 modal.querySelector('[data-event-description]').textContent = props.description || '—';
-                deleteForm.action = deleteForm.dataset.eventDeleteUrl.replace('__EVENT__', encodeURIComponent(event.id));
+                if (!isBooking && !isTask) {
+                    deleteForm.action = deleteForm.dataset.eventDeleteUrl.replace('__EVENT__', encodeURIComponent(event.id));
+                }
 
                 bootstrap.Modal.getOrCreateInstance(modal).show();
             },

@@ -123,8 +123,12 @@
                                     <input class="form-control" id="scene-setting-{{ $sceneId }}" name="scenes[{{ $key }}][setting]" value="{{ $scene['setting'] ?? '' }}" maxlength="500" placeholder="Place, time, atmosphere">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label" for="scene-time-{{ $sceneId }}">Scene time</label>
-                                    <input class="form-control" id="scene-time-{{ $sceneId }}" name="scenes[{{ $key }}][time]" type="time" value="{{ $scene['time'] ?? '' }}">
+                                    <label class="form-label" for="scene-scheduled-at-{{ $sceneId }}">Scene date and time</label>
+                                    <input class="form-control" id="scene-scheduled-at-{{ $sceneId }}" name="scenes[{{ $key }}][scheduled_at]" type="datetime-local" value="{{ $scene['scheduled_at'] ?? '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label" for="scene-duration-{{ $sceneId }}">Estimated scene duration (minutes)</label>
+                                    <input class="form-control" id="scene-duration-{{ $sceneId }}" name="scenes[{{ $key }}][duration_minutes]" type="number" min="1" max="1440" step="1" value="{{ $scene['duration_minutes'] ?? '' }}" placeholder="e.g. 30">
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label" for="scene-script-{{ $sceneId }}">Scene script</label>
@@ -204,8 +208,12 @@
                 <input class="form-control" id="scene-setting-__ID__" name="scenes[__ID__][setting]" maxlength="500" placeholder="Place, time, atmosphere">
             </div>
             <div class="col-md-4">
-                <label class="form-label" for="scene-time-__ID__">Scene time</label>
-                <input class="form-control" id="scene-time-__ID__" name="scenes[__ID__][time]" type="time">
+                <label class="form-label" for="scene-scheduled-at-__ID__">Scene date and time</label>
+                <input class="form-control" id="scene-scheduled-at-__ID__" name="scenes[__ID__][scheduled_at]" type="datetime-local">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label" for="scene-duration-__ID__">Estimated scene duration (minutes)</label>
+                <input class="form-control" id="scene-duration-__ID__" name="scenes[__ID__][duration_minutes]" type="number" min="1" max="1440" step="1" placeholder="e.g. 30">
             </div>
             <div class="col-12">
                 <label class="form-label" for="scene-script-__ID__">Scene script</label>

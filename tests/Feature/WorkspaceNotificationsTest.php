@@ -24,6 +24,7 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::fake();
         $actor = $this->adminUser();
         $assignee = User::factory()->create();
+        $assignee->assignRole('member');
         $project = Project::query()->create(['name' => 'Mentoring portal']);
 
         $this->actingAs($actor)
@@ -45,6 +46,7 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::fake();
         $actor = $this->adminUser();
         $assignee = User::factory()->create();
+        $assignee->assignRole('member');
         $project = Project::query()->create(['name' => 'Student prototype']);
         $parent = $project->tasks()->create([
             'title' => 'Build the prototype',
@@ -70,6 +72,7 @@ class WorkspaceNotificationsTest extends TestCase
         $actor = $this->adminUser();
         $creator = User::factory()->create();
         $assignee = User::factory()->create();
+        $assignee->assignRole('member');
         $task = Task::query()->create([
             'title' => 'Prepare launch checklist',
             'status' => 'backlog',
@@ -125,6 +128,7 @@ class WorkspaceNotificationsTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         Notification::fake();
         $actor = User::factory()->create();
+        $actor->assignRole('admin');
         $admin = User::factory()->create();
         $admin->assignRole('admin');
         $assignee = User::factory()->create();
@@ -160,9 +164,12 @@ class WorkspaceNotificationsTest extends TestCase
 
     public function test_ticket_creation_notifies_assignees_without_notifying_the_creator(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         Notification::fake();
         $actor = User::factory()->create();
+        $actor->assignRole('admin');
         $assignee = User::factory()->create();
+        $assignee->assignRole('member');
         $customer = Customer::query()->create([
             'name' => 'Ticket customer',
             'email' => 'ticket-customer@example.test',
@@ -213,6 +220,7 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::fake();
         $actor = $this->adminUser();
         $assignee = User::factory()->create();
+        $assignee->assignRole('member');
         $project = Project::query()->create(['name' => 'Student FYP']);
         $project->tasks()->create([
             'assigned_to' => $assignee->id,
@@ -253,6 +261,10 @@ class WorkspaceNotificationsTest extends TestCase
             ->get(route('notifications.index'))
             ->assertOk()
             ->assertSee('Notifications')
+            ->assertSee('id="unread-notifications-count" class="notification-count', false)
+            ->assertSee('aria-label="1 unread notifications"', false)
+            ->assertSee('Your Notifications')
+            ->assertSee('notification-unread', false)
             ->assertSee('Task assigned to you');
 
         $this->get(route('notifications.read', $notification))

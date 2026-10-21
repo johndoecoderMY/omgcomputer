@@ -15,7 +15,7 @@
             <button class="btn" type="button" data-bs-toggle="modal" data-bs-target="#project-export-modal">
                 <i class="fas fa-file-pdf fa-fw me-2"></i>Export PDF
             </button>
-            <a href="{{ route('projects.calendar') }}"><i class="fas fa-calendar-days fa-fw me-2"></i>Calendar</a>
+            <a href="{{ route('projects.calendar', $project) }}"><i class="fas fa-calendar-days fa-fw me-2"></i>Project calendar</a>
             <a href="#project-schedule"><i class="fas fa-calendar-plus fa-fw me-2"></i>Schedule event</a>
             <a href="{{ route('projects.edit', $project) }}"><i class="fas fa-pen fa-fw me-2"></i>Edit project</a>
             <a href="{{ route('projects.tasks.create', $project) }}"><i class="fas fa-plus fa-fw me-2"></i>Add task</a>
@@ -258,7 +258,7 @@
                         <p class="small text-body-secondary project-empty-state p-3">No upcoming events. Select a date in the mini calendar or add an event.</p>
                     @endforelse
                     </div>
-                    <a class="btn btn-sm btn-link px-0" href="{{ route('projects.calendar') }}">Open full calendar</a>
+                    <a class="btn btn-sm btn-link px-0" href="{{ route('projects.calendar', $project) }}">Open project calendar</a>
                 </div>
             </div>
         </div>
@@ -826,8 +826,7 @@
                 headerToolbar: { left: 'prev,next', center: 'title', right: 'today' },
                 dayMaxEvents: true,
                 events: {
-                    url: @json(route('projects.calendar.events')),
-                    extraParams: { project_id: @json($project->id) },
+                    url: @json(route('projects.calendar.events', $project)),
                 },
                 eventDidMount: (info) => {
                     const backgroundColor = info.event.backgroundColor;

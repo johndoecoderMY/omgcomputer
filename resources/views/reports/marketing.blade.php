@@ -90,6 +90,7 @@
                     <div class="d-flex gap-2">
                         @role('admin')
                             <a class="btn btn-sm btn-outline-success" href="{{ route('reports.integrations.whatsapp') }}">Test connection</a>
+                            <a class="btn btn-sm btn-outline-success" href="{{ route('reports.integrations.whatsapp.inbox') }}">Inbox</a>
                         @endrole
                         <a class="btn btn-sm btn-outline-success" href="{{ route('customer-messages.index') }}">Manage templates</a>
                     </div>

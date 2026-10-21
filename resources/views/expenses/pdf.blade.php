@@ -59,13 +59,21 @@
     @endif
 
     @if ($photos->isNotEmpty())
-        <h2>Photos and attachments</h2>
+        <h2>Photos</h2>
         @foreach ($photos as $photo)
             <div class="photo-page">
                 <img class="photo" src="{{ $photo['src'] }}" alt="{{ $photo['caption'] }}">
                 <p class="muted">{{ $photo['caption'] }}</p>
             </div>
         @endforeach
+    @endif
+    @if ($documents->isNotEmpty())
+        <h2>Attached PDF files</h2>
+        <ul>
+            @foreach ($documents as $document)
+                <li>{{ $document->caption ?: $document->original_name }}</li>
+            @endforeach
+        </ul>
     @endif
 </body>
 </html>

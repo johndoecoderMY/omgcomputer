@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\IntegrationTestMail;
 use App\Notifications\IntegrationTestNotification;
+use App\Services\MailSettingsService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class IntegrationTestController extends Controller
 {
@@ -36,20 +38,30 @@ class IntegrationTestController extends Controller
         ]);
     }
 
-    public function sendTestEmail(Request $request): RedirectResponse
+    public function sendTestEmail(Request $request, MailSettingsService $mailSettings): RedirectResponse
     {
         $user = $request->user();
 
         if (blank($user->email)) {
-            return back()->with('email_test_result', [
+            return redirect()->route('reports.integrations.notifications')->with('email_test_result', [
                 'success' => false,
                 'message' => 'Your account does not have an email address to send the test to.',
             ]);
         }
 
-        Mail::to($user->email)->send(new IntegrationTestMail($user->name));
+        $mailSettings->apply();
+        try {
+            Mail::to($user->email)->send(new IntegrationTestMail($user->name));
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('Configured SMTP test email failed.', ['exception' => $exception::class]);
 
-        return back()->with('email_test_result', [
+            return redirect()->route('reports.integrations.notifications')->with('email_test_result', [
+                'success' => false,
+                'message' => 'The test email could not be sent. Check the configured mail transport.',
+            ]);
+        }
+
+        return redirect()->route('reports.integrations.notifications')->with('email_test_result', [
             'success' => true,
             'message' => "A test email was sent to {$user->email}.",
         ]);

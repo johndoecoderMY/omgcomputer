@@ -38,10 +38,15 @@ class AttachmentController extends Controller
     public function storeExpense(Request $request, string $category, BusinessExpense $expense, AttachmentStorage $storage): RedirectResponse
     {
         abort_unless($expense->category === $category, 404);
-        $data = $request->validate(AttachmentStorage::validationRules());
-        $storage->store($expense->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
+        if ($request->exists('documents')) {
+            $data = $request->validate(AttachmentStorage::documentValidationRules());
+            $storage->storeDocuments($expense->attachments(), $data['documents'], $request->user(), $data['caption'] ?? null);
+        } else {
+            $data = $request->validate(AttachmentStorage::validationRules());
+            $storage->store($expense->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
+        }
 
-        return back()->with('success', 'Expense photos uploaded.');
+        return back()->with('success', 'Expense files uploaded.');
     }
 
     public function updateExpenseCaption(Request $request, string $category, BusinessExpense $expense, Attachment $attachment): RedirectResponse

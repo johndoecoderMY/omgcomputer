@@ -29,6 +29,7 @@ class CustomerRepairTicketTest extends TestCase
             'phone' => '+60123456789',
             'company' => 'Kampar Campus',
             'project_id' => $project->id,
+            'notes' => 'Prefers contact after 2 PM.',
         ])->assertRedirect();
 
         $customer = Customer::query()->firstOrFail();
@@ -37,13 +38,15 @@ class CustomerRepairTicketTest extends TestCase
             'draw' => 1,
             'start' => 0,
             'length' => 25,
-            'search' => ['value' => 'Avery Tan'],
+            'search' => ['value' => 'contact after 2 PM'],
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.notes', fn (string $notes): bool => str_contains($notes, 'Prefers contact after 2 PM.'))
             ->assertSee('Avery Tan');
         $this->get(route('customers.show', $customer))
             ->assertOk()
             ->assertSee('Avery Tan')
+            ->assertSee('Prefers contact after 2 PM.')
             ->assertSee('Student support project')
             ->assertSee('New repair ticket');
         $this->get(route('projects.show', $project))
