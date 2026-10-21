@@ -726,7 +726,12 @@
 
     <div class="card project-panel">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="h5 mb-0">Tasks</h2>
-            <span class="badge text-bg-light border">{{ $project->tasks->count() }}</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge text-bg-light border">{{ $project->tasks->count() }}</span>
+                <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.tasks.index', $project) }}">
+                    All project tasks
+                </a>
+            </div>
         </div>
         @if ($project->tasks->isNotEmpty())
             <div class="list-group list-group-flush">

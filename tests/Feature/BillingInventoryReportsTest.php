@@ -3,13 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\BillingDocument;
+use App\Models\BillingPaymentAttempt;
 use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\ChipCollect;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class BillingInventoryReportsTest extends TestCase
@@ -96,6 +99,111 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
     }
 
+    public function test_customer_can_start_chip_checkout_for_their_invoice(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        config([
+            'services.chip.secret_key' => 'test-secret',
+            'services.chip.brand_id' => 'test-brand',
+            'services.chip.enabled' => true,
+        ]);
+        Http::fake([
+            'gate.chip-in.asia/api/v1/purchases/' => Http::response([
+                'id' => 'chip-purchase-123',
+                'checkout_url' => 'https://gate.chip-in.asia/checkout/123',
+            ], 201),
+        ]);
+
+        $customer = User::factory()->create(['email' => 'invoice-customer@example.test']);
+        $customer->assignRole('customer');
+        $project = Project::query()->create(['name' => 'Customer project']);
+        Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Invoice customer',
+            'email' => 'invoice-customer@example.test',
+        ]);
+        $document = $this->createIssuedInvoice($project, 125.50);
+
+        $this->actingAs($customer)
+            ->post(route('billing.chip.checkout', $document))
+            ->assertRedirect('https://gate.chip-in.asia/checkout/123');
+        $this->actingAs($customer)
+            ->post(route('billing.documents.payments.store', $document), [
+                'amount' => 125.50,
+                'method' => 'cash',
+                'paid_at' => now()->toDateString(),
+            ])
+            ->assertForbidden();
+
+        $attempt = BillingPaymentAttempt::query()->firstOrFail();
+        $this->assertSame('pending', $attempt->status);
+        $this->assertSame('chip-purchase-123', $attempt->provider_purchase_id);
+        $this->assertSame(125.50, (float) $attempt->amount);
+        $this->assertSame(0.0, (float) $document->fresh()->paid_amount);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
+            && $request['purchase']['currency'] === 'MYR'
+            && $request['purchase']['products'][0]['price'] === 12550
+            && str_starts_with($request['reference'], $document->number.'-')
+            && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
+    }
+
+    public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void
+    {
+        $project = Project::query()->create(['name' => 'Callback project']);
+        $document = $this->createIssuedInvoice($project, 40);
+        $attempt = BillingPaymentAttempt::query()->create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'billing_document_id' => $document->id,
+            'amount' => 40,
+            'provider_purchase_id' => 'chip-purchase-456',
+            'status' => 'pending',
+        ]);
+        $body = json_encode(['id' => 'chip-purchase-456'], JSON_THROW_ON_ERROR);
+        $this->mock(ChipCollect::class, function ($mock) use ($body): void {
+            $mock->shouldReceive('verifyCallback')->twice()->with($body, 'valid-signature')->andReturnTrue();
+            $mock->shouldReceive('purchase')->twice()->with('chip-purchase-456')->andReturn([
+                'id' => 'chip-purchase-456',
+                'status' => 'paid',
+            ]);
+        });
+
+        $callback = fn () => $this->call(
+            'POST',
+            route('webhooks.chip.collect', $attempt->uuid),
+            [],
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json', 'HTTP_X_SIGNATURE' => 'valid-signature'],
+            $body,
+        );
+
+        $callback()->assertOk();
+        $callback()->assertOk();
+
+        $this->assertSame('paid', $attempt->fresh()->status);
+        $this->assertSame('paid', $document->fresh()->status);
+        $this->assertSame(40.0, (float) $document->fresh()->paid_amount);
+        $this->assertDatabaseCount('billing_payments', 1);
+    }
+
+    public function test_chip_callback_rejects_invalid_signatures(): void
+    {
+        $attempt = BillingPaymentAttempt::query()->create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'billing_document_id' => $this->createIssuedInvoice(Project::query()->create(['name' => 'Invalid callback']), 20)->id,
+            'amount' => 20,
+            'provider_purchase_id' => 'chip-purchase-invalid',
+            'status' => 'pending',
+        ]);
+        $this->mock(ChipCollect::class, function ($mock): void {
+            $mock->shouldReceive('verifyCallback')->once()->andReturnFalse();
+            $mock->shouldNotReceive('purchase');
+        });
+
+        $this->postJson(route('webhooks.chip.collect', $attempt->uuid), ['id' => 'chip-purchase-invalid'])
+            ->assertUnauthorized();
+    }
+
     public function test_project_can_have_customer_visible_invoices_and_quotations(): void
     {
         $admin = $this->adminUser();
@@ -133,6 +241,10 @@ class BillingInventoryReportsTest extends TestCase
                 ]],
             ])->assertRedirect();
         }
+        $quotation = BillingDocument::query()->where('type', 'quotation')->firstOrFail();
+        $this->actingAs($admin)->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('href="'.route('customers.show', Customer::query()->where('email', 'project-customer@example.test')->firstOrFail()).'"', false);
 
         $customer = User::factory()->create(['email' => 'PROJECT-CUSTOMER@example.test']);
         $customer->assignRole('customer');
@@ -296,7 +408,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($user)->get(route('inventory.index'))
             ->assertOk()->assertSee('Inventory overview')->assertSee('Recent stock movements');
         $this->actingAs($user)->get(route('inventory.parts'))
-            ->assertOk()->assertSee('Spare parts')->assertDontSee('Recent stock movements');
+            ->assertOk()->assertSee('Parts')->assertDontSee('Recent stock movements');
         $this->actingAs($user)->get(route('inventory.movements'))
             ->assertOk()->assertSee('Stock movements')->assertSee('data-datatable', false);
         $this->actingAs($user)->getJson(route('inventory.movements.datatable', [
@@ -304,6 +416,24 @@ class BillingInventoryReportsTest extends TestCase
             'start' => 0,
             'length' => 25,
         ]))->assertOk()->assertJsonPath('recordsTotal', 0);
+    }
+
+    private function createIssuedInvoice(Project $project, float $total): BillingDocument
+    {
+        return BillingDocument::query()->create([
+            'number' => 'INV-'.strtoupper(uniqid()),
+            'type' => 'invoice',
+            'status' => 'issued',
+            'project_id' => $project->id,
+            'customer_name' => 'Invoice customer',
+            'customer_email' => 'invoice-customer@example.test',
+            'issue_date' => now()->toDateString(),
+            'subtotal' => $total,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'total' => $total,
+            'paid_amount' => 0,
+        ]);
     }
 
     private function createPart(User $user, int $stock): InventoryPart

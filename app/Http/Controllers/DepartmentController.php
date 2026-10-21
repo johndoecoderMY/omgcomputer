@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class DepartmentController extends Controller
@@ -21,9 +23,12 @@ class DepartmentController extends Controller
         return view('departments.create', ['department' => new Department]);
     }
 
-    public function datatable()
+    public function datatable(Request $request)
     {
-        return DataTables::eloquent(Department::query()->withCount('teams'))
+        return DataTables::eloquent(DataTableQueryBuilder::for(Department::query()->withCount('teams'), $request, [
+            'name' => AllowedFilter::partial('name'),
+            'description' => AllowedFilter::partial('description'),
+        ]))
             ->addColumn('actions', fn (Department $department): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">View</a>',
                 e(route('departments.show', $department)),

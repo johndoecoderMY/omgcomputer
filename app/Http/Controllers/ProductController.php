@@ -98,6 +98,7 @@ class ProductController extends Controller
             'audience' => ['required', 'string', 'max:255'],
             'price' => ['required', 'string', 'max:80'],
             'billing_price' => ['required', 'numeric', 'min:0', 'max:9999999999'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
     }
 }

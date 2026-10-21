@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class SupplierController extends Controller
@@ -21,14 +23,25 @@ class SupplierController extends Controller
         return view('suppliers.create', ['supplier' => new Supplier]);
     }
 
-    public function datatable()
+    public function datatable(Request $request)
     {
-        return DataTables::eloquent(Supplier::query()->withCount('parts'))
+        return DataTables::eloquent(DataTableQueryBuilder::for(Supplier::query()->withCount('parts'), $request, [
+            'name' => AllowedFilter::partial('name'),
+            'email' => AllowedFilter::partial('email'),
+            'phone' => AllowedFilter::partial('phone'),
+            'website' => AllowedFilter::partial('website'),
+        ]))
+            ->addColumn('website_link', fn (Supplier $supplier): string => $supplier->website
+                ? sprintf(
+                    '<a href="%s" target="_blank" rel="noopener noreferrer">Visit website</a>',
+                    e($supplier->website),
+                )
+                : '—')
             ->addColumn('actions', fn (Supplier $supplier): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">View</a>',
                 e(route('inventory.suppliers.show', $supplier)),
             ))
-            ->rawColumns(['actions'])
+            ->rawColumns(['website_link', 'actions'])
             ->toJson();
     }
 
@@ -80,7 +93,7 @@ class SupplierController extends Controller
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
-            'website' => ['nullable', 'url', 'max:255'],
+            'website' => ['nullable', 'url:http,https', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
     }

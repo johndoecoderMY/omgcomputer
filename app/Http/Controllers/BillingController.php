@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\BillingDocument;
+use App\Models\Customer;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Services\InventoryStock;
+use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Mpdf\Mpdf;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class BillingController extends Controller
@@ -50,7 +53,13 @@ class BillingController extends Controller
             $query->where('status', $request->input('status'));
         }
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
+            'type' => AllowedFilter::exact('type'),
+            'status' => AllowedFilter::exact('status'),
+            'number' => AllowedFilter::partial('number'),
+            'customer_name' => AllowedFilter::partial('customer_name'),
+            'customer_email' => AllowedFilter::partial('customer_email'),
+        ]))
             ->filter(function ($documents) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search !== '') {
@@ -325,9 +334,25 @@ class BillingController extends Controller
     public function show(BillingDocument $document): View
     {
         $this->authorizeCustomerDocument(request(), $document);
-        $document->load(['items.part', 'payments' => fn ($query) => $query->latest('paid_at')]);
+        $document->load([
+            'items.part',
+            'payments' => fn ($query) => $query->latest('paid_at'),
+            'project.customers',
+            'repairTicket.customer',
+            'repairTicket.project.customers',
+        ]);
+        $customerRecord = $document->repairTicket?->customer;
+        $project = $document->project ?? $document->repairTicket?->project;
+        $projectCustomers = $project?->customers ?? collect();
+        if (! $customerRecord && $projectCustomers->isNotEmpty()) {
+            $email = strtolower(trim((string) $document->customer_email));
+            $customerRecord = $email !== ''
+                ? $projectCustomers->first(fn (Customer $customer): bool => strtolower(trim((string) $customer->email)) === $email)
+                : null;
+            $customerRecord ??= $projectCustomers->count() === 1 ? $projectCustomers->first() : null;
+        }
 
-        return view('billing.show', compact('document'));
+        return view('billing.show', compact('document', 'customerRecord'));
     }
 
     private function authorizeCustomerDocument(Request $request, BillingDocument $document): void
@@ -383,6 +408,8 @@ class BillingController extends Controller
 
     public function storePayment(BillingDocument $document, Request $request): RedirectResponse
     {
+        abort_unless($request->user()->hasRole('admin'), 403);
+
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'method' => ['required', 'in:cash,card,bank_transfer,online,other'],

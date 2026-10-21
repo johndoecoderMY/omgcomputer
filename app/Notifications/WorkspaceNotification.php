@@ -30,7 +30,7 @@ class WorkspaceNotification extends Notification
 
     public function toBroadcast(object $notifiable): BroadcastMessage
     {
-        return new BroadcastMessage($this->toArray($notifiable));
+        return (new BroadcastMessage($this->toArray($notifiable)))->onConnection('sync');
     }
 
     public function toMail(object $notifiable): MailMessage

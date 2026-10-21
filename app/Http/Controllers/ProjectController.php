@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class ProjectController extends Controller
@@ -45,7 +47,10 @@ class ProjectController extends Controller
                 ->withCount(['tasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')]);
         }
 
-        $table = DataTables::eloquent($projects);
+        $table = DataTables::eloquent(DataTableQueryBuilder::for($projects, $request, [
+            'name' => AllowedFilter::partial('name'),
+            'status' => AllowedFilter::partial('status'),
+        ]));
         if (! $customerView) {
             $table->addColumn('assignees', fn (Project $project): string => e(
                 $project->assignees->pluck('name')->join(', ') ?: 'Unassigned',
@@ -295,9 +300,16 @@ class ProjectController extends Controller
         return redirect()->route('projects.show', $project)->with('success', 'Project estimate item removed.');
     }
 
-    public function flowChartsDatatable(Project $project)
+    public function flowChartsDatatable(Request $request, Project $project)
     {
-        return DataTables::eloquent($project->flowCharts()->where('is_example', false))
+        return DataTables::eloquent(DataTableQueryBuilder::for(
+            $project->flowCharts()->where('is_example', false),
+            $request,
+            [
+                'name' => AllowedFilter::partial('name'),
+                'category' => AllowedFilter::exact('category'),
+            ],
+        ))
             ->addColumn('category_label', fn (FlowChart $flowChart): string => [
                 'website' => 'Website',
                 'process' => 'Process',

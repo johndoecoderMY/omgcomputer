@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Project;
+use App\Models\Booking;
 use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
@@ -11,6 +11,7 @@ use App\Rules\AssignableUser;
 use App\Services\AttachmentStorage;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
+use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -18,11 +19,40 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class RepairTicketController extends Controller
 {
+    public function trackingForm(): View
+    {
+        return view('repairs.track');
+    }
+
+    public function track(Request $request): View|RedirectResponse
+    {
+        $data = $request->validate([
+            'ticket_number' => ['required', 'string', 'max:64'],
+        ]);
+
+        $ticket = RepairTicket::query()
+            ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($data['ticket_number']))])
+            ->with(['updates' => fn ($updates) => $updates
+                ->select(['id', 'repair_ticket_id', 'status', 'created_at'])
+                ->oldest()])
+            ->first();
+
+        if (! $ticket) {
+            return redirect()->route('repairs.track.form')
+                ->withErrors(['ticket_number' => 'We could not find a repair with that service number.'])
+                ->withInput();
+        }
+
+        return view('repairs.track', ['trackingTicket' => $ticket]);
+    }
+
     public function index(Request $request): View
     {
         return view('tickets.index', [
@@ -48,7 +78,12 @@ class RepairTicketController extends Controller
             $query->whereHas('assignees', fn (Builder $assignees) => $assignees->whereKey($request->user()->id));
         }
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
+            'status' => AllowedFilter::exact('status'),
+            'priority' => AllowedFilter::exact('priority'),
+            'ticket_number' => AllowedFilter::partial('ticket_number'),
+            'device_model' => AllowedFilter::partial('device_model'),
+        ]))
             ->filter(function (Builder $tickets) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search === '') {
@@ -90,18 +125,30 @@ class RepairTicketController extends Controller
             ->toJson();
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
         abort_if($request->user()->hasRole('customer'), 403);
 
+        $booking = $request->filled('booking_id')
+            ? Booking::query()->with('customer')->findOrFail($request->integer('booking_id'))
+            : null;
+        if ($booking?->repair_ticket_id) {
+            return redirect()->route('tickets.show', $booking->repair_ticket_id);
+        }
+        $customer = $booking?->customer;
+
         return view('tickets.create', [
             'ticket' => new RepairTicket([
-                'customer_id' => $request->integer('customer_id') ?: null,
-                'project_id' => $request->integer('project_id') ?: null,
+                'customer_id' => $customer?->id ?? ($request->integer('customer_id') ?: null),
+                'device_type' => $booking ? 'Computer' : null,
+                'device_model' => $booking?->device_model,
+                'issue_description' => $booking
+                    ? trim($booking->service_name."\n\n".($booking->request_notes ?? ''))
+                    : null,
                 'priority' => 'normal',
             ]),
+            'booking' => $booking,
             'customers' => Customer::query()->orderBy('name')->get(),
-            'projects' => Project::query()->orderBy('name')->get(),
             'users' => AssignmentAccess::users()->get(['id', 'name']),
             'statuses' => RepairTicket::STATUSES,
             'priorities' => RepairTicket::PRIORITIES,
@@ -113,8 +160,8 @@ class RepairTicketController extends Controller
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
 
         $data = $request->validate([
-            'customer_id' => ['required', 'integer', 'exists:customers,id'],
-            'project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'customer_id' => ['required_without:booking_id', 'nullable', 'integer', 'exists:customers,id'],
+            'booking_id' => ['nullable', 'integer', 'exists:bookings,id'],
             'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'assignees' => ['sometimes', 'array'],
             'assignees.*' => ['integer', 'distinct', new AssignableUser],
@@ -126,17 +173,39 @@ class RepairTicketController extends Controller
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'due_at' => ['nullable', 'date'],
         ]);
+        $bookingId = $data['booking_id'] ?? null;
+        unset($data['booking_id']);
         $assignees = $this->assigneeIds($request, $data);
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
 
-        $ticket = DB::transaction(function () use ($data, $request, $assignees): RepairTicket {
-            $customer = Customer::query()->findOrFail($data['customer_id']);
+        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId): RepairTicket {
+            $booking = $bookingId
+                ? Booking::query()->with('customer')->lockForUpdate()->findOrFail($bookingId)
+                : null;
+            if ($booking?->repair_ticket_id) {
+                throw ValidationException::withMessages([
+                    'booking_id' => 'This booking already has a repair ticket.',
+                ]);
+            }
+            $customer = $booking?->customer;
+            if ($booking && ! $customer) {
+                $customer = Customer::query()->firstOrCreate(
+                    ['email' => $booking->customer_email],
+                    [
+                        'name' => $booking->customer_name,
+                        'phone' => $booking->customer_phone,
+                    ],
+                );
+                $booking->update(['customer_id' => $customer->id]);
+            }
+            $customer ??= Customer::query()->findOrFail($data['customer_id']);
             $ticket = RepairTicket::create([
                 ...$data,
+                'customer_id' => $customer->id,
                 'assigned_to' => $assignees[0] ?? null,
                 'created_by_user_id' => $request->user()->id,
                 'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
-                'project_id' => $data['project_id'] ?? $customer->project_id,
+                'project_id' => null,
                 'status' => 'new',
                 'received_at' => now(),
             ]);
@@ -151,6 +220,7 @@ class RepairTicketController extends Controller
             ]);
 
             $ticket->assignees()->sync($assignees);
+            $booking?->update(['repair_ticket_id' => $ticket->id]);
 
             return $ticket;
         });

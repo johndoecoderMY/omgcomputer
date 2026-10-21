@@ -30,6 +30,8 @@ class ProfileTest extends TestCase
             ->assertSee('Take photo')
             ->assertSee('Security')
             ->assertSee('Activity')
+            ->assertSee('nav-item dropdown d-flex align-items-center', false)
+            ->assertSee('d-flex align-items-center justify-content-center px-2 py-0', false)
             ->assertSee('id="navbarDropdownUser"', false)
             ->assertSee('aria-label="Open account menu for '.$user->name.'"', false)
             ->assertSee('Profile and account')

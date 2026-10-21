@@ -3,7 +3,7 @@
         href="{{ route('notifications.read', $notification) }}">
         <div class="notification-avatar">
             <div class="avatar avatar-2xl me-3">
-                <div class="avatar-name rounded-circle bg-primary-subtle text-primary">
+                <div class="avatar-name rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center">
                     <span class="fas fa-bell" aria-hidden="true"></span>
                 </div>
             </div>

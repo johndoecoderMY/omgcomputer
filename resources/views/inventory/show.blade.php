@@ -11,6 +11,7 @@
     <div class="card"><div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">SKU</dt><dd class="col-sm-9">{{ $part->sku ?: '—' }}</dd>
+            <dt class="col-sm-3">Type</dt><dd class="col-sm-9">{{ \App\Models\InventoryPart::TYPES[$part->type] ?? $part->type }}</dd>
             <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ $part->description ?: '—' }}</dd>
             <dt class="col-sm-3">Supplier</dt><dd class="col-sm-9">{{ $part->supplier?->name ?? '—' }}</dd>
             <dt class="col-sm-3">In stock</dt><dd class="col-sm-9">{{ $part->stock_quantity }} (reorder at {{ $part->reorder_level }})</dd>

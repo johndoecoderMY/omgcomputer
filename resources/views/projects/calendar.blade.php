@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', $selectedProject ? $selectedProject->name.' Calendar' : 'All Events Calendar')
+@section('title', $selectedProject ? $selectedProject->name.' Calendar' : 'My Calendar')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header :eyebrow="$selectedProject ? 'Project schedule' : 'System calendar'" :title="$selectedProject ? $selectedProject->name.' calendar' : 'All Events Calendar'"
+    <x-page-header :eyebrow="$selectedProject ? 'Project schedule' : 'System calendar'" :title="$selectedProject ? $selectedProject->name.' calendar' : 'My Calendar'"
         :description="$selectedProject ? 'See all events scheduled for this project.' : 'See events across projects and general workspace events.'"
         :back-url="$selectedProject ? route('projects.show', $selectedProject) : route('dashboard')"
         :back-label="$selectedProject ? 'Back to project' : 'Dashboard'">

@@ -41,6 +41,8 @@ class EnsureWorkspacePermission
             'email.mailbox-settings.update',
             'email.mailbox-settings.test',
             'email.mailbox-settings.delete',
+            'billing.chip.checkout',
+            'billing.chip.return',
         ], true)) {
             return $next($request);
         }

@@ -6,11 +6,13 @@ use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\Supplier;
 use App\Services\InventoryStock;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class InventoryController extends Controller
@@ -36,8 +38,9 @@ class InventoryController extends Controller
     public function create(): View
     {
         return view('inventory.create', [
-            'part' => new InventoryPart(['stock_quantity' => 0, 'reorder_level' => 0, 'cost_price' => 0, 'selling_price' => 0]),
+            'part' => new InventoryPart(['type' => 'other', 'stock_quantity' => 0, 'reorder_level' => 0, 'cost_price' => 0, 'selling_price' => 0]),
             'suppliers' => Supplier::query()->orderBy('name')->get(),
+            'types' => InventoryPart::TYPES,
         ]);
     }
 
@@ -53,6 +56,7 @@ class InventoryController extends Controller
         return view('inventory.edit', [
             'part' => $part,
             'suppliers' => Supplier::query()->orderBy('name')->get(),
+            'types' => InventoryPart::TYPES,
         ]);
     }
 
@@ -61,12 +65,14 @@ class InventoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('inventory_parts', 'sku')->ignore($part->id)],
+            'type' => ['nullable', Rule::in(array_keys(InventoryPart::TYPES))],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'description' => ['nullable', 'string', 'max:2000'],
             'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:10000000'],
         ]);
+        $data['type'] ??= $part->type;
         $part->update($data);
 
         return redirect()->route('inventory.parts.show', $part)->with('success', 'Inventory item updated.');
@@ -88,14 +94,20 @@ class InventoryController extends Controller
     {
         $query = InventoryPart::query()
             ->leftJoin('suppliers', 'inventory_parts.supplier_id', '=', 'suppliers.id')
-            ->select('inventory_parts.*', 'suppliers.name as supplier_name')
-            ->when($request->boolean('low_stock'), fn ($parts) => $parts->whereColumn(
-                'inventory_parts.stock_quantity',
-                '<=',
-                'inventory_parts.reorder_level',
-            ));
+            ->select('inventory_parts.*', 'suppliers.name as supplier_name');
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
+            'name' => AllowedFilter::partial('name', 'inventory_parts.name'),
+            'sku' => AllowedFilter::partial('sku', 'inventory_parts.sku'),
+            'type' => AllowedFilter::exact('type', 'inventory_parts.type'),
+            'supplier' => AllowedFilter::partial('supplier', 'suppliers.name'),
+            'low_stock' => AllowedFilter::callback('low_stock', function ($query, string $value): void {
+                if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                    $query->whereColumn('inventory_parts.stock_quantity', '<=', 'inventory_parts.reorder_level');
+                }
+            }),
+        ]))
+            ->addColumn('type_label', fn (InventoryPart $part): string => InventoryPart::TYPES[$part->type] ?? $part->type)
             ->editColumn('stock_quantity', fn (InventoryPart $part): string => sprintf(
                 '<span class="badge text-bg-%s">%s</span>',
                 $part->stock_quantity <= $part->reorder_level ? 'danger' : 'success',
@@ -104,8 +116,9 @@ class InventoryController extends Controller
             ->editColumn('cost_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->cost_price, 2))
             ->editColumn('selling_price', fn (InventoryPart $part): string => 'RM '.number_format((float) $part->selling_price, 2))
             ->addColumn('actions', fn (InventoryPart $part): string => sprintf(
-                '<div class="d-flex gap-1"><a class="btn btn-sm btn-outline-secondary" href="%s">Details</a><form class="d-flex gap-1" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><select class="form-select form-select-sm" name="direction" aria-label="Stock adjustment direction"><option value="receive">Receive</option><option value="use">Use</option></select><input class="form-control form-control-sm" name="quantity" type="number" min="1" placeholder="Qty" required style="max-width:85px"><button class="btn btn-sm btn-outline-primary" aria-label="Save stock adjustment"><span class="fas fa-check"></span></button></form></div>',
+                '<div class="d-flex gap-1"><a class="btn btn-sm btn-outline-secondary" href="%s">Details</a><a class="btn btn-sm btn-outline-primary" href="%s">Edit</a><form class="d-flex gap-1" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><select class="form-select form-select-sm" name="direction" aria-label="Stock adjustment direction"><option value="receive">Receive</option><option value="use">Use</option></select><input class="form-control form-control-sm" name="quantity" type="number" min="1" placeholder="Qty" required style="max-width:85px"><button class="btn btn-sm btn-outline-primary" aria-label="Save stock adjustment"><span class="fas fa-check"></span></button></form></div>',
                 e(route('inventory.parts.show', $part)),
+                e(route('inventory.parts.edit', $part)),
                 e(route('inventory.movements.store', $part)),
                 e(csrf_token()),
             ))
@@ -123,6 +136,7 @@ class InventoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:100', 'unique:inventory_parts,sku'],
+            'type' => ['nullable', Rule::in(array_keys(InventoryPart::TYPES))],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'description' => ['nullable', 'string', 'max:2000'],
             'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
@@ -130,6 +144,7 @@ class InventoryController extends Controller
             'stock_quantity' => ['required', 'integer', 'min:0', 'max:10000000'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:10000000'],
         ]);
+        $data['type'] ??= 'other';
 
         DB::transaction(function () use ($data, $request): void {
             $part = InventoryPart::create($data);
@@ -172,14 +187,20 @@ class InventoryController extends Controller
         return view('inventory.movements');
     }
 
-    public function movementsDatatable()
+    public function movementsDatatable(Request $request)
     {
-        return DataTables::eloquent(
+        return DataTables::eloquent(DataTableQueryBuilder::for(
             InventoryMovement::query()
                 ->leftJoin('inventory_parts', 'inventory_movements.inventory_part_id', '=', 'inventory_parts.id')
                 ->leftJoin('users', 'inventory_movements.user_id', '=', 'users.id')
-                ->select('inventory_movements.*', 'inventory_parts.name as part_name', 'users.name as user_name')
-        )
+                ->select('inventory_movements.*', 'inventory_parts.name as part_name', 'users.name as user_name'),
+            $request,
+            [
+                'type' => AllowedFilter::exact('type', 'inventory_movements.type'),
+                'part_name' => AllowedFilter::partial('part_name', 'inventory_parts.name'),
+                'user_name' => AllowedFilter::partial('user_name', 'users.name'),
+            ],
+        ))
             ->editColumn('created_at', fn (InventoryMovement $movement): string => $movement->created_at->format('M j, Y g:i A'))
             ->editColumn('part_name', fn (InventoryMovement $movement): string => $movement->part_name ?? 'Deleted item')
             ->editColumn('quantity_change', fn (InventoryMovement $movement): string => $movement->quantity_change > 0

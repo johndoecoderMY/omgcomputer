@@ -5,8 +5,10 @@
                 class="toggle-line"></span></span></button>
     <a class="navbar-brand me-1 me-sm-3" href="{{ route('dashboard') }}">
         <div class="d-flex align-items-center">
-            <img class="me-2 brand-logo" src="{{ asset('assets/img/omg/logoex2.png') }}" alt="OMG Computer logo"
-                width="80" />
+            <img class="me-2 brand-logo brand-logo-light" src="{{ asset('assets/img/omg/logoex2.png') }}"
+                alt="OMG Computer logo" width="80" />
+            <img class="me-2 brand-logo brand-logo-dark" src="{{ asset('assets/img/omg/logoex2w.png') }}"
+                alt="" aria-hidden="true" width="80" />
         </div>
     </a>
     <ul class="navbar-nav flex-grow-1 mx-2 mx-lg-3" style="min-width: 0; max-width: 32rem;">
@@ -58,11 +60,11 @@
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('bookings.index') }}" role="option"
                             data-header-search-item data-search-terms="appointments schedule calendar">
-                            <span class="fas fa-calendar-check me-2 text-primary" aria-hidden="true"></span>Customer bookings
+                            <span class="fas fa-calendar-check me-2 text-primary" aria-hidden="true"></span>Bookings
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('bookings.calendar') }}" role="option"
                             data-header-search-item data-search-terms="appointments schedule booking calendar">
-                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>Bookings calendar
+                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>Book Calendar
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('booking-time-slots.index') }}" role="option"
                             data-header-search-item data-search-terms="appointments schedule availability">
@@ -78,19 +80,19 @@
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('calendar') }}" role="option"
                             data-header-search-item data-search-terms="all events system calendar schedule">
-                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>All Events Calendar
+                            <span class="fas fa-calendar-alt me-2 text-primary" aria-hidden="true"></span>My Calendar
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('customers.index') }}" role="option"
                             data-header-search-item data-search-terms="clients">
-                            <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>Customers
+                            <span class="fas fa-users me-2 text-primary" aria-hidden="true"></span>Records
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('development.overview') }}" role="option"
                             data-header-search-item data-search-terms="company business">
-                            <span class="fas fa-home me-2 text-primary" aria-hidden="true"></span>OMG Computer overview
+                            <span class="fas fa-home me-2 text-primary" aria-hidden="true"></span>Overview
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('tasks.index') }}" role="option"
-                            data-header-search-item data-search-terms="to do work">
-                            <span class="fas fa-tasks me-2 text-primary" aria-hidden="true"></span>Tasks
+                            data-header-search-item data-search-terms="to do work system all">
+                            <span class="fas fa-tasks me-2 text-primary" aria-hidden="true"></span>My Tasks
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('development.plan') }}" role="option"
                             data-header-search-item data-search-terms="business">
@@ -98,11 +100,11 @@
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('development.sops') }}" role="option"
                             data-header-search-item data-search-terms="procedures documentation">
-                            <span class="fas fa-book me-2 text-primary" aria-hidden="true"></span>SOP library
+                            <span class="fas fa-book me-2 text-primary" aria-hidden="true"></span>SOPs
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('customer-messages.index') }}" role="option"
                             data-header-search-item data-search-terms="templates communication">
-                            <span class="fas fa-envelope me-2 text-primary" aria-hidden="true"></span>Customer messages
+                            <span class="fas fa-envelope me-2 text-primary" aria-hidden="true"></span>Copywriting
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('expenses.index', 'rental') }}" role="option"
                             data-header-search-item data-search-terms="rental rent operating costs">
@@ -114,7 +116,7 @@
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('expenses.index', 'services') }}" role="option"
                             data-header-search-item data-search-terms="services renewal domain server SSM operating costs">
-                            <span class="fas fa-sync-alt me-2 text-primary" aria-hidden="true"></span>Services and renewals
+                            <span class="fas fa-sync-alt me-2 text-primary" aria-hidden="true"></span>Services &amp; renewals
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('teams.index') }}" role="option"
                             data-header-search-item data-search-terms="staff members">
@@ -159,8 +161,8 @@
                             <span class="fas fa-boxes me-2 text-primary" aria-hidden="true"></span>Inventory overview
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.parts') }}" role="option"
-                            data-header-search-item data-search-terms="stock spare parts">
-                            <span class="fas fa-cubes me-2 text-primary" aria-hidden="true"></span>Spare parts
+                            data-header-search-item data-search-terms="stock spare parts cpu gpu ram components">
+                            <span class="fas fa-cubes me-2 text-primary" aria-hidden="true"></span>Parts
                         </a>
                         <a class="dropdown-item px-x1 py-2" href="{{ route('inventory.suppliers.index') }}" role="option"
                             data-header-search-item data-search-terms="vendors">

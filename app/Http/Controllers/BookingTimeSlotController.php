@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\BookingTimeSlot;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class BookingTimeSlotController extends Controller
@@ -31,9 +33,12 @@ class BookingTimeSlotController extends Controller
         return view('booking-time-slots.index', compact('events'));
     }
 
-    public function datatable()
+    public function datatable(Request $request)
     {
-        return DataTables::eloquent(BookingTimeSlot::query())
+        return DataTables::eloquent(DataTableQueryBuilder::for(BookingTimeSlot::query(), $request, [
+            'day_of_week' => AllowedFilter::exact('day_of_week'),
+            'start_time' => AllowedFilter::partial('start_time'),
+        ]))
             ->addColumn('day_label', fn (BookingTimeSlot $slot): string => BookingTimeSlot::DAYS[$slot->day_of_week])
             ->editColumn('start_time', fn (BookingTimeSlot $slot): string => date('g:i A', strtotime($slot->start_time)))
             ->addColumn('actions', fn (BookingTimeSlot $slot): string => sprintf(

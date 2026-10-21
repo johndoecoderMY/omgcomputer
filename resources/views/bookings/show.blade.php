@@ -10,6 +10,8 @@
             <x-slot:actions>
                 @if ($booking->repairTicket)
                     <a class="btn btn-outline-primary" href="{{ route('tickets.show', $booking->repairTicket) }}">Open repair ticket</a>
+                @elseif (! auth()->user()->hasRole('customer'))
+                    <a class="btn btn-primary" href="{{ route('tickets.create', ['booking_id' => $booking->id]) }}">Create repair ticket</a>
                 @endif
                 @if ($booking->customer && ! auth()->user()->hasRole('customer'))
                     <a class="btn btn-outline-primary" href="{{ route('customers.show', $booking->customer) }}">Open customer record</a>

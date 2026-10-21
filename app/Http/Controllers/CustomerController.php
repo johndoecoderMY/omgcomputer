@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Project;
 use App\Models\User;
+use App\Support\DataTableQueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Str;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class CustomerController extends Controller
@@ -21,7 +24,16 @@ class CustomerController extends Controller
 
     public function datatable(Request $request)
     {
-        return DataTables::eloquent(Customer::query()->with('project')->withCount('repairTickets'))
+        return DataTables::eloquent(DataTableQueryBuilder::for(
+            Customer::query()->with('project')->withCount('repairTickets'),
+            $request,
+            [
+                'name' => AllowedFilter::partial('name'),
+                'email' => AllowedFilter::partial('email'),
+                'phone' => AllowedFilter::partial('phone'),
+                'company' => AllowedFilter::partial('company'),
+            ],
+        ))
             ->filter(function ($customers) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search !== '') {
@@ -68,6 +80,23 @@ class CustomerController extends Controller
         $customer = Customer::create($this->validatedData($request));
 
         return redirect()->route('customers.show', $customer)->with('success', 'Customer profile created.');
+    }
+
+    public function quickStore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('customers', 'email')],
+            'phone' => ['nullable', 'string', 'max:64'],
+            'company' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $customer = Customer::query()->create($data);
+
+        return response()->json([
+            'id' => $customer->id,
+            'text' => $customer->name.($customer->company ? ' · '.$customer->company : ''),
+        ], 201);
     }
 
     public function show(Customer $customer): View

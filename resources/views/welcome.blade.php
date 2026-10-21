@@ -15,7 +15,7 @@
                     <div class="d-flex flex-wrap gap-3">
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#services">Explore our services</a>
                         <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
-                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="#repair-tracking">
+                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
                             <span class="fas fa-search me-2"></span>Track a repair
                         </a>
                     </div>
@@ -329,21 +329,12 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-8 col-xl-7">
-                    <div class="card border-0 shadow p-2">
+                    <div class="card border-0 shadow-sm p-2">
                         <div class="card-body p-4 p-md-5 text-center">
                             <span class="fas fa-magnifying-glass text-primary fa-2x mb-3"></span>
-                            <span class="d-block text-primary fw-bold text-uppercase fs-10">Guest repair tracking</span>
-                            <h2 class="fw-bold text-1000 mt-2">Have a service number?</h2>
-                            <p class="text-700">Guest tracking is coming soon. Keep the service number provided by the shop handy; you’ll be able to check your repair progress here.</p>
-                            <form class="row g-2 justify-content-center mt-3" aria-label="Repair tracking lookup">
-                                <div class="col-sm-8">
-                                    <label class="visually-hidden" for="service-number">Service number</label>
-                                    <input class="form-control" id="service-number" type="text" placeholder="Enter your service number" disabled>
-                                </div>
-                                <div class="col-sm-auto">
-                                    <button class="btn btn-primary w-100" type="button" disabled>Track repair</button>
-                                </div>
-                            </form>
+                            <h2 class="fw-bold text-1000">Track your repair</h2>
+                            <p class="text-700 mb-4">Check the latest progress using the service number provided by our shop.</p>
+                            <a class="btn btn-primary rounded-pill px-4" href="{{ route('repairs.track.form') }}">Track a repair</a>
                         </div>
                     </div>
                 </div>

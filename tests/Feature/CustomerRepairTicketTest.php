@@ -15,6 +15,77 @@ class CustomerRepairTicketTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_guest_can_track_a_repair_with_only_the_service_number(): void
+    {
+        $customer = Customer::query()->create([
+            'name' => 'Repair Tracking Customer',
+            'email' => 'tracking@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000123',
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'Private intake details must not appear in public tracking.',
+            'status' => 'waiting_parts',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $ticket->updates()->create([
+            'title' => 'Device received',
+            'status' => 'new',
+            'notes' => 'Private intake details must not appear in public tracking.',
+            'created_at' => now()->subHours(2),
+        ]);
+        $ticket->updates()->create([
+            'title' => 'Parts ordered',
+            'status' => 'waiting_parts',
+            'notes' => 'Internal supplier details must not appear in public tracking.',
+            'created_at' => now()->subHour(),
+        ]);
+
+        $this->get(route('repairs.track.form'))
+            ->assertOk()
+            ->assertSee('<title>Track a Repair - OMG Computer</title>', false)
+            ->assertSee('name="ticket_number"', false)
+            ->assertDontSee('name="email"', false);
+
+        $this->post(route('repairs.track'), [
+            'ticket_number' => 'rt-2026-000123',
+        ])->assertOk()
+            ->assertSee('RT-2026-000123')
+            ->assertSee('Waiting for parts')
+            ->assertSee('Repair timeline')
+            ->assertSee('New')
+            ->assertSee('Waiting for parts')
+            ->assertDontSee('Private intake details')
+            ->assertDontSee('Internal supplier details')
+            ->assertDontSee('tracking@example.test');
+
+        $this->from(route('repairs.track.form'))
+            ->post(route('repairs.track'), [
+                'ticket_number' => 'RT-2026-999999',
+            ])
+            ->assertRedirect(route('repairs.track.form'))
+            ->assertSessionHasErrors('ticket_number');
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Check the latest progress using the service number provided by our shop.')
+            ->assertSee(route('repairs.track.form'), false)
+            ->assertDontSee('tracking-email');
+    }
+
+    public function test_public_repair_tracking_is_rate_limited(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->post(route('repairs.track'), ['ticket_number' => 'RT-UNKNOWN'])
+                ->assertRedirect();
+        }
+
+        $this->post(route('repairs.track'), ['ticket_number' => 'RT-UNKNOWN'])
+            ->assertTooManyRequests();
+    }
+
     public function test_customer_profile_links_to_a_project_and_manages_repair_tickets(): void
     {
         $this->seed(PlannerRoleSeeder::class);
@@ -55,7 +126,10 @@ class CustomerRepairTicketTest extends TestCase
 
         $this->get(route('tickets.create', ['customer_id' => $customer->id]))
             ->assertOk()
-            ->assertSee('New repair ticket');
+            ->assertSee('New repair ticket')
+            ->assertSee('Add new customer…')
+            ->assertDontSee('Related project')
+            ->assertDontSee('<li class="breadcrumb-item">Work</li>', false);
         $this->post(route('tickets.store'), [
             'customer_id' => $customer->id,
             'assigned_to' => $user->id,
@@ -67,7 +141,7 @@ class CustomerRepairTicketTest extends TestCase
         ])->assertRedirect();
 
         $ticket = RepairTicket::query()->firstOrFail();
-        $this->assertSame($project->id, $ticket->project_id);
+        $this->assertNull($ticket->project_id);
         $this->assertSame($customer->id, $ticket->customer_id);
         $this->assertSame($user->id, $ticket->assigned_to);
         $this->assertDatabaseHas('repair_tickets', ['ticket_number' => $ticket->ticket_number]);
@@ -82,12 +156,17 @@ class CustomerRepairTicketTest extends TestCase
 
         $this->get(route('tickets.show', $ticket))
             ->assertOk()
+            ->assertSee('Tickets')
+            ->assertSee(route('tickets.index'), false)
+            ->assertSee($ticket->ticket_number)
             ->assertSee('Charging port requires replacement.')
             ->assertSee('Waiting for parts')
             ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
         $this->get(route('tickets.index', ['status' => 'waiting_parts']))
             ->assertOk()
-            ->assertSee('data-datatable', false);
+            ->assertSee('data-datatable', false)
+            ->assertSee('ticket-filters-modal')
+            ->assertSee('Filter tickets');
         $this->getJson(route('tickets.datatable', [
             'status' => 'waiting_parts',
             'draw' => 1,
@@ -133,6 +212,45 @@ class CustomerRepairTicketTest extends TestCase
         $this->get(route('customers.show', $customer))
             ->assertSee($ticket->ticket_number)
             ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
+    }
+
+    public function test_staff_can_create_a_repair_ticket_with_a_new_customer_without_a_project(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $this->actingAs($staff);
+
+        $this->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('Add new customer…')
+            ->assertDontSee('Related project');
+
+        $customerResponse = $this->postJson(route('tickets.customers.store'), [
+            'name' => 'Morgan New Customer',
+            'email' => 'morgan@example.test',
+            'phone' => '+60123456789',
+            'company' => 'New Company',
+        ])->assertCreated()
+            ->assertJsonPath('text', 'Morgan New Customer · New Company');
+
+        $customerId = $customerResponse->json('id');
+        $this->get(route('tickets.create', ['customer_id' => $customerId]))
+            ->assertOk()
+            ->assertSee('value="'.$customerId.'" selected', false);
+
+        $this->post(route('tickets.store'), [
+            'customer_id' => $customerId,
+            'device_type' => 'Laptop',
+            'issue_description' => 'The laptop does not start.',
+            'priority' => 'normal',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->with('customer')->firstOrFail();
+        $this->assertSame((int) $customerId, $ticket->customer_id);
+        $this->assertSame('Morgan New Customer', $ticket->customer->name);
+        $this->assertSame('morgan@example.test', $ticket->customer->email);
+        $this->assertNull($ticket->project_id);
     }
 
     public function test_customer_profile_shows_matching_customer_login_account(): void

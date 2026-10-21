@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FlowChart;
 use App\Models\Project;
 use App\Models\User;
+use Database\Seeders\DeveloperSetupFlowChartSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -12,6 +13,38 @@ use Tests\TestCase;
 class FlowChartTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_developer_setup_flow_charts_are_seeded_with_valid_connections_and_repeat_safely(): void
+    {
+        $this->seed(DeveloperSetupFlowChartSeeder::class);
+        $this->seed(DeveloperSetupFlowChartSeeder::class);
+
+        $flowCharts = FlowChart::query()
+            ->whereIn('title', [
+                'Arduino CLI Setup & Upload',
+                'ESP32 Setup with Arduino IDE',
+                'Laravel Project Setup',
+                'Database Tables & Relationship Example',
+            ])
+            ->get();
+
+        $this->assertCount(4, $flowCharts);
+        $this->assertTrue($flowCharts->every(fn (FlowChart $flowChart): bool => $flowChart->is_example && $flowChart->category === 'process'));
+
+        foreach ($flowCharts as $flowChart) {
+            $stepIds = collect($flowChart->steps)->pluck('id');
+            $this->assertNotEmpty($flowChart->steps);
+            foreach ($flowChart->steps as $step) {
+                foreach ($step['connections'] as $targetId) {
+                    $this->assertTrue($stepIds->contains($targetId), "{$flowChart->title} has a connection to an unknown step.");
+                }
+            }
+        }
+
+        $this->assertStringContainsString('arduino cli', strtolower($flowCharts->firstWhere('title', 'Arduino CLI Setup & Upload')->steps[1]['label']));
+        $this->assertStringContainsString('esp32', strtolower($flowCharts->firstWhere('title', 'ESP32 Setup with Arduino IDE')->steps[3]['label']));
+        $this->assertStringContainsString('foreign key', strtolower($flowCharts->firstWhere('title', 'Database Tables & Relationship Example')->steps[2]['label']));
+    }
 
     public function test_authenticated_user_can_create_view_update_and_delete_a_flow_chart(): void
     {

@@ -11,9 +11,23 @@ class InventoryPart extends Model
 {
     use SoftDeletes;
 
+    public const TYPES = [
+        'cpu' => 'CPU',
+        'gpu' => 'GPU',
+        'ram' => 'RAM',
+        'motherboard' => 'Motherboard',
+        'storage' => 'Storage',
+        'power_supply' => 'Power supply',
+        'case' => 'Case',
+        'cooling' => 'Cooling',
+        'peripheral' => 'Peripheral',
+        'other' => 'Other',
+    ];
+
     protected $fillable = [
         'name',
         'sku',
+        'type',
         'supplier_id',
         'description',
         'cost_price',

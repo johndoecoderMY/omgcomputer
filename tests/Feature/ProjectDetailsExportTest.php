@@ -12,6 +12,7 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ProjectDetailsExportTest extends TestCase
@@ -44,12 +45,16 @@ class ProjectDetailsExportTest extends TestCase
 
     public function test_page_header_breadcrumbs_follow_sidebar_sections(): void
     {
-        $this->actingAs(User::factory()->create());
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
 
         $this->get(route('tickets.index'))
             ->assertOk()
-            ->assertSee('Support Desk')
-            ->assertSee('Tickets');
+            ->assertSee('Work')
+            ->assertSee('Tickets')
+            ->assertSee('<title>Repair Tickets</title>', false);
         $this->get(route('bookings.index'))
             ->assertOk()
             ->assertSee('Bookings')
@@ -57,7 +62,7 @@ class ProjectDetailsExportTest extends TestCase
         $this->get(route('customers.index'))
             ->assertOk()
             ->assertSee('Customers')
-            ->assertSee('Customer records');
+            ->assertSee('Records');
         $this->get(route('inventory.index'))
             ->assertOk()
             ->assertSee('Manage')

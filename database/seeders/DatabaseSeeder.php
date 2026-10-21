@@ -50,8 +50,10 @@ class DatabaseSeeder extends Seeder
         $this->call(ServiceSopExampleSeeder::class);
         $this->call(StudentFypSopSeeder::class);
         $this->call(SoftwareStructureSopSeeder::class);
+        $this->call(DeveloperSetupFlowChartSeeder::class);
 
         if (app()->environment(['local', 'testing'])) {
+            $this->call(PcPartsSeeder::class);
             $this->call(DemoDataSeeder::class);
             $this->call(BusinessPlanTaskSeeder::class);
             $this->call(RepairTicketExampleSeeder::class);

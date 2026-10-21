@@ -18,18 +18,19 @@
 
     <div class="card p-2">
         <div class="table-responsive"><table class="table table-hover align-middle mb-0 table-bordered">
-            <thead><tr><th>Offer</th><th>Category</th><th>Typical scope</th><th>Target customer</th><th class="text-end">Plan estimate</th></tr></thead>
+            <thead><tr><th>Offer</th><th>Category</th><th>Availability</th><th>Typical scope</th><th>Target customer</th><th class="text-end">Plan estimate</th></tr></thead>
             <tbody>
                 @forelse ($products as $product)
                     <tr>
                         <td class="fw-semibold"><a href="{{ route('products.show', $product) }}">{{ $product->name }}</a></td>
                         <td>{{ $categories[$product->category] }}</td>
+                        <td><span class="badge {{ $product->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $product->is_active ? 'Active' : 'Disabled' }}</span></td>
                         <td>{{ $product->scope }}</td>
                         <td>{{ $product->audience }}</td>
                         <td class="text-end text-nowrap">{{ $product->price }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-body-secondary py-5">No offers match these filters.</td></tr>
+                    <tr><td colspan="6" class="text-center text-body-secondary py-5">No offers match these filters.</td></tr>
                 @endforelse
             </tbody>
         </table></div>

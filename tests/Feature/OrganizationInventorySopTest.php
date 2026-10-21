@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use App\Models\Team;
 use App\Models\User;
 use Database\Seeders\DepartmentTeamSeeder;
+use Database\Seeders\PlannerRoleSeeder;
 use Database\Seeders\ServiceSopExampleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -118,9 +119,14 @@ class OrganizationInventorySopTest extends TestCase
 
     public function test_supplier_crud_links_parts_and_deletion_preserves_inventory(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $this->actingAs($user);
         $this->get(route('inventory.suppliers.index'))->assertOk()->assertSee('data-datatable', false)->assertSee('Add supplier');
-        $this->get(route('inventory.suppliers.create'))->assertOk();
+        $this->get(route('inventory.suppliers.create'))
+            ->assertOk()
+            ->assertSee('name="website"', false);
         $this->post(route('inventory.suppliers.store'), [
             'name' => 'Parts Wholesale',
             'contact_name' => 'Alex Supplier',
@@ -129,7 +135,10 @@ class OrganizationInventorySopTest extends TestCase
             'website' => 'https://supplier.example.test',
         ])->assertRedirect();
         $supplier = Supplier::query()->firstOrFail();
-        $this->get(route('inventory.suppliers.show', $supplier))->assertOk()->assertSee('Parts Wholesale');
+        $this->get(route('inventory.suppliers.show', $supplier))
+            ->assertOk()
+            ->assertSee('Parts Wholesale')
+            ->assertSee('href="https://supplier.example.test"', false);
 
         $part = InventoryPart::query()->create([
             'name' => 'Laptop charger',
@@ -141,7 +150,9 @@ class OrganizationInventorySopTest extends TestCase
         ]);
         $this->get(route('inventory.parts'))->assertOk()->assertSee('data-datatable', false);
         $this->getJson(route('inventory.suppliers.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
-            ->assertOk()->assertJsonPath('data.0.name', 'Parts Wholesale');
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Parts Wholesale')
+            ->assertJsonPath('data.0.website_link', '<a href="https://supplier.example.test" target="_blank" rel="noopener noreferrer">Visit website</a>');
         $this->getJson(route('inventory.parts.datatable', ['draw' => 1, 'start' => 0, 'length' => 25]))
             ->assertOk()->assertJsonPath('data.0.supplier_name', 'Parts Wholesale');
         $this->get(route('inventory.suppliers.edit', $supplier))->assertOk()->assertSee('Parts Wholesale');
@@ -149,8 +160,10 @@ class OrganizationInventorySopTest extends TestCase
         $this->put(route('inventory.suppliers.update', $supplier), [
             'name' => 'Parts Wholesale MY',
             'email' => 'updated@example.test',
+            'website' => 'https://updated-supplier.example.test',
         ])->assertRedirect(route('inventory.suppliers.show', $supplier));
         $this->assertSame('Parts Wholesale MY', $supplier->fresh()->name);
+        $this->assertSame('https://updated-supplier.example.test', $supplier->fresh()->website);
 
         $this->get(route('inventory.suppliers.delete', $supplier))->assertOk();
         $this->delete(route('inventory.suppliers.destroy', $supplier))

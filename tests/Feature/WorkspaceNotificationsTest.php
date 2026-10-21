@@ -19,6 +19,13 @@ class WorkspaceNotificationsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_workspace_notifications_broadcast_without_waiting_for_the_default_queue(): void
+    {
+        $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
+
+        $this->assertSame('sync', $notification->toBroadcast(User::factory()->make())->connection);
+    }
+
     public function test_task_assignment_notifies_the_assignee(): void
     {
         Notification::fake();
@@ -265,6 +272,7 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertSee('aria-label="1 unread notifications"', false)
             ->assertSee('Your Notifications')
             ->assertSee('notification-unread', false)
+            ->assertSee('avatar-name rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center', false)
             ->assertSee('Task assigned to you');
 
         $this->get(route('notifications.read', $notification))

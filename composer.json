@@ -6,8 +6,8 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "ext-gd": "*",
         "php": "^8.3",
+        "ext-gd": "*",
         "laravel/breeze": "^2.4",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
@@ -15,6 +15,7 @@
         "pusher/pusher-php-server": "^7.3",
         "spatie/laravel-backup": "^10.0",
         "spatie/laravel-permission": "^6.25",
+        "spatie/laravel-query-builder": "^7.0",
         "yajra/laravel-datatables-oracle": "^12.0"
     },
     "require-dev": {

@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class TeamController extends Controller
@@ -25,13 +27,19 @@ class TeamController extends Controller
 
     public function datatable(Request $request)
     {
-        return DataTables::eloquent(
+        return DataTables::eloquent(DataTableQueryBuilder::for(
             Team::query()
                 ->leftJoin('departments', 'teams.department_id', '=', 'departments.id')
                 ->select('teams.*', 'departments.name as department_name')
                 ->with('users')
-                ->withCount('users')
-        )
+                ->withCount('users'),
+            $request,
+            [
+                'name' => AllowedFilter::partial('name', 'teams.name'),
+                'department' => AllowedFilter::partial('department', 'departments.name'),
+                'description' => AllowedFilter::partial('description', 'teams.description'),
+            ],
+        ))
             ->filter(function (Builder $teams) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search !== '') {

@@ -18,10 +18,11 @@
                 ['data' => 'contact_name', 'name' => 'suppliers.contact_name'],
                 ['data' => 'email', 'name' => 'suppliers.email'],
                 ['data' => 'phone', 'name' => 'suppliers.phone'],
+                ['data' => 'website_link', 'orderable' => false, 'searchable' => false],
                 ['data' => 'parts_count', 'name' => 'parts_count'],
                 ['data' => 'actions', 'orderable' => false, 'searchable' => false],
             ]) }}">
-            <thead><tr><th>Supplier</th><th>Contact</th><th>Email</th><th>Phone</th><th>Parts</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Supplier</th><th>Contact</th><th>Email</th><th>Phone</th><th>Website</th><th>Parts</th><th>Actions</th></tr></thead>
             <tbody></tbody>
         </table>
     </div></div>

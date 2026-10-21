@@ -4,7 +4,7 @@
     'multiple' => false,
     'required' => false,
     'accept' => 'image/jpeg,image/png,image/webp',
-    'cameraLabel' => 'Take photo',
+    'cameraLabel' => 'Camera',
     'inputClass' => '',
     'cameraMediaTypeId' => null,
     'cameraMediaTypeValue' => null,

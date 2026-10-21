@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Bookings Calendar')
+@section('title', 'Book Calendar')
 
 @section('content')
     <div class="container-fluid py-3">
-        <x-page-header eyebrow="Bookings" title="Bookings Calendar"
+        <x-page-header eyebrow="Bookings" title="Book Calendar"
             :description="$customerView ? 'View your scheduled appointments.' : 'Review customer appointments and their current status.'"
             :back-url="route('bookings.index')" back-label="Customer bookings">
         </x-page-header>

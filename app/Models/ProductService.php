@@ -21,12 +21,14 @@ class ProductService extends Model
         'audience',
         'price',
         'billing_price',
+        'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'billing_price' => 'decimal:2',
+            'is_active' => 'boolean',
         ];
     }
 }

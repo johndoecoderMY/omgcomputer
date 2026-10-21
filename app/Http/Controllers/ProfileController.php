@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class ProfileController extends Controller
@@ -41,9 +43,14 @@ class ProfileController extends Controller
 
     public function activity(Request $request)
     {
-        return DataTables::eloquent(
-            $request->user()->profileActivities()->getQuery()
-        )
+        return DataTables::eloquent(DataTableQueryBuilder::for(
+            $request->user()->profileActivities()->getQuery(),
+            $request,
+            [
+                'event' => AllowedFilter::partial('event'),
+                'created_at' => AllowedFilter::partial('created_at'),
+            ],
+        ))
             ->editColumn('created_at', fn ($activity): string => $activity->created_at->format('M j, Y g:i A'))
             ->editColumn('event', fn ($activity): string => match ($activity->event) {
                 'profile_updated' => 'Profile details updated',

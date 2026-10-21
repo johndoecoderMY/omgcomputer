@@ -9,60 +9,129 @@
 
 @php
     $routeName = \Illuminate\Support\Facades\Route::currentRouteName() ?? '';
+    $isCustomer = auth()->user()->hasRole('customer');
+    $sidebarSection = match (true) {
+        str_starts_with($routeName, 'tickets.') => null,
+        str_starts_with($routeName, 'bookings.') => null,
+        str_starts_with($routeName, 'booking-time-slots.') => null,
+        str_starts_with($routeName, 'projects.tasks.') && isset($project) && (string) $project->getKey() === '1' => 'OMG Computer',
+        str_starts_with($routeName, 'projects.') => $isCustomer ? null : 'Projects',
+        str_starts_with($routeName, 'customers.'),
+        str_starts_with($routeName, 'admin.users.customers') => 'Customers',
+        str_starts_with($routeName, 'development.flowcharts.'),
+        str_starts_with($routeName, 'teams.'),
+        str_starts_with($routeName, 'departments.'),
+        str_starts_with($routeName, 'admin.users.'),
+        str_starts_with($routeName, 'admin.access.'),
+        str_starts_with($routeName, 'admin.backups.'),
+        str_starts_with($routeName, 'products.'),
+        str_starts_with($routeName, 'products_services.'),
+        str_starts_with($routeName, 'inventory.'),
+        str_starts_with($routeName, 'suppliers.'),
+        str_starts_with($routeName, 'meta-content.'),
+        str_starts_with($routeName, 'drama-content.') => 'Manage',
+        str_starts_with($routeName, 'expenses.') => 'Operating costs',
+        str_starts_with($routeName, 'billing.') => 'Billing & Payments',
+        str_starts_with($routeName, 'reports.integrations.'),
+        str_starts_with($routeName, 'marketplace-shops.'),
+        $routeName === 'email.settings' => 'Integrations',
+        str_starts_with($routeName, 'reports.') => 'Reports & Analytics',
+        str_starts_with($routeName, 'development.'),
+        str_starts_with($routeName, 'customer-messages.') => 'OMG Computer',
+        str_starts_with($routeName, 'profile.'),
+        str_starts_with($routeName, 'email.'),
+        str_starts_with($routeName, 'notifications.'),
+        str_starts_with($routeName, 'error-pages.'),
+        str_starts_with($routeName, 'tasks.'),
+        $routeName === 'calendar' => 'System',
+        default => null,
+    };
     $sidebarBreadcrumbs = match (true) {
-        str_starts_with($routeName, 'tickets.') => [
-            ['label' => 'Support Desk'],
+        str_starts_with($routeName, 'tickets.') && $isCustomer => [
+            ['label' => 'My Tickets', 'url' => route('tickets.index')],
+        ],
+        $routeName === 'tickets.show' => [
             ['label' => 'Tickets', 'url' => route('tickets.index')],
         ],
-        $routeName === 'bookings.calendar' => [
-            ['label' => 'Bookings', 'url' => route('bookings.index')],
-            ['label' => 'Bookings Calendar'],
+        str_starts_with($routeName, 'tickets.') => [],
+        $routeName === 'bookings.calendar' && $isCustomer => [
+            ['label' => 'My Bookings', 'url' => route('bookings.index')],
+            ['label' => 'Book Calendar'],
         ],
-        str_starts_with($routeName, 'bookings.') => [
-            ['label' => 'Bookings'],
-            ['label' => 'Customer bookings', 'url' => route('bookings.index')],
+        $routeName === 'bookings.calendar' => [],
+        str_starts_with($routeName, 'bookings.') && $isCustomer => [
+            ['label' => 'My Bookings', 'url' => route('bookings.index')],
         ],
+        str_starts_with($routeName, 'bookings.') => [],
         str_starts_with($routeName, 'booking-time-slots.') => [
-            ['label' => 'Bookings'],
-            ['label' => 'Available times', 'url' => route('booking-time-slots.index')],
+            ['label' => $title],
+        ],
+        $routeName === 'projects.calendar' && $isCustomer => [
+            ['label' => 'My Projects', 'url' => route('projects.index')],
+            ['label' => 'Project calendar'],
         ],
         $routeName === 'projects.calendar' => [
             ['label' => 'Projects', 'url' => route('projects.index')],
             ['label' => 'Project calendar'],
         ],
+        str_starts_with($routeName, 'projects.tasks.') && $isCustomer => [
+            ['label' => 'My Projects', 'url' => route('projects.index')],
+            ['label' => isset($project) ? $project->name : 'Project'],
+            ['label' => 'Tasks'],
+        ],
+        str_starts_with($routeName, 'projects.tasks.') && isset($project) && (string) $project->getKey() === '1' => [
+            ['label' => 'OMG Computer'],
+            ['label' => 'Tasks', 'url' => route('projects.tasks.index', $project)],
+        ],
+        str_starts_with($routeName, 'projects.tasks.') => [
+            ['label' => 'Projects', 'url' => route('projects.index')],
+            ['label' => isset($project) ? $project->name : 'Project', 'url' => isset($project) ? route('projects.show', $project) : route('projects.index')],
+        ],
         $routeName === 'calendar' => [
             ['label' => 'System'],
-            ['label' => 'All Events Calendar'],
+            ['label' => 'My Calendar'],
+        ],
+        str_starts_with($routeName, 'projects.') && $isCustomer => [
+            ['label' => 'My Projects', 'url' => route('projects.index')],
         ],
         str_starts_with($routeName, 'projects.') => [
             ['label' => 'Projects', 'url' => route('projects.index')],
         ],
         str_starts_with($routeName, 'customers.') => [
             ['label' => 'Customers'],
-            ['label' => 'Customer records', 'url' => route('customers.index')],
+            ['label' => 'Records', 'url' => route('customers.index')],
         ],
         str_starts_with($routeName, 'admin.users.customers') => [
             ['label' => 'Customers'],
-            ['label' => 'Customer accounts', 'url' => route('admin.users.customers')],
+            ['label' => 'Accounts', 'url' => route('admin.users.customers')],
         ],
         str_starts_with($routeName, 'admin.users.') => [
             ['label' => 'Manage'],
             ['label' => 'Members', 'url' => route('admin.users.index')],
         ],
-        str_starts_with($routeName, 'tasks.') => [
-            ['label' => 'OMG Computer'],
-            ['label' => 'Tasks', 'url' => route('tasks.index')],
-        ],
         str_starts_with($routeName, 'development.flowcharts.') => [
             ['label' => 'Manage'],
             ['label' => 'Flow Charts', 'url' => route('development.flowcharts.index')],
         ],
-        str_starts_with($routeName, 'development.') => [
+        str_starts_with($routeName, 'development.sops') => [
             ['label' => 'OMG Computer'],
+            ['label' => 'SOPs'],
+        ],
+        $routeName === 'development.plan' => [
+            ['label' => 'OMG Computer'],
+            ['label' => 'Business Plan'],
+        ],
+        $routeName === 'development.overview' => [
+            ['label' => 'OMG Computer'],
+            ['label' => 'Overview'],
+        ],
+        str_starts_with($routeName, 'tasks.') => [
+            ['label' => 'System'],
+            ['label' => 'My Tasks', 'url' => route('tasks.index')],
         ],
         str_starts_with($routeName, 'customer-messages.') => [
             ['label' => 'OMG Computer'],
-            ['label' => 'Customer messages', 'url' => route('customer-messages.index')],
+            ['label' => 'Copywriting', 'url' => route('customer-messages.index')],
         ],
         str_starts_with($routeName, 'teams.') => [
             ['label' => 'Manage'],
@@ -84,6 +153,10 @@
             ['label' => 'Manage'],
             ['label' => 'Meta Content', 'url' => route('meta-content.index')],
         ],
+        str_starts_with($routeName, 'drama-content.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Drama Content', 'url' => route('drama-content.index')],
+        ],
         str_starts_with($routeName, 'admin.access.') => [
             ['label' => 'Manage'],
             ['label' => 'Roles & permissions', 'url' => route('admin.access.index')],
@@ -92,8 +165,24 @@
             ['label' => 'Manage'],
             ['label' => 'Backups', 'url' => route('admin.backups.index')],
         ],
+        str_starts_with($routeName, 'expenses.') => [
+            ['label' => 'Operating costs'],
+            ['label' => match (request()->route('category')) {
+                'rental' => 'Rental',
+                'bills' => 'Bills',
+                'services' => 'Services & renewals',
+                default => 'Operating costs',
+            }],
+        ],
         str_starts_with($routeName, 'billing.') => [
             ['label' => 'Billing & Payments'],
+            ['label' => match (true) {
+                isset($document) && $document->type === 'quotation',
+                isset($type) && $type === 'quotation',
+                request('type') === 'quotation' => 'Quotations',
+                request('status') === 'partial' => 'Part-paid invoices',
+                default => 'Invoices',
+            }],
         ],
         str_starts_with($routeName, 'reports.integrations.') => [
             ['label' => 'Integrations'],
@@ -105,11 +194,28 @@
             ['label' => 'Integrations'],
             ['label' => 'E-commerce Shops', 'url' => route('marketplace-shops.index')],
         ],
+        $routeName === 'email.settings' => [
+            ['label' => 'Integrations'],
+            ['label' => 'Email Server Settings'],
+        ],
+        str_starts_with($routeName, 'email.') => [
+            ['label' => 'System'],
+            ['label' => 'My Email Inbox', 'url' => route('email.inbox')],
+        ],
+        str_starts_with($routeName, 'notifications.') => [
+            ['label' => 'System'],
+            ['label' => 'Notifications'],
+        ],
+        str_starts_with($routeName, 'members.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Members', 'url' => route('admin.users.index')],
+        ],
         str_starts_with($routeName, 'profile.') || str_starts_with($routeName, 'error-pages.') => [
             ['label' => 'System'],
         ],
         default => [],
     };
+    $eyebrow = $isCustomer ? null : ($sidebarSection ?? $eyebrow);
     $breadcrumbs = array_values([...$sidebarBreadcrumbs, ...$breadcrumbs]);
     $lastBreadcrumb = $breadcrumbs === [] ? null : end($breadcrumbs);
     if ($lastBreadcrumb === null || (isset($lastBreadcrumb['url']) && ($lastBreadcrumb['label'] ?? null) !== $title)) {
@@ -164,8 +270,8 @@
 
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-2">
-        @unless (in_array($title, ['Home', 'Dashboard'], true))
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
+        @unless (in_array($title, ['Home', 'Dashboard'], true) || $isCustomer)
+            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
         @endunless
         @foreach ($breadcrumbs as $breadcrumb)
             @if ($loop->last)
@@ -195,7 +301,7 @@
                         <button class="btn btn-primary dropdown-toggle dropdown-caret-none"
                             id="{{ $actionDropdownId }}-toggle" type="button" data-bs-toggle="dropdown" data-boundary="viewport"
                             aria-haspopup="true" aria-expanded="false" aria-label="Page actions">
-                            <span class="fas fa-ellipsis-h fs-11" aria-hidden="true"></span>
+                            <span class="fas fa-ellipsis-v fs-11" aria-hidden="true"></span>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="{{ $actionDropdownId }}-toggle">
                             {!! $actionsHtml !!}

@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminBackupController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
 use App\Http\Controllers\BusinessExpenseController;
@@ -38,6 +39,11 @@ use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
+Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
+    ->name('repairs.track.form');
+Route::post('/track-repair', [RepairTicketController::class, 'track'])
+    ->middleware('throttle:5,1')
+    ->name('repairs.track');
 // Route::get('/sitemap.xml', fn () => response()
 //     ->view('sitemap', [], 200, ['Content-Type' => 'application/xml; charset=UTF-8']))
 //     ->name('sitemap');
@@ -75,6 +81,8 @@ Route::get('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'verify
     ->name('webhooks.whatsapp.verify');
 Route::post('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'receive'])
     ->name('webhooks.whatsapp.receive');
+Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::class, 'callback'])
+    ->name('webhooks.chip.collect');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -185,6 +193,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', [RepairTicketController::class, 'index'])->name('index');
         Route::get('/datatable', [RepairTicketController::class, 'datatable'])->name('datatable');
         Route::get('/create', [RepairTicketController::class, 'create'])->name('create');
+        Route::post('/customers', [CustomerController::class, 'quickStore'])->name('customers.store');
         Route::post('/', [RepairTicketController::class, 'store'])->name('store');
         Route::post('/{ticket}/attachments', [AttachmentController::class, 'storeTicket'])->name('attachments.store');
         Route::post('/{ticket}/steps', [RepairTicketController::class, 'storeUpdate'])->name('steps.store');
@@ -209,6 +218,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::post('/{document}/chip-checkout', [ChipPaymentController::class, 'checkout'])->name('chip.checkout');
+        Route::get('/chip-return/{attempt:uuid}', [ChipPaymentController::class, 'return'])->name('chip.return');
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
         Route::put('/{document}', 'update')->name('documents.update');
         Route::get('/{document}', 'show')->name('documents.show');
@@ -332,6 +343,9 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
             Route::get('/{project}/calendar/events', [ProjectEventController::class, 'projectEvents'])->name('calendar.events');
             Route::get('/{project}/calendar', [ProjectEventController::class, 'projectIndex'])->name('calendar');
             Route::get('/create', [ProjectController::class, 'create'])->name('create');
+            Route::get('/{project}/tasks', [TaskController::class, 'projectIndex'])->name('tasks.index');
+            Route::get('/{project}/tasks/kanban', [TaskController::class, 'projectKanban'])->name('tasks.kanban');
+            Route::get('/{project}/tasks/datatable', [TaskController::class, 'projectDatatable'])->name('tasks.datatable');
         });
         Route::get('/', [ProjectController::class, 'index'])->name('index');
         Route::get('/{project}', [ProjectController::class, 'show'])->name('show');

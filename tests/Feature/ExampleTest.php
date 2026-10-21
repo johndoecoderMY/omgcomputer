@@ -14,6 +14,8 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertSee('<title>Computer Repair &amp; Support</title>', false)
+            ->assertDontSee('<title>Computer Repair &amp; Support - OMG Computer</title>', false);
     }
 }

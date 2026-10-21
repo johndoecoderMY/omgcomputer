@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FlowChart;
+use App\Support\DataTableQueryBuilder;
 use App\Support\SopTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class FlowChartController extends Controller
@@ -23,9 +25,13 @@ class FlowChartController extends Controller
         return view('development.flowcharts.index');
     }
 
-    public function datatable()
+    public function datatable(Request $request)
     {
-        return DataTables::eloquent(FlowChart::query()->with('projects'))
+        return DataTables::eloquent(DataTableQueryBuilder::for(FlowChart::query()->with('projects'), $request, [
+            'name' => AllowedFilter::partial('name'),
+            'category' => AllowedFilter::exact('category'),
+            'is_example' => AllowedFilter::exact('is_example'),
+        ]))
             ->addColumn('category_label', fn (FlowChart $flowChart): string => [
                 'website' => 'Website',
                 'process' => 'Process',
@@ -79,7 +85,14 @@ class FlowChartController extends Controller
             $flowCharts->where('subject_name', $filters['subject_name']);
         }
 
-        return DataTables::eloquent($flowCharts)
+        return DataTables::eloquent(DataTableQueryBuilder::for($flowCharts, $request, [
+            'category' => AllowedFilter::exact('category'),
+            'type' => AllowedFilter::callback('type', fn ($query, string $value) => $query->where(
+                'is_example',
+                $value === 'example',
+            )),
+            'subject_name' => AllowedFilter::exact('subject_name'),
+        ]))
             ->addColumn('category_label', fn (FlowChart $flowChart): string => [
                 'product' => 'Product',
                 'service' => 'Service',

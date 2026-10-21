@@ -134,11 +134,48 @@ class ProjectTaskTest extends TestCase
         $this->actingAs($admin)->get(route('tasks.index'))
             ->assertOk()
             ->assertSee('Kanban')
+            ->assertSee('My Tasks')
+            ->assertSee('System')
+            ->assertSee('logoex2w.png')
+            ->assertSee('html[data-bs-theme="dark"] .brand-logo-light', false)
+            ->assertSee('aria-label="Task view"', false)
+            ->assertSee('data-task-view="list"', false)
+            ->assertSee('data-task-view="kanban"', false)
             ->assertSee('data-task-kanban-view', false)
+            ->assertSee('kanban-container', false)
+            ->assertSee('kanban-column', false)
+            ->assertSee('data-task-total', false)
+            ->assertSee('data-task-id="'.$task->id.'"', false)
+            ->assertSee('data-bs-target="#task-details-modal"', false)
+            ->assertSee('data-task-title="Kanban card test"', false)
+            ->assertSee('task-kanban-drag-handle', false)
+            ->assertSee('btn-falcon-default task-kanban-drag-handle', false)
+            ->assertSee('aria-label="Touch and hold to drag task"', false)
+            ->assertSee("sortable.option('handle', '.task-kanban-drag-handle')", false)
+            ->assertSee("sortable.option('delayOnTouchOnly', true)", false)
+            ->assertSee("sortable.option('scroll', true)", false)
+            ->assertSee('data-task-url="'.route('tasks.show', $task).'"', false)
+            ->assertSee('id="task-details-modal"', false)
+            ->assertSee('data-task-modal-description', false)
+            ->assertSee('data-task-count>1</span>', false)
+            ->assertSee('vendors/sortablejs/Sortable.min.js')
+            ->assertSee('data-sortable=\'{"draggable":".sortable-item-wrapper:not([aria-disabled=true])"}\'', false)
+            ->assertSee('window.Sortable.get(zone)', false)
+            ->assertSee("sortable.option('onEnd', async", false)
+            ->assertSee('card.dataset.status = nextStatus', false)
+            ->assertSee("if (!errorBox)", false)
+            ->assertSee("boardView.prepend(errorBox)", false)
+            ->assertSee("headers: {", false)
+            ->assertSee('sortable-item-wrapper task-kanban-card', false)
+            ->assertSee("sortable.option('filter', 'a, button')", false)
+            ->assertSee('sortable-item kanban-item-card', false)
+            ->assertDontSee('stretched-link fw-semibold text-900', false)
+            ->assertSee('Task board')
             ->assertSee('Recently Browsed')
             ->assertSee('data-bs-dismiss="search"', false)
             ->assertSee('placeholder="Search..."', false)
-            ->assertSee(route('tasks.kanban'), false);
+            ->assertViewHas('boardTasks', fn (array $tasks): bool => count($tasks) === 1
+                && $tasks[0]['title'] === 'Kanban card test');
         $this->getJson(route('tasks.kanban'))
             ->assertOk()
             ->assertJsonFragment([
@@ -148,10 +185,16 @@ class ProjectTaskTest extends TestCase
                 'can_update' => true,
             ]);
 
-        $this->patchJson(route('tasks.update-status', $task), ['status' => 'in_progress'])
+        $this->patch(route('tasks.update-status', $task), ['status' => 'in_progress'], [
+            'Accept' => 'application/json',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])
             ->assertOk()
             ->assertJsonPath('status', 'in_progress');
-        $this->assertSame('in_progress', $task->fresh()->status);
+        $this->assertDatabaseHas('tasks', [
+            'id' => $task->id,
+            'status' => 'in_progress',
+        ]);
     }
 
     public function test_projects_show_task_progress_and_subtasks_cannot_be_nested_or_cross_project(): void
@@ -176,7 +219,9 @@ class ProjectTaskTest extends TestCase
             ->assertSee('project-overview')
             ->assertSee('project-stat')
             ->assertSee('50%')
-            ->assertSee('Create the homepage');
+            ->assertSee('Create the homepage')
+            ->assertSee('All project tasks')
+            ->assertSee(route('projects.tasks.index', $project), false);
         $this->assertSame(50, $project->fresh()->progress);
 
         $this->post(route('projects.tasks.store', $project), [
@@ -200,6 +245,43 @@ class ProjectTaskTest extends TestCase
             ->assertSee('Retry loading table', false)
             ->assertSee('d-none', false)
             ->assertSee(route('tasks.datatable'), false);
+        $this->get(route('projects.tasks.index', $project))
+            ->assertOk()
+            ->assertSee('Tasks')
+            ->assertSee(route('projects.tasks.datatable', $project), false)
+            ->assertSee(route('projects.tasks.create', $project), false)
+            ->assertSee('Build the website')
+            ->assertDontSee('Other project task');
+        $this->getJson(route('projects.tasks.kanban', $project))
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonFragment(['title' => 'Build the website'])
+            ->assertJsonFragment(['title' => 'Create the homepage']);
+        $this->getJson(route('projects.tasks.datatable', [
+            'project' => $project,
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('recordsTotal', 2);
+        $this->getJson(route('tasks.kanban'))
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $child->id,
+                'title' => 'Create the homepage',
+                'status' => 'done',
+                'parent' => 'Build the website',
+            ]);
+        $this->getJson(route('tasks.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'Create the homepage'],
+        ]))
+            ->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.task', '<div class="small text-body-secondary"><span class="fas fa-level-up-alt fa-rotate-90 me-1" aria-hidden="true"></span>Subtask of Build the website</div><a class="fw-semibold" href="'.route('tasks.show', $child).'">Create the homepage</a><div class="small text-body-secondary"></div>');
         $this->get(route('tasks.index', ['status' => 'done', 'priority' => 'urgent']))
             ->assertOk()
             ->assertSee('value="">All statuses', false)
@@ -231,6 +313,21 @@ class ProjectTaskTest extends TestCase
                 && $counts['percent'] === 50)
             ->assertSee('50%')
             ->assertSee('1 of 2 tasks completed');
+
+        $otherProject->tasks()->create([
+            'title' => 'Other project task',
+            'status' => 'backlog',
+            'priority' => 'low',
+        ]);
+        $this->get(route('projects.tasks.index', $project))
+            ->assertOk()
+            ->assertDontSee('Other project task');
+        $this->getJson(route('projects.tasks.kanban', $project))
+            ->assertOk()
+            ->assertJsonCount(2);
+        $this->getJson(route('tasks.kanban'))
+            ->assertOk()
+            ->assertJsonFragment(['title' => 'Other project task']);
     }
 
     public function test_projects_can_be_created_updated_and_deleted_with_their_tasks(): void

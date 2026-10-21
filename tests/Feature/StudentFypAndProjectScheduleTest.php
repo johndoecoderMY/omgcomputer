@@ -62,7 +62,7 @@ class StudentFypAndProjectScheduleTest extends TestCase
 
         $this->get(route('calendar'))
             ->assertOk()
-            ->assertSee('All Events Calendar')
+            ->assertSee('My Calendar')
             ->assertSee('System');
         $this->assertSame('/calendar', parse_url(route('calendar'), PHP_URL_PATH));
         $this->get(route('projects.calendar', $project))
@@ -155,7 +155,7 @@ class StudentFypAndProjectScheduleTest extends TestCase
             ->assertSee('timeGridWeek');
         $this->get(route('calendar'))
             ->assertOk()
-            ->assertSee('All Events Calendar')
+            ->assertSee('My Calendar')
             ->assertSee('event-details-modal')
             ->assertSee("moreLinkClick: 'popover'", false)
             ->assertSee('text-overflow: ellipsis', false)

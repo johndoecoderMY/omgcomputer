@@ -4,7 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
-    <title>OMGComputer</title>
+    <title>@yield('title', 'OMG Computer') - OMG Computer</title>
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/favicons/apple-touch-icon.png') }}">
@@ -27,6 +27,11 @@
      <link href="{{ asset('vendors/select2/select2.min.css') }}" rel="stylesheet">
      <link href="{{ asset('vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css') }}" rel="stylesheet">
      <style>
+         html[data-bs-theme="light"] .brand-logo-dark,
+         html[data-bs-theme="dark"] .brand-logo-light {
+             display: none;
+         }
+
          .card-header {
              display: flex;
              flex-wrap: wrap;
@@ -35,15 +40,41 @@
          }
 
          .card-header > a.btn,
-         .card-header > button.btn {
+         .card-header > button.btn,
+         .card-header > form,
+         .card-header > .btn-group {
              margin-inline-start: auto;
          }
 
          .card-header > a.btn ~ a.btn,
          .card-header > a.btn ~ button.btn,
+         .card-header > a.btn ~ form,
+         .card-header > a.btn ~ .btn-group,
          .card-header > button.btn ~ a.btn,
-         .card-header > button.btn ~ button.btn {
+         .card-header > button.btn ~ button.btn,
+         .card-header > button.btn ~ form,
+         .card-header > button.btn ~ .btn-group,
+         .card-header > form ~ a.btn,
+         .card-header > form ~ button.btn,
+         .card-header > form ~ form,
+         .card-header > form ~ .btn-group,
+         .card-header > .btn-group ~ a.btn,
+         .card-header > .btn-group ~ button.btn,
+         .card-header > .btn-group ~ form,
+         .card-header > .btn-group ~ .btn-group {
              margin-inline-start: 0;
+         }
+
+         .card-footer:has(> .btn, > form .btn, > .btn-group) {
+             display: flex;
+             flex-wrap: wrap;
+             align-items: center;
+             justify-content: flex-end;
+             gap: .5rem;
+         }
+
+         .modal-footer {
+             justify-content: flex-end;
          }
      </style>
      @stack('styles')

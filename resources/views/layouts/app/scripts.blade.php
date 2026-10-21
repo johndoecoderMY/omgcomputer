@@ -12,6 +12,7 @@
     <script src="{{ asset('vendors/datatables.net/dataTables.min.js') }}"></script>
     <script src="{{ asset('vendors/datatables.net-bs5/dataTables.bootstrap5.min.js') }}"></script>
     <script src="{{ asset('vendors/select2/select2.full.min.js') }}"></script>
+    <script src="{{ asset('vendors/sortablejs/Sortable.min.js') }}"></script>
     <script src="{{ asset('assets/js/theme.js') }}"></script>
     @vite('resources/js/app.js')
     <script>
@@ -155,6 +156,8 @@
                             filters.forEach(({ name, selector }) => {
                                 const filter = document.querySelector(selector);
                                 if (filter && filter.value) {
+                                    request.filter = request.filter || {};
+                                    request.filter[name] = filter.value;
                                     request[name] = filter.value;
                                 }
                             });

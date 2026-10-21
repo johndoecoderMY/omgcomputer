@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
-    <title>@yield('title', 'OMG Computer')</title>
+    @if (request()->path() === '/')
+        <title>@yield('title', 'OMG Computer')</title>
+    @else
+        <title>@yield('title', 'OMG Computer') - OMG Computer</title>
+    @endif
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/favicons/apple-touch-icon.png') }}">

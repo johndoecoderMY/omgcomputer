@@ -9,6 +9,7 @@ use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
 use App\Support\StatusBadge;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,27 +19,53 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class TaskController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
+    {
+        return $this->taskIndex($request);
+    }
+
+    public function projectIndex(Request $request, Project $project): View
+    {
+        return $this->taskIndex($request, $project);
+    }
+
+    private function taskIndex(Request $request, ?Project $project = null): View
     {
         return view('tasks.index', [
             'statuses' => Task::STATUSES,
             'priorities' => Task::PRIORITIES,
+            'project' => $project,
+            'boardTasks' => $this->boardTasks($request, $project),
         ]);
     }
 
     public function kanban(Request $request): JsonResponse
     {
+        return response()->json($this->boardTasks($request));
+    }
+
+    public function projectKanban(Request $request, Project $project): JsonResponse
+    {
+        return response()->json($this->boardTasks($request, $project));
+    }
+
+    private function boardTasks(Request $request, ?Project $project = null): array
+    {
         $tasks = Task::query()
-            ->with(['project:id,name', 'assignees:id,name'])
-            ->whereNull('parent_task_id')
+            ->with(['project:id,name', 'parent:id,title', 'assignees:id,name'])
             ->orderByRaw('due_date IS NULL')
             ->orderBy('due_date')
-            ->orderBy('priority')
-            ->get()
+            ->orderBy('priority');
+        if ($project) {
+            $tasks->where('project_id', $project->id);
+        }
+
+        return $tasks->get()
             ->map(fn (Task $task): array => [
                 'id' => $task->id,
                 'title' => $task->title,
@@ -48,51 +75,64 @@ class TaskController extends Controller
                 'priority' => Task::PRIORITIES[$task->priority] ?? $task->priority,
                 'due_date' => $task->due_date?->format('M j, Y'),
                 'project' => $task->project?->name,
+                'parent' => $task->parent?->title,
                 'assignees' => $task->assignees->pluck('name')->values(),
                 'url' => route('tasks.show', $task),
                 'status_url' => route('tasks.update-status', $task),
                 'can_update' => $this->canUpdateTaskStatus($task, $request->user()),
-            ]);
-
-        return response()->json($tasks);
+            ])
+            ->all();
     }
 
     public function datatable(Request $request)
     {
+        return $this->taskDatatable($request);
+    }
+
+    public function projectDatatable(Request $request, Project $project)
+    {
+        return $this->taskDatatable($request, $project);
+    }
+
+    private function taskDatatable(Request $request, ?Project $project = null)
+    {
         $query = Task::query()
-            ->with(['project', 'assignees'])
-            ->withCount('subtasks')
-            ->whereNull('parent_task_id');
+            ->with(['project', 'parent', 'assignees'])
+            ->withCount('subtasks');
+        if ($project) {
+            $query->where('project_id', $project->id);
+        }
 
         $status = $request->input('status');
         if (is_string($status) && isset(Task::STATUSES[$status])) {
-            $query->where(fn (Builder $tasks) => $tasks
-                ->where('status', $status)
-                ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('status', $status)));
+            $query->where('status', $status);
         }
         $priority = $request->input('priority');
         if (is_string($priority) && isset(Task::PRIORITIES[$priority])) {
-            $query->where(fn (Builder $tasks) => $tasks
-                ->where('priority', $priority)
-                ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('priority', $priority)));
+            $query->where('priority', $priority);
         }
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
+            'status' => AllowedFilter::exact('status'),
+            'priority' => AllowedFilter::exact('priority'),
+            'title' => AllowedFilter::partial('title'),
+        ]))
             ->filter(function (Builder $tasks) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search === '') {
                     return;
                 }
 
-                $tasks->where(fn (Builder $matches) => $matches
+                $tasks                ->where(fn (Builder $matches) => $matches
                     ->where('tasks.title', 'like', "%{$search}%")
                     ->orWhere('tasks.description', 'like', "%{$search}%")
                     ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
                     ->orWhereHas('assignees', fn (Builder $assignees) => $assignees->where('name', 'like', "%{$search}%"))
-                    ->orWhereHas('subtasks', fn (Builder $subtasks) => $subtasks->where('title', 'like', "%{$search}%")));
+                );
             }, true)
             ->addColumn('task', fn (Task $task): string => sprintf(
-                '<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
+                '%s<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
+                $task->parent ? '<div class="small text-body-secondary"><span class="fas fa-level-up-alt fa-rotate-90 me-1" aria-hidden="true"></span>Subtask of '.e($task->parent->title).'</div>' : '',
                 e(route('tasks.show', $task)),
                 e($task->title),
                 e(Str::limit($task->description ?? '', 120)),

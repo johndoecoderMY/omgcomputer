@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Support\DataTableQueryBuilder;
 use App\Services\CpanelEmailProvisioner;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -71,7 +73,14 @@ class AdminUserController extends Controller
             $query->whereDoesntHave('roles', fn (Builder $roles) => $roles->whereIn('name', ['admin', 'member']));
         }
 
-        return DataTables::eloquent($query->with(['teams', 'roles', 'permissions']))
+        return DataTables::eloquent(DataTableQueryBuilder::for(
+            $query->with(['teams', 'roles', 'permissions']),
+            request(),
+            [
+                'name' => AllowedFilter::partial('name'),
+                'email' => AllowedFilter::partial('email'),
+            ],
+        ))
             ->addColumn('teams_list', fn (User $user): string => e($user->teams->pluck('name')->join(', ') ?: 'Unassigned'))
             ->addColumn('roles_list', fn (User $user): string => e($user->roles->pluck('name')->join(', ') ?: 'No roles'))
             ->addColumn('permissions_list', fn (User $user): string => e(

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
+use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,10 +20,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class BookingController extends Controller
@@ -33,7 +36,7 @@ class BookingController extends Controller
     {
         $selectedDate = Carbon::now(self::TIMEZONE)->toDateString();
         $selected = Carbon::createFromFormat('Y-m-d', $selectedDate, self::TIMEZONE);
-        $services = ProductService::query()->orderBy('name')->get();
+        $services = ProductService::query()->where('is_active', true)->orderBy('name')->get();
 
         return view('bookings.create', [
             'selectedDate' => $selected,
@@ -104,12 +107,15 @@ class BookingController extends Controller
 
     public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
-        $serviceIds = ProductService::query()->pluck('id')->all();
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['required', 'email', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:64'],
-            'service_id' => ['required', 'string', Rule::in($serviceIds)],
+            'service_id' => [
+                'required',
+                'string',
+                Rule::exists('product_services', 'id')->where(fn ($query) => $query->where('is_active', true)),
+            ],
             'device_model' => ['nullable', 'string', 'max:255'],
             'request_notes' => ['nullable', 'string', 'max:3000'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
@@ -133,7 +139,9 @@ class BookingController extends Controller
             throw ValidationException::withMessages(['start_time' => 'That appointment has just been taken. Choose another time.']);
         }
 
-        $service = ProductService::query()->findOrFail($data['service_id']);
+        $service = ProductService::query()
+            ->where('is_active', true)
+            ->findOrFail($data['service_id']);
 
         try {
             $booking = DB::transaction(function () use ($data, $service, $start): Booking {
@@ -187,9 +195,18 @@ class BookingController extends Controller
 
     public function index(Request $request): View
     {
+        $services = Booking::query()
+            ->when($request->user()->hasRole('customer'), fn (Builder $bookings) => $bookings
+                ->whereRaw('LOWER(TRIM(customer_email)) = ?', [strtolower(trim($request->user()->email))]))
+            ->whereNotNull('service_name')
+            ->distinct()
+            ->orderBy('service_name')
+            ->pluck('service_name');
+
         return view('bookings.index', [
             'statuses' => Booking::STATUSES,
             'customerView' => request()->user()->hasRole('customer'),
+            'services' => $services,
         ]);
     }
 
@@ -263,19 +280,51 @@ class BookingController extends Controller
 
     public function datatable(Request $request)
     {
-        $query = Booking::query()->with(['assignee', 'repairTicket']);
+        $query = Booking::query()->with(['assignee', 'repairTicket', 'customer']);
         if ($request->user()->hasRole('customer')) {
             $query->whereRaw('LOWER(TRIM(customer_email)) = ?', [strtolower(trim($request->user()->email))]);
         }
-        $status = $request->input('status');
-        if (is_string($status) && isset(Booking::STATUSES[$status])) {
-            $query->where('status', $status);
+        $filterValues = $request->query('filter', []);
+        if (! is_array($filterValues)) {
+            $filterValues = [];
         }
+        foreach (['status', 'service', 'customer_name', 'starts_from', 'starts_to'] as $filter) {
+            if (! array_key_exists($filter, $filterValues) && $request->query->has($filter)) {
+                $filterValues[$filter] = $request->query($filter);
+            }
+        }
+        $filterValues = Validator::make(
+            ['filter' => $filterValues],
+            [
+                'filter' => ['array'],
+                'filter.status' => ['nullable', 'string', Rule::in(array_keys(Booking::STATUSES))],
+                'filter.service' => ['nullable', 'string', 'max:255'],
+                'filter.customer_name' => ['nullable', 'string', 'max:255'],
+                'filter.starts_from' => ['nullable', 'date'],
+                'filter.starts_to' => ['nullable', 'date', 'after_or_equal:filter.starts_from'],
+            ],
+        )->validate()['filter'] ?? [];
+        $queryRequest = Request::createFrom($request);
+        $queryRequest->query->set('filter', $filterValues);
         $users = $request->user()->hasRole('admin')
             ? AssignmentAccess::users()->get(['id', 'name'])
             : collect();
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $queryRequest, [
+            'status' => AllowedFilter::exact('status'),
+            'service' => AllowedFilter::exact('service', 'service_name'),
+            'customer_name' => AllowedFilter::partial('customer_name'),
+            'starts_from' => AllowedFilter::callback('starts_from', fn (Builder $bookings, string $value) => $bookings->where(
+                'starts_at',
+                '>=',
+                Carbon::parse($value, self::TIMEZONE)->setTimezone('UTC'),
+            )),
+            'starts_to' => AllowedFilter::callback('starts_to', fn (Builder $bookings, string $value) => $bookings->where(
+                'starts_at',
+                '<=',
+                Carbon::parse($value, self::TIMEZONE)->setTimezone('UTC'),
+            )),
+        ]))
             ->filter(function (Builder $bookings) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search !== '') {
@@ -291,12 +340,23 @@ class BookingController extends Controller
             }, true)
             ->editColumn('starts_at', fn (Booking $booking): string => $booking->starts_at
                 ->setTimezone(self::TIMEZONE)->format('M j, Y g:i A'))
-            ->addColumn('customer_contact', fn (Booking $booking): string => sprintf(
-                '%s<div class="small text-body-secondary">%s · %s</div>',
-                e($booking->customer_name),
-                e($booking->customer_email),
-                e($booking->customer_phone),
-            ))
+            ->addColumn('customer_contact', function (Booking $booking) use ($request): string {
+                $customerName = e($booking->customer_name);
+                if (! $request->user()->hasRole('customer') && $booking->customer) {
+                    $customerName = sprintf(
+                        '<a href="%s">%s</a>',
+                        e(route('customers.show', $booking->customer)),
+                        $customerName,
+                    );
+                }
+
+                return sprintf(
+                    '%s<div class="small text-body-secondary">%s · %s</div>',
+                    $customerName,
+                    e($booking->customer_email),
+                    e($booking->customer_phone),
+                );
+            })
             ->addColumn('service', fn (Booking $booking): string => sprintf(
                 '%s<div class="small text-body-secondary">%s</div>%s',
                 e($booking->service_name),

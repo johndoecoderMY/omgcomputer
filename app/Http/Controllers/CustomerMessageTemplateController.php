@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerMessageTemplate;
+use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Spatie\QueryBuilder\AllowedFilter;
 use Yajra\DataTables\Facades\DataTables;
 
 class CustomerMessageTemplateController extends Controller
@@ -28,7 +30,12 @@ class CustomerMessageTemplateController extends Controller
             $query->where('stage', $stage);
         }
 
-        return DataTables::eloquent($query)
+        return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
+            'stage' => AllowedFilter::exact('stage'),
+            'name' => AllowedFilter::partial('name'),
+            'subject' => AllowedFilter::partial('subject'),
+            'channel' => AllowedFilter::exact('channel'),
+        ]))
             ->filter(function ($templates) use ($request): void {
                 $search = trim((string) $request->input('search.value', ''));
                 if ($search !== '') {
