@@ -33,7 +33,7 @@
 @once
     @push('scripts')
         <script>
-            document.querySelectorAll('[data-image-upload]').forEach((control) => {
+            const initializeImageUpload = (control) => {
                 if (control.dataset.imageUploadInitialized) return;
                 control.dataset.imageUploadInitialized = 'true';
 
@@ -73,7 +73,18 @@
                     input.accept = originalAccept;
                     selection.textContent = Array.from(input.files || []).map((file) => file.name).join(', ');
                 });
-            });
+            };
+
+            document.querySelectorAll('[data-image-upload]').forEach(initializeImageUpload);
+            new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (!(node instanceof Element)) return;
+                        if (node.matches('[data-image-upload]')) initializeImageUpload(node);
+                        node.querySelectorAll('[data-image-upload]').forEach(initializeImageUpload);
+                    });
+                });
+            }).observe(document.body, { childList: true, subtree: true });
         </script>
     @endpush
 @endonce

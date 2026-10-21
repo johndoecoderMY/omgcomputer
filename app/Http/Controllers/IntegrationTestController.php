@@ -2,15 +2,59 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\IntegrationTestMail;
+use App\Notifications\IntegrationTestNotification;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class IntegrationTestController extends Controller
 {
+    public function notifications(): View
+    {
+        return view('reports.integrations.notifications', [
+            'mailer' => config('mail.default'),
+            'fromAddress' => config('mail.from.address'),
+        ]);
+    }
+
+    public function sendTestNotification(Request $request): RedirectResponse
+    {
+        $request->user()->notify(new IntegrationTestNotification(
+            'Test notification',
+            'Your workspace notifications are working.',
+            route('notifications.index'),
+        ));
+
+        return back()->with('notification_test_result', [
+            'success' => true,
+            'message' => 'A test notification was sent to your account.',
+        ]);
+    }
+
+    public function sendTestEmail(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        if (blank($user->email)) {
+            return back()->with('email_test_result', [
+                'success' => false,
+                'message' => 'Your account does not have an email address to send the test to.',
+            ]);
+        }
+
+        Mail::to($user->email)->send(new IntegrationTestMail($user->name));
+
+        return back()->with('email_test_result', [
+            'success' => true,
+            'message' => "A test email was sent to {$user->email}.",
+        ]);
+    }
+
     public function whatsapp(): View
     {
         return view('reports.integrations.whatsapp', [

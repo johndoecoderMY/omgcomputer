@@ -13,6 +13,7 @@ use App\Http\Controllers\CustomerMessageTemplateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DevelopmentController;
+use App\Http\Controllers\DramaScriptController;
 use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
@@ -258,6 +259,9 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/export', 'export')->name('export');
     });
     Route::prefix('reports/integrations')->name('reports.integrations.')->middleware('role:admin')->controller(IntegrationTestController::class)->group(function (): void {
+        Route::get('/notifications', 'notifications')->name('notifications');
+        Route::post('/notifications/send', 'sendTestNotification')->name('notifications.send');
+        Route::post('/email/send', 'sendTestEmail')->name('email.send');
         Route::get('/whatsapp', 'whatsapp')->name('whatsapp');
         Route::post('/whatsapp/check', 'checkWhatsapp')->name('whatsapp.check');
         Route::get('/easyparcel', 'easyParcel')->name('easyparcel');
@@ -348,6 +352,14 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/flowcharts/{flowchart}/tasks', [FlowChartController::class, 'addStepsToTasks'])->name('flowcharts.tasks.store');
         Route::patch('/flowcharts/{flowchart}/layout', [FlowChartController::class, 'saveLayout'])->name('flowcharts.layout');
         Route::resource('flowcharts', FlowChartController::class);
+    });
+    Route::prefix('drama-content')->name('drama-content.')->controller(DramaScriptController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{dramaScript}/edit', 'edit')->name('edit');
+        Route::put('/{dramaScript}', 'update')->name('update');
+        Route::delete('/{dramaScript}', 'destroy')->name('destroy');
     });
 });
 

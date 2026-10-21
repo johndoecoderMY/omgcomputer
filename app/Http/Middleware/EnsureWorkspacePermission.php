@@ -141,6 +141,9 @@ class EnsureWorkspacePermission
         if (str_starts_with($name, 'meta-content.')) {
             return in_array($name, ['meta-content.index'], true) ? 'meta_content.view' : 'meta_content.manage';
         }
+        if (str_starts_with($name, 'drama-content.')) {
+            return 'drama_content.manage';
+        }
         if (str_starts_with($name, 'inventory.') || str_starts_with($name, 'inventory.suppliers.')) {
             return in_array($name, ['inventory.index', 'inventory.parts', 'inventory.parts.datatable', 'inventory.movements', 'inventory.movements.datatable', 'inventory.suppliers.index', 'inventory.suppliers.datatable', 'inventory.suppliers.show', 'inventory.parts.show'], true)
                 ? 'inventory.view'

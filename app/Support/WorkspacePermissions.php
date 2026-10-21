@@ -93,6 +93,7 @@ class WorkspacePermissions
         'backups.manage',
         'profile.manage_own',
         'error_pages.view',
+        'drama_content.manage',
         'planner.manage-team-tasks',
     ];
 }

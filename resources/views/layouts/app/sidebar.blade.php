@@ -309,6 +309,14 @@
                         </div>
                     </a>
                     @endif
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('drama_content.manage'))
+                    <a class="nav-link" href="{{ route('drama-content.index') }}">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon"><span class="fas fa-film"></span></span>
+                            <span class="nav-link-text ps-1">Drama Content</span>
+                        </div>
+                    </a>
+                    @endif
                     @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
                     <a class="nav-link" href="{{ route('meta-content.index') }}">
                         <div class="d-flex align-items-center">
@@ -464,6 +472,12 @@
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fab fa-whatsapp"></span></span>
                                 <span class="nav-link-text ps-1">Test WhatsApp API</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('reports.integrations.notifications') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-bell"></span></span>
+                                <span class="nav-link-text ps-1">Test Notifications & Email</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">

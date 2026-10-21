@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Mail\IntegrationTestMail;
+use App\Notifications\IntegrationTestNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -142,5 +146,41 @@ class IntegrationTestPagesTest extends TestCase
 
         $this->actingAs($customer)->get(route('reports.integrations.whatsapp'))->assertForbidden();
         $this->actingAs($customer)->get(route('reports.integrations.easyparcel'))->assertForbidden();
+        $this->actingAs($customer)->get(route('reports.integrations.notifications'))->assertForbidden();
+        $this->actingAs($customer)->post(route('reports.integrations.notifications.send'))->assertForbidden();
+        $this->actingAs($customer)->post(route('reports.integrations.email.send'))->assertForbidden();
+    }
+
+    public function test_admin_can_send_a_test_notification_to_their_own_account(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        Notification::fake();
+
+        $this->actingAs($admin)->get(route('reports.integrations.notifications'))
+            ->assertOk()
+            ->assertSee('Notification &amp; Email Tests')
+            ->assertSee('Send test notification')
+            ->assertSee($admin->email);
+
+        $this->actingAs($admin)->post(route('reports.integrations.notifications.send'))
+            ->assertRedirect(route('reports.integrations.notifications'));
+
+        Notification::assertSentTo($admin, IntegrationTestNotification::class, fn (IntegrationTestNotification $notification): bool => $notification->title === 'Test notification');
+    }
+
+    public function test_admin_can_send_a_test_email_to_their_own_account(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        Mail::fake();
+
+        $this->actingAs($admin)->post(route('reports.integrations.email.send'))
+            ->assertRedirect(route('reports.integrations.notifications'));
+
+        Mail::assertSent(IntegrationTestMail::class, fn (IntegrationTestMail $mail): bool => $mail->recipientName === $admin->name
+            && $mail->hasTo($admin->email));
     }
 }

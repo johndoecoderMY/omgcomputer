@@ -194,6 +194,10 @@
                                 data-header-search-item data-search-terms="integration api">
                                 <span class="fab fa-whatsapp me-2 text-primary" aria-hidden="true"></span>WhatsApp API test
                             </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('reports.integrations.notifications') }}" role="option"
+                                data-header-search-item data-search-terms="integration notifications email mail test">
+                                <span class="fas fa-bell me-2 text-primary" aria-hidden="true"></span>Notification & email tests
+                            </a>
                             <a class="dropdown-item px-x1 py-2" href="{{ route('reports.integrations.easyparcel') }}" role="option"
                                 data-header-search-item data-search-terms="integration shipping delivery">
                                 <span class="fas fa-truck me-2 text-primary" aria-hidden="true"></span>EasyParcel rate checker
