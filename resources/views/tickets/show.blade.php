@@ -2,6 +2,10 @@
 
 @section('title', $ticket->ticket_number)
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendors/glightbox/glightbox.min.css') }}">
+@endpush
+
 @section('content')
     <div class="container-fluid py-3">
         <x-page-header eyebrow="Ticket" :title="$ticket->ticket_number" :back-url="route('tickets.index')"
@@ -17,14 +21,8 @@
             @endunless
         </x-page-header>
         <div class="mb-3"><x-status-badge :status="$ticket->status" :label="$statuses[$ticket->status] ?? ucfirst($ticket->status)" /></div>
-        @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>@endif
-        @if ($errors->any())
-            <div class="alert alert-danger">@foreach ($errors->all() as $error)
-            <div>{{ $error }}</div>@endforeach
-        </div>@endif
         <div class="row g-3">
-            <div class="col-xl-7">
+            <div class="col-xl-8">
                 <div class="card mb-3">
                     <div class="card-header fw-semibold">Device and reported issue</div>
                     <div class="card-body">
@@ -58,33 +56,6 @@
                     <div class="card-header fw-semibold">Diagnosis and service notes</div>
                     <div class="card-body text-pre-line">
                         {{ $ticket->diagnosis ?: 'No diagnosis or service notes recorded.' }}
-                    </div>
-                </div>
-                <div class="card mb-3">
-                    <div class="card-header fw-semibold">Ticket photos</div>
-                    @unless (auth()->user()->hasRole('customer'))
-                        <form class="card-body border-bottom" method="POST"
-                            action="{{ route('tickets.attachments.store', $ticket) }}" enctype="multipart/form-data">@csrf
-                            <div class="row g-2 align-items-end">
-                                <div class="col-md-5">
-                                    <label class="form-label" for="ticket-photos">Photos</label>
-                                    <x-image-upload-input id="ticket-photos" name="photos[]" :multiple="true"
-                                        :required="true" />
-                                </div>
-                                <div class="col-md-5 h-100">
-                                    <label class="form-label" for="ticket-photo-caption">Caption</label>
-                                    <input class="form-control" id="ticket-photo-caption" name="caption" maxlength="255"
-                                        placeholder="Intake condition or customer-provided image">
-                                </div>
-                                <div class="col-md-2 d-grid">
-                                    <button class="btn btn-outline-primary">Upload</button>
-                                </div>
-                            </div>
-                            <div class="form-text">Up to 8 JPG, PNG, or WebP images, 10 MB each.</div>
-                        </form>
-                    @endunless
-                    <div class="card-body">
-                        @include('attachments.gallery', ['attachments' => $ticket->attachments, 'emptyMessage' => 'No ticket photos yet.'])
                     </div>
                 </div>
                 <div class="card mb-3">
@@ -134,7 +105,12 @@
                                 <p class="text-pre-line mt-2 mb-0">{{ $update->notes }}</p>@endif
                                 @if ($update->attachments->isNotEmpty())
                                     <div class="mt-3">
-                                        @include('attachments.gallery', ['attachments' => $update->attachments, 'emptyMessage' => ''])
+                                        @include('attachments.gallery', [
+                                            'attachments' => $update->attachments,
+                                            'emptyMessage' => '',
+                                            'lightbox' => true,
+                                            'galleryName' => 'ticket-step-'.$update->id,
+                                        ])
                                 </div>@endif
                             </article>
                         @empty
@@ -142,22 +118,11 @@
                         @endforelse
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header fw-semibold">Billing documents</div>
-                    <div class="list-group list-group-flush">@forelse ($ticket->billingDocuments as $document)<a
-                        class="list-group-item list-group-item-action d-flex justify-content-between"
-                        href="{{ route('billing.documents.show', $document) }}"><span>{{ $document->number }}<small
-                                class="d-block text-body-secondary">{{ ucfirst($document->type) }} · <x-status-badge
-                                    :status="$document->status"
-                                    :label="ucfirst($document->status)" /></small></span><span>RM
-                    {{ number_format($document->total, 2) }}</span></a>@empty<div
-                                    class="list-group-item text-body-secondary">No quotations or invoices linked yet.</div>
-                                @endforelse</div>
-                </div>
+
             </div>
             @unless (auth()->user()->hasRole('customer'))
-                    <div class="col-xl-5">
-                        <form class="card" method="POST" action="{{ route('tickets.update', $ticket) }}">@csrf @method('PUT')
+                    <div class="col-xl-4">
+                        <form class="card mb-3" method="POST" action="{{ route('tickets.update', $ticket) }}">@csrf @method('PUT')
                             <div class="card-header fw-semibold">Ticket workflow</div>
                             <div class="card-body">
                                 <div class="mb-3"><label class="form-label" for="status">Status</label><select class="form-select"
@@ -190,9 +155,30 @@
                             </div>
                             <div class="card-footer text-end"><button class="btn btn-primary">Save ticket</button></div>
                         </form>
+                        <div class="card">
+                            <div class="card-header fw-semibold">Billing documents</div>
+                            <div class="list-group list-group-flush">@forelse ($ticket->billingDocuments as $document)<a
+                                class="list-group-item list-group-item-action d-flex justify-content-between"
+                                href="{{ route('billing.documents.show', $document) }}"><span>{{ $document->number }}<small
+                                        class="d-block text-body-secondary">{{ ucfirst($document->type) }} · <x-status-badge
+                                            :status="$document->status"
+                                            :label="ucfirst($document->status)" /></small></span><span>RM
+                            {{ number_format($document->total, 2) }}</span></a>@empty<div
+                                            class="list-group-item text-body-secondary">No quotations or invoices linked yet.</div>
+                                        @endforelse</div>
+                        </div>
                     </div>
                 </div>
             @endunless
     </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
+    <script>
+        if (window.GLightbox) {
+            window.GLightbox({ selector: '.attachment-lightbox' });
+        }
+    </script>
+@endpush

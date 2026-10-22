@@ -11,7 +11,7 @@
                         <span class="fas fa-tools me-2"></span>Local computer repair &amp; support
                     </span>
                     <h1 class="display-2 fw-bold text-1000 mb-3">Computer trouble?<br><span class="text-primary">We can help.</span></h1>
-                    <p class="lead text-700 mb-4">Friendly, dependable help for slow PCs, broken hardware, upgrades, and everyday tech headaches.</p>
+                    <p class="lead text-700 mb-4">Friendly computer repairs and support, plus custom websites for businesses and organizations.</p>
                     <div class="d-flex flex-wrap gap-3">
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#services">Explore our services</a>
                         <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
@@ -43,12 +43,12 @@
             <div class="row justify-content-center text-center mb-5">
                 <div class="col-lg-8">
                     <span class="text-primary fw-bold text-uppercase fs-10">How we can help</span>
-                    <h2 class="fw-bold text-1000 mt-2">Computer services for home and work</h2>
-                    <p class="text-700 mb-0">Get support for the problems that slow you down, with clear advice at every step.</p>
+                    <h2 class="fw-bold text-1000 mt-2">Technology services for home and work</h2>
+                    <p class="text-700 mb-0">From computer support to custom websites, get practical technology help for home and work.</p>
                 </div>
             </div>
             <div class="row g-4">
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-stethoscope text-primary fs-4 mb-3"></span>
@@ -57,7 +57,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-screwdriver-wrench text-primary fs-4 mb-3"></span>
@@ -66,7 +66,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-memory text-primary fs-4 mb-3"></span>
@@ -75,12 +75,21 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-xl-3">
+                <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="fas fa-shield-virus text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Software &amp; security support</h5>
                             <p class="text-700 mb-0">Resolve software issues and get practical help protecting your devices.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-xl">
+                    <div class="card h-100 border-0 shadow-sm p-2">
+                        <div class="card-body p-4">
+                            <span class="fas fa-globe text-primary fs-4 mb-3"></span>
+                            <h5 class="text-1000">Website design &amp; development</h5>
+                            <p class="text-700 mb-0">Get a custom website designed and built for your business or organization.</p>
                         </div>
                     </div>
                 </div>

@@ -18,7 +18,7 @@
                     {{ $booking->customer_name }} · {{ $booking->customer_email }}
                 </div>
             @else
-                <select class="form-select" id="customer_id" name="customer_id" @disabled($booking)>
+                <select class="form-select" id="customer_id" name="customer_id" @if (! $booking) required @endif @disabled($booking)>
                     @if (! $booking)
                         <option value="">Select customer</option>
                         <option value="__new_customer__">Add new customer…</option>
@@ -41,7 +41,11 @@
         <div class="col-md-3"><label class="form-label" for="priority">Priority</label><select class="form-select" id="priority" name="priority" required>@foreach ($priorities as $value => $label)<option value="{{ $value }}" @selected(old('priority', $ticket->priority) === $value)>{{ $label }}</option>@endforeach</select></div>
         <div class="col-md-3"><label class="form-label" for="due_at">Target date</label><input class="form-control" id="due_at" name="due_at" type="date" value="{{ old('due_at') }}"></div>
         <div class="col-12"><label class="form-label" for="issue_description">Reported issue</label><textarea class="form-control" id="issue_description" name="issue_description" rows="5" maxlength="5000" required>{{ old('issue_description', $ticket->issue_description) }}</textarea></div>
-    </div><div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ route('tickets.index') }}">Cancel</a><button class="btn btn-primary">Create ticket</button></div>
+    </div>
+    <div class="card-footer d-flex justify-content-end gap-2">
+        <a class="btn btn-outline-secondary" href="{{ route('tickets.index') }}">Cancel</a>
+        <button class="btn btn-primary" type="submit">Create ticket</button>
+    </div>
 
     @unless ($booking)
         <div class="modal fade" id="new-customer-modal" tabindex="-1" aria-labelledby="new-customer-title" aria-hidden="true">
@@ -55,7 +59,7 @@
                         <div class="alert alert-danger d-none" id="new-customer-error" role="alert"></div>
                         <div class="mb-3">
                             <label class="form-label" for="new_customer_name">Customer name</label>
-                            <input class="form-control" id="new_customer_name" maxlength="255" required>
+                            <input class="form-control" id="new_customer_name" maxlength="255">
                             <div class="invalid-feedback">Enter the customer's name.</div>
                         </div>
                         <div class="mb-3">

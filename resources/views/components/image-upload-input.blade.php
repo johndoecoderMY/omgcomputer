@@ -10,23 +10,25 @@
     'cameraMediaTypeValue' => null,
 ])
 
-<div class="d-flex flex-wrap align-items-center gap-2"
+<div class="d-grid gap-2"
     data-image-upload
     @if ($cameraMediaTypeId) data-camera-media-type-id="{{ $cameraMediaTypeId }}" @endif
     @if ($cameraMediaTypeValue) data-camera-media-type-value="{{ $cameraMediaTypeValue }}" @endif>
-    <input
-        class="form-control {{ $inputClass }} {{ $attributes->get('class') }}"
-        id="{{ $id }}"
-        name="{{ $name }}"
-        type="file"
-        accept="{{ $accept }}"
-        @if ($multiple) multiple @endif
-        @if ($required) required @endif
-        aria-describedby="{{ $id }}-selection"
-    >
-    <button class="btn btn-outline-secondary flex-shrink-0" type="button" data-image-upload-camera aria-controls="{{ $id }}">
-        <span class="fas fa-camera me-1" aria-hidden="true"></span>{{ $cameraLabel }}
-    </button>
+    <div class="input-group">
+        <input
+            class="form-control {{ $inputClass }} {{ $attributes->get('class') }}"
+            id="{{ $id }}"
+            name="{{ $name }}"
+            type="file"
+            accept="{{ $accept }}"
+            @if ($multiple) multiple @endif
+            @if ($required) required @endif
+            aria-describedby="{{ $id }}-selection"
+        >
+        <button class="btn btn-outline-secondary" type="button" data-image-upload-camera aria-controls="{{ $id }}">
+            <span class="fas fa-camera me-1" aria-hidden="true"></span>{{ $cameraLabel }}
+        </button>
+    </div>
     <span class="small text-body-secondary" id="{{ $id }}-selection" data-image-upload-selection aria-live="polite"></span>
 </div>
 

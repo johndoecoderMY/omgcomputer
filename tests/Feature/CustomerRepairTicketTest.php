@@ -128,6 +128,9 @@ class CustomerRepairTicketTest extends TestCase
             ->assertOk()
             ->assertSee('New repair ticket')
             ->assertSee('Add new customer…')
+            ->assertSee('name="customer_id"', false)
+            ->assertSee('required', false)
+            ->assertDontSee('id="new_customer_name" maxlength="255" required', false)
             ->assertDontSee('Related project')
             ->assertDontSee('<li class="breadcrumb-item">Work</li>', false);
         $this->post(route('tickets.store'), [

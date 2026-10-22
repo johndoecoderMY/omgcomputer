@@ -6,6 +6,7 @@
                     <a href="{{ route('attachments.show', $attachment) }}"
                         @if ($lightbox ?? false)
                             class="attachment-lightbox"
+                            data-type="image"
                             data-gallery="{{ $galleryName ?? 'task-photos' }}"
                             data-description="{{ $attachment->caption ?: $attachment->original_name }}"
                         @else
