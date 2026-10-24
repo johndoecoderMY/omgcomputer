@@ -40,9 +40,13 @@ class EmailMailboxService
             'timeout' => 30,
             'local_domain' => parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost',
         ]);
+        $signature = trim((string) $mailbox->signature);
+        $messageBody = $signature === ''
+            ? $body
+            : rtrim($body)."\n\n--\n".$signature;
 
         try {
-            $mailer->raw($body, function (Message $message) use ($user, $mailbox, $recipients, $subject, $attachments): void {
+            $mailer->raw($messageBody, function (Message $message) use ($user, $mailbox, $recipients, $subject, $attachments): void {
                 $message->from($mailbox->email, $user->name)
                     ->subject($subject);
 

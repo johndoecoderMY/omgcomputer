@@ -87,10 +87,12 @@ class EmailMailboxController extends Controller
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
             'password' => [Rule::requiredIf(! $mailbox), 'nullable', 'string', 'max:1000'],
+            'signature' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $mailbox ??= new UserEmailMailbox;
         $mailbox->email = $data['email'];
+        $mailbox->signature = $data['signature'] ?? null;
         if (filled($data['password'] ?? null)) {
             $mailbox->password = $data['password'];
         }

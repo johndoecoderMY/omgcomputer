@@ -10,6 +10,7 @@ class UserEmailMailbox extends Model
     protected $fillable = [
         'email',
         'password',
+        'signature',
     ];
 
     protected function casts(): array

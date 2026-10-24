@@ -182,6 +182,7 @@ class EmailMailboxTest extends TestCase
         $admin->emailMailbox()->create([
             'email' => 'admin@example.test',
             'password' => 'personal-mail-secret',
+            'signature' => "Jane Doe\nCustomer Support",
         ]);
         $settings = new EmailServerSetting($this->settingsData());
         $settings->id = 'primary';
@@ -200,7 +201,7 @@ class EmailMailboxTest extends TestCase
 
         $mailer = Mockery::mock(Mailer::class);
         $mailer->shouldReceive('raw')->once()
-            ->with('Please see attached.', Mockery::type(\Closure::class))
+            ->with("Please see attached.\n\n--\nJane Doe\nCustomer Support", Mockery::type(\Closure::class))
             ->andReturnUsing(function (string $body, \Closure $callback) use ($message): void {
                 $callback($message);
             });
@@ -294,7 +295,8 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($member)
             ->get(route('email.mailbox-settings'))
             ->assertOk()
-            ->assertSee('My cPanel mailbox');
+            ->assertSee('My cPanel mailbox')
+            ->assertSee('Email signature');
         $this->actingAs($member)
             ->get(route('email.compose'))
             ->assertOk()
@@ -307,6 +309,7 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($member)->put(route('email.mailbox-settings.update'), [
             'email' => 'member@example.test',
             'password' => 'personal-mail-secret',
+            'signature' => "Jane Doe\nCustomer Support",
         ])->assertRedirect();
 
         $otherMember = User::factory()->create();
@@ -314,13 +317,21 @@ class EmailMailboxTest extends TestCase
         $storedMailbox = User::query()->findOrFail($member->id)->emailMailbox;
         $this->assertSame('member@example.test', $storedMailbox->email);
         $this->assertSame('personal-mail-secret', $storedMailbox->password);
+        $this->assertSame("Jane Doe\nCustomer Support", $storedMailbox->signature);
         $this->assertNotSame('personal-mail-secret', DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'));
         $this->assertNull($otherMember->emailMailbox);
+        $this->actingAs(User::query()->findOrFail($member->id))
+            ->get(route('email.compose'))
+            ->assertOk()
+            ->assertSee('Your signature will be added when you send:')
+            ->assertSee('Jane Doe')
+            ->assertSee('Customer Support');
 
         $this->actingAs(User::query()->findOrFail($member->id))
             ->put(route('email.mailbox-settings.update'), [
                 'email' => 'member@example.test',
                 'password' => '',
+                'signature' => "Jane Doe\nCustomer Support",
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors();

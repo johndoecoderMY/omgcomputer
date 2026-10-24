@@ -42,6 +42,12 @@
                         {{ $mailbox ? '' : 'required' }}>
                     <div class="form-text">Stored encrypted. Your password is never shown after saving.</div>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label" for="mailbox-signature">Email signature</label>
+                    <textarea class="form-control" id="mailbox-signature" name="signature" rows="5" maxlength="5000"
+                        placeholder="Your name&#10;Your role&#10;OMG Computer">{{ old('signature', $mailbox?->signature) }}</textarea>
+                    <div class="form-text">This plain-text signature is automatically added to the bottom of emails you send. Leave blank to omit it.</div>
+                </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-primary" type="submit">
                         <span class="fas fa-save me-2" aria-hidden="true"></span>Save mailbox

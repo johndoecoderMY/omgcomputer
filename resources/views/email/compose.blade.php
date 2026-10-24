@@ -65,6 +65,17 @@
                 <textarea class="form-control border-0 rounded-0 px-x1 py-3" id="email-body" name="body"
                     rows="12" maxlength="100000" placeholder="Write your message…" required>{{ old('body') }}</textarea>
             </div>
+            @if (filled($mailbox?->signature))
+                <div class="border-top border-200 px-x1 py-3">
+                    <div class="small text-body-secondary mb-2">Your signature will be added when you send:</div>
+                    <div class="small" style="white-space: pre-wrap;">--&#10;{{ $mailbox->signature }}</div>
+                    <a class="small d-inline-block mt-2" href="{{ route('email.mailbox-settings') }}">Edit signature</a>
+                </div>
+            @else
+                <div class="border-top border-200 px-x1 py-2">
+                    <a class="small" href="{{ route('email.mailbox-settings') }}">Set up an email signature</a>
+                </div>
+            @endif
             <div class="bg-body-tertiary px-x1 py-3">
                 <div class="small text-body-secondary" id="email-attachment-list" aria-live="polite">No attachments selected</div>
             </div>

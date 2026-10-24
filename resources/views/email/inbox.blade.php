@@ -88,22 +88,22 @@
         @endif
 
         <div class="card-body fs-10 border-top p-0" id="emails" aria-live="polite">
-            <section id="unread-emails">
+            <div id="unread-emails">
                 <h2 class="h6 fs-9 px-3 pt-3 pb-2 mb-0 border-bottom">Unread</h2>
                 @foreach ($messages as $message)
                     @unless ($message['seen'])
                         @include('email._message-row', ['message' => $message])
                     @endunless
                 @endforeach
-            </section>
-            <section id="read-emails">
+            </div>
+            <div id="read-emails">
                 <h2 class="h6 fs-9 px-3 pt-3 pb-2 mb-0 border-bottom">Everything else</h2>
                 @foreach ($messages as $message)
                     @if ($message['seen'])
                         @include('email._message-row', ['message' => $message])
                     @endif
                 @endforeach
-            </section>
+            </div>
             @if ($messages === [])
                 <div class="d-flex flex-column align-items-center text-center text-body-secondary py-5" id="empty-emails">
                     <span class="fas fa-inbox fs-2 d-block mx-auto mb-2" aria-hidden="true"></span>
