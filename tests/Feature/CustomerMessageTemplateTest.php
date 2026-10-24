@@ -69,4 +69,48 @@ class CustomerMessageTemplateTest extends TestCase
             ->assertSee('Permintaan janji temu diterima (Bahasa Melayu)')
             ->assertSee('Makluman kelewatan alat ganti (Bahasa Melayu)');
     }
+
+    public function test_staff_can_load_active_copywriting_suggestions_by_channel(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        CustomerMessageTemplate::query()->create([
+            'slug' => 'email-confirmation',
+            'name' => 'Booking confirmation',
+            'stage' => 'booking',
+            'channel' => 'email',
+            'subject' => 'Booking confirmed for {{customer_name}}',
+            'body' => 'Hi {{customer_name}}, your appointment is confirmed.',
+            'is_active' => true,
+        ]);
+        CustomerMessageTemplate::query()->create([
+            'slug' => 'whatsapp-confirmation',
+            'name' => 'WhatsApp booking confirmation',
+            'stage' => 'booking',
+            'channel' => 'whatsapp',
+            'body' => 'Hi {{customer_name}}, your appointment is confirmed.',
+            'is_active' => true,
+        ]);
+        CustomerMessageTemplate::query()->create([
+            'slug' => 'archived-email',
+            'name' => 'Archived email',
+            'stage' => 'general',
+            'channel' => 'email',
+            'body' => 'This template is archived.',
+            'is_active' => false,
+        ]);
+
+        $this->getJson(route('customer-messages.suggestions', ['channel' => 'email']))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonCount(1, 'templates')
+            ->assertJsonPath('templates.0.name', 'Booking confirmation')
+            ->assertJsonPath('templates.0.subject', 'Booking confirmed for Avery')
+            ->assertJsonPath('templates.0.body', 'Hi Avery, your appointment is confirmed.');
+
+        $this->getJson(route('customer-messages.suggestions', ['channel' => 'whatsapp']))
+            ->assertOk()
+            ->assertJsonCount(1, 'templates')
+            ->assertJsonPath('templates.0.name', 'WhatsApp booking confirmation');
+    }
 }

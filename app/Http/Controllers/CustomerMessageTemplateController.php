@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CustomerMessageTemplate;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,6 +21,30 @@ class CustomerMessageTemplateController extends Controller
         return view('customer-messages.index', [
             'stages' => CustomerMessageTemplate::STAGES,
         ]);
+    }
+
+    public function suggestions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'channel' => ['required', Rule::in(array_keys(CustomerMessageTemplate::CHANNELS))],
+        ]);
+
+        $templates = CustomerMessageTemplate::query()
+            ->where('is_active', true)
+            ->where('channel', $data['channel'])
+            ->orderBy('stage')
+            ->orderBy('name')
+            ->get(['id', 'name', 'stage', 'subject', 'body'])
+            ->map(fn (CustomerMessageTemplate $template): array => [
+                'id' => $template->id,
+                'name' => $template->name,
+                'stage' => CustomerMessageTemplate::STAGES[$template->stage],
+                'subject' => $template->render($template->subject ?? ''),
+                'body' => $template->render($template->body),
+            ]);
+
+        return response()->json(['templates' => $templates])
+            ->header('Cache-Control', 'no-store, private');
     }
 
     public function datatable(Request $request)

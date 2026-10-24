@@ -26,9 +26,16 @@
     <form class="card" method="POST" action="{{ route('email.send') }}" enctype="multipart/form-data">
         @csrf
         <div class="card-header bg-body-tertiary">
-            <h2 class="h5 mb-0">New message</h2>
-            <div class="small text-body-secondary mt-1">
-                From: {{ $mailbox?->email ?? 'Mailbox not configured' }}
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                <div>
+                    <h2 class="h5 mb-0">New message</h2>
+                    <div class="small text-body-secondary mt-1">
+                        From: {{ $mailbox?->email ?? 'Mailbox not configured' }}
+                    </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#email-copywriting-modal">
+                    <span class="fas fa-lightbulb me-1" aria-hidden="true"></span>Suggest from Copywriting
+                </button>
             </div>
         </div>
         <div class="card-body p-0">
@@ -97,6 +104,48 @@
             </a>
         </div>
     </form>
+
+    <div class="modal fade" id="email-copywriting-modal" tabindex="-1" aria-labelledby="email-copywriting-title" aria-hidden="true"
+        data-suggestions-url="{{ route('customer-messages.suggestions') }}">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title fs-5" id="email-copywriting-title">Choose an email suggestion</h2>
+                        <div class="small text-body-secondary">Select a saved template, then review and personalize it before sending.</div>
+                    </div>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <div class="list-group" id="email-copywriting-list" aria-label="Email copywriting templates"></div>
+                        </div>
+                        <div class="col-md-7">
+                            <div id="email-copywriting-status" class="small text-body-secondary" role="status" aria-live="polite">Loading suggestions…</div>
+                            <div id="email-copywriting-preview" class="mt-3" hidden>
+                                <div class="small text-body-secondary" id="email-copywriting-stage"></div>
+                                <h3 class="h6 mt-1" id="email-copywriting-name"></h3>
+                                <div id="email-copywriting-subject-wrap" class="mb-2" hidden>
+                                    <div class="small text-body-secondary">Subject</div>
+                                    <div id="email-copywriting-subject" class="fw-semibold"></div>
+                                </div>
+                                <div class="small text-body-secondary">Message</div>
+                                <pre id="email-copywriting-body" class="copywriting-preview mb-0"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <a class="small" href="{{ route('customer-messages.index') }}">Manage Copywriting templates</a>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" id="email-copywriting-use" type="button" disabled>Use suggestion</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -106,6 +155,15 @@
         const recipientChips = document.getElementById('email-recipient-chips');
         const input = document.getElementById('email-attachments');
         const list = document.getElementById('email-attachment-list');
+        const suggestionsModal = document.getElementById('email-copywriting-modal');
+        const suggestionsList = document.getElementById('email-copywriting-list');
+        const suggestionsStatus = document.getElementById('email-copywriting-status');
+        const suggestionsPreview = document.getElementById('email-copywriting-preview');
+        const useSuggestion = document.getElementById('email-copywriting-use');
+        let suggestions = [];
+        let selectedSuggestion = null;
+        let suggestionsLoaded = false;
+        let suggestionsLoading = false;
 
         const recipients = () => [...recipientChips.querySelectorAll('input[name="recipients[]"]')]
             .map((recipient) => recipient.value.trim().toLowerCase());
@@ -191,6 +249,75 @@
             const files = [...input.files].map((file) => `${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
             list.textContent = files.length ? files.join(' · ') : 'No attachments selected';
         });
+
+        const selectSuggestion = (suggestion) => {
+            selectedSuggestion = suggestion;
+            suggestionsList.querySelectorAll('[data-suggestion-id]').forEach((button) => {
+                button.classList.toggle('active', button.dataset.suggestionId === String(suggestion.id));
+                button.setAttribute('aria-pressed', String(button.dataset.suggestionId === String(suggestion.id)));
+            });
+            document.getElementById('email-copywriting-stage').textContent = suggestion.stage;
+            document.getElementById('email-copywriting-name').textContent = suggestion.name;
+            const subjectWrap = document.getElementById('email-copywriting-subject-wrap');
+            subjectWrap.hidden = !suggestion.subject;
+            document.getElementById('email-copywriting-subject').textContent = suggestion.subject;
+            document.getElementById('email-copywriting-body').textContent = suggestion.body;
+            suggestionsPreview.hidden = false;
+            suggestionsStatus.textContent = 'Review the sample wording and personalize details before sending.';
+            useSuggestion.disabled = false;
+        };
+
+        const loadSuggestions = async () => {
+            if (suggestionsLoaded || suggestionsLoading) return;
+            suggestionsLoading = true;
+            suggestionsStatus.textContent = 'Loading suggestions…';
+            try {
+                const url = new URL(suggestionsModal.dataset.suggestionsUrl, window.location.origin);
+                url.searchParams.set('channel', 'email');
+                const response = await fetch(url, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                });
+                if (!response.ok) throw new Error('Could not load Copywriting suggestions.');
+                const payload = await response.json();
+                suggestions = payload.templates || [];
+                suggestionsList.replaceChildren();
+                suggestions.forEach((suggestion) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'list-group-item list-group-item-action';
+                    button.dataset.suggestionId = suggestion.id;
+                    button.setAttribute('aria-pressed', 'false');
+                    const name = document.createElement('span');
+                    name.className = 'fw-semibold d-block';
+                    name.textContent = suggestion.name;
+                    const stage = document.createElement('span');
+                    stage.className = 'small text-body-secondary';
+                    stage.textContent = suggestion.stage;
+                    button.append(name, stage);
+                    button.addEventListener('click', () => selectSuggestion(suggestion));
+                    suggestionsList.append(button);
+                });
+                suggestionsLoaded = true;
+                suggestionsStatus.textContent = suggestions.length
+                    ? 'Choose a template to preview it.'
+                    : 'No active email templates yet. Add one in Copywriting.';
+            } catch {
+                suggestionsStatus.textContent = 'Suggestions could not be loaded. Please try again.';
+            } finally {
+                suggestionsLoading = false;
+            }
+        };
+
+        suggestionsModal.addEventListener('show.bs.modal', loadSuggestions);
+        useSuggestion.addEventListener('click', () => {
+            if (!selectedSuggestion) return;
+            if (selectedSuggestion.subject) document.getElementById('email-subject').value = selectedSuggestion.subject;
+            document.getElementById('email-body').value = selectedSuggestion.body;
+            bootstrap.Modal.getOrCreateInstance(suggestionsModal).hide();
+            document.getElementById('email-body').focus();
+        });
     })();
 </script>
 <style>
@@ -199,5 +326,6 @@
     .email-recipient-input { min-width: 12rem; }
     .email-recipient-chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; padding: .35rem .5rem; }
     .email-recipient-remove { border: 0; padding: 0; color: inherit; background: transparent; font-size: 1rem; line-height: 1; }
+    .copywriting-preview { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; color: inherit; border: 1px solid var(--falcon-border-color, #d8e0e8); border-radius: 4px; padding: 1rem; max-height: 16rem; overflow-y: auto; }
 </style>
 @endsection

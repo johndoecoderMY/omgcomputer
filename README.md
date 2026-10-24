@@ -43,6 +43,7 @@ The staff-only Shop uses inventory parts as its product catalogue, with separate
 Run `php artisan migrate` to create the planning, inventory, billing, and shop tables. Keep a current database backup before applying migrations to an existing deployment.
 
 Administrators can use **System maintenance** to run migrations, clear Laravel optimization caches, or pull the configured Git branch. Git pull requires Git and a configured remote on the server; it only fast-forwards and refuses to run when tracked files have local changes.
+The same page can build production frontend assets with `npm run build` when Node.js, npm, and project dependencies are installed on the server.
 
 ## Teams, Suppliers, and SOP Flow Charts
 

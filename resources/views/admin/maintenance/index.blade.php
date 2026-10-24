@@ -44,6 +44,24 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100">
                 <div class="card-body">
+                    <h2 class="h5">Build frontend assets</h2>
+                    <p class="text-body-secondary">
+                        Run <code>npm run build</code> to generate the production Vite assets in <code>public/build</code>.
+                        Node.js, npm, and the project dependencies must be installed on the server.
+                    </p>
+                    <form method="POST" action="{{ route('admin.maintenance.build-assets') }}"
+                        onsubmit="return confirm('Build production frontend assets on the server now?');">
+                        @csrf
+                        <button class="btn btn-outline-primary" type="submit">
+                            <span class="fas fa-box me-2" aria-hidden="true"></span>Build assets
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-body">
                     <h2 class="h5">Database migrations</h2>
                     <p class="text-body-secondary">
                         Apply pending migrations to the configured database. Back up the database before running migrations on a live site.

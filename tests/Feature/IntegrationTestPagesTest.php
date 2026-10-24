@@ -154,7 +154,10 @@ class IntegrationTestPagesTest extends TestCase
             ->assertOk()
             ->assertSee('WhatsApp Inbox')
             ->assertSee('Inbox Customer')
-            ->assertSee('Are you open today?');
+            ->assertSee('Are you open today?')
+            ->assertSee('Suggest a reply')
+            ->assertSee('Open WhatsApp draft')
+            ->assertSee('60123456789');
 
         $this->actingAs($admin)->getJson(route('reports.integrations.whatsapp.inbox.poll'))
             ->assertOk()

@@ -155,9 +155,10 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     });
     Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
-        Route::post('/migrate', 'migrate')->middleware('throttle:3,1')->name('migrate');
-        Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:3,1')->name('optimize-clear');
-        Route::post('/git-pull', 'gitPull')->middleware('throttle:3,1')->name('git-pull');
+        Route::post('/migrate', 'migrate')->middleware('throttle:10,1')->name('migrate');
+        Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:10,1')->name('optimize-clear');
+        Route::post('/build-assets', 'buildAssets')->middleware('throttle:10,1')->name('build-assets');
+        Route::post('/git-pull', 'gitPull')->middleware('throttle:10,1')->name('git-pull');
     });
     Route::prefix('attachments')->name('attachments.')->controller(AttachmentController::class)->group(function (): void {
         Route::get('/{attachment}/file', 'show')->name('show');
@@ -188,6 +189,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('customer-messages')->name('customer-messages.')->controller(CustomerMessageTemplateController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
+        Route::get('/suggestions', 'suggestions')->name('suggestions');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('/{customerMessage}', 'show')->name('show');

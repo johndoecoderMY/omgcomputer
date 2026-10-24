@@ -24,6 +24,7 @@ class AdminMaintenanceTest extends TestCase
         $this->actingAs($member)->get(route('admin.maintenance.index'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.migrate'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
 
         $admin = User::factory()->create();
@@ -32,6 +33,7 @@ class AdminMaintenanceTest extends TestCase
         $this->actingAs($admin)->get(route('admin.maintenance.index'))
             ->assertOk()
             ->assertSee('System maintenance')
+            ->assertSee('Build assets')
             ->assertSee('Run migrations')
             ->assertSee('Optimize clear')
             ->assertSee('Git pull');
@@ -118,5 +120,37 @@ class AdminMaintenanceTest extends TestCase
             ->assertRedirect(route('admin.maintenance.index'))
             ->assertSessionHas('maintenance_success', 'Laravel optimization caches cleared.')
             ->assertSessionHas('maintenance_output', 'Cached events cleared.');
+    }
+
+    public function test_administrator_can_build_frontend_assets(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Process::fake([
+            '*' => Process::result('Vite build complete.'),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.build-assets'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'Frontend assets built successfully.')
+            ->assertSessionHas('maintenance_output', 'Vite build complete.');
+
+        Process::assertRan(fn ($process): bool => $process->command === ['npm', 'run', 'build']);
+    }
+
+    public function test_failed_frontend_build_shows_build_output(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Process::fake([
+            '*' => Process::result('', 'npm is not installed.', 127),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.build-assets'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_error')
+            ->assertSessionHas('maintenance_output', 'npm is not installed.');
     }
 }

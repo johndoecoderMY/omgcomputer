@@ -140,6 +140,7 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($admin)->get(route('email.compose'))
             ->assertOk()
             ->assertSee('New message')
+            ->assertSee('Suggest from Copywriting')
             ->assertSee('admin@example.test')
             ->assertSee('Attach files');
 

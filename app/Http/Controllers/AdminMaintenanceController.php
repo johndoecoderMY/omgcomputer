@@ -7,6 +7,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use RuntimeException;
@@ -34,6 +35,37 @@ class AdminMaintenanceController extends Controller
             [],
             'Laravel optimization caches cleared.',
         );
+    }
+
+    public function buildAssets(): RedirectResponse
+    {
+        try {
+            $result = Process::path(base_path())->timeout(180)->run(['npm', 'run', 'build']);
+        } catch (RuntimeException $exception) {
+            Log::warning('Admin frontend asset build could not start.', [
+                'reason' => Str::limit($exception->getMessage(), 200),
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'The frontend build could not start. Confirm Node.js, npm, and the project dependencies are available on the server.');
+        }
+
+        $output = trim($result->output()."\n".$result->errorOutput());
+
+        if (! $result->successful()) {
+            Log::error('Admin frontend asset build failed.', [
+                'exit_code' => $result->exitCode(),
+                'output' => $output,
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'The frontend asset build failed. Review the output and confirm Node.js, npm, and the project dependencies are available on the server.')
+                ->with('maintenance_output', $output);
+        }
+
+        return redirect()->route('admin.maintenance.index')
+            ->with('maintenance_success', 'Frontend assets built successfully.')
+            ->with('maintenance_output', $output);
     }
 
     public function gitPull(GitPullService $git): RedirectResponse
