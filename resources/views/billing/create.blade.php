@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Billing" :title="$editing ? 'Edit draft ' . $document->number : 'Create ' . $type" :back-url="$editing ? route('billing.documents.show', $document) : ($project ? route('projects.show', $project) : route('billing.index'))" :back-label="$editing ? 'Back to document' : ($project ? 'Back to project' : 'Back to billing')" />
+    <x-page-header eyebrow="Billing" :title="$editing ? (($document->status === 'rejected' ? 'Edit rejected quotation ' : 'Edit draft ') . $document->number) : 'Create ' . $type" :back-url="$editing ? route('billing.documents.show', $document) : ($project ? route('projects.show', $project) : route('billing.index'))" :back-label="$editing ? 'Back to document' : ($project ? 'Back to project' : 'Back to billing')" />
     @if ($ticket)<div class="alert alert-info">Quotation for repair ticket <a href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>. Customer and issue details have been prefilled.</div>@endif
     @if ($project)<div class="alert alert-info">Billing document for project <a href="{{ route('projects.show', $project) }}">{{ $project->name }}</a>. Customer details have been prefilled where available.</div>@endif
     @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
@@ -15,6 +15,24 @@
         @if ($ticket)<input type="hidden" name="repair_ticket_id" value="{{ $ticket->id }}">@endif
         @if ($project)<input type="hidden" name="project_id" value="{{ $project->id }}">@endif
         <div class="card mb-3"><div class="card-header fw-semibold">Customer and dates</div><div class="card-body row g-3">
+            @if ($projectRecipients->isNotEmpty())
+                <div class="col-12">
+                    <label class="form-label" for="project-recipient">Customer recipient from this project</label>
+                    <select class="form-select" id="project-recipient" name="recipient_key">
+                        @foreach ($projectRecipients as $recipient)
+                            <option value="{{ $recipient['key'] }}"
+                                data-name="{{ $recipient['name'] }}"
+                                data-email="{{ $recipient['email'] }}"
+                                data-phone="{{ $recipient['phone'] }}"
+                                data-address="{{ $recipient['address'] }}"
+                                @selected(old('recipient_key', $selectedRecipientKey) === $recipient['key'])>
+                                {{ $recipient['name'] }}{{ $recipient['email'] ? ' · '.$recipient['email'] : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Selecting a linked customer fills in the quotation recipient details below.</div>
+                </div>
+            @endif
             <div class="col-md-6"><label class="form-label" for="customer_name">Customer name</label><input class="form-control" id="customer_name" name="customer_name" value="{{ old('customer_name', $document->customer_name) }}" required></div>
             <div class="col-md-3"><label class="form-label" for="customer_email">Email</label><input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email', $document->customer_email) }}"></div>
             <div class="col-md-3"><label class="form-label" for="customer_phone">Phone</label><input class="form-control" id="customer_phone" name="customer_phone" value="{{ old('customer_phone', $document->customer_phone) }}"></div>
@@ -33,13 +51,26 @@
             </tbody></table></div>
             <div class="card-body row g-3"><div class="col-md-3"><label class="form-label" for="tax_rate">Tax rate (%)</label><input class="form-control" id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="0.01" value="{{ old('tax_rate', $document->tax_rate ?? 0) }}" required></div><div class="col-md-9"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="2">{{ old('notes', $document->notes) }}</textarea></div></div>
         </div>
-        <div class="d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ $editing ? route('billing.documents.show', $document) : route('billing.index') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ $editing ? 'Save draft changes' : ($type === 'invoice' ? 'Create and issue invoice' : 'Save quotation') }}</button></div>
+        <div class="d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ $editing ? route('billing.documents.show', $document) : route('billing.index') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ $editing ? ($document->status === 'rejected' ? 'Save revised quotation as draft' : 'Save draft changes') : ($type === 'invoice' ? 'Create and issue invoice' : 'Save quotation') }}</button></div>
     </form>
 </div>
 @endsection
 
 @push('scripts')
 <script>
+(() => {
+    const recipientSelect = document.getElementById('project-recipient');
+    if (!recipientSelect) return;
+
+    recipientSelect.addEventListener('change', () => {
+        const option = recipientSelect.selectedOptions[0];
+        document.getElementById('customer_name').value = option.dataset.name || '';
+        document.getElementById('customer_email').value = option.dataset.email || '';
+        document.getElementById('customer_phone').value = option.dataset.phone || '';
+        document.getElementById('customer_address').value = option.dataset.address || '';
+    });
+})();
+
 (() => {
     const lines = document.getElementById('lines');
     const renumber = () => lines.querySelectorAll('.billing-line').forEach((row, index) => {

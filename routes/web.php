@@ -5,10 +5,10 @@ use App\Http\Controllers\AdminBackupController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
-use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
 use App\Http\Controllers\BusinessExpenseController;
+use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerMessageTemplateController;
 use App\Http\Controllers\DashboardController;
@@ -31,6 +31,7 @@ use App\Http\Controllers\ProjectExportController;
 use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
@@ -83,6 +84,14 @@ Route::post('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'recei
     ->name('webhooks.whatsapp.receive');
 Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::class, 'callback'])
     ->name('webhooks.chip.collect');
+Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'])
+    ->name('webhooks.chip.shop');
+
+Route::prefix('shop/preview')->name('shop.preview.')->controller(ShopController::class)->group(function (): void {
+    Route::get('/products', 'previewProducts')->name('products.index');
+    Route::get('/products/grid', 'previewProductsGrid')->name('products.grid');
+    Route::get('/products/{product}', 'previewProductDetails')->name('products.show');
+});
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -148,6 +157,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     });
 
     Route::prefix('bookings')->name('bookings.')->controller(BookingController::class)->group(function (): void {
+        Route::get('/create', 'createAuthenticated')->middleware('role:customer')->name('account-create');
+        Route::post('/create', 'storeAuthenticated')->middleware('role:customer')->name('account-store');
         Route::get('/calendar', 'calendar')->name('calendar');
         Route::get('/calendar/events', 'calendarEvents')->name('calendar.events');
         Route::get('/', 'index')->name('index');
@@ -213,6 +224,33 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/{product}', 'show')->name('show');
     });
 
+    Route::prefix('shop')->name('shop.')->middleware('not-customer')->controller(ShopController::class)->group(function (): void {
+        Route::get('/products', 'products')->name('products.index');
+        Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
+        Route::get('/products/grid', 'productsGrid')->name('products.grid');
+        Route::get('/products/create', 'createProduct')->name('products.create');
+        Route::post('/products', 'storeProduct')->name('products.store');
+        Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');
+        Route::get('/products/{product}/purchase', 'beginProductPurchase')->name('products.purchase');
+        Route::get('/products/{product}/edit', 'editProduct')->name('products.edit');
+        Route::put('/products/{product}', 'updateProduct')->name('products.update');
+        Route::get('/products/{product}', 'showProduct')->name('products.show');
+        Route::get('/cart', 'cart')->name('cart');
+        Route::post('/cart/items/{product}', 'addToCart')->name('cart.add');
+        Route::put('/cart', 'updateCart')->name('cart.update');
+        Route::delete('/cart/items/{product}', 'removeFromCart')->name('cart.remove');
+        Route::get('/checkout', 'checkout')->name('checkout');
+        Route::post('/checkout', 'placeOrder')->name('checkout.place');
+        Route::get('/chip-return/{uuid}', 'chipReturn')->name('chip.return');
+        Route::get('/orders', 'orders')->name('orders.index');
+        Route::get('/orders/datatable', 'ordersDatatable')->name('orders.datatable');
+        Route::get('/orders/status-board', 'orderStatusBoard')->name('orders.status-board');
+        Route::get('/orders/status-board/datatable', 'orderStatusDatatable')->name('orders.status-board.datatable');
+        Route::get('/orders/customer-preview', 'orderStatusPreview')->name('orders.customer-preview');
+        Route::get('/orders/{order}', 'showOrder')->name('orders.show');
+        Route::patch('/orders/{order}/status', 'updateOrderStatus')->name('orders.status');
+    });
+
     Route::prefix('billing')->name('billing.')->controller(BillingController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
@@ -222,6 +260,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/chip-return/{attempt:uuid}', [ChipPaymentController::class, 'return'])->name('chip.return');
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
         Route::put('/{document}', 'update')->name('documents.update');
+        Route::post('/{document}/quotation-status', 'updateQuotationStatus')->name('documents.quotation-status');
         Route::get('/{document}', 'show')->name('documents.show');
         Route::post('/{document}/issue', 'issue')->name('documents.convert');
         Route::post('/{document}/payments', 'storePayment')->name('documents.payments.store');
@@ -367,6 +406,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
             Route::delete('/{project}/estimate-items/{item}', [ProjectController::class, 'destroyEstimateItem'])->name('estimate-items.destroy');
             Route::post('/{project}/events', [ProjectController::class, 'storeEvent'])->name('events.store');
             Route::delete('/{project}/events/{event}', [ProjectController::class, 'destroyEvent'])->name('events.destroy');
+            Route::patch('/{project}/events/{event}/visibility', [ProjectController::class, 'updateEventVisibility'])->name('events.visibility');
             Route::post('/{project}/links', [ProjectController::class, 'storeLink'])->name('links.store');
             Route::put('/{project}/links/{link}', [ProjectController::class, 'updateLink'])->name('links.update');
             Route::delete('/{project}/links/{link}', [ProjectController::class, 'destroyLink'])->name('links.destroy');

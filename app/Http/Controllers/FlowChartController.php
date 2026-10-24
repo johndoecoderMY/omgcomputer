@@ -32,13 +32,7 @@ class FlowChartController extends Controller
             'category' => AllowedFilter::exact('category'),
             'is_example' => AllowedFilter::exact('is_example'),
         ]))
-            ->addColumn('category_label', fn (FlowChart $flowChart): string => [
-                'website' => 'Website',
-                'process' => 'Process',
-                'product' => 'Product SOP',
-                'service' => 'Service SOP',
-                'education' => 'Student FYP SOP',
-            ][$flowChart->category] ?? 'Flow chart')
+            ->addColumn('category_label', fn (FlowChart $flowChart): string => $flowChart->categoryLabel())
             ->addColumn('example_label', fn (FlowChart $flowChart): string => $flowChart->is_example
                 ? '<span class="badge text-bg-info">Example</span>'
                 : '<span class="badge text-bg-light border">Custom</span>')
@@ -111,7 +105,7 @@ class FlowChartController extends Controller
 
     public function create(): View
     {
-        $category = in_array(request()->query('category'), ['product', 'service', 'education'], true)
+        $category = in_array(request()->query('category'), array_keys(FlowChart::CATEGORIES), true)
             ? request()->query('category')
             : 'website';
 
@@ -133,7 +127,7 @@ class FlowChartController extends Controller
             'projectId' => $projectId,
             'isSop' => $isSop,
             'flowChart' => new FlowChart(['steps' => [
-                ...($category === 'website'
+                ...(in_array($category, FlowChart::WEBSITE_CATEGORIES, true)
                     ? [
                         ['id' => (string) Str::uuid(), 'label' => '', 'kind' => 'page', 'connections' => []],
                         ['id' => (string) Str::uuid(), 'label' => '', 'kind' => 'page', 'connections' => []],
@@ -275,7 +269,7 @@ class FlowChartController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'category' => ['sometimes', 'required', Rule::in(['website', 'process', 'product', 'service', 'education'])],
+            'category' => ['sometimes', 'required', Rule::in(array_keys(FlowChart::CATEGORIES))],
             'subject_name' => ['nullable', 'required_if:category,product,service,education', 'string', 'max:255'],
             'is_example' => ['sometimes', 'boolean'],
             'steps' => ['required', 'array', 'min:1', 'max:30'],
@@ -286,6 +280,10 @@ class FlowChartController extends Controller
             'steps.*.y' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:20000'],
             'steps.*.connections' => ['sometimes', 'array', 'max:29'],
             'steps.*.connections.*' => ['required', 'string', 'max:64'],
+            'steps.*.connection_sides' => ['sometimes', 'array'],
+            'steps.*.connection_sides.*' => ['sometimes'],
+            'steps.*.connection_sides.*.source' => ['sometimes', 'required', Rule::in(['top', 'bottom', 'left', 'right'])],
+            'steps.*.connection_sides.*.target' => ['sometimes', 'required', Rule::in(['top', 'bottom', 'left', 'right'])],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -302,6 +300,31 @@ class FlowChartController extends Controller
                 $connections = $step['connections'] ?? [];
                 if (! is_array($connections)) {
                     continue;
+                }
+                $connectionSides = $step['connection_sides'] ?? [];
+                if (is_array($connectionSides)) {
+                    foreach ($connectionSides as $targetId => $sides) {
+                        if (! in_array((string) $targetId, $connections, true)) {
+                            $validator->errors()->add(
+                                "steps.{$index}.connection_sides.{$targetId}",
+                                'Choose a direction for a connection from this step.',
+                            );
+                        }
+
+                        if (is_string($sides) && ! in_array($sides, ['top', 'bottom', 'left', 'right'], true)) {
+                            $validator->errors()->add(
+                                "steps.{$index}.connection_sides.{$targetId}",
+                                'Choose a valid direction for this connection.',
+                            );
+                        }
+
+                        if (is_array($sides) && array_diff(array_keys($sides), ['source', 'target']) !== []) {
+                            $validator->errors()->add(
+                                "steps.{$index}.connection_sides.{$targetId}",
+                                'Choose valid source and destination directions for this connection.',
+                            );
+                        }
+                    }
                 }
 
                 if (count($connections) !== count(array_unique($connections))) {

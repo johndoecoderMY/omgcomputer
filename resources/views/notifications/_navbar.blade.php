@@ -5,11 +5,11 @@
 @endphp
 
 <li class="nav-item dropdown d-flex align-items-center">
-    <a class="nav-link position-relative d-flex align-items-center justify-content-center px-2 py-0 fa-icon-wait"
+    <a class="nav-link position-relative d-flex align-items-center justify-content-center px-2 py-0"
         href="{{ route('notifications.index') }}" id="navbarDropdownNotification" role="button"
         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Notifications"
         data-hide-on-body-scroll="data-hide-on-body-scroll">
-        <span class="fas fa-bell d-block" data-fa-transform="shrink-6" style="font-size: 33px; line-height: 1;" aria-hidden="true"></span>
+        <span class="fas fa-bell d-block" style="font-size: 1.2rem; line-height: 1;" aria-hidden="true"></span>
         <span id="unread-notifications-count" class="notification-count {{ $unreadNotificationCount ? '' : 'd-none' }}"
             aria-live="polite" aria-label="{{ $unreadNotificationCount }} unread notifications">
             {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}

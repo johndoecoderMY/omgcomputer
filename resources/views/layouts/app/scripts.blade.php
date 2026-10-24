@@ -5,7 +5,6 @@
     <script src="{{ asset('vendors/is/is.min.js') }}"></script>
     <script src="{{ asset('vendors/echarts/echarts.min.js') }}"></script>
     <script src="{{ asset('vendors/prism/prism.js') }}"></script>
-    <script src="{{ asset('vendors/fontawesome/all.min.js') }}"></script>
     <script src="{{ asset('vendors/lodash/lodash.min.js') }}"></script>
     <script src="{{ asset('vendors/list.js/list.min.js') }}"></script>
     <script src="{{ asset('vendors/jquery/jquery.min.js') }}"></script>

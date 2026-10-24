@@ -217,6 +217,89 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
     }
 
+    public function test_customer_records_show_unique_project_count_beside_repair_ticket_count(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $directProject = Project::query()->create(['name' => 'Direct project']);
+        $ticketProject = Project::query()->create(['name' => 'Ticket project']);
+        $customer = Customer::query()->create([
+            'name' => 'Project Count Customer',
+            'email' => 'project-count@example.test',
+            'project_id' => $directProject->id,
+        ]);
+        RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000456',
+            'customer_id' => $customer->id,
+            'project_id' => $ticketProject->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'Project count test.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000457',
+            'customer_id' => $customer->id,
+            'project_id' => $ticketProject->id,
+            'device_type' => 'Desktop',
+            'issue_description' => 'Second ticket for the same project.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now()->subMinute(),
+        ]);
+        RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000459',
+            'customer_id' => $customer->id,
+            'project_id' => $directProject->id,
+            'device_type' => 'Tablet',
+            'issue_description' => 'Ticket linked to the profile project.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now()->subMinutes(2),
+        ]);
+        $unrelatedProject = Project::query()->create(['name' => 'Unrelated project']);
+        $otherCustomer = Customer::query()->create(['name' => 'Different customer']);
+        RepairTicket::query()->create([
+            'ticket_number' => 'RT-2026-000458',
+            'customer_id' => $otherCustomer->id,
+            'project_id' => $unrelatedProject->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'Must not appear on the first customer.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('customers.index'))
+            ->assertOk()
+            ->assertSee('<th>Repair tickets</th><th>Projects</th>', false)
+            ->assertDontSee('<th>Project</th>', false);
+
+        $this->getJson(route('customers.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => 'project-count@example.test'],
+        ]))->assertOk()
+            ->assertJsonPath('data.0.repair_tickets_count', 3)
+            ->assertJsonPath('data.0.projects_count', 2)
+            ->assertJsonMissingPath('data.0.project_name');
+
+        $this->get(route('customers.show', $customer))
+            ->assertOk()
+            ->assertSee('Projects')
+            ->assertSee('Direct project')
+            ->assertSee('Ticket project')
+            ->assertSee('RT-2026-000456')
+            ->assertSee('RT-2026-000457')
+            ->assertSee('RT-2026-000459')
+            ->assertDontSee('Unrelated project')
+            ->assertDontSee('RT-2026-000458');
+    }
+
     public function test_staff_can_create_a_repair_ticket_with_a_new_customer_without_a_project(): void
     {
         $this->seed(PlannerRoleSeeder::class);

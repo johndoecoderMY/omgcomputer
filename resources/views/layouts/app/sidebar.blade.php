@@ -1,10 +1,5 @@
-<nav class="navbar navbar-light navbar-vertical navbar-expand-xl">
-    <script>
-        var navbarStyle = localStorage.getItem("navbarStyle");
-        if (navbarStyle && navbarStyle !== 'transparent') {
-            document.querySelector('.navbar-vertical').classList.add(`navbar-${navbarStyle}`);
-        }
-    </script>
+<nav class="navbar navbar-light navbar-vertical navbar-expand-xl navbar-vibrant">
+
 
     <div class="d-flex align-items-center">
         <div class="toggle-icon-wrapper">
@@ -31,6 +26,30 @@
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
                 @if (auth()->user()->hasRole('customer'))
                     <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Overview</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('dashboard') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
+                                <span class="nav-link-text ps-1">Dashboard</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Services</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('tickets.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
@@ -47,6 +66,22 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('bookings.account-create') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-calendar-plus"></span></span>
+                                <span class="nav-link-text ps-1">Book a service</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Projects &amp; billing</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
@@ -58,9 +93,17 @@
                         <a class="nav-link" href="{{ route('billing.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
-                                <span class="nav-link-text ps-1">Project bills and quotations</span>
+                                <span class="nav-link-text ps-1">Bills and quotations</span>
                             </div>
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Account &amp; support</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('profile.edit') }}">
@@ -69,6 +112,24 @@
                                 <span class="nav-link-text ps-1">Profile</span>
                             </div>
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="settings my-3">
+                            <div class="card shadow-none">
+                                <div class="card-body text-center">
+                                    <span class="avatar avatar-l mb-2">
+                                        <span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary">
+                                            <span class="fas fa-headset" aria-hidden="true"></span>
+                                        </span>
+                                    </span>
+                                    <h2 class="h6 mb-1">Need help?</h2>
+                                    <p class="small text-body-secondary mb-3">Get in touch with our team.</p>
+                                    <div class="d-grid">
+                                        <a class="btn btn-sm btn-primary" href="{{ route('contact') }}">Contact us</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </li>
                 @else
                     {{-- Dashboard --}}
@@ -104,7 +165,7 @@
                                     <span class="nav-link-text ps-1">List</span>
                                 </a>
                             </li>
-                      
+
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('bookings.calendar') }}">
                                     <span class="nav-link-text ps-1">Book Calendar</span>
@@ -287,6 +348,46 @@
                             </a>
                         @endif
 
+                        <a class="nav-link dropdown-indicator" href="#shopMenu" role="button" data-bs-toggle="collapse"
+                            aria-expanded="false" aria-controls="shopMenu">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="fas fa-store"></span></span>
+                                <span class="nav-link-text ps-1">Shop</span>
+                            </div>
+                        </a>
+                        <ul class="nav collapse" id="shopMenu">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.products.index') }}">
+                                    <span class="nav-link-text ps-1">Products</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.products.grid') }}">
+                                    <span class="nav-link-text ps-1">Product grid</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.cart') }}">
+                                    <span class="nav-link-text ps-1">Cart &amp; checkout</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.orders.index') }}">
+                                    <span class="nav-link-text ps-1">Orders</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.orders.status-board') }}">
+                                    <span class="nav-link-text ps-1">Order status board</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.orders.customer-preview') }}">
+                                    <span class="nav-link-text ps-1">Customer status preview</span>
+                                </a>
+                            </li>
+                        </ul>
+
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
                             <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
                                 <div class="d-flex align-items-center">
@@ -378,6 +479,12 @@
                     {{-- Billing & Payments --}}
                     @if (auth()->user()->hasRole('admin') || auth()->user()->can('billing.view'))
                         <li class="nav-item">
+                            <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                                <div class="col-auto navbar-vertical-label">Finance</div>
+                                <div class="col ps-0">
+                                    <hr class="mb-0 navbar-vertical-divider">
+                                </div>
+                            </div>
                             <a class="nav-link dropdown-indicator" href="#billingMenu" role="button" data-bs-toggle="collapse"
                                 aria-expanded="false" aria-controls="billingMenu">
                                 <div class="d-flex align-items-center">
@@ -409,6 +516,12 @@
                     {{-- Reports --}}
                     @role('admin')
                     <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Insights</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
                         <a class="nav-link dropdown-indicator" href="#reportsMenu" role="button" data-bs-toggle="collapse"
                             aria-expanded="false" aria-controls="reportsMenu">
                             <div class="d-flex align-items-center">

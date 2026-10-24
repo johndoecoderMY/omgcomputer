@@ -41,7 +41,7 @@
 
     <div class="card">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
-                <h2 class="h5 mb-0">{{ $flowChart->category === 'website' ? 'Website structure' : 'Process steps' }}</h2>
+                <h2 class="h5 mb-0">{{ $flowChart->isWebsite() ? $flowChart->categoryLabel() : 'Process steps' }}</h2>
                 @if ($flowChart->is_example)<span class="badge text-bg-info">Example</span>@endif
             </div>
             <span class="badge text-bg-light border">{{ count($flowChart->steps) }} steps</span>
@@ -51,9 +51,9 @@
                 <div class="flow-chart-canvas">
                     <svg class="flow-chart-wires" aria-hidden="true">
                         <defs>
-                            <marker id="flow-chart-arrow" markerWidth="10" markerHeight="10"
-                                refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
-                                <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                            <marker id="flow-chart-arrow" viewBox="0 0 10 10" markerWidth="12" markerHeight="12"
+                                refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--falcon-primary)" stroke="none"></path>
                             </marker>
                         </defs>
                     </svg>
@@ -61,9 +61,10 @@
                         <article class="flow-chart-node-card flow-chart-node-{{ $step['kind'] }}"
                             data-node-id="{{ $step['id'] }}" data-node-index="{{ $index }}"
                             data-connections="{{ json_encode($step['connections'] ?? []) }}"
+                            data-connection-sides="{{ json_encode($step['connection_sides'] ?? []) }}"
                             data-position-x="{{ $step['x'] ?? '' }}" data-position-y="{{ $step['y'] ?? '' }}">
                             <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="fas fa-grip"></span></button>
-                            <span class="flow-chart-node-kind">{{ $step['kind'] === 'page' && $flowChart->category !== 'website' ? 'step' : $step['kind'] }}</span>
+                            <span class="flow-chart-node-kind">{{ $step['kind'] === 'page' && ! $flowChart->isWebsite() ? 'step' : $step['kind'] }}</span>
                             <strong>{{ $step['label'] }}</strong>
                         </article>
                     @endforeach
@@ -140,6 +141,23 @@
         const layoutInputs = document.getElementById('flow-chart-layout-inputs');
         if (!nodes.length) return;
 
+        const sideVector = (side) => ({
+            top: { x: 0, y: -1 },
+            bottom: { x: 0, y: 1 },
+            left: { x: -1, y: 0 },
+            right: { x: 1, y: 0 },
+        })[side];
+        const oppositeSide = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+        const nodePort = (node, side, offset) => {
+            const vector = sideVector(side);
+            const centerX = node.offsetLeft + node.offsetWidth / 2;
+            const centerY = node.offsetTop + node.offsetHeight / 2;
+            return {
+                x: centerX + vector.x * (node.offsetWidth / 2 + offset),
+                y: centerY + vector.y * (node.offsetHeight / 2 + offset),
+            };
+        };
+
         const drawWires = () => {
             const width = Math.max(viewport.clientWidth - 2, canvas.scrollWidth);
             const height = Math.max(220, canvas.scrollHeight);
@@ -154,18 +172,30 @@
                 node.dataset.nodeId,
                 JSON.parse(node.dataset.connections || '[]'),
             ]));
+            const connectionSides = new Map(nodes.map((node) => [
+                node.dataset.nodeId,
+                JSON.parse(node.dataset.connectionSides || '{}'),
+            ]));
             nodes.forEach((source) => {
-                const sourceX = source.offsetLeft + source.offsetWidth / 2;
-                const sourceY = source.offsetTop + source.offsetHeight;
                 (connections.get(source.dataset.nodeId) || []).forEach((targetId) => {
                     const target = nodes.find((node) => node.dataset.nodeId === targetId);
                     if (!target) return;
-                    const targetX = target.offsetLeft + target.offsetWidth / 2;
-                    const targetY = target.offsetTop;
-                    const bendY = sourceY + Math.max(28, (targetY - sourceY) / 2);
+                    const dx = target.offsetLeft + target.offsetWidth / 2 - (source.offsetLeft + source.offsetWidth / 2);
+                    const dy = target.offsetTop + target.offsetHeight / 2 - (source.offsetTop + source.offsetHeight / 2);
+                    const savedSides = connectionSides.get(source.dataset.nodeId)[targetId];
+                    const sourceSide = (typeof savedSides === 'object' ? savedSides?.source : savedSides)
+                        || (Math.abs(dx) > Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : (dy >= 0 ? 'bottom' : 'top'));
+                    const targetSide = (typeof savedSides === 'object' ? savedSides?.target : null)
+                        || oppositeSide[sourceSide];
+                    const sourcePoint = nodePort(source, sourceSide, 0);
+                    const targetPoint = nodePort(target, targetSide, 9);
+                    const distance = Math.hypot(targetPoint.x - sourcePoint.x, targetPoint.y - sourcePoint.y);
+                    const control = Math.max(40, Math.min(150, distance * 0.45));
+                    const sourceVector = sideVector(sourceSide);
+                    const targetVector = sideVector(targetSide);
                     const wire = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                     wire.setAttribute('class', 'flow-chart-wire');
-                    wire.setAttribute('d', `M ${sourceX} ${sourceY} C ${sourceX} ${bendY}, ${targetX} ${bendY}, ${targetX} ${targetY}`);
+                    wire.setAttribute('d', `M ${sourcePoint.x} ${sourcePoint.y} C ${sourcePoint.x + sourceVector.x * control} ${sourcePoint.y + sourceVector.y * control}, ${targetPoint.x + targetVector.x * control} ${targetPoint.y + targetVector.y * control}, ${targetPoint.x} ${targetPoint.y}`);
                     wire.setAttribute('marker-end', 'url(#flow-chart-arrow)');
                     svg.append(wire);
                 });

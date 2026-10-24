@@ -32,12 +32,14 @@
                 data-columns="{{ json_encode([
                     ['data' => 'name', 'name' => 'users.name'],
                     ['data' => 'email', 'name' => 'users.email'],
-                    ['data' => 'teams_list', 'orderable' => false, 'searchable' => false],
+                    ...($accountType === 'members' ? [
+                        ['data' => 'teams_list', 'orderable' => false, 'searchable' => false],
+                    ] : []),
                     ['data' => 'roles_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'permissions_list', 'orderable' => false, 'searchable' => false],
                     ['data' => 'actions', 'orderable' => false, 'searchable' => false],
                 ]) }}">
-                <thead><tr><th>Name</th><th>Email</th><th>Teams</th><th>Roles</th><th>Additional permissions</th><th>Profile</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th>@if ($accountType === 'members')<th>Teams</th>@endif<th>Roles</th><th>Additional permissions</th><th>Profile</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>

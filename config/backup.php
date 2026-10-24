@@ -196,14 +196,10 @@ return [
         'password' => env('BACKUP_ARCHIVE_PASSWORD'),
 
         /*
-         * The encryption algorithm to be used for archive encryption.
-         * Set to 'none' to disable encryption.
-         *
-         * Supported: 'none', 'default', 'aes128', 'aes192', 'aes256'
-         *
-         * When set to 'default', we'll use AES-256 if available on your system.
+         * The backup package uses this algorithm only when a password is set.
+         * When set to 'default', AES-256 is used if available on your system.
          */
-        'encryption' => env('BACKUP_ARCHIVE_PASSWORD') ? 'default' : 'none',
+        'encryption' => 'default',
 
         /*
          * After creating the zip, verify it can be opened and contains files.

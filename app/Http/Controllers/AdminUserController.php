@@ -73,15 +73,22 @@ class AdminUserController extends Controller
             $query->whereDoesntHave('roles', fn (Builder $roles) => $roles->whereIn('name', ['admin', 'member']));
         }
 
-        return DataTables::eloquent(DataTableQueryBuilder::for(
-            $query->with(['teams', 'roles', 'permissions']),
+        $relations = $accountType === 'customers'
+            ? ['roles', 'permissions']
+            : ['teams', 'roles', 'permissions'];
+        $dataTable = DataTables::eloquent(DataTableQueryBuilder::for(
+            $query->with($relations),
             request(),
             [
                 'name' => AllowedFilter::partial('name'),
                 'email' => AllowedFilter::partial('email'),
             ],
-        ))
-            ->addColumn('teams_list', fn (User $user): string => e($user->teams->pluck('name')->join(', ') ?: 'Unassigned'))
+        ));
+        if ($accountType === 'members') {
+            $dataTable->addColumn('teams_list', fn (User $user): string => e($user->teams->pluck('name')->join(', ') ?: 'Unassigned'));
+        }
+
+        return $dataTable
             ->addColumn('roles_list', fn (User $user): string => e($user->roles->pluck('name')->join(', ') ?: 'No roles'))
             ->addColumn('permissions_list', fn (User $user): string => e(
                 $user->getDirectPermissions()->pluck('name')->join(', ') ?: 'Role permissions only',

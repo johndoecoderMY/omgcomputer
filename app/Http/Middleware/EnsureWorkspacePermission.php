@@ -119,6 +119,9 @@ class EnsureWorkspacePermission
                 : 'tickets.manage';
         }
         if (str_starts_with($name, 'bookings.')) {
+            if (in_array($name, ['bookings.account-create', 'bookings.account-store'], true)) {
+                return 'bookings.view';
+            }
             if (in_array($name, ['bookings.index', 'bookings.datatable', 'bookings.show', 'bookings.calendar', 'bookings.calendar.events'], true)) {
                 return 'bookings.view';
             }

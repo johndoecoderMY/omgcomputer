@@ -32,6 +32,7 @@ class InventoryPart extends Model
         'description',
         'cost_price',
         'selling_price',
+        'is_for_sale',
         'stock_quantity',
         'reorder_level',
     ];
@@ -41,6 +42,7 @@ class InventoryPart extends Model
         return [
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
+            'is_for_sale' => 'boolean',
         ];
     }
 

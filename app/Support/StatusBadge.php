@@ -8,6 +8,7 @@ class StatusBadge
 {
     private const COLORS = [
         'active' => 'success',
+        'accepted' => 'success',
         'archived' => 'secondary',
         'backlog' => 'secondary',
         'cancelled' => 'danger',
@@ -42,6 +43,7 @@ class StatusBadge
         'refunded' => 'danger',
         'rejected' => 'danger',
         'scheduled' => 'info',
+        'sent' => 'info',
         'shipped' => 'primary',
         'published' => 'success',
         'to_receive' => 'info',

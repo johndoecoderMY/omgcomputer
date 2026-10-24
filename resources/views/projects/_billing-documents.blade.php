@@ -1,8 +1,8 @@
-<section class="card project-panel mb-4" aria-labelledby="project-billing-heading">
+<div class="card project-panel mb-4" aria-labelledby="project-billing-heading">
     <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h2 class="h5 mb-0" id="project-billing-heading">Project billing and quotations</h2>
-            <p class="small text-body-secondary mb-0">Invoices and quotations linked to this project.</p>
+            <p class="small text-body-secondary mb-0">Invoices and quotations linked to this project. Quotations can be marked sent, accepted, or rejected from their detail page.</p>
         </div>
         @if ($canManageBilling)
             <div class="d-flex flex-wrap gap-2">
@@ -35,4 +35,4 @@
             </tbody>
         </table>
     </div>
-</section>
+</div>

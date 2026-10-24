@@ -10,12 +10,34 @@
         <div class="collapse navbar-collapse" id="guestNavbar">
             <ul class="navbar-nav ms-auto align-items-lg-center">
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#services">Services</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#website-pricing">Website pricing</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('shop.preview.products.grid') }}">Shop preview</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#how-it-works">How it works</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#about">About</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#help">Help</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q &amp; A</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#contact">Contact</a></li>
-                <li class="nav-item ms-lg-3"><a class="nav-link" href="{{ route('login') }}">Sign in</a></li>
+                @auth
+                    <li class="nav-item dropdown ms-lg-3">
+                        <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-account-menu" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="fas fa-user-circle me-1" aria-hidden="true"></span>{{ auth()->user()->name }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="guest-account-menu">
+                            <li><span class="dropdown-item-text small text-body-secondary">Signed in as {{ auth()->user()->email }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('dashboard') }}"><span class="fas fa-gauge me-2" aria-hidden="true"></span>Go to workspace</a></li>
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button class="dropdown-item" type="submit"><span class="fas fa-sign-out-alt me-2" aria-hidden="true"></span>Sign out</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                @else
+                    <li class="nav-item ms-lg-3"><a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('login') }}">Sign in</a></li>
+                @endauth
                 <li class="nav-item ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a></li>
             </ul>
         </div>

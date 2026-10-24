@@ -34,6 +34,16 @@ class BookingController extends Controller
 
     public function create(Request $request): View
     {
+        return $this->bookingForm($request, false);
+    }
+
+    public function createAuthenticated(Request $request): View
+    {
+        return $this->bookingForm($request, true);
+    }
+
+    private function bookingForm(Request $request, bool $authenticatedBooking): View
+    {
         $selectedDate = Carbon::now(self::TIMEZONE)->toDateString();
         $selected = Carbon::createFromFormat('Y-m-d', $selectedDate, self::TIMEZONE);
         $services = ProductService::query()->where('is_active', true)->orderBy('name')->get();
@@ -41,6 +51,7 @@ class BookingController extends Controller
         return view('bookings.create', [
             'selectedDate' => $selected,
             'services' => $services,
+            'authenticatedBooking' => $authenticatedBooking,
         ]);
     }
 
@@ -145,7 +156,10 @@ class BookingController extends Controller
 
         try {
             $booking = DB::transaction(function () use ($data, $service, $start): Booking {
-                $customer = Customer::query()->where('email', $data['customer_email'])->first();
+                $customer = Customer::query()
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($data['customer_email']))])
+                    ->orderBy('id')
+                    ->first();
                 if (! $customer) {
                     $customer = Customer::create([
                         'name' => $data['customer_name'],
@@ -184,6 +198,16 @@ class BookingController extends Controller
         );
 
         return redirect()->route('bookings.confirmation', $booking->reference);
+    }
+
+    public function storeAuthenticated(Request $request, WorkspaceNotifier $notifier): RedirectResponse
+    {
+        $request->merge([
+            'customer_name' => $request->user()->name,
+            'customer_email' => $request->user()->email,
+        ]);
+
+        return $this->store($request, $notifier);
     }
 
     public function confirmation(string $reference): View

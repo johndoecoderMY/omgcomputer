@@ -43,5 +43,10 @@
 
             <button class="btn btn-primary w-100" type="submit">Sign in</button>
         </form>
+
+        <p class="text-center text-body-secondary small mt-4 mb-0">
+            New here? <a href="{{ route('register') }}">Create an account</a>
+        </p>
+
     </x-auth-card>
 @endsection

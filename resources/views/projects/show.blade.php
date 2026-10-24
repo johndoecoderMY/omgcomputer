@@ -7,6 +7,16 @@
 @endpush
 
 @section('content')
+@php
+    $linkedCustomers = $project->customers->unique(
+        fn ($customer) => strtolower(trim((string) $customer->email)) ?: 'record:'.$customer->id
+    );
+    $accountEmail = strtolower(trim((string) $project->customerAccount?->email));
+    $accountHasLinkedRecord = $accountEmail !== '' && $linkedCustomers->contains(
+        fn ($customer) => strtolower(trim((string) $customer->email)) === $accountEmail
+    );
+    $linkedCustomerCount = $linkedCustomers->count() + ($project->customerAccount && !$accountHasLinkedRecord ? 1 : 0);
+@endphp
 <div class="container-fluid py-3 project-show">
     <x-page-header eyebrow="Project" :title="$project->name"
         :description="$project->description"
@@ -50,6 +60,7 @@
                         <div class="row g-2">
                             @foreach ([
                                 'overview' => 'Project overview',
+                                'links' => 'Project links',
                                 'photos' => 'Photos and references',
                                 'requirements' => 'Requirements checklist and notes',
                                 'customers' => 'Linked customers',
@@ -80,7 +91,9 @@
                             <label class="form-label mt-2" for="export-flowchart-ids">Choose flow charts</label>
                             <select class="form-select" name="flow_chart_ids[]" id="export-flowchart-ids" multiple size="5">
                                 @foreach ($project->flowCharts as $flowChart)
-                                    <option value="{{ $flowChart->id }}">{{ $flowChart->title }} · {{ $flowChart->category }}</option>
+                                    <option value="{{ $flowChart->id }}">
+                                        {{ $flowChart->title }} · {{ $flowChart->categoryLabel() }}
+                                    </option>
                                 @endforeach
                             </select>
                             <div class="form-text">Used only when “Only selected flow charts” is chosen. Use Ctrl or Cmd to select multiple charts.</div>
@@ -95,7 +108,8 @@
         </div>
     </div>
 
-    <div class="card project-overview mb-4 p-2">        <div class="card-body">
+    <div class="card project-overview mb-4 p-2">
+        <div class="card-body">
             <div class="row align-items-center g-4">
                 <div class="col-xl-5">
                     <div class="d-flex justify-content-between align-items-end mb-3">
@@ -122,7 +136,7 @@
                         <div class="col-12 col-sm-3">
                             <div class="project-stat">
                                 <span class="small text-body-secondary d-block mb-2">Customers</span>
-                                <span class="project-stat-value">{{ $project->customers->count() }}</span>
+                                <span class="project-stat-value">{{ $linkedCustomerCount }}</span>
                                 <span class="small text-body-secondary">linked to project</span>
                             </div>
                         </div>
@@ -150,7 +164,7 @@
 
     @include('projects._billing-documents', ['project' => $project, 'billingDocuments' => $billingDocuments, 'canManageBilling' => $canManageBilling])
 
-    <section class="card project-panel mb-4" aria-labelledby="project-photos-heading">
+    <div class="card project-panel mb-4" aria-labelledby="project-photos-heading">
         <div class="card-header bg-body">
             <h2 class="h5 mb-0" id="project-photos-heading">Project photos and references</h2>
             <p class="small text-body-secondary mb-0">Upload project images, open them in a lightbox, or include them in the project PDF.</p>
@@ -181,9 +195,9 @@
                 'captionRouteParameters' => [$project],
             ])
         </div>
-    </section>
+    </div>
 
-    <section class="card project-panel mb-4" aria-labelledby="project-requirements-heading">
+    <div class="card project-panel mb-4" aria-labelledby="project-requirements-heading">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h2 class="h5 mb-0" id="project-requirements-heading">Project requirements</h2>
@@ -211,7 +225,7 @@
                 <p class="text-body-secondary mb-0">No requirements have been added yet.</p>
             @endforelse
         </div>
-    </section>
+    </div>
 
     <div class="card project-panel mb-4" id="project-schedule">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
@@ -244,14 +258,25 @@
                                     @if ($event->location)<div class="small text-body-secondary">{{ $event->location }}</div>@endif
                                     @if ($event->description)<p class="small mb-0 mt-1">{{ $event->description }}</p>@endif
                                 </div>
-                                <form method="POST" action="{{ route('events.destroy', $event) }}"
-                                    onsubmit="return confirm('Remove this event?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-link text-danger" type="submit" aria-label="Remove {{ $event->title }}">
-                                        <i class="fas fa-trash" aria-hidden="true"></i>
-                                    </button>
-                                </form>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    <form method="POST" action="{{ route('projects.events.visibility', [$project, $event]) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="visible_to_customer" value="{{ $event->visible_to_customer ? '0' : '1' }}">
+                                        <button class="btn btn-sm {{ $event->visible_to_customer ? 'btn-outline-secondary' : 'btn-outline-primary' }}" type="submit">
+                                            <i class="fas {{ $event->visible_to_customer ? 'fa-eye-slash' : 'fa-eye' }} me-1" aria-hidden="true"></i>
+                                            {{ $event->visible_to_customer ? 'Hide from customer' : 'Show to customer' }}
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ route('events.destroy', $event) }}"
+                                        onsubmit="return confirm('Remove this event?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-link text-danger" type="submit" aria-label="Remove {{ $event->title }}">
+                                            <i class="fas fa-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </article>
                     @empty
@@ -266,7 +291,7 @@
     @include('projects._event-modal', ['fixedProject' => $project])
 
     <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h2 class="h5 mb-0">Flow charts &amp; SOPs</h2>
+            <h2 class="h5 mb-0">Flow charts & SOPs</h2>
             <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['project_id' => $project->id]) }}">
                 <i class="fas fa-plus me-1"></i>Create for this project
             </a>
@@ -282,7 +307,7 @@
                             id="project-flow-chart-select" name="flow_chart_ids[]" multiple>
                             @foreach ($availableFlowCharts as $flowChart)
                                 <option value="{{ $flowChart->id }}" @selected(in_array((string) $flowChart->id, old('flow_chart_ids', []), true))>
-                                    {{ ['website' => 'Website', 'process' => 'Process', 'product' => 'Product SOP', 'service' => 'Service SOP', 'education' => 'Student FYP SOP'][$flowChart->category] ?? 'Flow chart' }}
+                                    {{ $flowChart->categoryLabel() }}
                                     · {{ $flowChart->title }}{{ $flowChart->subject_name ? ' · '.$flowChart->subject_name : '' }}
                                 </option>
                             @endforeach
@@ -306,7 +331,7 @@
                         id="project-example-flow-chart-select" name="flow_chart_ids[]" multiple>
                         @foreach ($availableExamples as $flowChart)
                             <option value="{{ $flowChart->id }}" @selected(in_array((string) $flowChart->id, old('flow_chart_ids', []), true))>
-                                {{ ['website' => 'Website', 'process' => 'Process', 'product' => 'Product SOP', 'service' => 'Service SOP', 'education' => 'Student FYP SOP'][$flowChart->category] ?? 'Flow chart' }}
+                                {{ $flowChart->categoryLabel() }}
                                 · {{ $flowChart->title }}{{ $flowChart->subject_name ? ' · '.$flowChart->subject_name : '' }}
                             </option>
                         @endforeach
@@ -400,7 +425,7 @@
     <div class="card project-panel mb-4" id="project-hardware">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Parts &amp; hardware recommendations</h2>
+                <h2 class="h5 mb-0">Parts & hardware recommendations</h2>
                 <p class="small text-body-secondary mb-0">Track suggested parts for this project without changing inventory stock.</p>
             </div>
             <span class="badge text-bg-light border">{{ $project->inventoryParts->count() }} recommended</span>
@@ -622,15 +647,26 @@
 
     <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <h2 class="h5 mb-0">Customer linked to this project</h2>
-            <span class="badge text-bg-light border">{{ $project->customers->count() }}</span>
+            <span class="badge text-bg-light border">{{ $linkedCustomerCount }}</span>
         </div>
-        @forelse ($project->customers as $customer)
+        @if ($project->customerAccount && !$accountHasLinkedRecord)
+            <div class="list-group-item d-flex justify-content-between align-items-center gap-2 px-4 py-3">
+                <div>
+                    <span class="fw-semibold">{{ $project->customerAccount->name }}</span>
+                    <div class="small text-body-secondary">{{ $project->customerAccount->email }}</div>
+                    <span class="badge text-bg-light border mt-1">Customer account</span>
+                </div>
+            </div>
+        @endif
+        @forelse ($linkedCustomers as $customer)
             <div class="list-group-item d-flex justify-content-between align-items-center gap-2 px-4 py-3">
                 <div><a class="fw-semibold" href="{{ route('customers.show', $customer) }}">{{ $customer->name }}</a><div class="small text-body-secondary">{{ $customer->email ?: $customer->phone }}</div></div>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ route('customers.show', $customer) }}">View profile</a>
             </div>
         @empty
-            <div class="card-body text-body-secondary">No customer is linked to this project. You can change this from Edit project.</div>
+            @unless ($project->customerAccount)
+                <div class="card-body text-body-secondary">No customer is linked to this project. You can change this from Edit project.</div>
+            @endunless
         @endforelse
     </div>
 

@@ -45,6 +45,7 @@ class Event extends Model
         'ends_at',
         'location',
         'description',
+        'visible_to_customer',
     ];
 
     protected function casts(): array
@@ -52,6 +53,7 @@ class Event extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'visible_to_customer' => 'boolean',
         ];
     }
 

@@ -6,6 +6,9 @@ use App\Models\FlowChart;
 use App\Models\Project;
 use App\Models\User;
 use Database\Seeders\DeveloperSetupFlowChartSeeder;
+use Database\Seeders\ServiceSopExampleSeeder;
+use Database\Seeders\SoftwareStructureSopSeeder;
+use Database\Seeders\StudentFypSopSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -37,6 +40,10 @@ class FlowChartTest extends TestCase
             foreach ($flowChart->steps as $step) {
                 foreach ($step['connections'] as $targetId) {
                     $this->assertTrue($stepIds->contains($targetId), "{$flowChart->title} has a connection to an unknown step.");
+                    $sides = $step['connection_sides'][$targetId] ?? null;
+                    $this->assertIsArray($sides);
+                    $this->assertContains($sides['source'] ?? null, ['top', 'bottom', 'left', 'right']);
+                    $this->assertContains($sides['target'] ?? null, ['top', 'bottom', 'left', 'right']);
                 }
             }
         }
@@ -46,6 +53,48 @@ class FlowChartTest extends TestCase
         $this->assertStringContainsString('foreign key', strtolower($flowCharts->firstWhere('title', 'Database Tables & Relationship Example')->steps[2]['label']));
     }
 
+    public function test_all_sop_flow_chart_seeders_save_directions_and_preserve_step_ids(): void
+    {
+        $seeders = [
+            ServiceSopExampleSeeder::class,
+            StudentFypSopSeeder::class,
+            SoftwareStructureSopSeeder::class,
+            DeveloperSetupFlowChartSeeder::class,
+        ];
+
+        foreach ($seeders as $seeder) {
+            $this->seed($seeder);
+        }
+
+        $flowCharts = FlowChart::query()->where('is_example', true)->orderBy('title')->get();
+        $this->assertCount(14, $flowCharts);
+
+        $stepIdsByChart = [];
+        foreach ($flowCharts as $flowChart) {
+            $stepIdsByChart[$flowChart->title] = collect($flowChart->steps)->pluck('id')->all();
+            foreach ($flowChart->steps as $step) {
+                foreach ($step['connections'] as $targetId) {
+                    $sides = $step['connection_sides'][$targetId] ?? null;
+                    $this->assertIsArray($sides, "{$flowChart->title} is missing endpoint directions.");
+                    $this->assertContains($sides['source'] ?? null, ['top', 'bottom', 'left', 'right']);
+                    $this->assertContains($sides['target'] ?? null, ['top', 'bottom', 'left', 'right']);
+                }
+            }
+        }
+
+        foreach ($seeders as $seeder) {
+            $this->seed($seeder);
+        }
+
+        $this->assertSame(
+            $stepIdsByChart,
+            FlowChart::query()->where('is_example', true)->orderBy('title')
+                ->get()->mapWithKeys(fn (FlowChart $flowChart): array => [
+                    $flowChart->title => collect($flowChart->steps)->pluck('id')->all(),
+                ])->all(),
+        );
+    }
+
     public function test_authenticated_user_can_create_view_update_and_delete_a_flow_chart(): void
     {
         $user = User::factory()->create();
@@ -53,15 +102,24 @@ class FlowChartTest extends TestCase
 
         $this->get(route('development.flowcharts.create'))
             ->assertOk()
-            ->assertSee('Website pages and connections')
-            ->assertSee('Connect this node to')
-            ->assertSee('select any number');
+            ->assertSee('Website journey pages and connections')
+            ->assertSee('Website structure')
+            ->assertSee('Sitemap')
+            ->assertSee('Live preview')
+            ->assertSee('Choose a side arrow on the source node')
+            ->assertDontSee('flow-chart-connections-modal');
 
         $home = (string) Str::uuid();
         $services = (string) Str::uuid();
         $contact = (string) Str::uuid();
         $steps = [
-            ['id' => $home, 'label' => 'Home', 'kind' => 'page', 'connections' => [$services, $contact]],
+            [
+                'id' => $home,
+                'label' => 'Home',
+                'kind' => 'page',
+                'connections' => [$services, $contact],
+                'connection_sides' => [$services => ['source' => 'right', 'target' => 'left']],
+            ],
             ['id' => $services, 'label' => 'Services', 'kind' => 'page', 'connections' => []],
             ['id' => $contact, 'label' => 'Contact', 'kind' => 'page', 'connections' => []],
         ];

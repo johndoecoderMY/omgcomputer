@@ -256,6 +256,10 @@ class MemberManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Members')
             ->assertSee('/admin/users/datatable', false);
+        $this->get(route('admin.users.customers'))
+            ->assertOk()
+            ->assertSee('Additional permissions')
+            ->assertDontSee('<th>Teams</th>', false);
         $members = $this->getJson(route('admin.users.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -287,6 +291,11 @@ class MemberManagementTest extends TestCase
         $customers->assertJsonPath('recordsFiltered', 2);
         $customers->assertJsonFragment(['email' => $createdCustomer->email]);
         $customers->assertJsonFragment(['email' => $customer->email]);
+        $customers->assertJsonFragment([
+            'email' => $customer->email,
+            'permissions_list' => 'Role permissions only',
+        ]);
+        $this->assertArrayNotHasKey('teams_list', $customers->json('data.0'));
     }
 
     public function test_customer_account_profile_hides_team_and_department_fields(): void

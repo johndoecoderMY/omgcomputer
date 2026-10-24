@@ -8,11 +8,13 @@ use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\Project;
+use App\Models\RepairTicket;
 use App\Models\User;
 use App\Services\ChipCollect;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class BillingInventoryReportsTest extends TestCase
@@ -74,6 +76,28 @@ class BillingInventoryReportsTest extends TestCase
         $part = $this->createPart($user, 5);
         $this->actingAs($user)->post(route('billing.store'), $this->documentData('quote', $part, 2));
         $quote = BillingDocument::query()->firstOrFail();
+        $this->actingAs($user)->get(route('billing.documents.show', $quote))
+            ->assertOk()
+            ->assertSee('Mark as sent')
+            ->assertDontSee('Convert to invoice');
+
+        $this->actingAs($user)->post(route('billing.documents.convert', $quote))
+            ->assertUnprocessable();
+        $this->assertSame('draft', $quote->fresh()->status);
+
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'sent'])
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->assertSame('sent', $quote->fresh()->status);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'rejected'])
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->assertSame('rejected', $quote->fresh()->status);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'accepted'])
+            ->assertUnprocessable();
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'sent'])
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'accepted'])
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->assertSame('accepted', $quote->fresh()->status);
 
         $this->actingAs($user)->post(route('billing.documents.convert', $quote))
             ->assertRedirect(route('billing.documents.show', $quote));
@@ -81,6 +105,9 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('invoice', $quote->type);
         $this->assertSame('issued', $quote->status);
         $this->assertSame(3, $part->fresh()->stock_quantity);
+        $this->actingAs($user)->get(route('billing.documents.show', $quote))
+            ->assertOk()
+            ->assertSee('Record payment');
 
         $paymentData = [
             'amount' => 10,
@@ -117,7 +144,7 @@ class BillingInventoryReportsTest extends TestCase
         $customer = User::factory()->create(['email' => 'invoice-customer@example.test']);
         $customer->assignRole('customer');
         $project = Project::query()->create(['name' => 'Customer project']);
-        Customer::query()->create([
+        $firstCustomer = Customer::query()->create([
             'project_id' => $project->id,
             'name' => 'Invoice customer',
             'email' => 'invoice-customer@example.test',
@@ -147,12 +174,139 @@ class BillingInventoryReportsTest extends TestCase
             && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
     }
 
+    public function test_customer_account_can_view_billing_documents_for_a_directly_linked_project(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create(['email' => 'invoice-customer@example.test']);
+        $customer->assignRole('customer');
+        $project = Project::query()->create([
+            'name' => 'Directly linked project',
+            'customer_user_id' => $customer->id,
+        ]);
+        $document = $this->createIssuedInvoice($project, 75);
+        $quotation = $this->createIssuedInvoice($project, 120, 'quotation');
+        $draftQuotation = $this->createDraftQuotation($project, $customer->email);
+        $secondCustomer = User::factory()->create(['email' => 'second-customer@example.test']);
+        $secondCustomer->assignRole('customer');
+        $secondCustomer = Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Second customer',
+            'email' => $secondCustomer->email,
+        ]);
+        $secondCustomerDocument = $this->createIssuedInvoice(
+            $project,
+            90,
+            'invoice',
+            $secondCustomer->email,
+            'Second customer',
+        );
+        $otherCustomer = User::factory()->create(['email' => 'other-invoice-customer@example.test']);
+        $otherCustomer->assignRole('customer');
+        $otherProject = Project::query()->create([
+            'name' => 'Another customer project',
+            'customer_user_id' => $otherCustomer->id,
+        ]);
+        $otherDocument = $this->createIssuedInvoice($otherProject, 200);
+        $unlinkedProject = Project::query()->create(['name' => 'Unlinked project']);
+        $unlinkedDocument = $this->createIssuedInvoice($unlinkedProject, 300);
+        $customerTicketDocument = $this->createTicketInvoice($customer, 'RT-CUSTOMER-001', 50);
+        $otherTicketDocument = $this->createTicketInvoice($otherCustomer, 'RT-OTHER-001', 60);
+
+        $this->actingAs($customer)
+            ->get(route('billing.index'))
+            ->assertOk()
+            ->assertSee('data-datatable', false)
+            ->assertSee('My bills & payments')
+            ->assertDontSee('All document types');
+        $this->actingAs($customer)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertDontSee($draftQuotation->number)
+            ->assertDontSee($secondCustomerDocument->number);
+        $this->actingAs($customer)
+            ->getJson(route('billing.datatable', [
+                'draw' => 1,
+                'start' => 0,
+                'length' => 25,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('recordsTotal', 3)
+            ->assertJsonPath('recordsFiltered', 3)
+            ->assertSee($document->number)
+            ->assertSee($quotation->number)
+            ->assertSee($customerTicketDocument->number)
+            ->assertDontSee($draftQuotation->number)
+            ->assertDontSee($secondCustomerDocument->number)
+            ->assertDontSee($otherDocument->number)
+            ->assertDontSee($unlinkedDocument->number)
+            ->assertDontSee($otherTicketDocument->number);
+
+        $this->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee($document->number);
+        $this->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee($quotation->number);
+        $this->get(route('billing.documents.show', $draftQuotation))->assertNotFound();
+        $this->get(route('billing.documents.pdf', $draftQuotation))->assertNotFound();
+        $this->get(route('billing.documents.show', $customerTicketDocument))
+            ->assertOk()
+            ->assertSee($customerTicketDocument->number);
+        $this->get(route('billing.documents.show', $secondCustomerDocument))->assertNotFound();
+        $this->get(route('billing.documents.pdf', $secondCustomerDocument))->assertNotFound();
+        $this->get(route('billing.documents.show', $otherDocument))->assertNotFound();
+        $this->get(route('billing.documents.show', $unlinkedDocument))->assertNotFound();
+        $this->get(route('billing.documents.show', $otherTicketDocument))->assertNotFound();
+
+        $this->actingAs($secondCustomer)
+            ->getJson(route('billing.datatable', [
+                'draw' => 1,
+                'start' => 0,
+                'length' => 25,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('recordsTotal', 1)
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertSee($secondCustomerDocument->number)
+            ->assertDontSee($document->number)
+            ->assertDontSee($quotation->number);
+        $this->assertSame('sent', $quotation->status);
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee($secondCustomerDocument->number)
+            ->assertDontSee($document->number)
+            ->assertDontSee($quotation->number);
+    }
+
+    public function test_customer_project_billing_lists_sent_quotations_and_invoices_but_not_drafts(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create(['email' => 'billing-portal@example.test']);
+        $customer->assignRole('customer');
+        $project = Project::query()->create([
+            'name' => 'Customer billing portal project',
+            'customer_user_id' => $customer->id,
+        ]);
+        $invoice = $this->createIssuedInvoice($project, 90, 'invoice', $customer->email);
+        $quotation = $this->createIssuedInvoice($project, 110, 'quotation', $customer->email);
+        $draft = $this->createDraftQuotation($project, $customer->email);
+
+        $this->actingAs($customer)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee($invoice->number)
+            ->assertSee($quotation->number)
+            ->assertDontSee($draft->number);
+        $this->post(route('billing.documents.quotation-status', $quotation), ['status' => 'accepted'])
+            ->assertForbidden();
+    }
+
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void
     {
         $project = Project::query()->create(['name' => 'Callback project']);
         $document = $this->createIssuedInvoice($project, 40);
         $attempt = BillingPaymentAttempt::query()->create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'billing_document_id' => $document->id,
             'amount' => 40,
             'provider_purchase_id' => 'chip-purchase-456',
@@ -189,7 +343,7 @@ class BillingInventoryReportsTest extends TestCase
     public function test_chip_callback_rejects_invalid_signatures(): void
     {
         $attempt = BillingPaymentAttempt::query()->create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
             'billing_document_id' => $this->createIssuedInvoice(Project::query()->create(['name' => 'Invalid callback']), 20)->id,
             'amount' => 20,
             'provider_purchase_id' => 'chip-purchase-invalid',
@@ -272,6 +426,37 @@ class BillingInventoryReportsTest extends TestCase
         }
     }
 
+    public function test_project_billing_form_can_choose_which_linked_customer_receives_the_quotation(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Multi-customer project']);
+        $firstCustomer = Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'First project customer',
+            'email' => 'first-project-customer@example.test',
+            'phone' => '0123456789',
+            'address' => 'First customer address',
+        ]);
+        $secondCustomer = Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Second project customer',
+            'email' => 'second-project-customer@example.test',
+            'phone' => '0198765432',
+            'address' => 'Second customer address',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]))
+            ->assertOk()
+            ->assertSee('Customer recipient from this project')
+            ->assertSee('value="customer:'.$firstCustomer->id.'"', false)
+            ->assertSee('value="customer:'.$secondCustomer->id.'"', false)
+            ->assertSee('data-email="second-project-customer@example.test"', false)
+            ->assertSee('data-phone="0198765432"', false)
+            ->assertSee('data-address="Second customer address"', false)
+            ->assertSee('document.getElementById(\'customer_email\').value = option.dataset.email', false);
+    }
+
     public function test_business_plan_services_can_be_quoted_and_billed_without_stock_deduction(): void
     {
         $user = $this->adminUser();
@@ -333,6 +518,47 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('Updated Customer', $quotation->customer_name);
         $this->assertSame(120.0, (float) $quotation->total);
         $this->assertSame('Laptop cleaning', $quotation->items()->firstOrFail()->description);
+        $this->assertDatabaseCount('inventory_movements', 0);
+    }
+
+    public function test_rejected_quotation_can_be_edited_and_returns_to_draft_until_resent(): void
+    {
+        $user = $this->adminUser();
+        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', null, 1));
+        $quotation = BillingDocument::query()->firstOrFail();
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'sent']);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'rejected']);
+
+        $this->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('Edit rejected quotation');
+        $this->get(route('billing.documents.edit', $quotation))
+            ->assertOk()
+            ->assertSee('Edit rejected quotation')
+            ->assertSee('Save revised quotation as draft');
+
+        $this->put(route('billing.documents.update', $quotation), [
+            'type' => 'quotation',
+            'customer_name' => 'Revised Customer',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Revised service',
+                'quantity' => 2,
+                'unit_price' => 75,
+            ]],
+        ])->assertRedirect(route('billing.documents.show', $quotation))
+            ->assertSessionHas('success', 'Rejected quotation updated and returned to draft. Mark it as sent when ready.');
+
+        $quotation->refresh();
+        $this->assertSame('draft', $quotation->status);
+        $this->assertSame('Revised Customer', $quotation->customer_name);
+        $this->assertSame(150.0, (float) $quotation->total);
+        $this->assertSame('Revised service', $quotation->items()->firstOrFail()->description);
+        $this->actingAs($user)->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('Mark as sent')
+            ->assertDontSee('Convert to invoice');
         $this->assertDatabaseCount('inventory_movements', 0);
     }
 
@@ -418,15 +644,57 @@ class BillingInventoryReportsTest extends TestCase
         ]))->assertOk()->assertJsonPath('recordsTotal', 0);
     }
 
-    private function createIssuedInvoice(Project $project, float $total): BillingDocument
+    private function createIssuedInvoice(
+        Project $project,
+        float $total,
+        string $type = 'invoice',
+        string $customerEmail = 'invoice-customer@example.test',
+        string $customerName = 'Invoice customer',
+        ?string $status = null,
+    ): BillingDocument {
+        return BillingDocument::query()->create([
+            'number' => ($type === 'quotation' ? 'QUO-' : 'INV-').strtoupper(uniqid()),
+            'type' => $type,
+            'status' => $status ?? ($type === 'quotation' ? 'sent' : 'issued'),
+            'project_id' => $project->id,
+            'customer_name' => $customerName,
+            'customer_email' => $customerEmail,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => $total,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'total' => $total,
+            'paid_amount' => 0,
+        ]);
+    }
+
+    private function createDraftQuotation(Project $project, string $customerEmail): BillingDocument
     {
+        return $this->createIssuedInvoice($project, 30, 'quotation', $customerEmail, 'Invoice customer', 'draft');
+    }
+
+    private function createTicketInvoice(User $customer, string $ticketNumber, float $total): BillingDocument
+    {
+        $customerRecord = Customer::query()->create([
+            'name' => $customer->name,
+            'email' => $customer->email,
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => $ticketNumber,
+            'customer_id' => $customerRecord->id,
+            'issue_description' => 'Repair billing test.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
         return BillingDocument::query()->create([
             'number' => 'INV-'.strtoupper(uniqid()),
             'type' => 'invoice',
             'status' => 'issued',
-            'project_id' => $project->id,
-            'customer_name' => 'Invoice customer',
-            'customer_email' => 'invoice-customer@example.test',
+            'repair_ticket_id' => $ticket->id,
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
             'issue_date' => now()->toDateString(),
             'subtotal' => $total,
             'tax_rate' => 0,

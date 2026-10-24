@@ -7,9 +7,17 @@
     <x-page-header eyebrow="{{ ucfirst($document->type) }}" :title="$document->number" :back-url="route('billing.index')" back-label="Back to billing">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="fas fa-file-pdf me-2"></span>PDF</a>
-            @if (auth()->user()->hasRole('admin') && $document->status === 'draft')<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="fas fa-pen me-2"></span>Edit draft</a>@endif
+            @if (auth()->user()->hasRole('admin') && ($document->status === 'draft' || ($document->type === 'quotation' && $document->status === 'rejected')))<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="fas fa-pen me-2"></span>{{ $document->status === 'rejected' ? 'Edit rejected quotation' : 'Edit draft' }}</a>@endif
             @if ($document->repairTicket)<a class="btn btn-outline-secondary" href="{{ route('tickets.show', $document->repairTicket) }}"><span class="fas fa-ticket-alt me-2"></span>{{ $document->repairTicket->ticket_number }}</a>@endif
-            @if (auth()->user()->hasRole('admin') && $document->status === 'draft')<form method="POST" action="{{ route('billing.documents.convert', $document) }}">@csrf<button class="btn btn-primary" onclick="return confirm('Issue this document and deduct listed stock?')">{{ $document->type === 'quotation' ? 'Convert to invoice' : 'Issue invoice' }}</button></form>@endif
+            @if (auth()->user()->hasRole('admin') && $document->type === 'quotation' && $document->status === 'draft')
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="sent"><button class="btn btn-primary">Mark as sent</button></form>
+            @elseif (auth()->user()->hasRole('admin') && $document->type === 'quotation' && $document->status === 'sent')
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success">Mark accepted</button></form>
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger">Mark rejected</button></form>
+            @elseif (auth()->user()->hasRole('admin') && $document->type === 'quotation' && $document->status === 'rejected')
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="sent"><button class="btn btn-primary">Resend quotation</button></form>
+            @endif
+            @if (auth()->user()->hasRole('admin') && (($document->type === 'quotation' && $document->status === 'accepted') || ($document->type === 'invoice' && $document->status === 'draft')))<form method="POST" action="{{ route('billing.documents.convert', $document) }}">@csrf<button class="btn btn-primary" onclick="return confirm('Issue this document and deduct listed stock?')">{{ $document->type === 'quotation' ? 'Convert to invoice' : 'Issue invoice' }}</button></form>@endif
             @if (auth()->user()->hasRole('admin') && ! in_array($document->status, ['void', 'paid'], true) && (float) $document->paid_amount === 0.0)<form method="POST" action="{{ route('billing.documents.void', $document) }}">@csrf<button class="btn btn-outline-danger" onclick="return confirm('Void this document?')">Void</button></form>@endif
         </x-slot>
     </x-page-header>

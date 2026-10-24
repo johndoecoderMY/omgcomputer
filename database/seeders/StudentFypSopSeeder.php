@@ -104,15 +104,16 @@ class StudentFypSopSeeder extends Seeder
         ];
 
         foreach ($examples as [$title, $subject, $description, $steps, $connections]) {
-            FlowChart::query()->firstOrCreate(
-                ['category' => 'education', 'title' => $title],
-                [
-                    'is_example' => true,
-                    'subject_name' => $subject,
-                    'description' => $description,
-                    'steps' => SopTemplate::customSteps($steps, $connections),
-                ],
-            );
+            $flowChart = FlowChart::query()->firstOrNew([
+                'category' => 'education',
+                'title' => $title,
+            ]);
+            $flowChart->fill([
+                'is_example' => true,
+                'subject_name' => $subject,
+                'description' => $description,
+                'steps' => SopTemplate::customSteps($steps, $connections, $flowChart->steps ?? []),
+            ])->save();
         }
     }
 }

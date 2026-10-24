@@ -1,4 +1,4 @@
-<section class="card project-panel mb-4" aria-labelledby="project-links-heading">
+<div class="card project-panel mb-4" aria-labelledby="project-links-heading">
     <div class="card-header bg-body">
         <h2 class="h5 mb-0" id="project-links-heading">Project links</h2>
         <p class="small text-body-secondary mb-0">Save GitHub, staging, documentation, and other useful project URLs.</p>
@@ -77,4 +77,4 @@
             <p class="text-body-secondary mb-0">No project links have been added.</p>
         @endforelse
     </div>
-</section>
+</div>

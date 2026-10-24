@@ -43,14 +43,12 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        $memberRole = Role::query()
-            ->where('name', 'member')
+        $customerRole = Role::query()
+            ->where('name', 'customer')
             ->where('guard_name', 'web')
-            ->first();
+            ->firstOrFail();
 
-        if ($memberRole !== null) {
-            $user->assignRole($memberRole);
-        }
+        $user->assignRole($customerRole);
 
         event(new Registered($user));
 

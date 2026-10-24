@@ -354,6 +354,49 @@ class BookingTest extends TestCase
             ->assertJsonFragment(['start' => $date->toDateString(), 'available' => true]);
     }
 
+    public function test_customer_can_book_from_the_authenticated_page_and_identity_comes_from_the_account(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create([
+            'name' => 'Signed-in Customer',
+            'email' => 'signed-in@example.test',
+            'phone' => '+60112223333',
+        ]);
+        $customer->assignRole('customer');
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->get(route('bookings.account-create'))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($customer)
+            ->get(route('bookings.account-create'))
+            ->assertOk()
+            ->assertSee('Book a service')
+            ->assertSee('My bookings')
+            ->assertDontSee('data-header-page-search', false)
+            ->assertSee('data-notifications-user="'.$customer->id.'"', false)
+            ->assertSee('value="Signed-in Customer"', false)
+            ->assertSee('value="signed-in@example.test"', false)
+            ->assertSee('readonly', false)
+            ->assertDontSee('guestNavbar', false);
+
+        $this->post(route('bookings.account-store'), [
+            'customer_name' => 'Impersonated Name',
+            'customer_email' => 'someone-else@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'laptop-cleaning',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertSame('Signed-in Customer', $booking->customer_name);
+        $this->assertSame('signed-in@example.test', $booking->customer_email);
+    }
+
     public function test_staff_can_create_edit_and_delete_recurring_booking_times(): void
     {
         $this->seed(PlannerRoleSeeder::class);

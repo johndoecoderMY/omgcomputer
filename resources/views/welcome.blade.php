@@ -97,6 +97,77 @@
         </div>
     </section>
 
+    <section class="py-7" id="website-pricing" style="scroll-margin-top: 100px;">
+        <div class="container">
+            <div class="row justify-content-center text-center mb-5">
+                <div class="col-lg-8">
+                    <span class="text-primary fw-bold text-uppercase fs-10">Website design &amp; development</span>
+                    <h2 class="fw-bold text-1000 mt-2">Straightforward website package estimates</h2>
+                    <p class="text-700 mb-0">Choose a starting point for your project. We’ll confirm the final scope and price with you before work begins.</p>
+                </div>
+            </div>
+            <div class="row g-4 align-items-stretch">
+                <div class="col-md-6 col-xl-4">
+                    <article class="card h-100 border-0 shadow-sm p-2">
+                        <div class="card-body p-4">
+                            <span class="fas fa-file-lines text-primary fs-4 mb-3" aria-hidden="true"></span>
+                            <h3 class="h4 text-1000">Starter landing page</h3>
+                            <p class="text-700">A polished single-page website to introduce your business and help customers get in touch.</p>
+                            <p class="h3 text-primary mb-3">RM800–1,500</p>
+                            <ul class="text-700 ps-3 mb-0">
+                                <li class="mb-2">Responsive layout for mobile and desktop</li>
+                                <li class="mb-2">Core business information and contact call-to-action</li>
+                                <li>Basic on-page SEO setup</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer bg-body border-0 px-4 pb-4">
+                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Discuss this package</a>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-4">
+                    <article class="card h-100 border border-primary shadow-sm p-2">
+                        <div class="card-body p-4">
+                            <span class="badge text-bg-primary mb-3">Popular starting point</span>
+                            <h3 class="h4 text-1000">Business website</h3>
+                            <p class="text-700">A multi-page website for businesses that need room to explain their services and build trust.</p>
+                            <p class="h3 text-primary mb-3">RM2,000–4,000</p>
+                            <ul class="text-700 ps-3 mb-0">
+                                <li class="mb-2">Up to five pages with a consistent custom design</li>
+                                <li class="mb-2">Contact form and clear navigation</li>
+                                <li>Responsive layout and basic on-page SEO</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer bg-body border-0 px-4 pb-4">
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Discuss this package</a>
+                        </div>
+                    </article>
+                </div>
+                <div class="col-md-6 col-xl-4">
+                    <article class="card h-100 border-0 shadow-sm p-2">
+                        <div class="card-body p-4">
+                            <span class="fas fa-code text-primary fs-4 mb-3" aria-hidden="true"></span>
+                            <h3 class="h4 text-1000">Custom website</h3>
+                            <p class="text-700">For larger sites, online stores, integrations, or features tailored to your workflow.</p>
+                            <p class="h3 text-primary mb-3">From RM4,500</p>
+                            <ul class="text-700 ps-3 mb-0">
+                                <li class="mb-2">Scope and features planned around your requirements</li>
+                                <li class="mb-2">Custom functionality or third-party integrations</li>
+                                <li>Final price provided after a project discussion</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer bg-body border-0 px-4 pb-4">
+                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Discuss your project</a>
+                        </div>
+                    </article>
+                </div>
+            </div>
+            <p class="small text-body-secondary text-center mt-4 mb-0">
+                These are illustrative estimates in Malaysian ringgit (RM), not fixed quotations. Domain registration, hosting, paid themes or plugins, and other third-party charges are not included unless stated in your confirmed quote.
+            </p>
+        </div>
+    </section>
+
     <section class="py-7" id="how-it-works">
         <div class="container">
             <div class="row align-items-center g-5">

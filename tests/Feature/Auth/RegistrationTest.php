@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -24,6 +26,7 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         Notification::fake();
 
         $response = $this->post('/register', [
@@ -35,7 +38,9 @@ class RegistrationTest extends TestCase
         $this->assertAuthenticated();
         $response->assertRedirect(route('verification.notice'));
         $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
-        $user = \App\Models\User::where('email', 'test@example.com')->firstOrFail();
+        $user = User::where('email', 'test@example.com')->firstOrFail();
+        $this->assertTrue($user->hasRole('customer'));
+        $this->assertFalse($user->hasRole('member'));
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'email_verified_at' => null,

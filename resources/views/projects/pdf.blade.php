@@ -27,6 +27,28 @@
         <p><strong>Created:</strong> {{ $project->created_at?->format('F j, Y') ?? '—' }}</p>
     @endif
 
+    @if (in_array('links', $sections, true))
+        <h2>Project links</h2>
+        @if ($project->links->isEmpty())
+            <p class="muted">No project links have been added.</p>
+        @else
+            <table>
+                <thead>
+                    <tr><th>Label</th><th>URL</th><th>Customer visibility</th></tr>
+                </thead>
+                <tbody>
+                    @foreach ($project->links as $link)
+                        <tr>
+                            <td>{{ $link->label }}</td>
+                            <td>{{ $link->url }}</td>
+                            <td>{{ $link->visible_to_customer ? 'Visible to customer' : 'Staff only' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    @endif
+
     @if (in_array('photos', $sections, true))
         <h2>Project photos and references</h2>
         @forelse ($projectPhotos as $photo)
@@ -53,13 +75,27 @@
 
     @if (in_array('customers', $sections, true))
         <h2>Customers</h2>
-        @forelse ($project->customers as $customer)
+        @php
+            $linkedCustomers = $project->customers->unique(
+                fn ($customer) => strtolower(trim((string) $customer->email)) ?: 'record:'.$customer->id
+            );
+            $accountEmail = strtolower(trim((string) $project->customerAccount?->email));
+            $accountHasLinkedRecord = $accountEmail !== '' && $linkedCustomers->contains(
+                fn ($customer) => strtolower(trim((string) $customer->email)) === $accountEmail
+            );
+        @endphp
+        @if ($project->customerAccount && !$accountHasLinkedRecord)
+            <p><strong>{{ $project->customerAccount->name }}</strong> · {{ $project->customerAccount->email }} (customer account)</p>
+        @endif
+        @forelse ($linkedCustomers as $customer)
             <p><strong>{{ $customer->name }}</strong>
                 @if ($customer->email) · {{ $customer->email }}@endif
                 @if ($customer->phone) · {{ $customer->phone }}@endif
             </p>
         @empty
-            <p class="muted">No customers are linked to this project.</p>
+            @unless ($project->customerAccount)
+                <p class="muted">No customers are linked to this project.</p>
+            @endunless
         @endforelse
     @endif
 
@@ -273,7 +309,7 @@
             @if ($diagramSteps->isEmpty())
                 <div class="flow-chart-page">
                     <h2>{{ $flowChart->title }}</h2>
-                    <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
+                    <p class="muted">{{ $flowChart->categoryLabel() }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
                     @if ($flowChart->description)<p>{{ $flowChart->description }}</p>@endif
                     <p class="muted">No steps are recorded for this flow chart.</p>
                 </div>
@@ -285,7 +321,7 @@
                     <div class="flow-chart-page">
                         <h2>{{ $flowChart->title }}@if (! $loop->first) (continued)@endif</h2>
                         @if ($loop->first)
-                            <p class="muted">{{ ucfirst($flowChart->category) }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
+                            <p class="muted">{{ $flowChart->categoryLabel() }}@if ($flowChart->subject_name) · {{ $flowChart->subject_name }}@endif</p>
                             @if ($flowChart->description)<p>{{ $flowChart->description }}</p>@endif
                         @endif
                         <div align="center">

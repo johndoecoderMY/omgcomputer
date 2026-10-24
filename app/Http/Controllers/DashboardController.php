@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Booking;
 use App\Models\Event;
 use App\Models\FlowChart;
 use App\Models\Project;
@@ -18,7 +19,37 @@ class DashboardController extends Controller
     public function index(Request $request): View|RedirectResponse
     {
         if ($request->user()->hasRole('customer')) {
-            return redirect()->route('projects.index');
+            $email = strtolower(trim($request->user()->email));
+            $projects = Project::query()
+                ->visibleToCustomer($request->user())
+                ->latest('updated_at')
+                ->limit(5)
+                ->get();
+            $tickets = RepairTicket::query()
+                ->whereHas('customer', fn ($customers) => $customers
+                    ->whereRaw('LOWER(email) = ?', [$email]))
+                ->latest('received_at');
+            $bookings = Booking::query()
+                ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$email]);
+            $upcomingBookings = (clone $bookings)
+                ->where('starts_at', '>=', now())
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->orderBy('starts_at')
+                ->limit(5)
+                ->get();
+
+            return view('customer.dashboard', [
+                'projects' => $projects,
+                'projectCount' => Project::query()->visibleToCustomer($request->user())->count(),
+                'activeTicketCount' => (clone $tickets)->whereNotIn('status', ['closed', 'cancelled'])->count(),
+                'recentTickets' => (clone $tickets)->limit(5)->get(),
+                'upcomingBookingCount' => (clone $bookings)
+                    ->where('starts_at', '>=', now())
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->count(),
+                'upcomingBookings' => $upcomingBookings,
+                'unreadNotificationCount' => $request->user()->unreadNotifications()->count(),
+            ]);
         }
 
         $projects = Project::query()
@@ -80,7 +111,7 @@ class DashboardController extends Controller
             'upcomingEvents' => Event::query()->with('project:id,name')
                 ->where('starts_at', '>=', now())->orderBy('starts_at')->limit(6)->get(),
             'sopExamples' => FlowChart::query()
-                ->whereIn('category', ['website', 'process', 'education', 'service', 'product'])
+                ->whereIn('category', array_keys(FlowChart::CATEGORIES))
                 ->latest('updated_at')->limit(6)->get(),
             'unreadNotificationCount' => auth()->user()->unreadNotifications()->count(),
         ]);

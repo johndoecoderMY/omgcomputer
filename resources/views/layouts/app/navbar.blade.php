@@ -11,6 +11,7 @@
                 alt="" aria-hidden="true" width="80" />
         </div>
     </a>
+    @unless (auth()->user()->hasRole('customer'))
     <ul class="navbar-nav flex-grow-1 mx-2 mx-lg-3" style="min-width: 0; max-width: 32rem;">
         <li class="nav-item flex-grow-1" style="min-width: 0;">
         <div class="search-box" data-header-page-search style="max-width: 100%;">
@@ -41,10 +42,7 @@
                             data-header-search-item data-search-terms="my projects customer">
                             <span class="fas fa-project-diagram me-2 text-primary" aria-hidden="true"></span>My Projects
                         </a>
-                        <a class="dropdown-item px-x1 py-2" href="{{ route('profile.edit') }}" role="option"
-                            data-header-search-item data-search-terms="profile account settings">
-                            <span class="fas fa-user me-2 text-primary" aria-hidden="true"></span>Profile
-                        </a>
+                      
                     @else
                         <a class="dropdown-item px-x1 py-2" href="{{ route('dashboard') }}" role="option"
                             data-header-search-item data-search-terms="home overview">
@@ -235,10 +233,11 @@
         </div>
         </li>
     </ul>
+    @endunless
     <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
         <li class="nav-item ps-2 pe-0">
             <div class="dropdown theme-control-dropdown"><a
-                    class="nav-link d-flex align-items-center dropdown-toggle fa-icon-wait fs-9 pe-1 py-0"
+                    class="nav-link d-flex align-items-center dropdown-toggle fs-9 pe-1 py-0"
                     href="navbar-vertical.html#" role="button" id="themeSwitchDropdown" data-bs-toggle="dropdown"
                     aria-haspopup="true" aria-expanded="false"><span class="fas fa-sun fs-7"
                         data-fa-transform="shrink-2" data-theme-dropdown-toggle-icon="light"></span><span
@@ -261,11 +260,19 @@
                 </div>
             </div>
         </li>
-       
+
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center justify-content-center px-2 py-0"
+                href="{{ route('profile.edit') }}" aria-label="Settings" title="Settings">
+                <span class="fas fa-cog" aria-hidden="true"></span>
+                <span class="visually-hidden">Settings</span>
+            </a>
+        </li>
+
         @auth
             @include('notifications._navbar')
         @endauth
-     
+
         <li class="nav-item dropdown">
             <a class="nav-link pe-0 ps-2" href="{{ route('profile.edit') }}" id="navbarDropdownUser" role="button"
                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"

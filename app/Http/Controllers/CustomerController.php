@@ -9,6 +9,7 @@ use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Illuminate\Support\Str;
@@ -25,7 +26,17 @@ class CustomerController extends Controller
     public function datatable(Request $request)
     {
         return DataTables::eloquent(DataTableQueryBuilder::for(
-            Customer::query()->with('project')->withCount('repairTickets'),
+            Customer::query()
+                ->withCount('repairTickets')
+                ->addSelect([
+                    'projects_count' => DB::table('repair_tickets as project_tickets')
+                        ->selectRaw('COUNT(DISTINCT project_tickets.project_id) + CASE WHEN customers.project_id IS NOT NULL AND NOT EXISTS (
+                            SELECT 1 FROM repair_tickets as customer_project_tickets
+                            WHERE customer_project_tickets.customer_id = customers.id
+                                AND customer_project_tickets.project_id = customers.project_id
+                        ) THEN 1 ELSE 0 END')
+                        ->whereColumn('project_tickets.customer_id', 'customers.id'),
+                ]),
             $request,
             [
                 'name' => AllowedFilter::partial('name'),
@@ -53,9 +64,6 @@ class CustomerController extends Controller
             ))
             ->addColumn('contact', fn (Customer $customer): string => e($customer->email ?: '—')
                 .'<div class="small text-body-secondary">'.e($customer->phone ?: '').'</div>')
-            ->addColumn('project_name', fn (Customer $customer): string => $customer->project
-                ? sprintf('<a href="%s">%s</a>', e(route('projects.show', $customer->project)), e($customer->project->name))
-                : '<span class="text-body-secondary">—</span>')
             ->addColumn('notes', fn (Customer $customer): string => $customer->notes
                 ? sprintf('<span title="%s">%s</span>', e($customer->notes), e(Str::limit($customer->notes, 120)))
                 : '<span class="text-body-secondary">—</span>')
@@ -63,7 +71,7 @@ class CustomerController extends Controller
                 '<a class="btn btn-sm btn-outline-secondary" href="%s">View profile</a>',
                 e(route('customers.show', $customer)),
             ))
-            ->rawColumns(['customer', 'contact', 'project_name', 'notes', 'actions'])
+            ->rawColumns(['customer', 'contact', 'notes', 'actions'])
             ->toJson();
     }
 
@@ -105,6 +113,24 @@ class CustomerController extends Controller
             'project',
             'repairTickets' => fn ($query) => $query->with(['project', 'assignees'])->latest(),
         ]);
+        $linkedProjects = Project::query()
+            ->where(function ($projects) use ($customer): void {
+                if ($customer->project_id !== null) {
+                    $projects->whereKey($customer->project_id);
+                }
+
+                $projects->orWhereHas(
+                    'repairTickets',
+                    fn ($tickets) => $tickets->where('customer_id', $customer->id),
+                );
+            })
+            ->with([
+                'repairTickets' => fn ($tickets) => $tickets
+                    ->where('customer_id', $customer->id)
+                    ->orderByDesc('received_at'),
+            ])
+            ->orderBy('name')
+            ->get();
 
         $account = $customer->email
             ? User::query()
@@ -113,7 +139,7 @@ class CustomerController extends Controller
                 ->first()
             : null;
 
-        return view('customers.show', compact('customer', 'account'));
+        return view('customers.show', compact('customer', 'account', 'linkedProjects'));
     }
 
     public function edit(Customer $customer): View

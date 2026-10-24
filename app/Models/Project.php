@@ -16,6 +16,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'created_by_user_id',
+        'customer_user_id',
         'description',
         'requirements_notes',
     ];
@@ -46,11 +47,12 @@ class Project extends Model
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function (Builder $projects) use ($email): void {
-            $projects->whereHas('customers', fn (Builder $customers) => $customers
-                ->whereRaw('LOWER(email) = ?', [$email]))
+        return $query->where(function (Builder $projects) use ($email, $user): void {
+            $projects->where('customer_user_id', $user->id)
+                ->orWhereHas('customers', fn (Builder $customers) => $customers
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
                 ->orWhereHas('repairTickets.customer', fn (Builder $customers) => $customers
-                    ->whereRaw('LOWER(email) = ?', [$email]));
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
         });
     }
 
@@ -72,6 +74,11 @@ class Project extends Model
     public function customers(): HasMany
     {
         return $this->hasMany(Customer::class);
+    }
+
+    public function customerAccount(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_user_id');
     }
 
     public function repairTickets(): HasMany

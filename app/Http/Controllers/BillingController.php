@@ -8,9 +8,11 @@ use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
+use App\Models\User;
 use App\Services\InventoryStock;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,29 +29,18 @@ class BillingController extends Controller
 {
     public function index(Request $request): View
     {
-        return view('billing.index');
+        return view($request->user()->hasRole('customer') ? 'billing.customer-index' : 'billing.index');
     }
 
     public function datatable(Request $request)
     {
-        $query = BillingDocument::query();
-        if ($request->user()->hasRole('customer')) {
-            $email = strtolower(trim($request->user()->email));
-            $query->whereIn('type', ['invoice', 'quotation'])
-                ->where(function ($documents) use ($email): void {
-                    $documents->whereHas('project.customers', fn ($customers) => $customers
-                        ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
-                        ->orWhereHas('repairTicket.project', fn ($projects) => $projects
-                            ->whereHas('customers', fn ($customers) => $customers
-                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
-                            ->orWhereHas('repairTickets.customer', fn ($customers) => $customers
-                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email])));
-                });
-        }
+        $query = $request->user()->hasRole('customer')
+            ? $this->customerDocumentsQuery($request->user())
+            : BillingDocument::query();
         if (in_array($request->input('type'), ['invoice', 'quotation'], true)) {
             $query->where('type', $request->input('type'));
         }
-        if (in_array($request->input('status'), ['draft', 'issued', 'partial', 'part_paid', 'paid', 'void'], true)) {
+        if (in_array($request->input('status'), ['draft', 'sent', 'accepted', 'rejected', 'issued', 'partial', 'part_paid', 'paid', 'void'], true)) {
             $query->where('status', $request->input('status'));
         }
 
@@ -97,12 +88,20 @@ class BillingController extends Controller
             ? Project::query()->with(['customers', 'repairTickets.customer'])->findOrFail($request->integer('project_id'))
             : $ticket?->project;
         $customer = $ticket?->customer ?? $project?->customers?->first() ?? $project?->repairTickets?->first()?->customer;
+        $project?->loadMissing(['customers', 'customerAccount', 'repairTickets.customer']);
+        $projectRecipients = $project ? $this->projectRecipients($project) : collect();
+        $selectedRecipientKey = $projectRecipients
+            ->first(fn (array $recipient): bool => strtolower(trim($recipient['email'])) === strtolower(trim((string) $customer?->email)))['key']
+            ?? $projectRecipients->first()['key']
+            ?? '';
 
         return view('billing.create', [
             'parts' => InventoryPart::query()->orderBy('name')->get(),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $ticket,
             'project' => $project,
+            'projectRecipients' => $projectRecipients,
+            'selectedRecipientKey' => $selectedRecipientKey,
             'document' => new BillingDocument([
                 'type' => $type,
                 'customer_name' => $customer?->name,
@@ -127,14 +126,27 @@ class BillingController extends Controller
 
     public function edit(BillingDocument $document): View
     {
-        abort_unless($document->status === 'draft', 404);
+        abort_unless(
+            $document->status === 'draft'
+                || ($document->type === 'quotation' && $document->status === 'rejected'),
+            404,
+        );
         $document->load('items');
+        $document->loadMissing(['project.customers', 'project.customerAccount', 'project.repairTickets.customer']);
+        $projectRecipients = $document->project
+            ? $this->projectRecipients($document->project)
+            : collect();
+        $selectedRecipientKey = $projectRecipients
+            ->first(fn (array $recipient): bool => strtolower(trim($recipient['email'])) === strtolower(trim((string) $document->customer_email)))['key']
+            ?? '';
 
         return view('billing.create', [
             'parts' => InventoryPart::query()->orderBy('name')->get(),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $document->repairTicket,
             'project' => $document->project,
+            'projectRecipients' => $projectRecipients,
+            'selectedRecipientKey' => $selectedRecipientKey,
             'document' => $document,
             'lines' => $document->items->map(fn ($item) => [
                 'inventory_part_id' => $item->inventory_part_id,
@@ -147,6 +159,40 @@ class BillingController extends Controller
             'formAction' => route('billing.documents.update', $document),
             'editing' => true,
         ]);
+    }
+
+    private function projectRecipients(Project $project)
+    {
+        $customerRecipient = fn (Customer $customer): array => [
+            'key' => 'customer:'.$customer->id,
+            'name' => (string) $customer->name,
+            'email' => (string) $customer->email,
+            'phone' => (string) $customer->phone,
+            'address' => (string) $customer->address,
+        ];
+
+        $recipients = $project->customers
+            ->map($customerRecipient)
+            ->concat($project->repairTickets
+                ->pluck('customer')
+                ->filter()
+                ->unique('id')
+                ->map($customerRecipient));
+
+        if ($project->customerAccount) {
+            $account = $project->customerAccount;
+            $recipients->push([
+                'key' => 'account:'.$account->id,
+                'name' => (string) $account->name,
+                'email' => (string) $account->email,
+                'phone' => (string) $account->phone,
+                'address' => (string) $account->address,
+            ]);
+        }
+
+        return $recipients
+            ->unique(fn (array $recipient): string => strtolower(trim($recipient['email'])) ?: $recipient['key'])
+            ->values();
     }
 
     public function store(Request $request, InventoryStock $stock): RedirectResponse
@@ -261,7 +307,9 @@ class BillingController extends Controller
 
     public function update(Request $request, BillingDocument $document): RedirectResponse
     {
-        abort_unless($document->status === 'draft', 404);
+        $canEdit = fn (BillingDocument $billingDocument): bool => $billingDocument->status === 'draft'
+            || ($billingDocument->type === 'quotation' && $billingDocument->status === 'rejected');
+        abort_unless($canEdit($document), 404);
         $data = $request->validate([
             'type' => ['required', Rule::in([$document->type])],
             'customer_name' => ['required', 'string', 'max:255'],
@@ -285,9 +333,10 @@ class BillingController extends Controller
             throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the issue date.']);
         }
 
-        DB::transaction(function () use ($document, $data): void {
+        DB::transaction(function () use ($document, $data, $canEdit): void {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
-            abort_unless($locked->status === 'draft', 404);
+            abort_unless($canEdit($locked), 404);
+            $wasRejectedQuotation = $locked->type === 'quotation' && $locked->status === 'rejected';
             $locked->update([
                 'customer_name' => $data['customer_name'],
                 'customer_email' => $data['customer_email'] ?? null,
@@ -297,6 +346,7 @@ class BillingController extends Controller
                 'due_date' => $data['due_date'] ?? null,
                 'tax_rate' => $data['tax_rate'],
                 'notes' => $data['notes'] ?? null,
+                ...($wasRejectedQuotation ? ['status' => 'draft'] : []),
             ]);
             $locked->items()->delete();
 
@@ -328,7 +378,12 @@ class BillingController extends Controller
             ]);
         });
 
-        return redirect()->route('billing.documents.show', $document)->with('success', 'Draft billing document updated.');
+        return redirect()->route('billing.documents.show', $document)->with(
+            'success',
+            $document->type === 'quotation' && $document->status === 'rejected'
+                ? 'Rejected quotation updated and returned to draft. Mark it as sent when ready.'
+                : 'Draft billing document updated.',
+        );
     }
 
     public function show(BillingDocument $document): View
@@ -361,32 +416,46 @@ class BillingController extends Controller
             return;
         }
 
-        $email = strtolower(trim($request->user()->email));
         abort_unless(
-            in_array($document->type, ['invoice', 'quotation'], true)
-                && (
-                    $document->project()
-                        ->whereHas('customers', fn ($customers) => $customers->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
-                        ->exists()
-                    || $document->repairTicket()
-                        ->whereHas('project')
-                        ->where(function ($ticket) use ($email): void {
-                            $ticket->whereHas('project.customers', fn ($customers) => $customers
-                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
-                                ->orWhereHas('customer', fn ($customers) => $customers
-                                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
-                        })
-                        ->exists()
-                ),
+            $this->customerDocumentsQuery($request->user())
+                ->whereKey($document->getKey())
+                ->exists(),
             404,
         );
+    }
+
+    private function customerDocumentsQuery(User $user): Builder
+    {
+        $email = strtolower(trim($user->email));
+        if ($email === '') {
+            return BillingDocument::query()->whereRaw('1 = 0');
+        }
+
+        return BillingDocument::query()
+            ->whereIn('type', ['invoice', 'quotation'])
+            ->where('status', '!=', 'draft')
+            ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$email])
+            ->where(function (Builder $documents) use ($user, $email): void {
+                $documents->whereHas('project', fn (Builder $projects) => $projects->visibleToCustomer($user))
+                    ->orWhereHas('repairTicket.project', fn (Builder $projects) => $projects->visibleToCustomer($user))
+                    ->orWhereHas('repairTicket.customer', fn (Builder $customers) => $customers
+                        ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
+            });
     }
 
     public function issue(BillingDocument $document, Request $request, InventoryStock $stock): RedirectResponse
     {
         DB::transaction(function () use ($document, $request, $stock): void {
             $document = BillingDocument::query()->with('items')->lockForUpdate()->findOrFail($document->id);
-            abort_if($document->status !== 'draft', 422, 'Only draft documents can be issued.');
+            abort_if(
+                $document->type === 'quotation'
+                    ? $document->status !== 'accepted'
+                    : $document->status !== 'draft',
+                422,
+                $document->type === 'quotation'
+                    ? 'Only accepted quotations can be converted to invoices.'
+                    : 'Only draft invoices can be issued.',
+            );
 
             if ($document->type === 'quotation') {
                 $document->type = 'invoice';
@@ -404,6 +473,42 @@ class BillingController extends Controller
         });
 
         return redirect()->route('billing.documents.show', $document)->with('success', 'Document issued; inventory was updated.');
+    }
+
+    public function updateQuotationStatus(BillingDocument $document, Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->hasRole('admin'), 403);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['sent', 'accepted', 'rejected'])],
+        ]);
+
+        DB::transaction(function () use ($document, $data): void {
+            $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
+            abort_unless($locked->type === 'quotation', 404);
+            abort_if($locked->status === 'void', 422, 'Voided quotations cannot be changed.');
+            abort_if(
+                $locked->status === 'draft' && $data['status'] !== 'sent',
+                422,
+                'Draft quotations must be marked as sent before changing their status.',
+            );
+            abort_if(
+                $locked->status === 'accepted' && $data['status'] !== 'accepted',
+                422,
+                'Accepted quotations can only be converted into invoices.',
+            );
+            abort_if(
+                $locked->status === 'rejected' && $data['status'] === 'accepted',
+                422,
+                'Rejected quotations must be sent again before they can be accepted.',
+            );
+
+            $locked->update(['status' => $data['status']]);
+        });
+
+        return redirect()
+            ->route('billing.documents.show', $document)
+            ->with('success', 'Quotation status updated.');
     }
 
     public function storePayment(BillingDocument $document, Request $request): RedirectResponse

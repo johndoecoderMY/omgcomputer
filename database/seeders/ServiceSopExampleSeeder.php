@@ -10,17 +10,15 @@ class ServiceSopExampleSeeder extends Seeder
 {
     public function run(): void
     {
-        FlowChart::query()->firstOrCreate(
-            [
-                'category' => 'service',
-                'title' => 'Laptop Repair Service SOP',
-            ],
-            [
-                'is_example' => true,
-                'subject_name' => 'Laptop repair service',
-                'description' => 'Example reusable service SOP. Review and adapt the scope, approval, repair, verification, and handover steps for each service you offer.',
-                'steps' => SopTemplate::steps('service'),
-            ],
-        );
+        $flowChart = FlowChart::query()->firstOrNew([
+            'category' => 'service',
+            'title' => 'Laptop Repair Service SOP',
+        ]);
+        $flowChart->fill([
+            'is_example' => true,
+            'subject_name' => 'Laptop repair service',
+            'description' => 'Example reusable service SOP. Review and adapt the scope, approval, repair, verification, and handover steps for each service you offer.',
+            'steps' => SopTemplate::steps('service', $flowChart->steps ?? []),
+        ])->save();
     }
 }

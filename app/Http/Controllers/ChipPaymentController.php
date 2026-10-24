@@ -166,17 +166,27 @@ class ChipPaymentController extends Controller
 
         abort_unless($request->user()->hasRole('customer'), 403);
         $email = strtolower(trim($request->user()->email));
+        $userId = $request->user()->id;
         abort_unless(
             in_array($document->type, ['invoice', 'quotation'], true)
             && (
                 $document->project()
-                    ->whereHas('customers', fn ($customers) => $customers->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                    ->where(function ($projects) use ($email, $userId): void {
+                        $projects->where('customer_user_id', $userId)
+                            ->orWhereHas('customers', fn ($customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
+                    })
                     ->exists()
                 || $document->repairTicket()
                     ->whereHas('project')
-                    ->where(function ($ticket) use ($email): void {
-                        $ticket->whereHas('project.customers', fn ($customers) => $customers
-                            ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                    ->where(function ($ticket) use ($email, $userId): void {
+                        $ticket->whereHas('project', fn ($projects) => $projects
+                            ->where('customer_user_id', $userId)
+                            ->orWhereHas('customers', fn ($customers) => $customers
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                            ->orWhereHas('customerAccount', fn ($accounts) => $accounts
+                                ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                        )
                             ->orWhereHas('customer', fn ($customers) => $customers
                                 ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
                     })

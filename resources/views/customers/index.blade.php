@@ -14,12 +14,12 @@
             data-columns="{{ json_encode([
                 ['data' => 'customer', 'name' => 'name'],
                 ['data' => 'contact', 'orderable' => false, 'searchable' => false],
-                ['data' => 'project_name', 'orderable' => false, 'searchable' => false],
                 ['data' => 'notes', 'orderable' => false, 'searchable' => false],
                 ['data' => 'repair_tickets_count', 'name' => 'repair_tickets_count'],
+                ['data' => 'projects_count', 'name' => 'projects_count'],
                 ['data' => 'actions', 'orderable' => false, 'searchable' => false],
             ]) }}">
-            <thead><tr><th>Customer</th><th>Contact</th><th>Project</th><th>Notes</th><th>Repair tickets</th><th></th></tr></thead>
+            <thead><tr><th>Customer</th><th>Contact</th><th>Notes</th><th>Repair tickets</th><th>Projects</th><th></th></tr></thead>
             <tbody></tbody>
         </table>
     </div></div>

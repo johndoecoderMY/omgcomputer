@@ -35,8 +35,10 @@ class DemoDataSeeder extends Seeder
                 'selling_price' => 260,
                 'stock_quantity' => 8,
                 'reorder_level' => 2,
+                'is_for_sale' => true,
             ],
         );
+        $part->update(['is_for_sale' => true]);
         $project->inventoryParts()->syncWithoutDetaching([
             $part->id => [
                 'quantity' => 1,
@@ -44,7 +46,7 @@ class DemoDataSeeder extends Seeder
             ],
         ]);
         InventoryMovement::query()->firstOrCreate(
-            ['reference' => 'SEED-OPENING-' . $part->id],
+            ['reference' => 'SEED-OPENING-'.$part->id],
             [
                 'inventory_part_id' => $part->id,
                 'user_id' => $user->id,
@@ -86,17 +88,29 @@ class DemoDataSeeder extends Seeder
             ],
         );
 
-        $flowChart = FlowChart::query()->firstOrCreate(
+        $flowChart = FlowChart::query()->firstOrNew(
             ['title' => 'Sample repair booking journey'],
-            [
-                'description' => 'Sample flow chart linked to a project task.',
-                'steps' => [
-                    ['id' => 'seed-booking-start', 'label' => 'Customer submits booking', 'kind' => 'start', 'connections' => ['seed-booking-review']],
-                    ['id' => 'seed-booking-review', 'label' => 'Review repair request', 'kind' => 'action', 'connections' => ['seed-booking-end']],
-                    ['id' => 'seed-booking-end', 'label' => 'Confirm appointment', 'kind' => 'end', 'connections' => []],
-                ],
-            ],
         );
+        $flowChart->fill([
+            'description' => 'Sample flow chart linked to a project task.',
+            'steps' => [
+                [
+                    'id' => 'seed-booking-start',
+                    'label' => 'Customer submits booking',
+                    'kind' => 'start',
+                    'connections' => ['seed-booking-review'],
+                    'connection_sides' => ['seed-booking-review' => ['source' => 'bottom', 'target' => 'top']],
+                ],
+                [
+                    'id' => 'seed-booking-review',
+                    'label' => 'Review repair request',
+                    'kind' => 'action',
+                    'connections' => ['seed-booking-end'],
+                    'connection_sides' => ['seed-booking-end' => ['source' => 'bottom', 'target' => 'top']],
+                ],
+                ['id' => 'seed-booking-end', 'label' => 'Confirm appointment', 'kind' => 'end', 'connections' => [], 'connection_sides' => []],
+            ],
+        ])->save();
         $task->update([
             'flow_chart_id' => $flowChart->id,
             'flow_chart_step_id' => 'seed-booking-review',

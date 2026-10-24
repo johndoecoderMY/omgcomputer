@@ -265,6 +265,13 @@
         .page-header-action-dropdown .dropdown-menu > .btn-outline-danger {
             color: var(--falcon-danger, #e63757);
         }
+
+        @media (max-width: 575.98px) {
+            .page-header-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
     </style>
 @endonce
 
@@ -291,7 +298,7 @@
         <h1 class="h2 mb-1">{{ $title }}</h1>
         @if ($description)<p class="text-body-secondary mb-0">{{ $description }}</p>@endif
     </div>
-    <div class="d-flex flex-wrap align-items-center gap-2">
+    <div class="page-header-actions d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
         @if (isset($actions))
             <div class="page-header-action-single">
                 @if ($hasSingleAction)

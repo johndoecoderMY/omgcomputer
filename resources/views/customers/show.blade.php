@@ -69,6 +69,43 @@
             </div>
         </div>
     </div>
+    <section class="card mb-3" aria-labelledby="customer-projects-heading">
+        <div class="card-header">
+            <h2 class="h5 mb-0" id="customer-projects-heading">Projects</h2>
+            <span class="badge text-bg-light border ms-auto">{{ $linkedProjects->count() }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-bordered">
+                <thead>
+                    <tr><th>Project</th><th>Customer link</th><th>Related repair tickets</th></tr>
+                </thead>
+                <tbody>
+                    @forelse ($linkedProjects as $project)
+                        <tr>
+                            <td><a class="fw-semibold" href="{{ route('projects.show', $project) }}">{{ $project->name }}</a></td>
+                            <td>
+                                @if ($customer->project_id === $project->id)
+                                    <span class="badge text-bg-primary">Customer profile</span>
+                                @endif
+                                @if ($project->repairTickets->isNotEmpty())
+                                    <span class="badge text-bg-light border">Repair tickets</span>
+                                @endif
+                            </td>
+                            <td>
+                                @forelse ($project->repairTickets as $ticket)
+                                    <a class="me-2" href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>
+                                @empty
+                                    <span class="text-body-secondary">—</span>
+                                @endforelse
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3" class="text-center text-body-secondary py-4">No projects are linked to this customer.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
     @if ($account)
         <section class="card mb-3" aria-labelledby="customer-account-heading">
             <div class="card-header">

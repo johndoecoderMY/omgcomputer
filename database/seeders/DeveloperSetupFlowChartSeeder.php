@@ -106,15 +106,20 @@ class DeveloperSetupFlowChartSeeder extends Seeder
         ];
 
         foreach ($examples as $example) {
-            FlowChart::query()->firstOrCreate(
-                ['category' => 'process', 'title' => $example['title']],
-                [
-                    'is_example' => true,
-                    'subject_name' => $example['subject_name'],
-                    'description' => $example['description'],
-                    'steps' => SopTemplate::customSteps($example['steps'], $example['connections']),
-                ],
-            );
+            $flowChart = FlowChart::query()->firstOrNew([
+                'category' => 'process',
+                'title' => $example['title'],
+            ]);
+            $flowChart->fill([
+                'is_example' => true,
+                'subject_name' => $example['subject_name'],
+                'description' => $example['description'],
+                'steps' => SopTemplate::customSteps(
+                    $example['steps'],
+                    $example['connections'],
+                    $flowChart->steps ?? [],
+                ),
+            ])->save();
         }
     }
 }

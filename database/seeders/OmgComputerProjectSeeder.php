@@ -38,8 +38,8 @@ class OmgComputerProjectSeeder extends Seeder
         }
 
         foreach ([
-            ['name' => 'PHP', 'version' => '8.3', 'notes' => 'Runtime requirement in composer.json.'],
-            ['name' => 'Laravel', 'version' => '12', 'notes' => 'Application framework.'],
+            ['name' => 'PHP', 'version' => '8.2', 'notes' => 'Runtime requirement in composer.json.'],
+            ['name' => 'Laravel', 'version' => '11', 'notes' => 'Application framework.'],
             ['name' => 'Bootstrap', 'version' => '5', 'notes' => 'Falcon theme assets used for the interface.'],
             ['name' => 'Vite', 'version' => '7', 'notes' => 'Frontend asset build tooling.'],
             ['name' => 'mPDF', 'version' => '8.3', 'notes' => 'PDF generation for project and billing documents.'],

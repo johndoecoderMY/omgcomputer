@@ -114,11 +114,27 @@ class FlowChartPngRenderer
                 }
 
                 $target = $pixelPositions[$targetId];
-                $sourceX = $source['x'] + (int) round(self::NODE_WIDTH * $scale / 2);
-                $sourceY = $source['y'] + $source['height'];
-                $targetX = $target['x'] + (int) round(self::NODE_WIDTH * $scale / 2);
-                $targetY = $target['y'];
-                $this->drawArrow($image, $sourceX, $sourceY, $targetX, $targetY, $colors['wire'], $scale);
+                $dx = ($target['x'] + $target['width'] / 2) - ($source['x'] + $source['width'] / 2);
+                $dy = ($target['y'] + $target['height'] / 2) - ($source['y'] + $source['height'] / 2);
+                $savedSides = $step['connection_sides'][$targetId] ?? null;
+                $side = (is_array($savedSides) ? ($savedSides['source'] ?? null) : $savedSides)
+                    ?? (abs($dx) > abs($dy) ? ($dx >= 0 ? 'right' : 'left') : ($dy >= 0 ? 'bottom' : 'top'));
+                $oppositeSide = ['top' => 'bottom', 'bottom' => 'top', 'left' => 'right', 'right' => 'left'];
+                $targetSide = (is_array($savedSides) ? ($savedSides['target'] ?? null) : null)
+                    ?? ($oppositeSide[$side] ?? 'top');
+                $sourcePoint = $this->nodePort($source, $side, 0);
+                $targetPoint = $this->nodePort($target, $targetSide, max(8, (int) round(9 * $scale)));
+                $this->drawArrow(
+                    $image,
+                    $sourcePoint['x'],
+                    $sourcePoint['y'],
+                    $targetPoint['x'],
+                    $targetPoint['y'],
+                    $colors['wire'],
+                    $scale,
+                    $side,
+                    $targetSide,
+                );
             }
         }
 
@@ -135,7 +151,7 @@ class FlowChartPngRenderer
 
             $this->drawRoundedRectangle($image, $left, $top, $right, $bottom, $radius, $colors[$style['fill']], $colors[$style['border']]);
 
-            $kindText = strtoupper($kind === 'page' && $flowChart->category !== 'website' ? 'step' : $kind);
+            $kindText = strtoupper($kind === 'page' && ! $flowChart->isWebsite() ? 'step' : $kind);
             $kindFontSize = max(1, (int) round(9 * $scale));
             $labelFontSize = max(1, (int) round(13 * $scale));
             $centerX = (int) round(($left + $right) / 2);
@@ -431,18 +447,57 @@ class FlowChartPngRenderer
         imagettftext($image, $fontSize, 0, $left, $baseline, $color, $font, $text);
     }
 
-    private function drawArrow(\GdImage $image, int $x1, int $y1, int $x2, int $y2, int $color, float $scale): void
+    private function nodePort(array $node, string $side, int $offset): array
     {
+        $vectors = [
+            'top' => ['x' => 0, 'y' => -1],
+            'bottom' => ['x' => 0, 'y' => 1],
+            'left' => ['x' => -1, 'y' => 0],
+            'right' => ['x' => 1, 'y' => 0],
+        ];
+        $vector = $vectors[$side] ?? $vectors['bottom'];
+        $centerX = $node['x'] + $node['width'] / 2;
+        $centerY = $node['y'] + $node['height'] / 2;
+
+        return [
+            'x' => (int) round($centerX + $vector['x'] * ($node['width'] / 2 + $offset)),
+            'y' => (int) round($centerY + $vector['y'] * ($node['height'] / 2 + $offset)),
+        ];
+    }
+
+    private function drawArrow(
+        \GdImage $image,
+        int $x1,
+        int $y1,
+        int $x2,
+        int $y2,
+        int $color,
+        float $scale,
+        string $sourceSide,
+        string $targetSide,
+    ): void
+    {
+        $vectors = [
+            'top' => ['x' => 0, 'y' => -1],
+            'bottom' => ['x' => 0, 'y' => 1],
+            'left' => ['x' => -1, 'y' => 0],
+            'right' => ['x' => 1, 'y' => 0],
+        ];
+        $sourceVector = $vectors[$sourceSide] ?? $vectors['bottom'];
+        $targetVector = $vectors[$targetSide] ?? $vectors['top'];
+        $control = max((int) round(28 * $scale), min(150, (int) round(hypot($x2 - $x1, $y2 - $y1) * 0.45)));
+        $controlX1 = $x1 + $sourceVector['x'] * $control;
+        $controlY1 = $y1 + $sourceVector['y'] * $control;
+        $controlX2 = $x2 + $targetVector['x'] * $control;
+        $controlY2 = $y2 + $targetVector['y'] * $control;
         imagesetthickness($image, max(2, (int) round(1.2 * $scale)));
-        $controlY1 = $y1 + max((int) round(28 * $scale), (int) round(($y2 - $y1) / 2));
-        $controlY2 = $y2 - max((int) round(28 * $scale), (int) round(($y2 - $y1) / 2));
         $previousX = $x1;
         $previousY = $y1;
 
         for ($step = 1; $step <= 24; $step++) {
             $t = $step / 24;
             $inverse = 1 - $t;
-            $x = (int) round(($inverse ** 3) * $x1 + 3 * ($inverse ** 2) * $t * $x1 + 3 * $inverse * ($t ** 2) * $x2 + ($t ** 3) * $x2);
+            $x = (int) round(($inverse ** 3) * $x1 + 3 * ($inverse ** 2) * $t * $controlX1 + 3 * $inverse * ($t ** 2) * $controlX2 + ($t ** 3) * $x2);
             $y = (int) round(($inverse ** 3) * $y1 + 3 * ($inverse ** 2) * $t * $controlY1 + 3 * $inverse * ($t ** 2) * $controlY2 + ($t ** 3) * $y2);
             imageline($image, $previousX, $previousY, $x, $y, $color);
             $previousX = $x;
@@ -450,11 +505,14 @@ class FlowChartPngRenderer
         }
 
         $arrowSize = max(6, (int) round(8 * $scale));
-        $baseY = $y2 - $arrowSize;
+        $baseX = $x2 + $targetVector['x'] * $arrowSize;
+        $baseY = $y2 + $targetVector['y'] * $arrowSize;
+        $perpendicularX = -$targetVector['y'] * $arrowSize;
+        $perpendicularY = $targetVector['x'] * $arrowSize;
         imagefilledpolygon($image, [
             $x2, $y2,
-            $x2 - $arrowSize, $baseY,
-            $x2 + $arrowSize, $baseY,
+            $baseX + $perpendicularX, $baseY + $perpendicularY,
+            $baseX - $perpendicularX, $baseY - $perpendicularY,
         ], 3, $color);
         imagesetthickness($image, 1);
     }

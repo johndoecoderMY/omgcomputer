@@ -16,6 +16,7 @@ class ProjectExportController extends Controller
 {
     private const SECTIONS = [
         'overview',
+        'links',
         'requirements',
         'customers',
         'technology_stack',
@@ -68,7 +69,8 @@ class ProjectExportController extends Controller
 
         $project->load([
             ...(in_array('requirements', $sections, true) ? ['requirements'] : []),
-            ...(in_array('customers', $sections, true) ? ['customers'] : []),
+            ...(in_array('links', $sections, true) ? ['links' => fn ($query) => $query->orderBy('label')] : []),
+            ...(in_array('customers', $sections, true) ? ['customers', 'customerAccount'] : []),
             ...(in_array('technology_stack', $sections, true) ? ['technologyStack' => fn ($query) => $query->orderBy('name')] : []),
             ...(in_array('estimates', $sections, true) ? ['estimateItems' => fn ($query) => $query->orderBy('category')->orderBy('description')] : []),
             ...(in_array('schedule', $sections, true) ? ['events' => fn ($query) => $query->orderBy('starts_at')] : []),

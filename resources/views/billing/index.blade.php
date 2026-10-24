@@ -18,7 +18,7 @@
 
     <form class="row g-2 mb-3" method="GET" action="{{ route('billing.index') }}">
         <div class="col-md-4"><label class="visually-hidden" for="type">Document type</label><select class="form-select" id="type" name="type"><option value="">All document types</option><option value="invoice" @selected(request('type') === 'invoice')>Invoices</option><option value="quotation" @selected(request('type') === 'quotation')>Quotations</option></select></div>
-        <div class="col-md-4"><label class="visually-hidden" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All statuses</option>@foreach (['draft', 'issued', 'partial', 'part_paid', 'paid', 'void'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ str_replace('_', ' ', ucfirst($status)) }}</option>@endforeach</select></div>
+        <div class="col-md-4"><label class="visually-hidden" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All statuses</option>@foreach (['draft', 'sent', 'accepted', 'rejected', 'issued', 'partial', 'part_paid', 'paid', 'void'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ str_replace('_', ' ', ucfirst($status)) }}</option>@endforeach</select></div>
         <div class="col-auto"><button class="btn btn-outline-primary">Filter</button><a class="btn btn-outline-secondary" href="{{ route('billing.index') }}">Reset</a></div>
     </form>
 

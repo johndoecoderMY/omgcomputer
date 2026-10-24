@@ -26,6 +26,11 @@ class ProjectDetailsExportTest extends TestCase
         $this->get(route('customers.index'))
             ->assertOk()
             ->assertSee('Add customer')
+            ->assertSee('aria-label="Settings"', false)
+            ->assertSee('class="fas fa-cog"', false)
+            ->assertSee('aria-label="Notifications"', false)
+            ->assertSee('class="fas fa-bell d-block"', false)
+            ->assertDontSee('fa-icon-wait', false)
             ->assertDontSee('aria-label="Page actions"', false)
             ->assertSee('page-header-action-single', false)
             ->assertSee('btn btn-primary', false);
@@ -201,7 +206,9 @@ class ProjectDetailsExportTest extends TestCase
 
     public function test_project_pdf_can_include_selected_sections_and_linked_flowcharts_but_not_tasks_by_default(): void
     {
+        Role::findOrCreate('admin', 'web');
         $user = User::factory()->create();
+        $user->assignRole('admin');
         $this->actingAs($user);
         $project = Project::query()->create([
             'name' => 'Device booking portal',
@@ -216,6 +223,16 @@ class ProjectDetailsExportTest extends TestCase
             'name' => 'FullCalendar',
             'version' => '6.1.19',
             'notes' => 'Booking calendar',
+        ]);
+        $project->links()->create([
+            'label' => 'Customer portal',
+            'url' => 'https://example.test/customer',
+            'visible_to_customer' => true,
+        ]);
+        $project->links()->create([
+            'label' => 'Internal planning',
+            'url' => 'https://example.test/internal',
+            'visible_to_customer' => false,
         ]);
         $project->tasks()->create([
             'title' => 'Secret internal task title',
@@ -278,13 +295,25 @@ class ProjectDetailsExportTest extends TestCase
             $queries[] = $query->sql;
         });
         $response = $this->post(route('projects.export', $project), [
-            'sections' => ['overview', 'technology_stack', 'schedule', 'flowcharts'],
+            'sections' => ['overview', 'links', 'technology_stack', 'schedule', 'flowcharts'],
             'flowchart_mode' => 'selected',
             'flow_chart_ids' => [$chart->id, $secondChart->id],
         ]);
 
         $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-', $response->getContent());
+        $pdfHtml = view('projects.pdf', [
+            'project' => $project->load('links'),
+            'sections' => ['links'],
+            'flowCharts' => collect(),
+            'flowChartImages' => collect(),
+            'projectPhotos' => collect(),
+        ])->render();
+        $this->assertStringContainsString('Customer portal', $pdfHtml);
+        $this->assertStringContainsString('https://example.test/customer', $pdfHtml);
+        $this->assertStringContainsString('Visible to customer', $pdfHtml);
+        $this->assertStringContainsString('Internal planning', $pdfHtml);
+        $this->assertStringContainsString('Staff only', $pdfHtml);
         preg_match_all('/\/Type\s*\/Page\b/', $response->getContent(), $pageMatches);
         $this->assertCount(4, $pageMatches[0], 'Project details followed by an oversized chart should include its continuation page.');
         $this->assertFalse(collect($queries)->contains(fn (string $sql): bool => str_contains(strtolower($sql), 'from "tasks"')));
