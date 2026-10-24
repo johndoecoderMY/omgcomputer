@@ -7,8 +7,8 @@
     <x-page-header eyebrow="Finance" title="Billing & payments">
         @role('admin')
             <x-slot name="actions">
-                <a class="btn btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation']) }}"><span class="fas fa-file-alt me-2"></span>New quotation</a>
-                <a class="btn btn-primary" href="{{ route('billing.create') }}"><span class="fas fa-plus me-2"></span>New invoice</a>
+                <a class="btn btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation']) }}"><span class="bi bi-file-text me-2"></span>New quotation</a>
+                <a class="btn btn-primary" href="{{ route('billing.create') }}"><span class="bi bi-plus me-2"></span>New invoice</a>
             </x-slot>
         @endrole
     </x-page-header>

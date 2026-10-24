@@ -6,9 +6,9 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="{{ ucfirst($document->type) }}" :title="$document->number" :back-url="route('billing.index')" back-label="Back to billing">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="fas fa-file-pdf me-2"></span>PDF</a>
-            @if (auth()->user()->hasRole('admin') && ($document->status === 'draft' || ($document->type === 'quotation' && $document->status === 'rejected')))<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="fas fa-pen me-2"></span>{{ $document->status === 'rejected' ? 'Edit rejected quotation' : 'Edit draft' }}</a>@endif
-            @if ($document->repairTicket)<a class="btn btn-outline-secondary" href="{{ route('tickets.show', $document->repairTicket) }}"><span class="fas fa-ticket-alt me-2"></span>{{ $document->repairTicket->ticket_number }}</a>@endif
+            <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="bi bi-filetype-pdf me-2"></span>PDF</a>
+            @if (auth()->user()->hasRole('admin') && ($document->status === 'draft' || ($document->type === 'quotation' && $document->status === 'rejected')))<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="bi bi-pencil me-2"></span>{{ $document->status === 'rejected' ? 'Edit rejected quotation' : 'Edit draft' }}</a>@endif
+            @if ($document->repairTicket)<a class="btn btn-outline-secondary" href="{{ route('tickets.show', $document->repairTicket) }}"><span class="bi bi-ticket-perforated me-2"></span>{{ $document->repairTicket->ticket_number }}</a>@endif
             @if (auth()->user()->hasRole('admin') && $document->type === 'quotation' && $document->status === 'draft')
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="sent"><button class="btn btn-primary">Mark as sent</button></form>
             @elseif (auth()->user()->hasRole('admin') && $document->type === 'quotation' && $document->status === 'sent')

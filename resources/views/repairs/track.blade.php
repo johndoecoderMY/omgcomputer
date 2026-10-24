@@ -9,13 +9,13 @@
             <div class="col-lg-8 col-xl-7">
                 <div class="mb-4">
                     <a class="text-decoration-none" href="{{ url('/') }}">
-                        <span class="fas fa-arrow-left me-2" aria-hidden="true"></span>Back to OMG Computer
+                        <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>Back to OMG Computer
                     </a>
                 </div>
                 <div class="card border-0 shadow p-2">
                     <div class="card-body p-4 p-md-5">
                         <div class="text-center mb-4">
-                            <span class="fas fa-magnifying-glass text-primary fa-2x mb-3" aria-hidden="true"></span>
+                            <span class="bi bi-search text-primary bi-2x mb-3" aria-hidden="true"></span>
                             <span class="d-block text-primary fw-bold text-uppercase fs-10">Guest repair tracking</span>
                             <h1 class="h2 fw-bold text-1000 mt-2">Track your repair</h1>
                             <p class="text-700 mb-0">Enter the service number provided by the shop to check repair progress.</p>

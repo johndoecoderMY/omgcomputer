@@ -11,6 +11,7 @@ use App\Services\InventoryStock;
 use App\Services\WorkspaceNotifier;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -114,7 +115,7 @@ class ShopController extends Controller
             ],
         ))
             ->addColumn('product', fn (InventoryPart $part): string => sprintf(
-                '<div class="d-flex align-items-center gap-3"><span class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary flex-shrink-0" style="width: 3.5rem; height: 3.5rem"><i class="fas fa-box-open" aria-hidden="true"></i></span><div><a class="fw-semibold text-body text-decoration-none" href="%s">%s</a><div class="small text-body-secondary">%s</div></div></div>',
+                '<div class="d-flex align-items-center gap-3"><span class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary flex-shrink-0" style="width: 3.5rem; height: 3.5rem"><i class="bi bi-box2" aria-hidden="true"></i></span><div><a class="fw-semibold text-body text-decoration-none" href="%s">%s</a><div class="small text-body-secondary">%s</div></div></div>',
                 e(route('shop.products.show', $part)),
                 e($part->name),
                 e($part->sku ?: 'No SKU'),
@@ -132,7 +133,7 @@ class ShopController extends Controller
                 $part->is_for_sale ? 'Listed' : 'Hidden',
             ))
             ->addColumn('actions', fn (InventoryPart $part): string => sprintf(
-                '<div class="d-flex flex-wrap gap-1"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shop-stock-modal" data-stock-action="%s" data-stock-name="%s" data-stock-current="%d"><i class="fas fa-arrows-rotate me-1" aria-hidden="true"></i>Adjust stock</button><a class="btn btn-sm btn-falcon-default" href="%s" aria-label="Edit %s"><i class="fas fa-pen" aria-hidden="true"></i></a></div>',
+                '<div class="d-flex flex-wrap gap-1"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shop-stock-modal" data-stock-action="%s" data-stock-name="%s" data-stock-current="%d"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Adjust stock</button><a class="btn btn-sm btn-falcon-default" href="%s" aria-label="Edit %s"><i class="bi bi-pencil" aria-hidden="true"></i></a></div>',
                 e(route('shop.products.stock', $part)),
                 e($part->name),
                 $part->stock_quantity,
@@ -290,7 +291,7 @@ class ShopController extends Controller
         ]);
     }
 
-    public function addToCart(Request $request, InventoryPart $product): RedirectResponse
+    public function addToCart(Request $request, InventoryPart $product): RedirectResponse|JsonResponse
     {
         abort_unless($product->is_for_sale, 404);
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:10000']]);
@@ -303,6 +304,13 @@ class ShopController extends Controller
         }
         $cart[$product->id] = $quantity;
         $request->session()->put(self::CART_KEY, $cart);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Product added to cart.',
+                'cartCount' => collect($cart)->sum(),
+            ]);
+        }
 
         return redirect()->route('shop.cart')->with('success', 'Product added to cart.');
     }

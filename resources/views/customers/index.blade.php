@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Customer management" title="Customers">
-        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('customers.create') }}"><span class="fas fa-user-plus me-2"></span>Add customer</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('customers.create') }}"><span class="bi bi-person-plus me-2"></span>Add customer</a></x-slot>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <div class="card p-2"><div class="table-responsive">

@@ -7,7 +7,7 @@
     <div class="container">
         <div class="card border-0 shadow-sm p-2 mx-auto" style="max-width: 720px;">
             <div class="card-body p-4 p-lg-5">
-                <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center mb-4" style="width:64px;height:64px;"><span class="fas fa-check fa-2x" aria-hidden="true"></span></div>
+                <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center mb-4" style="width:64px;height:64px;"><span class="bi bi-check bi-2x" aria-hidden="true"></span></div>
                 <p class="text-primary fw-bold text-uppercase fs-10 mb-2">Request received</p>
                 <h1 class="display-6 fw-bold text-1000 mb-3">Thanks, {{ $booking->customer_name }}.</h1>
                 <p class="lead text-700">Your appointment request has been sent. Our team will contact you to confirm the time.</p>
@@ -20,7 +20,7 @@
                     </dl>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-4">
-                    <a class="btn btn-primary rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-plus me-2"></span>Book another appointment</a>
+                    <a class="btn btn-primary rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="bi bi-calendar-plus me-2"></span>Book another appointment</a>
                     <a class="btn btn-outline-secondary rounded-pill px-4" href="{{ url('/') }}">Back to home</a>
                 </div>
             </div>

@@ -28,16 +28,16 @@
                     <div class="profile-tabs px-3" role="tablist" aria-label="Profile sections">
                         <button class="profile-tab active" id="profile-tab-overview" type="button"
                             role="tab" aria-selected="true" aria-controls="profile-pane-overview"
-                            data-profile-tab="overview"><span class="fas fa-user me-2" aria-hidden="true"></span>Overview</button>
+                            data-profile-tab="overview"><span class="bi bi-person me-2" aria-hidden="true"></span>Overview</button>
                         <button class="profile-tab" id="profile-tab-edit" type="button"
                             role="tab" aria-selected="false" aria-controls="profile-pane-edit"
-                            data-profile-tab="edit"><span class="fas fa-pen me-2" aria-hidden="true"></span>Edit profile</button>
+                            data-profile-tab="edit"><span class="bi bi-pencil me-2" aria-hidden="true"></span>Edit profile</button>
                         <button class="profile-tab" id="profile-tab-security" type="button"
                             role="tab" aria-selected="false" aria-controls="profile-pane-security"
-                            data-profile-tab="security"><span class="fas fa-shield-halved me-2" aria-hidden="true"></span>Security</button>
+                            data-profile-tab="security"><span class="bi bi-shield-shaded me-2" aria-hidden="true"></span>Security</button>
                         <button class="profile-tab" id="profile-tab-activity" type="button"
                             role="tab" aria-selected="false" aria-controls="profile-pane-activity"
-                            data-profile-tab="activity"><span class="fas fa-clock-rotate-left me-2" aria-hidden="true"></span>Activity</button>
+                            data-profile-tab="activity"><span class="bi bi-clock-history me-2" aria-hidden="true"></span>Activity</button>
                     </div>
 
                     <div class="p-3 p-lg-4">

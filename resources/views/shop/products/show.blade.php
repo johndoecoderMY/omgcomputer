@@ -6,15 +6,15 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce / Products" :title="$product->name" :back-url="route('shop.products.index')" back-label="Back to products">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('shop.products.edit', $product) }}"><i class="fas fa-pen me-2"></i>Edit product</a>
-            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="fas fa-cart-shopping me-2"></i>Cart</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.products.edit', $product) }}"><i class="bi bi-pencil me-2"></i>Edit product</a>
+            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2"></i>Cart</a>
         </x-slot>
     </x-page-header>
     <div class="row g-3">
         <div class="col-lg-5">
             <div class="card h-100">
                 <div class="card-body d-flex align-items-center justify-content-center bg-body-tertiary text-primary" style="min-height: 18rem">
-                    <i class="fas fa-box-open fa-5x" aria-hidden="true"></i>
+                    <i class="bi bi-box2 bi-5x" aria-hidden="true"></i>
                 </div>
             </div>
         </div>
@@ -36,11 +36,11 @@
                 </div>
                 @if ($product->is_for_sale && $product->stock_quantity > 0)
                     <div class="card-footer bg-body">
-                        <form class="d-flex flex-wrap gap-2 justify-content-end" method="POST" action="{{ route('shop.cart.add', $product) }}">
+                        <form class="d-flex flex-wrap gap-2 justify-content-end" method="POST" action="{{ route('shop.cart.add', $product) }}" data-cart-add-form>
                             @csrf
                             <label class="visually-hidden" for="quantity">Quantity</label>
                             <input class="form-control" id="quantity" name="quantity" type="number" min="1" max="{{ $product->stock_quantity }}" value="1" required style="max-width: 7rem">
-                            <button class="btn btn-primary" type="submit"><i class="fas fa-cart-plus me-2"></i>Add to cart</button>
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-cart-plus me-2"></i>Add to cart</button>
                         </form>
                     </div>
                 @endif

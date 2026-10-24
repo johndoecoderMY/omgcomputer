@@ -3,11 +3,11 @@
         <div class="d-flex flex-wrap justify-content-center align-items-center gap-1">
             @if ($paginator->onFirstPage())
                 <span class="btn btn-falcon-default btn-sm disabled" aria-disabled="true">
-                    <i class="fas fa-chevron-left me-1" aria-hidden="true"></i>Previous
+                    <i class="bi bi-chevron-left me-1" aria-hidden="true"></i>Previous
                 </span>
             @else
                 <a class="btn btn-falcon-default btn-sm" href="{{ $paginator->previousPageUrl() }}" rel="prev">
-                    <i class="fas fa-chevron-left me-1" aria-hidden="true"></i>Previous
+                    <i class="bi bi-chevron-left me-1" aria-hidden="true"></i>Previous
                 </a>
             @endif
 
@@ -29,11 +29,11 @@
 
             @if ($paginator->hasMorePages())
                 <a class="btn btn-falcon-default btn-sm" href="{{ $paginator->nextPageUrl() }}" rel="next">
-                    Next<i class="fas fa-chevron-right ms-1" aria-hidden="true"></i>
+                    Next<i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
                 </a>
             @else
                 <span class="btn btn-falcon-default btn-sm disabled" aria-disabled="true">
-                    Next<i class="fas fa-chevron-right ms-1" aria-hidden="true"></i>
+                    Next<i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
                 </span>
             @endif
         </div>

@@ -7,15 +7,15 @@
     <x-page-header eyebrow="My workspace" title="Welcome, {{ auth()->user()->name }}"
         description="A quick overview of your projects, repair tickets, and upcoming appointments.">
         <x-slot name="actions">
-            <a class="btn btn-primary" href="{{ route('bookings.account-create') }}"><i class="fas fa-calendar-plus me-2" aria-hidden="true"></i>Book a service</a>
-            <a class="btn btn-outline-primary" href="{{ route('shop.preview.products.grid') }}"><i class="fas fa-store me-2" aria-hidden="true"></i>Browse shop</a>
-            <a class="btn btn-outline-secondary" href="{{ route('contact') }}"><i class="fas fa-headset me-2" aria-hidden="true"></i>Contact us</a>
+            <a class="btn btn-primary" href="{{ route('bookings.account-create') }}"><i class="bi bi-calendar-plus me-2" aria-hidden="true"></i>Book a service</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.preview.products.grid') }}"><i class="bi bi-shop me-2" aria-hidden="true"></i>Browse shop</a>
+            <a class="btn btn-outline-secondary" href="{{ route('contact') }}"><i class="bi bi-headset me-2" aria-hidden="true"></i>Contact us</a>
         </x-slot>
     </x-page-header>
 
     @if ($unreadNotificationCount > 0)
         <div class="alert alert-primary d-flex align-items-center justify-content-between gap-3" role="status">
-            <span><i class="fas fa-bell me-2" aria-hidden="true"></i>You have {{ $unreadNotificationCount }} unread {{ \Illuminate\Support\Str::plural('notification', $unreadNotificationCount) }}.</span>
+            <span><i class="bi bi-bell me-2" aria-hidden="true"></i>You have {{ $unreadNotificationCount }} unread {{ \Illuminate\Support\Str::plural('notification', $unreadNotificationCount) }}.</span>
             <a class="alert-link text-nowrap" href="{{ route('notifications.index') }}">View notifications</a>
         </div>
     @endif
@@ -24,7 +24,7 @@
         <div class="col-sm-6 col-xl-4">
             <a class="card h-100 text-decoration-none" href="{{ route('projects.index') }}">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary"><span class="fas fa-project-diagram" aria-hidden="true"></span></span></span>
+                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary"><span class="bi bi-diagram-3" aria-hidden="true"></span></span></span>
                     <div><p class="text-body-secondary mb-1">My projects</p><h2 class="h3 mb-0 text-body">{{ $projectCount }}</h2></div>
                 </div>
             </a>
@@ -32,7 +32,7 @@
         <div class="col-sm-6 col-xl-4">
             <a class="card h-100 text-decoration-none" href="{{ route('tickets.index') }}">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-warning-subtle text-warning"><span class="fas fa-screwdriver-wrench" aria-hidden="true"></span></span></span>
+                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-warning-subtle text-warning"><span class="bi bi-tools" aria-hidden="true"></span></span></span>
                     <div><p class="text-body-secondary mb-1">Active repair tickets</p><h2 class="h3 mb-0 text-body">{{ $activeTicketCount }}</h2></div>
                 </div>
             </a>
@@ -40,7 +40,7 @@
         <div class="col-sm-6 col-xl-4">
             <a class="card h-100 text-decoration-none" href="{{ route('bookings.index') }}">
                 <div class="card-body d-flex align-items-center gap-3">
-                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success"><span class="fas fa-calendar-check" aria-hidden="true"></span></span></span>
+                    <span class="avatar avatar-xl"><span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-success-subtle text-success"><span class="bi bi-calendar-check" aria-hidden="true"></span></span></span>
                     <div><p class="text-body-secondary mb-1">Upcoming appointments</p><h2 class="h3 mb-0 text-body">{{ $upcomingBookingCount }}</h2></div>
                 </div>
             </a>

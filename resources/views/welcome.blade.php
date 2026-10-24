@@ -3,25 +3,29 @@
 @section('title', 'Computer Repair & Support')
 
 @section('content')
+    @php
+        $whatsappContactUrl = 'https://wa.me/601123881290?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
+    @endphp
     <section class="py-8 py-lg-10 bg-body-tertiary overflow-hidden" id="home" style="min-height: 78vh;">
         <div class="container">
             <div class="row align-items-center g-5 py-lg-4">
                 <div class="col-lg-6">
                     <span class="badge rounded-pill badge-subtle-primary mb-3 px-3 py-2">
-                        <span class="fas fa-tools me-2"></span>Local computer repair &amp; support
+                        <span class="bi bi-tools me-2"></span>Local computer repair &amp; support
                     </span>
                     <h1 class="display-2 fw-bold text-1000 mb-3">Computer trouble?<br><span class="text-primary">We can help.</span></h1>
                     <p class="lead text-700 mb-4">Friendly computer repairs and support, plus custom websites for businesses and organizations.</p>
                     <div class="d-flex flex-wrap gap-3">
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#services">Explore our services</a>
-                        <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
+                        <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="bi bi-calendar-check me-2"></span>Book an appointment</a>
+                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Contact us</a>
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
-                            <span class="fas fa-search me-2"></span>Track a repair
+                            <span class="bi bi-search me-2"></span>Track a repair
                         </a>
                     </div>
                     <div class="d-flex flex-wrap gap-4 mt-5 text-700">
-                        <span><span class="fas fa-check-circle text-primary me-2"></span>Clear explanations</span>
-                        <span><span class="fas fa-check-circle text-primary me-2"></span>Practical solutions</span>
+                        <span><span class="bi bi-check-circle text-primary me-2"></span>Clear explanations</span>
+                        <span><span class="bi bi-check-circle text-primary me-2"></span>Practical solutions</span>
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -51,7 +55,7 @@
                 <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-stethoscope text-primary fs-4 mb-3"></span>
+                            <span class="bi bi-activity text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Diagnostics &amp; troubleshooting</h5>
                             <p class="text-700 mb-0">Find the cause of crashes, slowdowns, startup issues, and other PC problems.</p>
                         </div>
@@ -60,7 +64,7 @@
                 <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-screwdriver-wrench text-primary fs-4 mb-3"></span>
+                            <span class="bi bi-tools text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">PC &amp; laptop repairs</h5>
                             <p class="text-700 mb-0">Get help with hardware faults, damaged components, and repair recommendations.</p>
                         </div>
@@ -69,7 +73,7 @@
                 <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-memory text-primary fs-4 mb-3"></span>
+                            <span class="bi bi-memory text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Upgrades &amp; tune-ups</h5>
                             <p class="text-700 mb-0">Improve performance with storage, memory, component, and system upgrades.</p>
                         </div>
@@ -78,7 +82,7 @@
                 <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-shield-virus text-primary fs-4 mb-3"></span>
+                            <span class="bi bi-shield-check text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Software &amp; security support</h5>
                             <p class="text-700 mb-0">Resolve software issues and get practical help protecting your devices.</p>
                         </div>
@@ -87,7 +91,7 @@
                 <div class="col-md-6 col-xl">
                     <div class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-globe text-primary fs-4 mb-3"></span>
+                            <span class="bi bi-globe text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Website design &amp; development</h5>
                             <p class="text-700 mb-0">Get a custom website designed and built for your business or organization.</p>
                         </div>
@@ -102,18 +106,18 @@
             <div class="row justify-content-center text-center mb-5">
                 <div class="col-lg-8">
                     <span class="text-primary fw-bold text-uppercase fs-10">Website design &amp; development</span>
-                    <h2 class="fw-bold text-1000 mt-2">Straightforward website package estimates</h2>
-                    <p class="text-700 mb-0">Choose a starting point for your project. We’ll confirm the final scope and price with you before work begins.</p>
+                    <h2 class="fw-bold text-1000 mt-2">Website packages tailored to your needs</h2>
+                    <p class="text-700 mb-0">Tell us what you need and we’ll provide a quote based on your project scope before work begins.</p>
                 </div>
             </div>
             <div class="row g-4 align-items-stretch">
                 <div class="col-md-6 col-xl-4">
                     <article class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-file-lines text-primary fs-4 mb-3" aria-hidden="true"></span>
+                            <span class="bi bi-file-text text-primary fs-4 mb-3" aria-hidden="true"></span>
                             <h3 class="h4 text-1000">Starter landing page</h3>
                             <p class="text-700">A polished single-page website to introduce your business and help customers get in touch.</p>
-                            <p class="h3 text-primary mb-3">RM800–1,500</p>
+                            <p class="h3 text-primary mb-3">Request a quote</p>
                             <ul class="text-700 ps-3 mb-0">
                                 <li class="mb-2">Responsive layout for mobile and desktop</li>
                                 <li class="mb-2">Core business information and contact call-to-action</li>
@@ -121,7 +125,7 @@
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Discuss this package</a>
+                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Request a quote</a>
                         </div>
                     </article>
                 </div>
@@ -131,7 +135,7 @@
                             <span class="badge text-bg-primary mb-3">Popular starting point</span>
                             <h3 class="h4 text-1000">Business website</h3>
                             <p class="text-700">A multi-page website for businesses that need room to explain their services and build trust.</p>
-                            <p class="h3 text-primary mb-3">RM2,000–4,000</p>
+                            <p class="h3 text-primary mb-3">Request a quote</p>
                             <ul class="text-700 ps-3 mb-0">
                                 <li class="mb-2">Up to five pages with a consistent custom design</li>
                                 <li class="mb-2">Contact form and clear navigation</li>
@@ -139,17 +143,17 @@
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Discuss this package</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
                         </div>
                     </article>
                 </div>
                 <div class="col-md-6 col-xl-4">
                     <article class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="fas fa-code text-primary fs-4 mb-3" aria-hidden="true"></span>
+                            <span class="bi bi-code-slash text-primary fs-4 mb-3" aria-hidden="true"></span>
                             <h3 class="h4 text-1000">Custom website</h3>
                             <p class="text-700">For larger sites, online stores, integrations, or features tailored to your workflow.</p>
-                            <p class="h3 text-primary mb-3">From RM4,500</p>
+                            <p class="h3 text-primary mb-3">Request a quote</p>
                             <ul class="text-700 ps-3 mb-0">
                                 <li class="mb-2">Scope and features planned around your requirements</li>
                                 <li class="mb-2">Custom functionality or third-party integrations</li>
@@ -157,13 +161,13 @@
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Discuss your project</a>
+                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Request a quote</a>
                         </div>
                     </article>
                 </div>
             </div>
             <p class="small text-body-secondary text-center mt-4 mb-0">
-                These are illustrative estimates in Malaysian ringgit (RM), not fixed quotations. Domain registration, hosting, paid themes or plugins, and other third-party charges are not included unless stated in your confirmed quote.
+                Every project is quoted individually. Domain registration, hosting, paid themes or plugins, and other third-party charges will be discussed as part of your quote.
             </p>
         </div>
     </section>
@@ -225,25 +229,25 @@
                     <div class="row g-3 mt-3">
                         <div class="col-sm-6">
                             <div class="d-flex align-items-start">
-                                <span class="fas fa-check-circle text-primary mt-1 me-2"></span>
+                                <span class="bi bi-check-circle text-primary mt-1 me-2"></span>
                                 <span class="text-700">Honest explanations and recommendations</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="d-flex align-items-start">
-                                <span class="fas fa-check-circle text-primary mt-1 me-2"></span>
+                                <span class="bi bi-check-circle text-primary mt-1 me-2"></span>
                                 <span class="text-700">Support for home and business users</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="d-flex align-items-start">
-                                <span class="fas fa-check-circle text-primary mt-1 me-2"></span>
+                                <span class="bi bi-check-circle text-primary mt-1 me-2"></span>
                                 <span class="text-700">Practical solutions to get you back to work</span>
                             </div>
                         </div>
                         <div class="col-sm-6">
                             <div class="d-flex align-items-start">
-                                <span class="fas fa-check-circle text-primary mt-1 me-2"></span>
+                                <span class="bi bi-check-circle text-primary mt-1 me-2"></span>
                                 <span class="text-700">Respectful service from start to finish</span>
                             </div>
                         </div>
@@ -266,7 +270,7 @@
                 <div class="col-md-6 col-lg-4">
                     <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
-                            <span class="fas fa-bolt text-primary fs-3 mb-3"></span>
+                            <span class="bi bi-lightning text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Slow or unresponsive computer</h3>
                             <p class="text-700 mb-0">Startup programs, low storage, software problems, or aging hardware can affect performance. We can help find the cause and recommend a fix.</p>
                         </div>
@@ -275,7 +279,7 @@
                 <div class="col-md-6 col-lg-4">
                     <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
-                            <span class="fas fa-laptop text-primary fs-3 mb-3"></span>
+                            <span class="bi bi-laptop text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Hardware problems</h3>
                             <p class="text-700 mb-0">If your screen, keyboard, battery, or fans are acting up, we can assess whether repair or replacement makes sense.</p>
                         </div>
@@ -284,7 +288,7 @@
                 <div class="col-md-6 col-lg-4">
                     <div class="card border-0 shadow-sm h-100 p-2">
                         <div class="card-body p-4 p-lg-5">
-                            <span class="fas fa-shield-halved text-primary fs-3 mb-3"></span>
+                            <span class="bi bi-shield-shaded text-primary fs-3 mb-3"></span>
                             <h3 class="h4 text-1000">Security and software issues</h3>
                             <p class="text-700 mb-0">Get help with software conflicts, security concerns, update issues, and unwanted programs.</p>
                         </div>
@@ -374,9 +378,10 @@
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-lg p-2">
                         <div class="card-body p-4 p-lg-5">
-                            <span class="fas fa-headset text-primary fs-2 mb-3"></span>
+                            <span class="bi bi-headset text-primary fs-2 mb-3"></span>
                             <h3 class="h3 fw-bold text-1000">Need a hand?</h3>
                             <p class="text-700 mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next. Please use the contact details provided by the shop.</p>
+                            <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp</a>
                         </div>
                     </div>
                 </div>
@@ -396,9 +401,9 @@
                         </div>
                     </div>
                     <div class="col-lg-4 bg-primary text-center p-4 p-lg-5">
-                        <span class="fas fa-calendar-check fa-3x text-white mb-3"></span>
+                        <span class="bi bi-calendar-check bi-3x text-white mb-3"></span>
                         <p class="text-white mb-3">Request a booking online and our team will contact you to confirm.</p>
-                        <a class="btn btn-light btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="fas fa-calendar-check me-2"></span>Book an appointment</a>
+                        <a class="btn btn-light btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="bi bi-calendar-check me-2"></span>Book an appointment</a>
                     </div>
                 </div>
             </div>
@@ -411,7 +416,7 @@
                 <div class="col-lg-8 col-xl-7">
                     <div class="card border-0 shadow-sm p-2">
                         <div class="card-body p-4 p-md-5 text-center">
-                            <span class="fas fa-magnifying-glass text-primary fa-2x mb-3"></span>
+                            <span class="bi bi-search text-primary bi-2x mb-3"></span>
                             <h2 class="fw-bold text-1000">Track your repair</h2>
                             <p class="text-700 mb-4">Check the latest progress using the service number provided by our shop.</p>
                             <a class="btn btn-primary rounded-pill px-4" href="{{ route('repairs.track.form') }}">Track a repair</a>

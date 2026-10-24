@@ -9,107 +9,64 @@ window.Pusher = Pusher;
 
 Alpine.start();
 
-const headerPageSearch = document.querySelector('[data-header-page-search]');
+document.addEventListener('submit', async (event) => {
+    const form = event.target.closest('[data-cart-add-form]');
+    if (!form) {
+        return;
+    }
 
-if (headerPageSearch) {
-    const input = headerPageSearch.querySelector('.search-input');
-    const form = headerPageSearch.querySelector('form');
-    const links = Array.from(headerPageSearch.querySelectorAll('[data-header-search-item]'));
-    const prompt = headerPageSearch.querySelector('[data-header-search-prompt]');
-    const emptyState = headerPageSearch.querySelector('[data-header-search-empty]');
-    const recentSection = headerPageSearch.querySelector('[data-header-search-recent-section]');
-    const recentList = headerPageSearch.querySelector('[data-header-search-recent]');
-    const recentEmpty = headerPageSearch.querySelector('[data-header-search-recent-empty]');
-    const pagesHeading = headerPageSearch.querySelector('[data-header-search-pages-heading]');
-    const dismissButton = headerPageSearch.querySelector('[data-bs-dismiss="search"]');
-    const recentStorageKey = 'omgcomputer.recent-search-pages';
+    event.preventDefault();
+    const button = form.querySelector('[type="submit"]');
+    if (button?.disabled) {
+        return;
+    }
 
-    const readRecentPages = () => {
-        try {
-            const stored = JSON.parse(window.sessionStorage.getItem(recentStorageKey) || '[]');
+    if (button) {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+    }
 
-            return Array.isArray(stored)
-                ? stored.filter((item) => item && typeof item.href === 'string' && typeof item.title === 'string')
-                : [];
-        } catch (error) {
-            console.warn('Could not read recent page history.', error);
-
-            return [];
-        }
-    };
-
-    const rememberPage = (href, title) => {
-        const recentPages = readRecentPages().filter((recent) => recent.href !== href);
-        recentPages.unshift({ href, title });
-        try {
-            window.sessionStorage.setItem(recentStorageKey, JSON.stringify(recentPages.slice(0, 5)));
-        } catch (error) {
-            console.warn('Could not save recent page history.', error);
-        }
-    };
-
-    const renderRecentPages = () => {
-        const recentPages = readRecentPages()
-            .filter((recent) => links.some((link) => link.href === recent.href))
-            .slice(0, 5);
-        recentList.replaceChildren();
-        recentPages.forEach((recent) => {
-            const link = document.createElement('a');
-            link.className = 'dropdown-item fs-10 px-x1 py-1 hover-primary';
-            link.href = recent.href;
-            link.setAttribute('role', 'option');
-            const row = document.createElement('div');
-            row.className = 'd-flex align-items-center';
-            const icon = document.createElement('span');
-            icon.className = 'fas fa-circle me-2 text-300 fs-11';
-            icon.setAttribute('aria-hidden', 'true');
-            const title = document.createElement('span');
-            title.className = 'fw-normal title';
-            title.textContent = recent.title;
-            row.append(icon, title);
-            link.append(row);
-            recentList.append(link);
+    try {
+        const response = await fetch(form.action, {
+            method: form.method || 'POST',
+            body: new FormData(form),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
         });
-        recentEmpty.classList.toggle('d-none', recentPages.length > 0);
-    };
+        const payload = await response.json();
 
-    const filterPages = () => {
-        const query = input.value.trim().toLocaleLowerCase();
-        let visibleCount = 0;
-        const hasQuery = query.length > 0;
-
-        links.forEach((link) => {
-            const searchableText = `${link.textContent} ${link.dataset.searchTerms || ''}`.toLocaleLowerCase();
-            const matches = hasQuery
-                && query.split(/\s+/).every((term) => searchableText.includes(term));
-
-            link.classList.toggle('d-none', !matches);
-            visibleCount += matches ? 1 : 0;
-        });
-
-        prompt.classList.toggle('d-none', hasQuery);
-        emptyState.classList.toggle('d-none', !hasQuery || visibleCount > 0);
-        pagesHeading.classList.toggle('d-none', !hasQuery);
-        recentSection.classList.toggle('d-none', hasQuery);
-    };
-
-    headerPageSearch.addEventListener('click', (event) => {
-        const link = event.target.closest('a[href]');
-        if (link && headerPageSearch.contains(link)) {
-            rememberPage(link.href, link.textContent.trim());
+        if (!response.ok) {
+            const messages = Object.values(payload.errors || {}).flat();
+            throw new Error(messages.join('\n') || payload.message || 'Could not add this product to the cart.');
         }
-    });
 
-    renderRecentPages();
-    input.addEventListener('input', filterPages);
-    input.addEventListener('focus', filterPages);
-    dismissButton.addEventListener('search.close', filterPages);
-    form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        headerPageSearch.querySelector('[data-header-search-item]:not(.d-none)')?.click();
-    });
-    filterPages();
-}
+        const cartLink = document.querySelector('[data-cart-count]');
+        const cartCount = Number(payload.cartCount);
+        if (!Number.isInteger(cartCount) || cartCount < 0) {
+            throw new Error('The cart was updated, but its item count could not be read. Refresh the page to see the latest count.');
+        }
+
+        if (cartLink) {
+            const count = cartLink.querySelector('.notification-indicator-number');
+            if (count) {
+                count.textContent = cartCount > 99 ? '99+' : String(cartCount);
+            }
+            cartLink.setAttribute('aria-label', `Shopping cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}`);
+        }
+
+        window.showAppToast?.(payload.message || 'Product added to cart.', 'success');
+    } catch (error) {
+        window.showAppToast?.(error instanceof Error ? error.message : 'Could not add this product to the cart.', 'danger');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
+    }
+});
 
 const page = document.body;
 const userId = page.dataset.notificationsUser;
@@ -135,6 +92,8 @@ if (userId && pusherKey && pusherCluster) {
             count.textContent = nextUnreadCount > 99 ? '99+' : String(nextUnreadCount);
             count.setAttribute('aria-label', `${nextUnreadCount} unread notifications`);
             count.classList.remove('d-none');
+            document.getElementById('navbarDropdownNotification')
+                ?.setAttribute('aria-label', `Notifications, ${nextUnreadCount} unread`);
         }
 
         if (list) {
@@ -169,7 +128,7 @@ if (userId && pusherKey && pusherCluster) {
             const avatarName = document.createElement('div');
             avatarName.className = 'avatar-name rounded-circle bg-primary-subtle text-primary';
             const bell = document.createElement('span');
-            bell.className = 'fas fa-bell';
+            bell.className = 'bi bi-bell';
             bell.setAttribute('aria-hidden', 'true');
             avatarName.append(bell);
             avatarSize.append(avatarName);
@@ -185,7 +144,7 @@ if (userId && pusherKey && pusherCluster) {
             const time = document.createElement('span');
             time.className = 'notification-time';
             const bellIcon = document.createElement('span');
-            bellIcon.className = 'fas fa-bell me-2 text-primary';
+            bellIcon.className = 'bi bi-bell me-2 text-primary';
             bellIcon.setAttribute('aria-hidden', 'true');
             const timeText = document.createElement('span');
             timeText.textContent = 'Just now';

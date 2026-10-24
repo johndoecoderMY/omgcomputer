@@ -9,7 +9,7 @@
         :back-url="route('development.flowcharts.index')" back-label="All flow charts">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('development.sops.create') }}">
-                <i class="fas fa-plus me-2"></i>Add new SOP
+                <i class="bi bi-plus me-2"></i>Add new SOP
             </a>
         </x-slot:actions>
     </x-page-header>

@@ -9,7 +9,7 @@
         :back-url="route('reports.index')" back-label="Reports overview">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="https://developers.easyparcel.com/" target="_blank" rel="noopener noreferrer">
-                <span class="fas fa-arrow-up-right-from-square me-2" aria-hidden="true"></span>API documentation
+                <span class="bi bi-box-arrow-up-right me-2" aria-hidden="true"></span>API documentation
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -96,7 +96,7 @@
                     </div>
                     <div class="card-footer bg-body">
                         <button class="btn btn-primary" type="submit" @disabled(! ($authenticationConfigured && $apiKeyConfigured))>
-                            <span class="fas fa-magnifying-glass-dollar me-2" aria-hidden="true"></span>Check courier rates
+                            <span class="bi bi-search me-2" aria-hidden="true"></span>Check courier rates
                         </button>
                     </div>
                 </form>

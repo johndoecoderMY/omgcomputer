@@ -7,10 +7,10 @@
     <x-page-header eyebrow="Email" title="Inbox" description="Your cPanel mailbox, refreshed automatically while this page is open.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('email.compose') }}">
-                <span class="fas fa-pen me-2" aria-hidden="true"></span>Compose
+                <span class="bi bi-pencil me-2" aria-hidden="true"></span>Compose
             </a>
             <a class="btn btn-outline-primary" href="{{ route('email.mailbox-settings') }}">
-                <span class="fas fa-cog me-2" aria-hidden="true"></span>My mailbox
+                <span class="bi bi-gear me-2" aria-hidden="true"></span>My mailbox
             </a>
             @role('admin')
                 <a class="btn btn-outline-secondary" href="{{ route('email.settings') }}">Server settings</a>
@@ -32,13 +32,13 @@
                         <input class="form-check-input" id="select-all-emails" type="checkbox" aria-label="Select all visible emails">
                     </div>
                     <button class="btn btn-falcon-default btn-sm ms-sm-1" id="refresh-emails" type="button" aria-label="Refresh inbox" title="Refresh inbox">
-                        <span class="fas fa-redo" aria-hidden="true"></span>
+                        <span class="bi bi-arrow-counterclockwise" aria-hidden="true"></span>
                     </button>
                     <div class="dropdown">
                         <button class="btn btn-falcon-default text-600 btn-sm dropdown-toggle dropdown-caret-none ms-2"
                             type="button" id="email-filter" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
                             aria-label="Filter emails" title="Filter emails">
-                            <span class="fas fa-sliders-h" aria-hidden="true"></span>
+                            <span class="bi bi-sliders" aria-hidden="true"></span>
                             <span class="ms-1 d-none d-md-inline" id="email-filter-label">All</span>
                         </button>
                         <div class="dropdown-menu border py-0" aria-labelledby="email-filter">
@@ -54,16 +54,16 @@
                     <div class="border-start ms-3 ps-3 d-none" id="email-bulk-actions">
                         <div class="btn-group btn-group-sm" role="group" aria-label="Actions for selected emails">
                             <button class="btn btn-falcon-default" type="button" data-bulk-action="archive" aria-label="Archive selected" title="Archive selected">
-                                <span class="fas fa-archive" aria-hidden="true"></span>
+                                <span class="bi bi-archive" aria-hidden="true"></span>
                             </button>
                             <button class="btn btn-falcon-default" type="button" data-bulk-action="delete" aria-label="Delete selected" title="Delete selected">
-                                <span class="fas fa-trash-alt" aria-hidden="true"></span>
+                                <span class="bi bi-trash" aria-hidden="true"></span>
                             </button>
                             <button class="btn btn-falcon-default" type="button" data-bulk-action="read" aria-label="Mark selected as read" title="Mark selected as read">
-                                <span class="fas fa-envelope-open" aria-hidden="true"></span>
+                                <span class="bi bi-envelope-open" aria-hidden="true"></span>
                             </button>
                             <button class="btn btn-falcon-default" type="button" data-bulk-action="unread" aria-label="Mark selected as unread" title="Mark selected as unread">
-                                <span class="fas fa-envelope" aria-hidden="true"></span>
+                                <span class="bi bi-envelope" aria-hidden="true"></span>
                             </button>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                     <span class="small text-body-secondary" id="email-refresh-status" role="status">Checking inbox…</span>
                     <span class="small text-body-secondary d-none d-md-inline" id="email-count"></span>
                     <a class="btn btn-falcon-primary btn-sm" href="{{ route('email.mailbox-settings') }}">
-                        <span class="fas fa-envelope me-1" aria-hidden="true"></span>Mailbox
+                        <span class="bi bi-envelope me-1" aria-hidden="true"></span>Mailbox
                     </a>
                 </div>
             </div>
@@ -106,12 +106,12 @@
             </div>
             @if ($messages === [])
                 <div class="d-flex flex-column align-items-center text-center text-body-secondary py-5" id="empty-emails">
-                    <span class="fas fa-inbox fs-2 d-block mx-auto mb-2" aria-hidden="true"></span>
+                    <span class="bi bi-inbox fs-2 d-block mx-auto mb-2" aria-hidden="true"></span>
                     No messages found in this mailbox.
                 </div>
             @else
                 <div class="d-flex flex-column align-items-center text-center text-body-secondary py-5 d-none" id="empty-emails">
-                    <span class="fas fa-inbox fs-2 d-block mx-auto mb-2" aria-hidden="true"></span>
+                    <span class="bi bi-inbox fs-2 d-block mx-auto mb-2" aria-hidden="true"></span>
                     No messages match this filter.
                 </div>
             @endif
@@ -180,7 +180,7 @@
             button.className = `btn btn-tertiary hover-bg-200 ${extraClass}`.trim();
             button.setAttribute('aria-label', label);
             button.title = label;
-            button.innerHTML = `<span class="fas ${icon}" aria-hidden="true"></span>`;
+            button.innerHTML = `<span class="bi ${icon}" aria-hidden="true"></span>`;
             form.append(button);
             return form;
         };
@@ -197,9 +197,9 @@
 
             const actions = document.createElement('div');
             actions.className = 'btn-group btn-group-sm z-2 hover-actions end-0 me-3 email-row-actions';
-            actions.append(makeForm(message.uid, 'archive', 'Archive', 'fa-archive'));
-            actions.append(makeForm(message.uid, 'delete', 'Delete', 'fa-trash-alt'));
-            actions.append(makeForm(message.uid, message.seen ? 'unread' : 'read', message.seen ? 'Mark as unread' : 'Mark as read', message.seen ? 'fa-envelope' : 'fa-envelope-open'));
+            actions.append(makeForm(message.uid, 'archive', 'Archive', 'bi-archive'));
+            actions.append(makeForm(message.uid, 'delete', 'Delete', 'bi-trash'));
+            actions.append(makeForm(message.uid, message.seen ? 'unread' : 'read', message.seen ? 'Mark as unread' : 'Mark as read', message.seen ? 'bi-envelope' : 'bi-envelope-open'));
             row.append(actions);
 
             const selectCol = document.createElement('div');
@@ -216,7 +216,7 @@
             check.checked = selectedIds.has(String(message.uid));
             checkWrap.append(check);
             selectWrap.append(checkWrap);
-            const flagForm = makeForm(message.uid, message.flagged ? 'unflag' : 'flag', message.flagged ? 'Remove flag' : 'Flag email', message.flagged ? 'fa-star text-warning' : 'fa-star text-300');
+            const flagForm = makeForm(message.uid, message.flagged ? 'unflag' : 'flag', message.flagged ? 'Remove flag' : 'Flag email', message.flagged ? 'bi-star text-warning' : 'bi-star text-300');
             flagForm.classList.add('ms-1');
             selectWrap.append(flagForm);
             selectCol.append(selectWrap);
@@ -286,7 +286,7 @@
             if (refreshing || document.hidden) return;
             refreshing = true;
             refreshButton.disabled = true;
-            refreshButton.querySelector('.fas')?.classList.add('fa-spin');
+            refreshButton.querySelector('.bi')?.classList.add('bi-spin');
             refreshStatus.textContent = 'Checking inbox…';
             try {
                 const response = await fetch(inbox.dataset.pollUrl, {
@@ -294,8 +294,23 @@
                     credentials: 'same-origin',
                     cache: 'no-store',
                 });
-                const payload = await response.json();
+                const responseText = await response.text();
+                let payload;
+                try {
+                    payload = JSON.parse(responseText);
+                } catch {
+                    console.error('Email inbox poll returned an invalid response.', {
+                        status: response.status,
+                        contentType: response.headers.get('content-type'),
+                    });
+                    throw new Error(response.ok
+                        ? 'The inbox server returned an invalid response. Please try again.'
+                        : `The inbox could not be refreshed (HTTP ${response.status}).`);
+                }
                 if (!response.ok) throw new Error(payload.message || 'The inbox could not be refreshed.');
+                if (!Array.isArray(payload.messages) || typeof payload.checked_at !== 'string') {
+                    throw new Error('The inbox server returned an incomplete response. Please try again.');
+                }
                 const selectedIds = new Set([...rows.querySelectorAll('.email-select:checked')].map((input) => input.value));
                 unreadSection.querySelectorAll('[data-email-row]').forEach((row) => row.remove());
                 readSection.querySelectorAll('[data-email-row]').forEach((row) => row.remove());
@@ -318,7 +333,7 @@
             } finally {
                 refreshing = false;
                 refreshButton.disabled = false;
-                refreshButton.querySelector('.fas')?.classList.remove('fa-spin');
+                refreshButton.querySelector('.bi')?.classList.remove('bi-spin');
             }
         };
 

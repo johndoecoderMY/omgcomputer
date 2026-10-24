@@ -14,7 +14,7 @@
     />
 
     <div class="alert alert-warning d-flex align-items-start gap-2 mb-4" role="note">
-        <i class="fas fa-circle-info mt-1"></i>
+        <i class="bi bi-info-circle mt-1"></i>
         <div><strong>Planning estimates:</strong> All prices and financial figures are illustrative estimates in Malaysian ringgit (RM), not guaranteed results. Confirm local rent, licensing, tax, supplier costs and customer demand before committing capital.</div>
     </div>
 
@@ -27,9 +27,9 @@
                     <h2 class="h3 mb-3">A service-first repair shop with a student technology support niche</h2>
                     <p class="text-body-secondary mb-3">Start lean with PC and laptop maintenance, troubleshooting and upgrades. Add ethical FYP consultations and technical mentoring for students, then grow through repeat customers, campus-focused promotion and small-business maintenance contracts.</p>
                     <div class="d-flex flex-wrap gap-2">
-                        <span class="badge text-bg-light border text-dark"><i class="fas fa-screwdriver-wrench me-1 text-primary"></i>Repairs</span>
-                        <span class="badge text-bg-light border text-dark"><i class="fas fa-graduation-cap me-1 text-primary"></i>Student services</span>
-                        <span class="badge text-bg-light border text-dark"><i class="fas fa-bullhorn me-1 text-primary"></i>Local marketing</span>
+                        <span class="badge text-bg-light border text-dark"><i class="bi bi-tools me-1 text-primary"></i>Repairs</span>
+                        <span class="badge text-bg-light border text-dark"><i class="bi bi-mortarboard me-1 text-primary"></i>Student services</span>
+                        <span class="badge text-bg-light border text-dark"><i class="bi bi-megaphone me-1 text-primary"></i>Local marketing</span>
                     </div>
                 </div>
                 <div class="col-xl-5">
@@ -47,7 +47,7 @@
     <div class="card shadow-sm mb-4" id="location">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
             <div><h2 class="h5 mb-1">1. Target location</h2><p class="small text-body-secondary mb-0">Kampar, Perak, Malaysia</p></div>
-            <a class="btn btn-sm btn-outline-primary" href="https://www.google.com/maps/search/?api=1&amp;query=Kampar%2C%20Perak%2C%20Malaysia" target="_blank" rel="noopener noreferrer"><i class="fas fa-map-location-dot me-2"></i>Explore area</a>
+            <a class="btn btn-sm btn-outline-primary" href="https://www.google.com/maps/search/?api=1&amp;query=Kampar%2C%20Perak%2C%20Malaysia" target="_blank" rel="noopener noreferrer"><i class="bi bi-geo-alt me-2"></i>Explore area</a>
         </div>
         <div class="row g-0">
             <div class="col-lg-7"><div class="ratio ratio-16x9"><iframe src="https://www.google.com/maps?q=Kampar%2C%20Perak%2C%20Malaysia&amp;output=embed" title="Map showing Kampar, Perak, Malaysia" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div></div>
@@ -105,7 +105,7 @@
                 <tr><td class="fw-semibold">Small-group tech clinic</td><td>Introductory Git, ESP32 or PC maintenance workshop</td><td>4–8 attendees</td><td class="text-end text-nowrap">RM25–50/person</td><td>Earn from one session with several students</td></tr>
             </tbody>
         </table></div>
-        <div class="card-body"><div class="alert alert-info mb-0"><i class="fas fa-lightbulb me-2"></i><strong>Bundle idea:</strong> Offer a student laptop check plus software setup, or a three-session FYP mentoring pack paid upfront. State session length, inclusions, cancellation rules and any parts/software costs clearly.</div></div>
+        <div class="card-body"><div class="alert alert-info mb-0"><i class="bi bi-lightbulb me-2"></i><strong>Bundle idea:</strong> Offer a student laptop check plus software setup, or a three-session FYP mentoring pack paid upfront. State session length, inclusions, cancellation rules and any parts/software costs clearly.</div></div>
     </div>
 
     {{-- Customer workflow --}}

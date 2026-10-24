@@ -28,7 +28,7 @@
     <link href="{{ asset('vendors/simplebar/simplebar.min.css') }}" rel="stylesheet">
      <link href="{{ asset('assets/css/theme.min.css') }}" rel="stylesheet" id="style-default">
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
-     <link rel="preload" href="{{ Vite::asset('node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff2') }}" as="font" type="font/woff2" crossorigin>
+     <link rel="preload" href="{{ Vite::asset('node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
      @vite('resources/css/icons.css')
     <script>
       var isRTL = JSON.parse(localStorage.getItem('isRTL'));

@@ -36,7 +36,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('dashboard') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-pie-chart"></span></span>
                                 <span class="nav-link-text ps-1">Dashboard</span>
                             </div>
                         </a>
@@ -52,7 +52,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('tickets.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-ticket-perforated"></span></span>
                                 <span class="nav-link-text ps-1">My Tickets</span>
                             </div>
                         </a>
@@ -60,7 +60,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('bookings.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-calendar-check"></span></span>
                                 <span class="nav-link-text ps-1">My Bookings</span>
                             </div>
                         </a>
@@ -68,7 +68,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('bookings.account-create') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-calendar-plus"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-calendar-plus"></span></span>
                                 <span class="nav-link-text ps-1">Book a service</span>
                             </div>
                         </a>
@@ -84,7 +84,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
                                 <span class="nav-link-text ps-1">My Projects</span>
                             </div>
                         </a>
@@ -92,7 +92,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('billing.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-file-earmark-spreadsheet"></span></span>
                                 <span class="nav-link-text ps-1">Bills and quotations</span>
                             </div>
                         </a>
@@ -108,7 +108,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('profile.edit') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-cog"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-gear"></span></span>
                                 <span class="nav-link-text ps-1">Profile</span>
                             </div>
                         </a>
@@ -119,7 +119,7 @@
                                 <div class="card-body text-center">
                                     <span class="avatar avatar-l mb-2">
                                         <span class="avatar-name d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary">
-                                            <span class="fas fa-headset" aria-hidden="true"></span>
+                                            <span class="bi bi-headset" aria-hidden="true"></span>
                                         </span>
                                     </span>
                                     <h2 class="h6 mb-1">Need help?</h2>
@@ -136,7 +136,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('dashboard') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-chart-pie"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-pie-chart"></span></span>
                                 <span class="nav-link-text ps-1">Dashboard</span>
                             </div>
                         </a>
@@ -155,7 +155,7 @@
                         <a class="nav-link dropdown-indicator" href="#bookingsMenu" role="button" data-bs-toggle="collapse"
                             aria-expanded="false" aria-controls="bookingsMenu">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-calendar-check"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-calendar-check"></span></span>
                                 <span class="nav-link-text ps-1">Bookings</span>
                             </div>
                         </a>
@@ -183,7 +183,7 @@
                         <a class="nav-link dropdown-indicator" href="#repairTicketsMenu" role="button"
                             data-bs-toggle="collapse" aria-expanded="false" aria-controls="repairTicketsMenu">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-ticket-alt"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-ticket-perforated"></span></span>
                                 <span class="nav-link-text ps-1">Tickets</span>
                             </div>
                         </a>
@@ -208,7 +208,7 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ route('projects.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
                                 <span class="nav-link-text ps-1">Projects</span>
                             </div>
                         </a>
@@ -224,14 +224,14 @@
                         </div>
                         <a class="nav-link" href="{{ route('customers.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-people"></span></span>
                                 <span class="nav-link-text ps-1">Records</span>
                             </div>
                         </a>
                         @role('admin')
                         <a class="nav-link" href="{{ route('admin.users.customers') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-user-plus"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-person-plus"></span></span>
                                 <span class="nav-link-text ps-1">Accounts</span>
                             </div>
                         </a>
@@ -250,19 +250,19 @@
                         @role('admin')
                         <a class="nav-link" href="{{ route('development.overview') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-home"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-house"></span></span>
                                 <span class="nav-link-text ps-1">Overview</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('projects.tasks.index', ['project' => 1]) }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-tasks"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-list-task"></span></span>
                                 <span class="nav-link-text ps-1">Tasks</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('development.plan') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-file-alt"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-file-text"></span></span>
                                 <span class="nav-link-text ps-1">Business Plan</span>
                             </div>
                         </a>
@@ -284,13 +284,13 @@
 
                         <a class="nav-link" href="{{ route('development.sops') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-book"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-book"></span></span>
                                 <span class="nav-link-text ps-1">SOPs</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('customer-messages.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-envelope"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-envelope"></span></span>
                                 <span class="nav-link-text ps-1">Copywriting</span>
                             </div>
                         </a>
@@ -298,13 +298,13 @@
                         @role('admin')
                         <a class="nav-link" href="{{ route('teams.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-users-cog"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-people"></span></span>
                                 <span class="nav-link-text ps-1">Teams</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('departments.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-sitemap"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
                                 <span class="nav-link-text ps-1">Departments</span>
                             </div>
                         </a>
@@ -313,32 +313,32 @@
                             @role('admin')
                             <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-people"></span></span>
                                     <span class="nav-link-text ps-1">Members</span>
                                 </div>
                             </a>
                             <a class="nav-link" href="{{ route('admin.access.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-user-shield"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-person-lock"></span></span>
                                     <span class="nav-link-text ps-1">Roles & permissions</span>
                                 </div>
                             </a>
                             <a class="nav-link" href="{{ route('admin.backups.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-database"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-database"></span></span>
                                     <span class="nav-link-text ps-1">Backups</span>
                                 </div>
                             </a>
                             <a class="nav-link" href="{{ route('admin.maintenance.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-tools"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-tools"></span></span>
                                     <span class="nav-link-text ps-1">System maintenance</span>
                                 </div>
                             </a>
                         @else
                             <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-users"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-people"></span></span>
                                     <span class="nav-link-text ps-1">View user accounts</span>
                                 </div>
                             </a>
@@ -348,7 +348,7 @@
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('products.view'))
                             <a class="nav-link" href="{{ route('products.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-tags"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-tags"></span></span>
                                     <span class="nav-link-text ps-1">Products & Services</span>
                                 </div>
                             </a>
@@ -357,7 +357,7 @@
                         <a class="nav-link dropdown-indicator" href="#shopMenu" role="button" data-bs-toggle="collapse"
                             aria-expanded="false" aria-controls="shopMenu">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-store"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
                                 <span class="nav-link-text ps-1">Shop</span>
                             </div>
                         </a>
@@ -397,7 +397,7 @@
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
                             <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-project-diagram"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
                                     <span class="nav-link-text ps-1">Flow Charts</span>
                                 </div>
                             </a>
@@ -405,7 +405,7 @@
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('drama_content.manage'))
                             <a class="nav-link" href="{{ route('drama-content.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-film"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-film"></span></span>
                                     <span class="nav-link-text ps-1">Drama Content</span>
                                 </div>
                             </a>
@@ -413,7 +413,7 @@
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
                             <a class="nav-link" href="{{ route('meta-content.index') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-share-alt"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-share"></span></span>
                                     <span class="nav-link-text ps-1">Meta Content</span>
                                 </div>
                             </a>
@@ -423,7 +423,7 @@
                             <a class="nav-link dropdown-indicator" href="#inventoryMenu" role="button" data-bs-toggle="collapse"
                                 aria-expanded="false" aria-controls="inventoryMenu">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-boxes"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-boxes"></span></span>
                                     <span class="nav-link-text ps-1">Parts & Inventory</span>
                                 </div>
                             </a>
@@ -463,19 +463,19 @@
                         </div>
                         <a class="nav-link" href="{{ route('expenses.index', 'rental') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-building"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-building"></span></span>
                                 <span class="nav-link-text ps-1">Rental</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('expenses.index', 'bills') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-file-earmark-spreadsheet"></span></span>
                                 <span class="nav-link-text ps-1">Bills</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('expenses.index', 'services') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-sync-alt"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-arrow-repeat"></span></span>
                                 <span class="nav-link-text ps-1">Services & renewals</span>
                             </div>
                         </a>
@@ -494,7 +494,7 @@
                             <a class="nav-link dropdown-indicator" href="#billingMenu" role="button" data-bs-toggle="collapse"
                                 aria-expanded="false" aria-controls="billingMenu">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-file-invoice-dollar"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-file-earmark-spreadsheet"></span></span>
                                     <span class="nav-link-text ps-1">Billing & Payments</span>
                                 </div>
                             </a>
@@ -531,7 +531,7 @@
                         <a class="nav-link dropdown-indicator" href="#reportsMenu" role="button" data-bs-toggle="collapse"
                             aria-expanded="false" aria-controls="reportsMenu">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-chart-line"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-graph-up"></span></span>
                                 <span class="nav-link-text ps-1">Reports & Analytics</span>
                             </div>
                         </a>
@@ -577,31 +577,31 @@
                         </div>
                         <a class="nav-link" href="{{ route('reports.integrations.whatsapp') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fab fa-whatsapp"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-whatsapp"></span></span>
                                 <span class="nav-link-text ps-1">Test WhatsApp API</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('reports.integrations.notifications') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-bell"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-bell"></span></span>
                                 <span class="nav-link-text ps-1">Test Notifications & Email</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('email.settings') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-cog"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-gear"></span></span>
                                 <span class="nav-link-text ps-1">Email Server Settings</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-truck"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-truck"></span></span>
                                 <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('marketplace-shops.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-store"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
                                 <span class="nav-link-text ps-1">E-commerce Shops</span>
                             </div>
                         </a>
@@ -619,27 +619,27 @@
 
                         <a class="nav-link" href="{{ route('profile.edit') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-cog"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-gear"></span></span>
                                 <span class="nav-link-text ps-1">My Profile</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('email.inbox') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-envelope"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-envelope"></span></span>
                                 <span class="nav-link-text ps-1">My Email Inbox</span>
                             </div>
                         </a>
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
                             <a class="nav-link" href="{{ route('calendar') }}">
                                 <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="fas fa-calendar-alt"></span></span>
+                                    <span class="nav-link-icon"><span class="bi bi-calendar3"></span></span>
                                     <span class="nav-link-text ps-1">My Calendar</span>
                                 </div>
                             </a>
                         @endif
                         <a class="nav-link" href="{{ route('tasks.index') }}">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-tasks"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-list-task"></span></span>
                                 <span class="nav-link-text ps-1">My Tasks</span>
                             </div>
                         </a>
@@ -648,7 +648,7 @@
                         <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"
                             data-bs-toggle="collapse" aria-expanded="false" aria-controls="errorPagesMenu">
                             <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="fas fa-exclamation-triangle"></span></span>
+                                <span class="nav-link-icon"><span class="bi bi-exclamation-triangle"></span></span>
                                 <span class="nav-link-text ps-1">Error pages</span>
                             </div>
                         </a>

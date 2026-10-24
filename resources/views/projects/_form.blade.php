@@ -82,7 +82,7 @@
             @error('requirements')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             @error('requirements.*.requirement')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             <button class="btn btn-sm btn-outline-primary mt-2" type="button" id="add-project-requirement">
-                <i class="fas fa-plus me-1" aria-hidden="true"></i>Add requirement
+                <i class="bi bi-plus me-1" aria-hidden="true"></i>Add requirement
             </button>
         </fieldset>
 

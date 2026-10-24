@@ -14,9 +14,9 @@
                 <x-slot name="actions">
                     <a class="btn btn-outline-primary"
                         href="{{ route('billing.create', ['type' => 'quotation', 'repair_ticket_id' => $ticket->id]) }}"><span
-                            class="fas fa-file-invoice-dollar me-2"></span>Create quotation</a>
+                            class="bi bi-file-earmark-spreadsheet me-2"></span>Create quotation</a>
                     <a class="btn btn-outline-primary" href="{{ route('customers.show', $ticket->customer) }}"><span
-                            class="fas fa-user me-2"></span>Customer profile</a>
+                            class="bi bi-person me-2"></span>Customer profile</a>
                 </x-slot>
             @endunless
         </x-page-header>
@@ -86,7 +86,7 @@
                                 <div class="col-md-4"><label class="form-label" for="step-caption">Photo caption</label><input
                                         class="form-control" id="step-caption" name="caption" maxlength="255"></div>
                             </div>
-                            <div class="text-end mt-3"><button class="btn btn-primary"><span class="fas fa-plus me-2"></span>Add
+                            <div class="text-end mt-3"><button class="btn btn-primary"><span class="bi bi-plus me-2"></span>Add
                                     repair step</button></div>
                         </form>
                     @endunless

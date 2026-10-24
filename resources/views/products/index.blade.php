@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Catalogue" title="Products & services" description="Manage services and product prices for bookings and billing.">
-        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('products.create') }}"><span class="fas fa-plus me-2"></span>Add product or service</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('products.create') }}"><span class="bi bi-plus me-2"></span>Add product or service</a></x-slot>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <div class="alert alert-info" role="note">Prices are planning estimates for Kampar. Confirm scope, parts, software licences and final charges before quoting.</div>

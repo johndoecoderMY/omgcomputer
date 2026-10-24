@@ -18,7 +18,7 @@
                 @else
                     <a class="attachment-file d-flex flex-column align-items-center justify-content-center gap-2 text-decoration-none text-body"
                         href="{{ route('attachments.show', $attachment) }}" target="_blank" rel="noopener">
-                        <span class="fas fa-file-pdf fs-3 text-danger" aria-hidden="true"></span>
+                        <span class="bi bi-filetype-pdf fs-3 text-danger" aria-hidden="true"></span>
                         <span class="small">Open PDF</span>
                     </a>
                 @endif
@@ -33,7 +33,7 @@
                             <input class="form-control" id="attachment-caption-{{ $attachment->id }}" name="caption"
                                 maxlength="255" value="{{ $attachment->caption }}" placeholder="Add a caption">
                             <button class="btn btn-outline-secondary" type="submit" aria-label="Save caption">
-                                <span class="fas fa-save" aria-hidden="true"></span>
+                                <span class="bi bi-floppy" aria-hidden="true"></span>
                             </button>
                         </div>
                         @error('caption')

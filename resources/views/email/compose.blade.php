@@ -34,7 +34,7 @@
                     </div>
                 </div>
                 <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#email-copywriting-modal">
-                    <span class="fas fa-lightbulb me-1" aria-hidden="true"></span>Suggest from Copywriting
+                    <span class="bi bi-lightbulb me-1" aria-hidden="true"></span>Suggest from Copywriting
                 </button>
             </div>
         </div>
@@ -90,17 +90,17 @@
         <div class="card-footer border-top border-200 d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div class="d-flex align-items-center gap-2">
                 <button class="btn btn-primary btn-sm px-4" type="submit">
-                    <span class="fas fa-paper-plane me-2" aria-hidden="true"></span>Send
+                    <span class="bi bi-send me-2" aria-hidden="true"></span>Send
                 </button>
                 <input class="visually-hidden" id="email-attachments" name="attachments[]" type="file" multiple
                     accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.txt,.csv,.doc,.docx,.xls,.xlsx,.zip">
                 <label class="btn btn-tertiary btn-sm mb-0" for="email-attachments">
-                    <span class="fas fa-paperclip me-1" aria-hidden="true"></span>Attach files
+                    <span class="bi bi-paperclip me-1" aria-hidden="true"></span>Attach files
                 </label>
                 <span class="small text-body-secondary">Up to 5 files, 10 MB each</span>
             </div>
             <a class="btn btn-tertiary btn-sm" href="{{ route('email.inbox') }}" aria-label="Discard message" title="Discard message">
-                <span class="fas fa-trash-alt" aria-hidden="true"></span>
+                <span class="bi bi-trash" aria-hidden="true"></span>
             </a>
         </div>
     </form>

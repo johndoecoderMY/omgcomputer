@@ -66,7 +66,7 @@
                 <p class="small text-body-secondary mb-0" id="flow-steps-help">Use Connect to link pages and create branches.</p>
             </div>
             <button class="btn btn-sm btn-outline-primary" type="button" id="add-flow-step">
-                <i class="fas fa-plus me-1"></i>Add step
+                <i class="bi bi-plus me-1"></i>Add step
             </button>
         </div>
 
@@ -99,7 +99,7 @@
                         </div>
                         <div class="col-md-1 d-grid">
                             <button class="btn btn-outline-danger remove-flow-step" type="button" aria-label="Remove step">
-                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                <i class="bi bi-trash" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>
@@ -612,7 +612,7 @@
                     </div>
                     <div class="col-md-1 d-grid">
                         <button class="btn btn-outline-danger remove-flow-step" type="button" aria-label="Remove step">
-                            <i class="fas fa-trash" aria-hidden="true"></i>
+                            <i class="bi bi-trash" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>

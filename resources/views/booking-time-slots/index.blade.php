@@ -8,7 +8,7 @@
         description="Manage the recurring weekly times customers can book. Times are shown in Malaysia time (MYT).">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('booking-time-slots.create') }}">
-                <span class="fas fa-plus me-2"></span>Add available time
+                <span class="bi bi-plus me-2"></span>Add available time
             </a>
         </x-slot:actions>
     </x-page-header>

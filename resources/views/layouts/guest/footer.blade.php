@@ -32,7 +32,6 @@
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#services">Upgrades &amp; tune-ups</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#services">Software support</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#services">Website design &amp; development</a></li>
-                            <li><a class="link-600" href="{{ route('shop.preview.products.grid') }}">Shop preview</a></li>
                         </ul>
                     </div>
                     <div class="col-12 col-md-4">

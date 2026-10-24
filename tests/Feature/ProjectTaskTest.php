@@ -281,7 +281,7 @@ class ProjectTaskTest extends TestCase
         ]))
             ->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
-            ->assertJsonPath('data.0.task', '<div class="small text-body-secondary"><span class="fas fa-level-up-alt fa-rotate-90 me-1" aria-hidden="true"></span>Subtask of Build the website</div><a class="fw-semibold" href="'.route('tasks.show', $child).'">Create the homepage</a><div class="small text-body-secondary"></div>');
+            ->assertJsonPath('data.0.task', '<div class="small text-body-secondary"><span class="bi bi-arrow-right bi-rotate-90 me-1" aria-hidden="true"></span>Subtask of Build the website</div><a class="fw-semibold" href="'.route('tasks.show', $child).'">Create the homepage</a><div class="small text-body-secondary"></div>');
         $this->get(route('tasks.index', ['status' => 'done', 'priority' => 'urgent']))
             ->assertOk()
             ->assertSee('value="">All statuses', false)

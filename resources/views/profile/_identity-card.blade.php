@@ -13,7 +13,7 @@
         @unless ($user->hasRole('customer'))
             <p class="profile-role mb-2">{{ $user->teams->pluck('name')->join(', ') ?: 'Team member' }}</p>
             <p class="profile-location mb-0">
-                <span class="fas fa-building me-1" aria-hidden="true"></span>
+                <span class="bi bi-building me-1" aria-hidden="true"></span>
                 {{ $user->teams->pluck('department.name')->filter()->unique()->join(', ') ?: 'No department assigned' }}
             </p>
         @endunless
@@ -21,19 +21,19 @@
     @if ($isSelf)
         <div class="list-group list-group-flush text-start">
             <button class="list-group-item list-group-item-action" type="button" data-profile-tab="edit">
-                <span class="fas fa-user-pen me-2" aria-hidden="true"></span>Edit profile
+                <span class="bi bi-person-gear me-2" aria-hidden="true"></span>Edit profile
             </button>
             <button class="list-group-item list-group-item-action" type="button" data-profile-tab="activity">
-                <span class="fas fa-clock-rotate-left me-2" aria-hidden="true"></span>Account activity
+                <span class="bi bi-clock-history me-2" aria-hidden="true"></span>Account activity
             </button>
             <button class="list-group-item list-group-item-action" type="button" data-profile-tab="security">
-                <span class="fas fa-shield-halved me-2" aria-hidden="true"></span>Security
+                <span class="bi bi-shield-shaded me-2" aria-hidden="true"></span>Security
             </button>
         </div>
     @elseif (!$user->hasRole('customer'))
         <div class="card-footer bg-body d-flex justify-content-end">
             <a class="btn btn-outline-primary" href="{{ route('teams.index') }}">
-                <span class="fas fa-users me-2" aria-hidden="true"></span>Team directory
+                <span class="bi bi-people me-2" aria-hidden="true"></span>Team directory
             </a>
         </div>
     @endif

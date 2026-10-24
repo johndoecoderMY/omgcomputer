@@ -50,11 +50,11 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-primary" type="submit">
-                        <span class="fas fa-save me-2" aria-hidden="true"></span>Save mailbox
+                        <span class="bi bi-floppy me-2" aria-hidden="true"></span>Save mailbox
                     </button>
                     @if ($mailbox)
                         <button class="btn btn-outline-primary" type="submit" form="test-mailbox-form">
-                            <span class="fas fa-plug me-2" aria-hidden="true"></span>Test connection
+                            <span class="bi bi-plug me-2" aria-hidden="true"></span>Test connection
                         </button>
                     @endif
                 </div>

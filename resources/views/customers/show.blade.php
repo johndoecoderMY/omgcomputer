@@ -7,10 +7,10 @@
     <x-page-header eyebrow="Customer profile" :title="$customer->name" :back-url="route('customers.index')" back-label="All customers">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('tickets.create', ['customer_id' => $customer->id, 'project_id' => $customer->project_id]) }}">
-                <span class="fas fa-ticket-alt me-2" aria-hidden="true"></span>New repair ticket
+                <span class="bi bi-ticket-perforated me-2" aria-hidden="true"></span>New repair ticket
             </a>
             <a class="btn btn-primary" href="{{ route('customers.edit', $customer) }}">
-                <span class="fas fa-pen me-2" aria-hidden="true"></span>Edit profile
+                <span class="bi bi-pencil me-2" aria-hidden="true"></span>Edit profile
             </a>
         </x-slot:actions>
     </x-page-header>

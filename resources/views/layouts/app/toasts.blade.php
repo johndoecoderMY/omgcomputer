@@ -111,6 +111,10 @@
                 toastContainer().append(toast);
                 bootstrap.Toast.getOrCreateInstance(toast).show();
             };
+            window.showAppToast = (message, color = 'success') => {
+                const isError = color === 'danger';
+                showToast(isError ? 'Error' : 'Success', message, color, isError);
+            };
 
             const normalize = (value) => value.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
             const existingMessages = () => Array.from(document.querySelectorAll('[data-flash-toast] .toast-body'))

@@ -12,7 +12,7 @@
         <div class="col-12 col-xl-6">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex align-items-center gap-3">
-                    <span class="fas fa-bell fs-2 text-primary" aria-hidden="true"></span>
+                    <span class="bi bi-bell fs-2 text-primary" aria-hidden="true"></span>
                     <div>
                         <h2 class="h5 mb-0 text-primary">Test workspace notification</h2>
                         <span class="small text-body-secondary">Database and real-time notification</span>
@@ -28,7 +28,7 @@
                     <form method="POST" action="{{ route('reports.integrations.notifications.send') }}">
                         @csrf
                         <button class="btn btn-primary" type="submit">
-                            <span class="fas fa-bell me-2" aria-hidden="true"></span>Send test notification
+                            <span class="bi bi-bell me-2" aria-hidden="true"></span>Send test notification
                         </button>
                     </form>
                 </div>
@@ -38,7 +38,7 @@
         <div class="col-12 col-xl-6">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex align-items-center gap-3">
-                    <span class="fas fa-envelope fs-2 text-primary" aria-hidden="true"></span>
+                    <span class="bi bi-envelope fs-2 text-primary" aria-hidden="true"></span>
                     <div>
                         <h2 class="h5 mb-0 text-primary">Test outgoing email</h2>
                         <span class="small text-body-secondary">Mailer: {{ $mailer }}</span>
@@ -56,7 +56,7 @@
                     <form method="POST" action="{{ route('reports.integrations.email.send') }}">
                         @csrf
                         <button class="btn btn-outline-primary" type="submit">
-                            <span class="fas fa-paper-plane me-2" aria-hidden="true"></span>Send test email
+                            <span class="bi bi-send me-2" aria-hidden="true"></span>Send test email
                         </button>
                     </form>
                 </div>

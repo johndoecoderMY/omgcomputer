@@ -5,11 +5,11 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Shopping cart" description="Review quantities before creating a customer order.">
-        <x-slot name="actions"><a class="btn btn-outline-primary" href="{{ route('shop.products.grid') }}"><i class="fas fa-arrow-left me-2"></i>Continue shopping</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-outline-primary" href="{{ route('shop.products.grid') }}"><i class="bi bi-arrow-left me-2"></i>Continue shopping</a></x-slot>
     </x-page-header>
     @if ($cart->isEmpty())
         <div class="card"><div class="card-body text-center py-5">
-            <i class="fas fa-cart-shopping text-body-secondary fa-2x mb-3" aria-hidden="true"></i>
+            <i class="bi bi-cart3 text-body-secondary bi-2x mb-3" aria-hidden="true"></i>
             <h2 class="h5">Your cart is empty</h2>
             <p class="text-body-secondary">Browse the product grid to add available items.</p>
             <a class="btn btn-primary" href="{{ route('shop.products.grid') }}">Browse products</a>
@@ -36,7 +36,7 @@
                                 <td class="text-end fw-semibold text-nowrap">RM {{ number_format($row['price'] * $row['quantity'], 2) }}</td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-danger" type="submit" form="remove-{{ $id }}" aria-label="Remove {{ $row['product']->name }}">
-                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -47,7 +47,7 @@
             </div>
             <div class="card-footer d-flex flex-wrap justify-content-between gap-2">
                 <button class="btn btn-outline-primary" type="submit">Update cart</button>
-                <a class="btn btn-primary" href="{{ route('shop.checkout') }}">Continue to checkout <i class="fas fa-arrow-right ms-2" aria-hidden="true"></i></a>
+                <a class="btn btn-primary" href="{{ route('shop.checkout') }}">Continue to checkout <i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a>
             </div>
         </form>
         @foreach ($cart as $id => $row)

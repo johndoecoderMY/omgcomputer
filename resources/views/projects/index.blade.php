@@ -9,7 +9,7 @@
         @unless ($customerView)
             <x-slot:actions>
                 <a class="btn btn-primary" href="{{ route('projects.create') }}">
-                    <i class="fas fa-plus me-2"></i>New project
+                    <i class="bi bi-plus me-2"></i>New project
                 </a>
             </x-slot:actions>
         @endunless

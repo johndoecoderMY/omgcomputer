@@ -12,7 +12,7 @@
         <div class="col-12 col-xl-5">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex align-items-center gap-3">
-                    <span class="fab fa-whatsapp fs-2 text-success" aria-hidden="true"></span>
+                    <span class="bi bi-whatsapp fs-2 text-success" aria-hidden="true"></span>
                     <div>
                         <h2 class="h5 mb-0 text-primary">Connection setup</h2>
                         <span class="small text-body-secondary">Graph API {{ $apiVersion }}</span>
@@ -40,12 +40,12 @@
                     <form method="POST" action="{{ route('reports.integrations.whatsapp.check') }}">
                         @csrf
                         <button class="btn btn-success" type="submit" @disabled(! $whatsappReady)>
-                            <span class="fas fa-plug me-2" aria-hidden="true"></span>Test connection
+                            <span class="bi bi-plug me-2" aria-hidden="true"></span>Test connection
                         </button>
                     </form>
                     <div class="mt-3">
                         <a class="btn btn-outline-success" href="{{ route('reports.integrations.whatsapp.inbox') }}">
-                            <span class="fab fa-whatsapp me-2" aria-hidden="true"></span>Open inbound inbox
+                            <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Open inbound inbox
                         </a>
                     </div>
                     <div class="mt-3 small">
@@ -95,7 +95,7 @@
                         @endif
                     @else
                         <div class="text-center py-5">
-                            <span class="fas fa-mobile-screen-button fs-1 text-body-secondary mb-3" aria-hidden="true"></span>
+                            <span class="bi bi-phone fs-1 text-body-secondary mb-3" aria-hidden="true"></span>
                             <p class="text-body-secondary mb-0">Run the test to see the WhatsApp phone profile returned by Meta.</p>
                         </div>
                     @endif

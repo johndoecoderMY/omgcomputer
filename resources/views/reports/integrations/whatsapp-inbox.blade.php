@@ -19,7 +19,7 @@
             @forelse ($messages as $message)
                 <article class="list-group-item p-3 d-flex gap-3 whatsapp-message" data-message-id="{{ $message->id }}">
                     <span class="avatar avatar-s bg-success-subtle text-success d-flex align-items-center justify-content-center" aria-hidden="true">
-                        <span class="fab fa-whatsapp"></span>
+                        <span class="bi bi-whatsapp"></span>
                     </span>
                     <div class="flex-grow-1 min-w-0">
                         <div class="d-flex flex-wrap justify-content-between gap-2">
@@ -32,13 +32,13 @@
                         <div class="mt-2 text-break">{{ $message->message_body ?: '['.ucfirst($message->message_type).' message]' }}</div>
                         <button class="btn btn-sm btn-outline-success mt-2 whatsapp-suggest-reply" type="button"
                             data-wa-id="{{ $message->wa_id }}" data-contact-name="{{ $message->contact_name ?: $message->wa_id }}">
-                            <span class="fas fa-lightbulb me-1" aria-hidden="true"></span>Suggest a reply
+                            <span class="bi bi-lightbulb me-1" aria-hidden="true"></span>Suggest a reply
                         </button>
                     </div>
                 </article>
             @empty
                 <div class="text-center text-body-secondary py-5" id="whatsapp-inbox-empty">
-                    <span class="fab fa-whatsapp fs-2 d-block mb-2" aria-hidden="true"></span>
+                    <span class="bi bi-whatsapp fs-2 d-block mb-2" aria-hidden="true"></span>
                     No inbound WhatsApp messages yet.
                 </div>
             @endforelse
@@ -77,7 +77,7 @@
                 <div class="d-flex gap-2">
                     <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                     <button class="btn btn-success" id="whatsapp-copywriting-open" type="button" disabled>
-                        <span class="fab fa-whatsapp me-1" aria-hidden="true"></span>Open WhatsApp draft
+                        <span class="bi bi-whatsapp me-1" aria-hidden="true"></span>Open WhatsApp draft
                     </button>
                 </div>
             </div>
@@ -196,7 +196,7 @@
             icon.className = 'avatar avatar-s bg-success-subtle text-success d-flex align-items-center justify-content-center';
             icon.setAttribute('aria-hidden', 'true');
             const whatsappIcon = document.createElement('span');
-            whatsappIcon.className = 'fab fa-whatsapp';
+            whatsappIcon.className = 'bi bi-whatsapp';
             icon.append(whatsappIcon);
 
             const content = document.createElement('div');

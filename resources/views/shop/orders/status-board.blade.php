@@ -6,8 +6,8 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Order status board" description="Track every order and move paid orders through fulfillment.">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('shop.orders.index') }}"><i class="fas fa-receipt me-2"></i>All orders</a>
-            <a class="btn btn-outline-secondary" href="{{ route('shop.orders.customer-preview') }}"><i class="fas fa-eye me-2"></i>Customer status preview</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.orders.index') }}"><i class="bi bi-receipt me-2"></i>All orders</a>
+            <a class="btn btn-outline-secondary" href="{{ route('shop.orders.customer-preview') }}"><i class="bi bi-eye me-2"></i>Customer status preview</a>
         </x-slot>
     </x-page-header>
 

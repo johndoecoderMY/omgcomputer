@@ -7,7 +7,7 @@
     <x-page-header eyebrow="E-commerce / Orders" :title="$order->order_number" :back-url="route('shop.orders.index')" back-label="Back to orders">
         <x-slot name="actions">
             @if ($order->checkout_url && $order->payment_status === 'pending')
-                <a class="btn btn-primary" href="{{ $order->checkout_url }}" target="_blank" rel="noopener"><i class="fas fa-credit-card me-2"></i>Open CHiP checkout</a>
+                <a class="btn btn-primary" href="{{ $order->checkout_url }}" target="_blank" rel="noopener"><i class="bi bi-credit-card me-2"></i>Open CHiP checkout</a>
             @endif
         </x-slot>
     </x-page-header>

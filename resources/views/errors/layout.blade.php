@@ -30,7 +30,7 @@
                     <hr>
                     <p>If you need help, <a href="{{ route('contact') }}">contact us</a>.</p>
                     <a class="btn btn-primary btn-sm mt-3" href="{{ url('/') }}">
-                        <i class="fas fa-home me-2" aria-hidden="true"></i>Take me home
+                        <i class="bi bi-house me-2" aria-hidden="true"></i>Take me home
                     </a>
                 </div>
             </div>

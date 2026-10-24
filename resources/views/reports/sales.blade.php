@@ -9,7 +9,7 @@
         :back-url="route('reports.index')" back-label="All reports">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('reports.export', request()->query()) }}">
-                <span class="fas fa-download me-2" aria-hidden="true"></span>Export CSV
+                <span class="bi bi-download me-2" aria-hidden="true"></span>Export CSV
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -27,17 +27,17 @@
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Issued invoices', 'value' => number_format($invoiceCount), 'icon' => 'fa-file-invoice'],
-            ['label' => 'Sales revenue', 'value' => 'RM '.number_format($revenue, 2), 'icon' => 'fa-chart-line'],
-            ['label' => 'Payments collected', 'value' => 'RM '.number_format($collected, 2), 'icon' => 'fa-circle-check'],
-            ['label' => 'Outstanding balance', 'value' => 'RM '.number_format(max(0, $revenue - $collected), 2), 'icon' => 'fa-wallet'],
+            ['label' => 'Issued invoices', 'value' => number_format($invoiceCount), 'icon' => 'bi-file-earmark-text'],
+            ['label' => 'Sales revenue', 'value' => 'RM '.number_format($revenue, 2), 'icon' => 'bi-graph-up'],
+            ['label' => 'Payments collected', 'value' => 'RM '.number_format($collected, 2), 'icon' => 'bi-check-circle'],
+            ['label' => 'Outstanding balance', 'value' => 'RM '.number_format(max(0, $revenue - $collected), 2), 'icon' => 'bi-wallet'],
         ] as $metric)
             <div class="col-sm-6 col-xl-3">
                 <div class="card h-100 p-2">
                     <div class="card-header bg-body"><h2 class="h5 mb-0 text-primary">{{ $metric['label'] }}</h2></div>
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <span class="fs-4 fw-semibold">{{ $metric['value'] }}</span>
-                        <span class="fas {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
+                        <span class="bi {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
                     </div>
                 </div>
             </div>

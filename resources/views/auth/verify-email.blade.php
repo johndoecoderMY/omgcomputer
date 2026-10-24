@@ -8,7 +8,7 @@
         description="One last step before you get started."
     >
         <div class="text-center mb-4">
-            <span class="fas fa-envelope-open-text text-primary fs-3" aria-hidden="true"></span>
+            <span class="bi bi-envelope-paper text-primary fs-3" aria-hidden="true"></span>
         </div>
 
         <p class="mb-3">

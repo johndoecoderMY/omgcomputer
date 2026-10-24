@@ -258,8 +258,11 @@ class MemberManagementTest extends TestCase
             ->assertSee('/admin/users/datatable', false);
         $this->get(route('admin.users.customers'))
             ->assertOk()
-            ->assertSee('Additional permissions')
-            ->assertDontSee('<th>Teams</th>', false);
+            ->assertSee('<th>Name</th><th>Email</th><th>Date joined</th>', false)
+            ->assertDontSee('Additional permissions')
+            ->assertDontSee('<th>Teams</th>', false)
+            ->assertDontSee('<th>Roles</th>', false)
+            ->assertDontSee('<th>Profile</th>', false);
         $members = $this->getJson(route('admin.users.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -291,11 +294,11 @@ class MemberManagementTest extends TestCase
         $customers->assertJsonPath('recordsFiltered', 2);
         $customers->assertJsonFragment(['email' => $createdCustomer->email]);
         $customers->assertJsonFragment(['email' => $customer->email]);
-        $customers->assertJsonFragment([
-            'email' => $customer->email,
-            'permissions_list' => 'Role permissions only',
-        ]);
+        $this->assertSame($customer->created_at->format('M j, Y'), collect($customers->json('data'))->firstWhere('email', $customer->email)['date_joined']);
         $this->assertArrayNotHasKey('teams_list', $customers->json('data.0'));
+        $this->assertArrayNotHasKey('roles_list', $customers->json('data.0'));
+        $this->assertArrayNotHasKey('permissions_list', $customers->json('data.0'));
+        $this->assertArrayNotHasKey('actions', $customers->json('data.0'));
     }
 
     public function test_customer_account_profile_hides_team_and_department_fields(): void

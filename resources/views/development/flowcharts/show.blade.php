@@ -9,13 +9,13 @@
         :back-url="route('development.flowcharts.index')" back-label="All flow charts">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('development.flowcharts.edit', $flowChart) }}">
-                <i class="fas fa-pen me-2"></i>Edit
+                <i class="bi bi-pencil me-2"></i>Edit
             </a>
             <form id="flow-chart-layout-form" method="POST" action="{{ route('development.flowcharts.layout', $flowChart) }}">
                 @csrf
                 @method('PATCH')
                 <div id="flow-chart-layout-inputs"></div>
-                <button class="btn btn-primary" type="submit" disabled><i class="fas fa-save me-2"></i>Save layout</button>
+                <button class="btn btn-primary" type="submit" disabled><i class="bi bi-floppy me-2"></i>Save layout</button>
             </form>
             <form method="POST" action="{{ route('development.flowcharts.destroy', $flowChart) }}"
                 onsubmit="return confirm('Delete this flow chart?');">
@@ -63,7 +63,7 @@
                             data-connections="{{ json_encode($step['connections'] ?? []) }}"
                             data-connection-sides="{{ json_encode($step['connection_sides'] ?? []) }}"
                             data-position-x="{{ $step['x'] ?? '' }}" data-position-y="{{ $step['y'] ?? '' }}">
-                            <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="fas fa-grip"></span></button>
+                            <button class="flow-chart-drag-handle" type="button" aria-label="Move {{ $step['label'] }} node" title="Move node"><span class="bi bi-grip-horizontal"></span></button>
                             <span class="flow-chart-node-kind">{{ $step['kind'] === 'page' && ! $flowChart->isWebsite() ? 'step' : $step['kind'] }}</span>
                             <strong>{{ $step['label'] }}</strong>
                         </article>

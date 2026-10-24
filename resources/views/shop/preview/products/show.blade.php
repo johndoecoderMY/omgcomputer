@@ -1,78 +1,86 @@
 @extends('layouts.guest')
 
-@section('title', $product->name.' | Shop preview')
+@section('title', $product->name.' | OMG Computer')
 
 @section('content')
-<section class="pt-8 pt-lg-9 pb-6">
+<section class="pt-7 pt-lg-8 pb-6">
     <div class="container">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-            <div>
-                <span class="badge rounded-pill badge-subtle-primary mb-2">Product details preview</span>
-                <h1 class="h2 text-1000 mb-0">{{ $product->name }}</h1>
-            </div>
-            <div class="d-flex gap-2">
-                <a class="btn btn-outline-primary" href="{{ route('shop.preview.products.index') }}"><i class="fas fa-list me-2" aria-hidden="true"></i>List preview</a>
-                <a class="btn btn-outline-primary" href="{{ route('shop.preview.products.grid') }}"><i class="fas fa-th-large me-2" aria-hidden="true"></i>Grid preview</a>
+        <nav class="small mb-3" aria-label="Breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{{ route('shop.preview.products.index') }}">Shop</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}">{{ $types[$product->type] ?? $product->type }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
+            </ol>
+        </nav>
+
+        <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="row g-0">
+                <div class="col-lg-6 bg-body-tertiary p-3 p-lg-5">
+                    <div class="d-flex align-items-center justify-content-center rounded-4 bg-white text-primary" style="min-height: clamp(16rem, 45vw, 30rem)">
+                        <i class="bi bi-box2 bi-5x" aria-hidden="true"></i>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card-body p-4 p-lg-5 h-100 d-flex flex-column">
+                        <span class="badge rounded-pill badge-subtle-primary align-self-start mb-3">{{ $types[$product->type] ?? $product->type }}</span>
+                        <h1 class="display-6 fw-bold text-1000 mb-3">{{ $product->name }}</h1>
+                        <p class="h2 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</p>
+                        <div class="d-flex align-items-center gap-2 text-success mb-4">
+                            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                            <span class="fw-semibold">In stock</span>
+                        </div>
+                        <p class="text-700 mb-4">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
+
+                        <div class="border-top pt-4 mt-auto">
+                            <p class="small text-body-secondary mb-3">Availability and pricing may change. Sign in to continue with your order.</p>
+                            <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
+                            <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>More {{ strtolower($types[$product->type] ?? $product->type) }}</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-3 p-lg-4">
-                <div class="row g-4">
-                    <div class="col-lg-6">
-                        <div class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary" style="min-height: 22rem">
-                            <i class="fas fa-box-open fa-5x" aria-hidden="true"></i>
-                        </div>
+        <div class="row g-4 mt-2">
+            <div class="col-lg-8">
+                <section class="card border-0 shadow-sm h-100" aria-labelledby="product-information-title">
+                    <div class="card-body p-4">
+                        <h2 class="h5 text-1000 mb-3" id="product-information-title">Product information</h2>
+                        <p class="text-700 mb-0">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
                     </div>
-                    <div class="col-lg-6">
-                        <p class="small text-primary fw-bold text-uppercase mb-2">{{ $types[$product->type] ?? $product->type }}</p>
-                        <h2 class="h3 text-1000">{{ $product->name }}</h2>
-                        <div class="h3 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</div>
-                        <p class="text-700">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
-                        <p class="small mb-1">Availability: <strong class="text-success">In stock</strong></p>
-                        <p class="small text-700 mb-4">Product availability and pricing may change.</p>
-                        <a class="btn btn-primary" href="{{ route('shop.products.purchase', $product) }}"><i class="fas fa-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
+                </section>
+            </div>
+            <div class="col-lg-4">
+                <section class="card border-0 shadow-sm h-100" aria-labelledby="product-specifications-title">
+                    <div class="card-body p-4">
+                        <h2 class="h5 text-1000 mb-3" id="product-specifications-title">Specifications</h2>
+                        <dl class="mb-0">
+                            <div class="d-flex justify-content-between gap-3 py-2 border-bottom">
+                                <dt class="fw-normal text-body-secondary">Category</dt>
+                                <dd class="mb-0 text-end">{{ $types[$product->type] ?? $product->type }}</dd>
+                            </div>
+                            <div class="d-flex justify-content-between gap-3 py-2">
+                                <dt class="fw-normal text-body-secondary">Availability</dt>
+                                <dd class="mb-0 text-success fw-semibold">In stock</dd>
+                            </div>
+                        </dl>
                     </div>
-                </div>
-
-                <div class="mt-5">
-                    <ul class="nav nav-tabs" id="preview-product-tabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="preview-description-tab" data-bs-toggle="tab" data-bs-target="#preview-description" type="button" role="tab" aria-controls="preview-description" aria-selected="true">Description</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="preview-specifications-tab" data-bs-toggle="tab" data-bs-target="#preview-specifications" type="button" role="tab" aria-controls="preview-specifications" aria-selected="false">Specifications</button>
-                        </li>
-                    </ul>
-                    <div class="tab-content pt-3" id="preview-product-tab-content">
-                        <div class="tab-pane fade show active text-700" id="preview-description" role="tabpanel" aria-labelledby="preview-description-tab" tabindex="0">
-                            <p class="mb-0">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
-                        </div>
-                        <div class="tab-pane fade" id="preview-specifications" role="tabpanel" aria-labelledby="preview-specifications-tab" tabindex="0">
-                            <dl class="row mb-0">
-                                <dt class="col-sm-3">Category</dt>
-                                <dd class="col-sm-9">{{ $types[$product->type] ?? $product->type }}</dd>
-                                <dt class="col-sm-3">Availability</dt>
-                                <dd class="col-sm-9">In stock</dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
+                </section>
             </div>
         </div>
 
         @if ($relatedProducts->isNotEmpty())
             <section class="mt-5" aria-labelledby="related-products-title">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h4 text-1000 mb-0" id="related-products-title">Related products</h2>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h2 class="h4 text-1000 mb-0" id="related-products-title">You may also like</h2>
                     <a class="small" href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}">Browse {{ strtolower($types[$product->type] ?? $product->type) }}</a>
                 </div>
                 <div class="row g-3">
                     @foreach ($relatedProducts as $relatedProduct)
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-6 col-lg-3">
                             <a class="card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('shop.preview.products.show', $relatedProduct) }}">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary mb-3" style="height: 8rem"><i class="fas fa-box-open fa-2x" aria-hidden="true"></i></div>
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-center rounded-3 bg-body-tertiary text-primary mb-3" style="aspect-ratio: 4 / 3"><i class="bi bi-box2 bi-2x" aria-hidden="true"></i></div>
                                     <h3 class="h6 text-1000">{{ $relatedProduct->name }}</h3>
                                     <p class="text-primary fw-bold mb-0">RM {{ number_format((float) $relatedProduct->selling_price, 2) }}</p>
                                 </div>

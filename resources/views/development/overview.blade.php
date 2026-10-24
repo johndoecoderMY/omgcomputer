@@ -10,19 +10,19 @@
   >
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('development.flowcharts.index') }}">
-                <span class="fas fa-diagram-project me-2"></span>Manage flow charts
+                <span class="bi bi-diagram-3 me-2"></span>Manage flow charts
             </a>
             <a class="btn btn-outline-primary" href="{{ route('projects.index') }}">
-                <span class="fas fa-folder-open me-2"></span>Projects
+                <span class="bi bi-folder2-open me-2"></span>Projects
             </a>
             <a class="btn btn-primary" href="{{ route('tasks.index') }}">
-                <span class="fas fa-list-check me-2"></span>Manage tasks
+                <span class="bi bi-list-check me-2"></span>Manage tasks
             </a>
         </x-slot:actions>
     </x-page-header>
 
     <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
-        <span class="fas fa-info-circle mt-1"></span>
+        <span class="bi bi-info-circle mt-1"></span>
         <div>
             <strong>Preview mode</strong>
             <div class="small">Track website development tasks and see how each part of the site fits together.</div>
@@ -36,7 +36,7 @@
                     <div class="d-inline-flex align-items-center justify-content-center
             rounded-circle bg-primary text-white"
      style="width: 128px; height: 128px; ">
-    <i class="fas fa-desktop fs-2"></i>
+    <i class="bi bi-display fs-2"></i>
 </div>
                         <div>
                             <span class="badge badge-subtle-primary mb-1">Main project</span>
@@ -102,7 +102,7 @@
                 <p class="small text-body-secondary mb-0">Map the pages and actions that make up the website.</p>
             </div>
             <a class="btn btn-sm btn-outline-primary" href="{{ route('development.flowcharts.create') }}">
-                <i class="fas fa-plus me-2"></i>New flow chart
+                <i class="bi bi-plus me-2"></i>New flow chart
             </a>
         </div>
         <div class="card-body">
@@ -128,13 +128,13 @@
                 <div class="text-center py-4">
                     <p class="text-body-secondary mb-3">No flow charts yet. Create one to map the website journey.</p>
                     <a class="btn btn-primary" href="{{ route('development.flowcharts.create') }}">
-                        <i class="fas fa-plus me-2"></i>Create a flow chart
+                        <i class="bi bi-plus me-2"></i>Create a flow chart
                     </a>
                 </div>
             @endforelse
             @if ($flowCharts->isNotEmpty())
                 <a class="btn btn-link px-0 pb-0" href="{{ route('development.flowcharts.index') }}">
-                    View and manage all flow charts <i class="fas fa-arrow-right ms-1"></i>
+                    View and manage all flow charts <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             @endif
         </div>

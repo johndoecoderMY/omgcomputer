@@ -20,7 +20,7 @@
     <div class="card p-2">
         <div class="d-flex justify-content-end mb-2">
             <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#booking-filters-modal">
-                <span class="fas fa-filter me-2" aria-hidden="true"></span>Filters
+                <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
                 @if ($activeBookingFilters > 0)
                     <span class="badge text-bg-primary ms-1">{{ $activeBookingFilters }}</span>
                 @endif

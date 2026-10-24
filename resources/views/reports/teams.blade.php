@@ -14,23 +14,23 @@
     @include('reports._tabs', ['active' => 'teams'])
 
     <div class="alert alert-info d-flex align-items-center gap-2" role="status">
-        <span class="fas fa-circle-info" aria-hidden="true"></span>
+        <span class="bi bi-info-circle" aria-hidden="true"></span>
         <span>Performance is based on tasks assigned in the project planner. <strong>{{ $unassignedTasks }}</strong> task(s) are currently unassigned.</span>
     </div>
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Team members', 'value' => number_format($users->count()), 'icon' => 'fa-users'],
-            ['label' => 'Assigned tasks', 'value' => number_format($users->sum('assigned_tasks_count')), 'icon' => 'fa-list-check'],
-            ['label' => 'Completed tasks', 'value' => number_format($users->sum('completed_tasks_count')), 'icon' => 'fa-circle-check'],
-            ['label' => 'Unassigned tasks', 'value' => number_format($unassignedTasks), 'icon' => 'fa-user-clock'],
+            ['label' => 'Team members', 'value' => number_format($users->count()), 'icon' => 'bi-people'],
+            ['label' => 'Assigned tasks', 'value' => number_format($users->sum('assigned_tasks_count')), 'icon' => 'bi-list-check'],
+            ['label' => 'Completed tasks', 'value' => number_format($users->sum('completed_tasks_count')), 'icon' => 'bi-check-circle'],
+            ['label' => 'Unassigned tasks', 'value' => number_format($unassignedTasks), 'icon' => 'bi-person-gear'],
         ] as $metric)
             <div class="col-6 col-xl-3">
                 <div class="card h-100 p-2">
                     <div class="card-header bg-body"><h2 class="h5 mb-0 text-primary">{{ $metric['label'] }}</h2></div>
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <span class="fs-4 fw-semibold">{{ $metric['value'] }}</span>
-                        <span class="fas {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
+                        <span class="bi {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
                     </div>
                 </div>
             </div>

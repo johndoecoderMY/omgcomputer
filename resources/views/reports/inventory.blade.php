@@ -15,28 +15,28 @@
 
     @if ($lowStockCount > 0)
         <div class="alert alert-warning d-flex align-items-center gap-2" role="status">
-            <span class="fas fa-triangle-exclamation" aria-hidden="true"></span>
+            <span class="bi bi-exclamation-triangle" aria-hidden="true"></span>
             <span><strong>{{ $lowStockCount }} item(s)</strong> are at or below their reorder level. Review stock before scheduling more repairs.</span>
         </div>
     @else
         <div class="alert alert-success d-flex align-items-center gap-2" role="status">
-            <span class="fas fa-circle-check" aria-hidden="true"></span>
+            <span class="bi bi-check-circle" aria-hidden="true"></span>
             <span>All tracked parts are above their reorder levels.</span>
         </div>
     @endif
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Tracked items', 'value' => number_format($parts->count()), 'icon' => 'fa-boxes', 'color' => 'primary'],
-            ['label' => 'At or below reorder level', 'value' => number_format($lowStockCount), 'icon' => 'fa-triangle-exclamation', 'color' => 'danger'],
-            ['label' => 'Stock value at cost', 'value' => 'RM '.number_format($stockValue, 2), 'icon' => 'fa-coins', 'color' => 'success'],
+            ['label' => 'Tracked items', 'value' => number_format($parts->count()), 'icon' => 'bi-boxes', 'color' => 'primary'],
+            ['label' => 'At or below reorder level', 'value' => number_format($lowStockCount), 'icon' => 'bi-exclamation-triangle', 'color' => 'danger'],
+            ['label' => 'Stock value at cost', 'value' => 'RM '.number_format($stockValue, 2), 'icon' => 'bi-coin', 'color' => 'success'],
         ] as $metric)
             <div class="col-md-4">
                 <div class="card h-100 p-2">
                     <div class="card-header bg-body"><h2 class="h5 mb-0 text-primary">{{ $metric['label'] }}</h2></div>
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <span class="fs-4 fw-semibold {{ $metric['color'] === 'danger' && $lowStockCount ? 'text-danger' : '' }}">{{ $metric['value'] }}</span>
-                        <span class="fas {{ $metric['icon'] }} fs-3 text-{{ $metric['color'] }} opacity-50" aria-hidden="true"></span>
+                        <span class="bi {{ $metric['icon'] }} fs-3 text-{{ $metric['color'] }} opacity-50" aria-hidden="true"></span>
                     </div>
                 </div>
             </div>

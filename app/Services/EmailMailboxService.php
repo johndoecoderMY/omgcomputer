@@ -209,7 +209,11 @@ class EmailMailboxService
         $connection = @imap_open($mailbox, $account->email, $account->password);
 
         if (! $connection) {
-            throw new RuntimeException($this->lastError('Could not connect to the incoming mail server. Check the IMAP settings.'));
+            $error = $this->lastError('Could not connect to the incoming mail server. Check the IMAP settings.');
+            @imap_errors();
+            @imap_alerts();
+
+            throw new RuntimeException($error);
         }
 
         return $connection;

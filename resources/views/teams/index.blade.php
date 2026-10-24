@@ -8,7 +8,7 @@
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('departments.index') }}">Manage departments</a>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create-team-modal">
-                <i class="fas fa-plus me-2" aria-hidden="true"></i>Create team
+                <i class="bi bi-plus me-2" aria-hidden="true"></i>Create team
             </button>
         </x-slot:actions>
     </x-page-header>

@@ -308,7 +308,7 @@
                         <button class="btn btn-primary dropdown-toggle dropdown-caret-none"
                             id="{{ $actionDropdownId }}-toggle" type="button" data-bs-toggle="dropdown" data-boundary="viewport"
                             aria-haspopup="true" aria-expanded="false" aria-label="Page actions">
-                            <span class="fas fa-ellipsis-v fs-11" aria-hidden="true"></span>
+                            <span class="bi bi-three-dots-vertical fs-11" aria-hidden="true"></span>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="{{ $actionDropdownId }}-toggle">
                             {!! $actionsHtml !!}
@@ -319,7 +319,7 @@
         @endif
         @if ($backUrl)
             <a href="{{ $backUrl }}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i>{{ $backLabel }}
+                <i class="bi bi-arrow-left me-2"></i>{{ $backLabel }}
             </a>
         @endif
     </div>

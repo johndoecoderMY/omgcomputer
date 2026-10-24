@@ -23,7 +23,7 @@
                 </div>
             </div>
             <div class="col-md-1 d-grid">
-                <button class="btn btn-primary" type="submit" aria-label="Add project link"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                <button class="btn btn-primary" type="submit" aria-label="Add project link"><i class="bi bi-plus" aria-hidden="true"></i></button>
             </div>
         </form>
 

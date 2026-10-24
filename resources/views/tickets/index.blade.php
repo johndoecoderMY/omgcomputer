@@ -8,7 +8,7 @@
         @unless (auth()->user()->hasRole('customer'))
             <x-slot:actions>
                 <a class="btn btn-primary" href="{{ route('tickets.create') }}">
-                    <span class="fas fa-plus me-2"></span>New ticket
+                    <span class="bi bi-plus me-2"></span>New ticket
                 </a>
             </x-slot:actions>
         @endunless
@@ -21,7 +21,7 @@
     <div class="card p-2">
         <div class="d-flex justify-content-end mb-2">
             <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#ticket-filters-modal">
-                <span class="fas fa-filter me-2" aria-hidden="true"></span>Filters
+                <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
                 @if (request()->filled('status') || request()->filled('assigned'))
                     <span class="badge text-bg-primary ms-1">{{ (int) request()->filled('status') + (int) request()->filled('assigned') }}</span>
                 @endif

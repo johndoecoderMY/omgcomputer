@@ -113,10 +113,10 @@
 
         <div class="d-flex flex-wrap justify-content-end gap-2 my-3">
             <button class="btn btn-outline-primary" type="submit" form="test-imap-form">
-                <span class="fas fa-plug me-2" aria-hidden="true"></span>Test IMAP connection
+                <span class="bi bi-plug me-2" aria-hidden="true"></span>Test IMAP connection
             </button>
             <button class="btn btn-primary" type="submit">
-                <span class="fas fa-save me-2" aria-hidden="true"></span>Save email settings
+                <span class="bi bi-floppy me-2" aria-hidden="true"></span>Save email settings
             </button>
         </div>
     </form>
@@ -135,7 +135,7 @@
             <form method="POST" action="{{ route('email.settings.test-smtp') }}">
                 @csrf
                 <button class="btn btn-outline-primary" type="submit">
-                    <span class="fas fa-paper-plane me-2" aria-hidden="true"></span>Send test email
+                    <span class="bi bi-send me-2" aria-hidden="true"></span>Send test email
                 </button>
             </form>
         </div>

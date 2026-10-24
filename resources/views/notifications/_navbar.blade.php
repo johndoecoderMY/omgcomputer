@@ -5,13 +5,15 @@
 @endphp
 
 <li class="nav-item dropdown d-flex align-items-center">
-    <a class="nav-link position-relative d-flex align-items-center justify-content-center px-2 py-0"
+    <a class="nav-link px-0 notification-indicator notification-indicator-primary notification-indicator-fill"
         href="{{ route('notifications.index') }}" id="navbarDropdownNotification" role="button"
-        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Notifications"
+        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+        aria-label="Notifications, {{ $unreadNotificationCount }} unread"
         data-hide-on-body-scroll="data-hide-on-body-scroll">
-        <span class="fas fa-bell d-block" style="font-size: 1.2rem; line-height: 1;" aria-hidden="true"></span>
-        <span id="unread-notifications-count" class="notification-count {{ $unreadNotificationCount ? '' : 'd-none' }}"
-            aria-live="polite" aria-label="{{ $unreadNotificationCount }} unread notifications">
+        <span class="bi bi-bell" style="font-size: 22px;" aria-hidden="true"></span>
+        <span id="unread-notifications-count" class="notification-indicator-number {{ $unreadNotificationCount ? '' : 'd-none' }}"
+            style="width: auto; min-width: 1rem; padding: 0 .15rem;" aria-live="polite"
+            aria-label="{{ $unreadNotificationCount }} unread notifications">
             {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
         </span>
     </a>
@@ -60,26 +62,3 @@
         </div>
     </div>
 </li>
-
-@once
-    <style>
-        #navbarDropdownNotification .notification-count {
-            position: absolute;
-            top: -.2rem;
-            right: -.55rem;
-            display: grid;
-            min-width: 1.15rem;
-            height: 1.15rem;
-            place-items: center;
-            padding: 0 .22rem;
-            border: 2px solid var(--falcon-body-bg);
-            border-radius: 999px;
-            background-color: var(--falcon-danger);
-            color: #fff;
-            font-size: .65rem;
-            font-weight: 700;
-            line-height: 1;
-            white-space: nowrap;
-        }
-    </style>
-@endonce

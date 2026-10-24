@@ -34,9 +34,9 @@ class EmailMailboxController extends Controller
             return response()->json([
                 'messages' => $mailbox->messages($request->user()),
                 'checked_at' => now()->toIso8601String(),
-            ])->header('Cache-Control', 'no-store, private');
+            ], options: JSON_INVALID_UTF8_SUBSTITUTE)->header('Cache-Control', 'no-store, private');
         } catch (RuntimeException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422)
+            return response()->json(['message' => $exception->getMessage()], 422, options: JSON_INVALID_UTF8_SUBSTITUTE)
                 ->header('Cache-Control', 'no-store, private');
         }
     }

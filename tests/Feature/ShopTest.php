@@ -70,7 +70,8 @@ class ShopTest extends TestCase
 
         $this->get(route('shop.preview.products.index'))
             ->assertOk()
-            ->assertSee('Product list preview')
+            ->assertSee('OMG Computer shop')
+            ->assertSee('Find the right parts for your setup.')
             ->assertSee('Public preview graphics card')
             ->assertDontSee('PRIVATE-SKU-01')
             ->assertDontSee('Internal hidden part')
@@ -78,12 +79,12 @@ class ShopTest extends TestCase
             ->assertDontSee('Add to cart');
         $this->get(route('shop.preview.products.grid'))
             ->assertOk()
-            ->assertSee('Product grid preview')
+            ->assertSee('OMG Computer shop')
             ->assertSee('Public preview graphics card')
             ->assertDontSee('Add to cart');
         $this->get(route('shop.preview.products.show', $availablePart))
             ->assertOk()
-            ->assertSee('Product details preview')
+            ->assertSee('Product information')
             ->assertSee('A graphics card for the preview catalogue.')
             ->assertSee('RM 650.00')
             ->assertDontSee('400.00')
@@ -558,6 +559,59 @@ class ShopTest extends TestCase
             'view' => 'list',
         ])->assertRedirect(route('shop.products.index'))->assertSessionHasErrors('quantity');
         $this->assertSame(5, $part->fresh()->stock_quantity);
+    }
+
+    public function test_staff_navbar_always_shows_the_shopping_cart_item_count(): void
+    {
+        $user = $this->staffUser();
+        $product = InventoryPart::query()->create([
+            'name' => 'USB mouse',
+            'sku' => 'SHOP-MOUSE-01',
+            'type' => 'peripheral',
+            'selling_price' => 25,
+            'cost_price' => 10,
+            'stock_quantity' => 4,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+
+        $this->actingAs($user)->get(route('shop.cart'))
+            ->assertOk()
+            ->assertSee('Shopping cart, 0 items')
+            ->assertSee('class="bi bi-cart3"', false)
+            ->assertDontSee('data-fa-transform', false)
+            ->assertSee('notification-indicator-number', false);
+
+        $this->post(route('shop.cart.add', $product), ['quantity' => 2])
+            ->assertRedirect(route('shop.cart'));
+
+        $response = $this->get(route('shop.cart'));
+        $response->assertOk()
+            ->assertSee('Shopping cart, 2 items');
+        $this->assertMatchesRegularExpression(
+            '/class="notification-indicator-number"[^>]*>\s*2\s*</',
+            $response->getContent(),
+        );
+    }
+
+    public function test_adding_a_product_asynchronously_returns_the_updated_cart_count(): void
+    {
+        $user = $this->staffUser();
+        $product = InventoryPart::query()->create([
+            'name' => 'USB webcam',
+            'sku' => 'SHOP-CAM-01',
+            'type' => 'peripheral',
+            'selling_price' => 75,
+            'cost_price' => 35,
+            'stock_quantity' => 5,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+
+        $this->actingAs($user)->postJson(route('shop.cart.add', $product), ['quantity' => 2])
+            ->assertOk()
+            ->assertJsonPath('message', 'Product added to cart.')
+            ->assertJsonPath('cartCount', 2);
     }
 
     private function staffUser(): User

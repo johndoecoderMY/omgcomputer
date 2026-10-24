@@ -9,13 +9,13 @@
         :back-url="route('dashboard')" back-label="Dashboard">
         <x-slot:actions>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#add-permission-modal">
-                <span class="fas fa-plus me-2" aria-hidden="true"></span>Add permission
+                <span class="bi bi-plus me-2" aria-hidden="true"></span>Add permission
             </button>
             <a class="btn btn-outline-primary" href="{{ route('admin.users.index') }}">
-                <span class="fas fa-users me-2" aria-hidden="true"></span>Members
+                <span class="bi bi-people me-2" aria-hidden="true"></span>Members
             </a>
             <a class="btn btn-outline-primary" href="{{ route('admin.users.customers') }}">
-                <span class="fas fa-user-tag me-2" aria-hidden="true"></span>Customer accounts
+                <span class="bi bi-person-vcard me-2" aria-hidden="true"></span>Customer accounts
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -74,7 +74,7 @@
                                 href="{{ route('admin.access.index', ['role' => $role->id]) }}">
                                 <span class="avatar avatar-l d-flex align-items-center justify-content-center flex-shrink-0">
                                     <span class="avatar-name rounded-circle d-flex align-items-center justify-content-center w-100 h-100 {{ $role->name === 'admin' ? 'bg-danger-subtle text-danger' : ($role->name === 'customer' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary') }}">
-                                        <span class="fas {{ $role->name === 'admin' ? 'fa-shield-alt' : ($role->name === 'customer' ? 'fa-user-tag' : 'fa-user') }}" aria-hidden="true"></span>
+                                        <span class="bi {{ $role->name === 'admin' ? 'bi-shield' : ($role->name === 'customer' ? 'bi-person-vcard' : 'bi-person') }}" aria-hidden="true"></span>
                                     </span>
                                 </span>
                                 <span>
@@ -140,7 +140,7 @@
                             <p class="small text-body-secondary mb-0">Configure access for the {{ ucfirst($selectedRole->name) }} role.</p>
                         </div>
                         <button class="btn btn-primary" type="submit">
-                            <span class="fas fa-check me-1" aria-hidden="true"></span>Save changes
+                            <span class="bi bi-check me-1" aria-hidden="true"></span>Save changes
                         </button>
                     </div>
                     <div class="table-responsive">

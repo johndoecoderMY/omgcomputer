@@ -5,11 +5,11 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Checkout" description="Create a customer order and continue to secure CHiP payment.">
-        <x-slot name="actions"><a class="btn btn-outline-secondary" href="{{ route('shop.cart') }}"><i class="fas fa-arrow-left me-2"></i>Back to cart</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-outline-secondary" href="{{ route('shop.cart') }}"><i class="bi bi-arrow-left me-2"></i>Back to cart</a></x-slot>
     </x-page-header>
     @unless ($chipEnabled)
         <div class="alert alert-warning" role="status">
-            <i class="fas fa-triangle-exclamation me-2" aria-hidden="true"></i>
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
             CHiP checkout is not configured. Add sandbox credentials to enable order placement.
         </div>
     @endunless
@@ -62,7 +62,7 @@
                 <div class="card-body">
                     <p class="small text-body-secondary">Stock is reserved when the order is created. Unpaid orders release their reservation if CHiP reports a failed or cancelled payment.</p>
                     <button class="btn btn-primary w-100" type="submit" @disabled(! $chipEnabled)>
-                        <i class="fas fa-lock me-2" aria-hidden="true"></i>Continue to CHiP sandbox
+                        <i class="bi bi-lock me-2" aria-hidden="true"></i>Continue to CHiP sandbox
                     </button>
                 </div>
             </div>

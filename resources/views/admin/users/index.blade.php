@@ -11,10 +11,10 @@
         :back-url="route('admin.access.index')" back-label="Roles & permissions">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route($accountType === 'customers' ? 'admin.users.index' : 'admin.users.customers') }}">
-                <i class="fas fa-exchange-alt me-2" aria-hidden="true"></i>{{ $accountType === 'customers' ? 'View members' : 'View customer accounts' }}
+                <i class="bi bi-arrow-left-right me-2" aria-hidden="true"></i>{{ $accountType === 'customers' ? 'View members' : 'View customer accounts' }}
             </a>
             <a class="btn btn-primary" href="{{ route($accountType === 'customers' ? 'admin.users.customers.create' : 'admin.users.create') }}">
-                <i class="fas fa-user-plus me-2" aria-hidden="true"></i>Create {{ $accountType === 'customers' ? 'customer account' : 'member' }}
+                <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Create {{ $accountType === 'customers' ? 'customer account' : 'member' }}
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -32,14 +32,16 @@
                 data-columns="{{ json_encode([
                     ['data' => 'name', 'name' => 'users.name'],
                     ['data' => 'email', 'name' => 'users.email'],
-                    ...($accountType === 'members' ? [
+                    ...($accountType === 'customers' ? [
+                        ['data' => 'date_joined', 'name' => 'users.created_at', 'searchable' => false],
+                    ] : [
                         ['data' => 'teams_list', 'orderable' => false, 'searchable' => false],
-                    ] : []),
-                    ['data' => 'roles_list', 'orderable' => false, 'searchable' => false],
-                    ['data' => 'permissions_list', 'orderable' => false, 'searchable' => false],
-                    ['data' => 'actions', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'roles_list', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'permissions_list', 'orderable' => false, 'searchable' => false],
+                        ['data' => 'actions', 'orderable' => false, 'searchable' => false],
+                    ]),
                 ]) }}">
-                <thead><tr><th>Name</th><th>Email</th>@if ($accountType === 'members')<th>Teams</th>@endif<th>Roles</th><th>Additional permissions</th><th>Profile</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th>@if ($accountType === 'customers')<th>Date joined</th>@else<th>Teams</th><th>Roles</th><th>Additional permissions</th><th>Profile</th>@endif</tr></thead>
                 <tbody></tbody>
             </table>
         </div>

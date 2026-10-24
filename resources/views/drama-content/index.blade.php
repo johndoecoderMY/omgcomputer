@@ -8,7 +8,7 @@
         description="Plan characters, scenes, scripts, and references for AI-assisted production.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('drama-content.create') }}">
-                <i class="fas fa-plus me-2" aria-hidden="true"></i>New drama
+                <i class="bi bi-plus me-2" aria-hidden="true"></i>New drama
             </a>
         </x-slot:actions>
     </x-page-header>

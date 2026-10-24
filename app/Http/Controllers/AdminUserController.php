@@ -71,11 +71,10 @@ class AdminUserController extends Controller
             ->whereHas('roles', fn (Builder $roles) => $roles->whereIn('name', $roleNames));
         if ($accountType === 'customers') {
             $query->whereDoesntHave('roles', fn (Builder $roles) => $roles->whereIn('name', ['admin', 'member']));
+            $query->select('users.id', 'users.name', 'users.email', 'users.created_at');
         }
 
-        $relations = $accountType === 'customers'
-            ? ['roles', 'permissions']
-            : ['teams', 'roles', 'permissions'];
+        $relations = $accountType === 'customers' ? [] : ['teams', 'roles', 'permissions'];
         $dataTable = DataTables::eloquent(DataTableQueryBuilder::for(
             $query->with($relations),
             request(),
@@ -84,6 +83,12 @@ class AdminUserController extends Controller
                 'email' => AllowedFilter::partial('email'),
             ],
         ));
+        if ($accountType === 'customers') {
+            return $dataTable
+                ->addColumn('date_joined', fn (User $user): string => $user->created_at?->format('M j, Y') ?? '—')
+                ->toJson();
+        }
+
         if ($accountType === 'members') {
             $dataTable->addColumn('teams_list', fn (User $user): string => e($user->teams->pluck('name')->join(', ') ?: 'Unassigned'));
         }

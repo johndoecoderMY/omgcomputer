@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Operations" title="Parts">
-        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('inventory.parts.create') }}"><span class="fas fa-plus me-2"></span>Add item</a><a class="btn btn-outline-primary" href="{{ route('inventory.suppliers.index') }}">Suppliers</a><a class="btn btn-outline-primary" href="{{ route('inventory.movements') }}"><span class="fas fa-right-left me-2"></span>Stock movements</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-primary" href="{{ route('inventory.parts.create') }}"><span class="bi bi-plus me-2"></span>Add item</a><a class="btn btn-outline-primary" href="{{ route('inventory.suppliers.index') }}">Suppliers</a><a class="btn btn-outline-primary" href="{{ route('inventory.movements') }}"><span class="bi bi-arrow-left-right me-2"></span>Stock movements</a></x-slot>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
@@ -22,7 +22,7 @@
     <div class="card p-2">
         <div class="d-flex justify-content-end mb-2">
             <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#parts-filters-modal">
-                <span class="fas fa-filter me-2" aria-hidden="true"></span>Filters
+                <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
                 @if ($activePartFilters > 0)
                     <span class="badge text-bg-primary ms-1">{{ $activePartFilters }}</span>
                 @endif

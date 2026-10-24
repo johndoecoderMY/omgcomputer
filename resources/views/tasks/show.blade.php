@@ -14,12 +14,12 @@
         <x-slot:actions>
             @if (!$task->parent_task_id && $canManageTask)
                 <a class="btn btn-outline-primary" href="{{ $task->project ? route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) : route('tasks.create', ['parent_id' => $task->id]) }}">
-                    <i class="fas fa-plus me-2"></i>Add subtask
+                    <i class="bi bi-plus me-2"></i>Add subtask
                 </a>
             @endif
             @if ($canManageTask)
                 <a class="btn btn-primary" href="{{ route('tasks.edit', $task) }}">
-                    <i class="fas fa-pen me-2"></i>Edit
+                    <i class="bi bi-pencil me-2"></i>Edit
                 </a>
                 <form method="POST" action="{{ route('tasks.destroy', $task) }}"
                     onsubmit="return confirm('Delete this task{{ $task->subtasks->isNotEmpty() ? ' and its subtasks' : '' }}?');">
@@ -115,7 +115,7 @@
             @if ($canManageTask)
             <div class="card-footer bg-body">
                 <a class="btn btn-sm btn-outline-primary" href="{{ $task->project ? route('projects.tasks.create', ['project' => $task->project, 'parent_id' => $task->id]) : route('tasks.create', ['parent_id' => $task->id]) }}">
-                    <i class="fas fa-plus me-2"></i>Add subtask
+                    <i class="bi bi-plus me-2"></i>Add subtask
                 </a>
             </div>
             @endif

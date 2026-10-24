@@ -8,7 +8,7 @@
         description="A clear view of sales, stock health, team workload, and campaign performance.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('reports.export', request()->query()) }}">
-                <span class="fas fa-download me-2" aria-hidden="true"></span>Export sales CSV
+                <span class="bi bi-download me-2" aria-hidden="true"></span>Export sales CSV
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -31,16 +31,16 @@
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Issued sales', 'value' => 'RM '.number_format($salesTotal, 2), 'icon' => 'fa-file-invoice-dollar', 'color' => 'primary', 'route' => 'reports.sales', 'link' => 'Sales report'],
-            ['label' => 'Open invoice balance', 'value' => 'RM '.number_format($openBalance, 2), 'icon' => 'fa-wallet', 'color' => 'warning', 'route' => 'reports.sales', 'link' => 'View sales detail'],
-            ['label' => 'Low-stock items', 'value' => number_format($lowStockCount), 'icon' => 'fa-boxes', 'color' => 'danger', 'route' => 'reports.inventory', 'link' => 'Inventory report'],
-            ['label' => 'Active campaigns', 'value' => number_format($activeCampaigns), 'icon' => 'fa-bullhorn', 'color' => 'info', 'route' => 'reports.marketing', 'link' => 'Marketing report'],
+            ['label' => 'Issued sales', 'value' => 'RM '.number_format($salesTotal, 2), 'icon' => 'bi-file-earmark-spreadsheet', 'color' => 'primary', 'route' => 'reports.sales', 'link' => 'Sales report'],
+            ['label' => 'Open invoice balance', 'value' => 'RM '.number_format($openBalance, 2), 'icon' => 'bi-wallet', 'color' => 'warning', 'route' => 'reports.sales', 'link' => 'View sales detail'],
+            ['label' => 'Low-stock items', 'value' => number_format($lowStockCount), 'icon' => 'bi-boxes', 'color' => 'danger', 'route' => 'reports.inventory', 'link' => 'Inventory report'],
+            ['label' => 'Active campaigns', 'value' => number_format($activeCampaigns), 'icon' => 'bi-megaphone', 'color' => 'info', 'route' => 'reports.marketing', 'link' => 'Marketing report'],
         ] as $metric)
             <div class="col-sm-6 col-xl-3">
                 <div class="card h-100 p-2">
                     <div class="card-header bg-body d-flex justify-content-between align-items-center">
                         <h2 class="h5 mb-0 text-primary">{{ $metric['label'] }}</h2>
-                        <span class="fas {{ $metric['icon'] }} fs-3 text-{{ $metric['color'] }} opacity-50" aria-hidden="true"></span>
+                        <span class="bi {{ $metric['icon'] }} fs-3 text-{{ $metric['color'] }} opacity-50" aria-hidden="true"></span>
                     </div>
                     <div class="card-body">
                         <div class="fs-3 fw-semibold mb-3">{{ $metric['value'] }}</div>
@@ -56,7 +56,7 @@
             <div class="card p-2 border-start border-4 border-primary">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div class="d-flex align-items-center gap-3">
-                        <span class="fas fa-truck-fast fs-2 text-primary" aria-hidden="true"></span>
+                        <span class="bi bi-truck-front fs-2 text-primary" aria-hidden="true"></span>
                         <div>
                             <h2 class="h5 mb-1 text-primary">Delivery API readiness</h2>
                             <p class="small text-body-secondary mb-0">Recommended starting point: EasyParcel Malaysia</p>
@@ -82,11 +82,11 @@
                     <div class="col-lg-4 text-lg-end">
                         @role('admin')
                             <a class="btn btn-primary mb-2" href="{{ route('reports.integrations.easyparcel') }}">
-                                <span class="fas fa-magnifying-glass-dollar me-2" aria-hidden="true"></span>Open rate checker
+                                <span class="bi bi-search me-2" aria-hidden="true"></span>Open rate checker
                             </a>
                         @endrole
                         <a class="btn btn-outline-primary" href="https://developers.easyparcel.com/" target="_blank" rel="noopener noreferrer">
-                            <span class="fas fa-arrow-up-right-from-square me-2" aria-hidden="true"></span>EasyParcel API docs
+                            <span class="bi bi-box-arrow-up-right me-2" aria-hidden="true"></span>EasyParcel API docs
                         </a>
                     </div>
                 </div>
@@ -99,20 +99,20 @@
 
     <div class="row g-3">
         @foreach ([
-            ['title' => 'Sales', 'description' => 'Invoices, collections, revenue, and top-selling items.', 'icon' => 'fa-file-invoice-dollar', 'color' => 'primary', 'route' => 'reports.sales', 'action' => 'View sales'],
-            ['title' => 'Inventory', 'description' => 'Stock value, reorder risk, and recent movements.', 'icon' => 'fa-boxes', 'color' => 'success', 'route' => 'reports.inventory', 'action' => 'View inventory'],
-            ['title' => 'Team performance', 'description' => 'Assigned work, progress, and completion rates.', 'icon' => 'fa-users', 'color' => 'warning', 'route' => 'reports.teams', 'action' => 'View team report'],
-            ['title' => 'Marketing', 'description' => 'Campaign results and Meta / WhatsApp setup readiness.', 'icon' => 'fa-bullhorn', 'color' => 'info', 'route' => 'reports.marketing', 'action' => 'View marketing'],
+            ['title' => 'Sales', 'description' => 'Invoices, collections, revenue, and top-selling items.', 'icon' => 'bi-file-earmark-spreadsheet', 'color' => 'primary', 'route' => 'reports.sales', 'action' => 'View sales'],
+            ['title' => 'Inventory', 'description' => 'Stock value, reorder risk, and recent movements.', 'icon' => 'bi-boxes', 'color' => 'success', 'route' => 'reports.inventory', 'action' => 'View inventory'],
+            ['title' => 'Team performance', 'description' => 'Assigned work, progress, and completion rates.', 'icon' => 'bi-people', 'color' => 'warning', 'route' => 'reports.teams', 'action' => 'View team report'],
+            ['title' => 'Marketing', 'description' => 'Campaign results and Meta / WhatsApp setup readiness.', 'icon' => 'bi-megaphone', 'color' => 'info', 'route' => 'reports.marketing', 'action' => 'View marketing'],
         ] as $report)
             <div class="col-md-6 col-xl-3">
                 <a class="card h-100 p-2 text-decoration-none" href="{{ route($report['route']) }}">
                     <div class="card-header bg-body d-flex align-items-center gap-3">
-                        <span class="fas {{ $report['icon'] }} fs-3 text-{{ $report['color'] }}" aria-hidden="true"></span>
+                        <span class="bi {{ $report['icon'] }} fs-3 text-{{ $report['color'] }}" aria-hidden="true"></span>
                         <h2 class="h5 mb-0 text-primary">{{ $report['title'] }}</h2>
                     </div>
                     <div class="card-body">
                         <p class="text-body-secondary">{{ $report['description'] }}</p>
-                        <span class="btn btn-sm btn-primary">{{ $report['action'] }} <span class="fas fa-arrow-right ms-1" aria-hidden="true"></span></span>
+                        <span class="btn btn-sm btn-primary">{{ $report['action'] }} <span class="bi bi-arrow-right ms-1" aria-hidden="true"></span></span>
                     </div>
                 </a>
             </div>

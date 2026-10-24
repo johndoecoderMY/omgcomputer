@@ -11,7 +11,7 @@
     <x-page-header eyebrow="Operating costs" :title="$categoryLabel">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('expenses.create', $category) }}">
-                <i class="fas fa-plus me-2" aria-hidden="true"></i>Add {{ strtolower($categoryLabel) }} item
+                <i class="bi bi-plus me-2" aria-hidden="true"></i>Add {{ strtolower($categoryLabel) }} item
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -75,7 +75,7 @@
                             </td>
                             <td>
                                 <a class="btn btn-sm btn-outline-primary mb-2" href="{{ route('expenses.pdf', [$category, $expense]) }}" target="_blank" rel="noopener">
-                                    <i class="fas fa-file-pdf me-1" aria-hidden="true"></i>Export PDF
+                                    <i class="bi bi-filetype-pdf me-1" aria-hidden="true"></i>Export PDF
                                 </a>
                                 <details>
                                     <summary>{{ $expense->payments->count() }} payment(s)</summary>

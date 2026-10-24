@@ -8,10 +8,10 @@
             description="A live overview of your projects, repair queue, schedules, and working examples.">
             <x-slot:actions>
                 <a class="btn btn-outline-primary" href="{{ route('calendar') }}">
-                    <i class="fas fa-calendar-days me-2" aria-hidden="true"></i>Calendar
+                    <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Calendar
                 </a>
                 <a class="btn btn-primary" href="{{ route('projects.create') }}">
-                    <i class="fas fa-plus me-2" aria-hidden="true"></i>New project
+                    <i class="bi bi-plus me-2" aria-hidden="true"></i>New project
                 </a>
             </x-slot:actions>
         </x-page-header>

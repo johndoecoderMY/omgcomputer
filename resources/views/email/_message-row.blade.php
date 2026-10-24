@@ -4,14 +4,14 @@
     data-detail-url="{{ route('email.show', $message['uid']) }}">
     <div class="btn-group btn-group-sm z-2 hover-actions end-0 me-3 email-row-actions">
         <form method="POST" action="{{ route('email.action', [$message['uid'], 'archive']) }}">@csrf
-            <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="Archive" title="Archive"><span class="fas fa-archive" aria-hidden="true"></span></button>
+            <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="Archive" title="Archive"><span class="bi bi-archive" aria-hidden="true"></span></button>
         </form>
         <form method="POST" action="{{ route('email.action', [$message['uid'], 'delete']) }}" onsubmit="return confirm('Permanently delete this email from the mailbox?');">@csrf
-            <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="Delete" title="Delete"><span class="fas fa-trash-alt" aria-hidden="true"></span></button>
+            <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="Delete" title="Delete"><span class="bi bi-trash" aria-hidden="true"></span></button>
         </form>
         <form method="POST" action="{{ route('email.action', [$message['uid'], $message['seen'] ? 'unread' : 'read']) }}">@csrf
             <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="{{ $message['seen'] ? 'Mark as unread' : 'Mark as read' }}" title="{{ $message['seen'] ? 'Mark as unread' : 'Mark as read' }}">
-                <span class="fas {{ $message['seen'] ? 'fa-envelope' : 'fa-envelope-open' }}" aria-hidden="true"></span>
+                <span class="bi {{ $message['seen'] ? 'bi-envelope' : 'bi-envelope-open' }}" aria-hidden="true"></span>
             </button>
         </form>
     </div>
@@ -23,7 +23,7 @@
             <form method="POST" action="{{ route('email.action', [$message['uid'], ($message['flagged'] ?? false) ? 'unflag' : 'flag']) }}" class="ms-1">@csrf
                 <button class="btn btn-link p-0 border-0 text-decoration-none" type="submit"
                     aria-label="{{ ($message['flagged'] ?? false) ? 'Remove flag' : 'Flag email' }}" title="{{ ($message['flagged'] ?? false) ? 'Remove flag' : 'Flag email' }}">
-                    <span class="fas fa-star {{ ($message['flagged'] ?? false) ? 'text-warning' : 'text-300' }}" aria-hidden="true"></span>
+                    <span class="bi bi-star {{ ($message['flagged'] ?? false) ? 'text-warning' : 'text-300' }}" aria-hidden="true"></span>
                 </button>
             </form>
         </div>

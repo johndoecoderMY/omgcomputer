@@ -26,7 +26,7 @@
             aria-describedby="{{ $id }}-selection"
         >
         <button class="btn btn-outline-secondary" type="button" data-image-upload-camera aria-controls="{{ $id }}">
-            <span class="fas fa-camera me-1" aria-hidden="true"></span>{{ $cameraLabel }}
+            <span class="bi bi-camera me-1" aria-hidden="true"></span>{{ $cameraLabel }}
         </button>
     </div>
     <span class="small text-body-secondary" id="{{ $id }}-selection" data-image-upload-selection aria-live="polite"></span>

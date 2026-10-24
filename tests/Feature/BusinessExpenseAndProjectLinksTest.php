@@ -9,6 +9,7 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
+use Database\Seeders\RentalExpenseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -16,6 +17,21 @@ use Tests\TestCase;
 class BusinessExpenseAndProjectLinksTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_rental_expense_seeder_adds_monthly_shop_rent_once(): void
+    {
+        $this->seed(RentalExpenseSeeder::class);
+        $this->seed(RentalExpenseSeeder::class);
+
+        $this->assertDatabaseCount('business_expenses', 1);
+        $expense = BusinessExpense::query()->firstOrFail();
+        $this->assertSame('rental', $expense->category);
+        $this->assertSame('Shop rental', $expense->name);
+        $this->assertSame('900.00', $expense->amount);
+        $this->assertSame('monthly', $expense->frequency);
+        $this->assertSame(now()->startOfMonth()->addMonth()->toDateString(), $expense->due_date->toDateString());
+        $this->assertSame('0.00', $expense->cycle_paid_amount);
+    }
 
     public function test_recurring_service_payments_advance_the_due_date_and_keep_history(): void
     {

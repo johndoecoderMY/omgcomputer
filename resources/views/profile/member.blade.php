@@ -11,7 +11,7 @@
         @if ($canManageAccount)
             <x-slot:actions>
                 <a class="btn btn-primary" href="{{ route('admin.users.edit', $user) }}">
-                    <i class="fas fa-user-cog me-2" aria-hidden="true"></i>Manage account
+                    <i class="bi bi-person-gear me-2" aria-hidden="true"></i>Manage account
                 </a>
             </x-slot:actions>
         @endif

@@ -6,9 +6,9 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Product list" description="Manage shop products and inventory from the staff catalogue.">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('shop.orders.status-board') }}"><i class="fas fa-truck me-2"></i>Order status</a>
-            <a class="btn btn-outline-primary" href="{{ route('shop.products.grid') }}"><i class="fas fa-th-large me-2"></i>Product grid</a>
-            <a class="btn btn-primary" href="{{ route('shop.products.create') }}"><i class="fas fa-plus me-2"></i>Add product</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.orders.status-board') }}"><i class="bi bi-truck me-2"></i>Order status</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.products.grid') }}"><i class="bi bi-grid me-2"></i>Product grid</a>
+            <a class="btn btn-primary" href="{{ route('shop.products.create') }}"><i class="bi bi-plus me-2"></i>Add product</a>
         </x-slot>
     </x-page-header>
 

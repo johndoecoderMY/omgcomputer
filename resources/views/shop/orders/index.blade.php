@@ -6,8 +6,8 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Shop orders" description="Review payments and manage customer order fulfillment.">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('shop.products.index') }}"><i class="fas fa-box me-2"></i>Products</a>
-            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="fas fa-cart-shopping me-2"></i>Cart</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.products.index') }}"><i class="bi bi-box me-2"></i>Products</a>
+            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2"></i>Cart</a>
         </x-slot>
     </x-page-header>
     <div class="card p-2">

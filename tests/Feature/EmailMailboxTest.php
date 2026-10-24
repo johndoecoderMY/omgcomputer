@@ -95,12 +95,29 @@ class EmailMailboxTest extends TestCase
             ->assertSessionHas('mailbox_success', 'Email archived.');
     }
 
+    public function test_inbox_shows_mailbox_connection_errors_without_failing_the_page(): void
+    {
+        $admin = $this->admin();
+
+        $this->mock(EmailMailboxService::class, function (MockInterface $mock) use ($admin): void {
+            $mock->shouldReceive('messages')
+                ->once()
+                ->with($admin)
+                ->andThrow(new \RuntimeException('Authentication failed. Check your mailbox credentials.'));
+        });
+
+        $this->actingAs($admin)->get(route('email.inbox'))
+            ->assertOk()
+            ->assertSee('Authentication failed. Check your mailbox credentials.')
+            ->assertSee('Configure mailbox');
+    }
+
     public function test_user_can_poll_their_mailbox_for_new_messages(): void
     {
         $admin = $this->admin();
         $messages = [[
             'uid' => 27,
-            'subject' => 'New booking request',
+            'subject' => "New booking request \xB1",
             'from' => 'Customer <customer@example.test>',
             'to' => 'support@example.test',
             'date' => 'Wed, 21 Oct 2026 10:00:00 +0800',
@@ -116,6 +133,7 @@ class EmailMailboxTest extends TestCase
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonPath('messages.0.uid', 27)
+            ->assertJsonPath('messages.0.subject', 'New booking request �')
             ->assertJsonPath('messages.0.flagged', true)
             ->assertJsonStructure(['messages', 'checked_at']);
     }

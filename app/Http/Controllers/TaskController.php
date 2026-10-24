@@ -132,7 +132,7 @@ class TaskController extends Controller
             }, true)
             ->addColumn('task', fn (Task $task): string => sprintf(
                 '%s<a class="fw-semibold" href="%s">%s</a><div class="small text-body-secondary">%s</div>',
-                $task->parent ? '<div class="small text-body-secondary"><span class="fas fa-level-up-alt fa-rotate-90 me-1" aria-hidden="true"></span>Subtask of '.e($task->parent->title).'</div>' : '',
+                $task->parent ? '<div class="small text-body-secondary"><span class="bi bi-arrow-right bi-rotate-90 me-1" aria-hidden="true"></span>Subtask of '.e($task->parent->title).'</div>' : '',
                 e(route('tasks.show', $task)),
                 e($task->title),
                 e(Str::limit($task->description ?? '', 120)),

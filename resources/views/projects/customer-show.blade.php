@@ -19,7 +19,7 @@
             <h3 class="h6">Checklist</h3>
             @forelse ($project->requirements as $requirement)
                 <div class="d-flex align-items-start gap-2 py-2 border-bottom">
-                    <i class="fas {{ $requirement->is_completed ? 'fa-check-square text-success' : 'fa-square text-body-secondary' }} mt-1" aria-hidden="true"></i>
+                    <i class="bi {{ $requirement->is_completed ? 'bi-check-square text-success' : 'bi-square text-body-secondary' }} mt-1" aria-hidden="true"></i>
                     <span @class(['text-decoration-line-through text-body-secondary' => $requirement->is_completed])>{{ $requirement->requirement }}</span>
                     <span class="visually-hidden">{{ $requirement->is_completed ? 'Complete' : 'Incomplete' }}</span>
                 </div>
@@ -77,7 +77,7 @@
                             <span class="badge text-bg-light border">{{ $flowChart->categoryLabel() }}</span>
                             <button class="btn btn-sm btn-outline-primary" type="button"
                                 data-bs-toggle="modal" data-bs-target="#customer-flowchart-{{ $flowChart->id }}">
-                                <i class="fas fa-project-diagram me-1" aria-hidden="true"></i>View flow chart
+                                <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>View flow chart
                             </button>
                         </div>
                     </div>
@@ -340,7 +340,7 @@
                     <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
                         href="{{ $link->url }}" target="_blank" rel="noopener noreferrer">
                         <span>{{ $link->label }}</span>
-                        <i class="fas fa-external-link-alt text-body-secondary" aria-hidden="true"></i>
+                        <i class="bi bi-box-arrow-up-right text-body-secondary" aria-hidden="true"></i>
                     </a>
                 @endforeach
             </div>

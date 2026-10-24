@@ -10,7 +10,7 @@
         back-label="Back to project">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}">
-                <i class="fas fa-plus me-2"></i>Add task
+                <i class="bi bi-plus me-2"></i>Add task
             </a>
         </x-slot:actions>
     </x-page-header>
@@ -18,10 +18,10 @@
     <div class="d-flex justify-content-end mb-3">
         <div class="btn-group" role="group" aria-label="Task view">
             <button class="btn btn-outline-secondary active" type="button" data-task-view="list" aria-pressed="true">
-                <i class="fas fa-list me-1"></i>List
+                <i class="bi bi-list me-1"></i>List
             </button>
             <button class="btn btn-outline-secondary" type="button" data-task-view="kanban" aria-pressed="false">
-                <i class="fas fa-columns me-1"></i>Kanban
+                <i class="bi bi-layout-three-columns me-1"></i>Kanban
             </button>
         </div>
     </div>
@@ -91,7 +91,7 @@
             </div>
             <div class="col-auto">
                 <a class="btn btn-sm btn-falcon-default" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}">
-                    <span class="fas fa-plus me-2" aria-hidden="true"></span>Add task
+                    <span class="bi bi-plus me-2" aria-hidden="true"></span>Add task
                 </a>
             </div>
         </div>
@@ -111,7 +111,7 @@
                     aria-label="{{ $label }}">
                     <div class="kanban-column-header">
                         <h3 class="fs-9 mb-0">{{ $label }} <span class="text-500">(<span data-task-count>{{ $columnTasks->count() }}</span>)</span></h3>
-                        <span class="fas {{ $status === 'done' ? 'fa-check-circle text-success' : ($status === 'in_progress' ? 'fa-spinner text-primary' : 'fa-inbox text-secondary') }}"
+                        <span class="bi {{ $status === 'done' ? 'bi-check-circle text-success' : ($status === 'in_progress' ? 'bi-arrow-repeat text-primary' : 'bi-inbox text-secondary') }}"
                             aria-hidden="true"></span>
                     </div>
                     <div class="kanban-items-container scrollbar task-kanban-dropzone"
@@ -136,7 +136,7 @@
                                             </div>
                                             <button class="btn btn-sm btn-falcon-default task-kanban-drag-handle flex-shrink-0"
                                                 type="button" aria-label="Touch and hold to drag task">
-                                                <span class="fas fa-grip-vertical" aria-hidden="true"></span>
+                                                <span class="bi bi-grip-vertical" aria-hidden="true"></span>
                                             </button>
                                         </div>
                                         <button class="btn btn-link p-0 fw-semibold text-900 text-start d-block mb-2"
@@ -154,7 +154,7 @@
                                         </button>
                                         @if ($task['parent'])
                                             <p class="small text-body-secondary mb-2">
-                                                <span class="fas fa-level-up-alt fa-rotate-90 me-1" aria-hidden="true"></span>
+                                                <span class="bi bi-arrow-right bi-rotate-90 me-1" aria-hidden="true"></span>
                                                 Subtask of {{ $task['parent'] }}
                                             </p>
                                         @endif
@@ -164,14 +164,14 @@
                                         <div class="kanban-item-footer">
                                             <span class="d-inline-flex align-items-center">
                                                 @if ($task['due_date'])
-                                                    <span class="far fa-calendar me-1" aria-hidden="true"></span>{{ $task['due_date'] }}
+                                                    <span class="bi bi-calendar me-1" aria-hidden="true"></span>{{ $task['due_date'] }}
                                                 @else
                                                     No due date
                                                 @endif
                                             </span>
                                             <span class="d-inline-flex align-items-center text-truncate ms-2"
                                                 title="{{ $task['assignees']->join(', ') ?: 'Unassigned' }}">
-                                                <span class="fas fa-user me-1" aria-hidden="true"></span>
+                                                <span class="bi bi-person me-1" aria-hidden="true"></span>
                                                 {{ $task['assignees']->first() ?: 'Unassigned' }}
                                                 @if ($task['assignees']->count() > 1)
                                                     +{{ $task['assignees']->count() - 1 }}

@@ -7,9 +7,9 @@
     <x-page-header eyebrow="OMG Computer" title="Flow charts"
         description="Map website journeys, site structures, sitemaps, business processes, product procedures, service SOPs, and student FYP support.">
         <x-slot:actions>
-            <a class="btn btn-outline-primary" href="{{ route('development.sops') }}"><i class="fas fa-book me-2"></i>SOP Library</a>
+            <a class="btn btn-outline-primary" href="{{ route('development.sops') }}"><i class="bi bi-book me-2"></i>SOP Library</a>
             <a class="btn btn-primary" href="{{ route('development.flowcharts.create') }}">
-                <i class="fas fa-plus me-2"></i>New flow chart
+                <i class="bi bi-plus me-2"></i>New flow chart
             </a>
         </x-slot:actions>
     </x-page-header>

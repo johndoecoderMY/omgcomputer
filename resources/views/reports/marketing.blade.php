@@ -9,11 +9,11 @@
         :back-url="route('reports.index')" back-label="All reports">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('customer-messages.index') }}">
-                <span class="fab fa-whatsapp me-2" aria-hidden="true"></span>Message templates
+                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message templates
             </a>
             @role('admin')
                 <a class="btn btn-primary" href="{{ route('reports.integrations.whatsapp') }}">
-                    <span class="fas fa-plug me-2" aria-hidden="true"></span>Test WhatsApp API
+                    <span class="bi bi-plug me-2" aria-hidden="true"></span>Test WhatsApp API
                 </a>
             @endrole
         </x-slot:actions>
@@ -30,7 +30,7 @@
     @endif
 
     <div class="alert alert-info d-flex align-items-start gap-2" role="status">
-        <span class="fas fa-info-circle mt-1" aria-hidden="true"></span>
+        <span class="bi bi-info-circle mt-1" aria-hidden="true"></span>
         <div>
             <strong>Configuration presence does not confirm a live connection.</strong>
             Setup values are checked here. Open the WhatsApp API test page to verify your phone-number credentials against Meta.
@@ -43,7 +43,7 @@
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fs-3 text-success fab fa-whatsapp" aria-hidden="true"></span>
+                        <span class="fs-3 text-success bi bi-whatsapp" aria-hidden="true"></span>
                         <div>
                             <h2 class="h5 mb-0 text-primary">WhatsApp Business</h2>
                             <span class="small text-body-secondary">Cloud API setup readiness</span>
@@ -81,7 +81,7 @@
                         @endforeach
                     </ul>
                     <div class="mt-3 small text-body-secondary">
-                        <span class="fab fa-whatsapp me-1" aria-hidden="true"></span>
+                        <span class="bi bi-whatsapp me-1" aria-hidden="true"></span>
                         {{ $whatsAppTemplateCount }} active WhatsApp message template(s) are available for staff to prepare drafts.
                     </div>
                 </div>
@@ -102,7 +102,7 @@
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fs-3 text-primary fab fa-meta" aria-hidden="true"></span>
+                        <span class="fs-3 text-primary bi bi-meta" aria-hidden="true"></span>
                         <div>
                             <h2 class="h5 mb-0 text-primary">Meta Marketing API</h2>
                             <span class="small text-body-secondary">Ads insights setup readiness</span>
@@ -151,17 +151,17 @@
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Campaign spend', 'value' => 'RM '.number_format($spend, 2), 'icon' => 'fa-coins'],
-            ['label' => 'Attributed revenue', 'value' => 'RM '.number_format($revenue, 2), 'icon' => 'fa-chart-line'],
-            ['label' => 'Leads', 'value' => number_format($leads), 'icon' => 'fa-user-plus'],
-            ['label' => 'Conversions', 'value' => number_format($conversions), 'icon' => 'fa-bullseye'],
+            ['label' => 'Campaign spend', 'value' => 'RM '.number_format($spend, 2), 'icon' => 'bi-coin'],
+            ['label' => 'Attributed revenue', 'value' => 'RM '.number_format($revenue, 2), 'icon' => 'bi-graph-up'],
+            ['label' => 'Leads', 'value' => number_format($leads), 'icon' => 'bi-person-plus'],
+            ['label' => 'Conversions', 'value' => number_format($conversions), 'icon' => 'bi-bullseye'],
         ] as $metric)
             <div class="col-6 col-xl-3">
                 <div class="card h-100 p-2">
                     <div class="card-header bg-body"><h2 class="h5 mb-0 text-primary">{{ $metric['label'] }}</h2></div>
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <span class="fs-4 fw-semibold">{{ $metric['value'] }}</span>
-                        <span class="fas {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
+                        <span class="bi {{ $metric['icon'] }} fs-3 text-primary opacity-50" aria-hidden="true"></span>
                     </div>
                 </div>
             </div>

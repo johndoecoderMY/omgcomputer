@@ -7,10 +7,10 @@
         @if ($canManageBilling)
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]) }}">
-                    <i class="fas fa-file-alt me-1" aria-hidden="true"></i>Create quotation
+                    <i class="bi bi-file-text me-1" aria-hidden="true"></i>Create quotation
                 </a>
                 <a class="btn btn-sm btn-primary" href="{{ route('billing.create', ['type' => 'invoice', 'project_id' => $project->id]) }}">
-                    <i class="fas fa-file-invoice-dollar me-1" aria-hidden="true"></i>Create invoice
+                    <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Create invoice
                 </a>
             </div>
         @endif

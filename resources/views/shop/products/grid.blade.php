@@ -6,8 +6,8 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Product grid" description="Browse available inventory and prepare customer orders from the staff-only shop.">
         <x-slot name="actions">
-            <a class="btn btn-outline-primary" href="{{ route('shop.products.index', request()->query()) }}"><i class="fas fa-list me-2"></i>Product list</a>
-            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="fas fa-cart-shopping me-2"></i>View cart</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.products.index', request()->query()) }}"><i class="bi bi-list me-2"></i>Product list</a>
+            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2"></i>View cart</a>
         </x-slot>
     </x-page-header>
 
@@ -40,7 +40,7 @@
                             <option value="price-low" @selected($filters['sort'] === 'price-low')>Price: low to high</option>
                             <option value="price-high" @selected($filters['sort'] === 'price-high')>Price: high to low</option>
                         </select>
-                        <a class="btn btn-sm btn-falcon-default" href="{{ route('shop.cart') }}" title="Shopping cart" aria-label="View shopping cart"><i class="fas fa-cart-shopping" aria-hidden="true"></i></a>
+                        <a class="btn btn-sm btn-falcon-default" href="{{ route('shop.cart') }}" title="Shopping cart" aria-label="View shopping cart"><i class="bi bi-cart3" aria-hidden="true"></i></a>
                     </div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
                         <article class="border rounded-1 h-100 d-flex flex-column justify-content-between pb-3">
                             <div class="overflow-hidden">
                                 <a class="d-flex align-items-center justify-content-center rounded-top bg-body-tertiary text-primary text-decoration-none" href="{{ route('shop.products.show', $product) }}" aria-label="View {{ $product->name }}" style="height: 12rem">
-                                    <i class="fas fa-box-open fa-3x" aria-hidden="true"></i>
+                                    <i class="bi bi-box2 bi-3x" aria-hidden="true"></i>
                                 </a>
                                 @if ($product->stock_quantity <= $product->reorder_level)
                                     <span class="badge rounded-pill bg-warning text-dark position-relative ms-3 mt-n4">Low stock</span>
@@ -90,12 +90,12 @@
                                         data-stock-name="{{ $product->name }}"
                                         data-stock-current="{{ $product->stock_quantity }}"
                                         title="Adjust quantity" aria-label="Adjust stock for {{ $product->name }}">
-                                        <i class="fas fa-arrows-rotate" aria-hidden="true"></i>
+                                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                                     </button>
-                                    <form method="POST" action="{{ route('shop.cart.add', $product) }}">
+                                    <form method="POST" action="{{ route('shop.cart.add', $product) }}" data-cart-add-form>
                                         @csrf
                                         <input type="hidden" name="quantity" value="1">
-                                        <button class="btn btn-sm btn-falcon-default" type="submit" title="Add to cart" aria-label="Add {{ $product->name }} to cart"><i class="fas fa-cart-plus" aria-hidden="true"></i></button>
+                                        <button class="btn btn-sm btn-falcon-default" type="submit" title="Add to cart" aria-label="Add {{ $product->name }} to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i></button>
                                     </form>
                                 </div>
                             </div>
@@ -104,7 +104,7 @@
                 @empty
                     <div class="col-12">
                         <div class="text-center py-5">
-                            <i class="fas fa-box-open text-body-secondary fa-2x mb-3" aria-hidden="true"></i>
+                            <i class="bi bi-box2 text-body-secondary bi-2x mb-3" aria-hidden="true"></i>
                             <h2 class="h5">No products available</h2>
                             <p class="text-body-secondary mb-0">There are no in-stock products listed for sale yet.</p>
                         </div>

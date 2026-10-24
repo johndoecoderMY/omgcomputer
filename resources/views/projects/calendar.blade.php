@@ -11,7 +11,7 @@
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('projects.index') }}">Browse projects</a>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create-event-modal">
-                <i class="fas fa-calendar-plus me-2"></i>Add event
+                <i class="bi bi-calendar-plus me-2"></i>Add event
             </button>
         </x-slot:actions>
     </x-page-header>

@@ -35,7 +35,7 @@
                         onsubmit="return confirm('Pull the latest changes into the live application now?');">
                         @csrf
                         <button class="btn btn-warning" type="submit">
-                            <span class="fas fa-code-branch me-2" aria-hidden="true"></span>Git pull
+                            <span class="bi bi-diagram-2 me-2" aria-hidden="true"></span>Git pull
                         </button>
                     </form>
                 </div>
@@ -53,7 +53,7 @@
                         onsubmit="return confirm('Build production frontend assets on the server now?');">
                         @csrf
                         <button class="btn btn-outline-primary" type="submit">
-                            <span class="fas fa-box me-2" aria-hidden="true"></span>Build assets
+                            <span class="bi bi-box me-2" aria-hidden="true"></span>Build assets
                         </button>
                     </form>
                 </div>
@@ -70,7 +70,7 @@
                         onsubmit="return confirm('Run pending database migrations now? Make sure you have a recent database backup.');">
                         @csrf
                         <button class="btn btn-primary" type="submit">
-                            <span class="fas fa-database me-2" aria-hidden="true"></span>Run migrations
+                            <span class="bi bi-database me-2" aria-hidden="true"></span>Run migrations
                         </button>
                     </form>
                 </div>
@@ -87,7 +87,7 @@
                         onsubmit="return confirm('Clear Laravel optimization caches now?');">
                         @csrf
                         <button class="btn btn-outline-primary" type="submit">
-                            <span class="fas fa-broom me-2" aria-hidden="true"></span>Optimize clear
+                            <span class="bi bi-brush me-2" aria-hidden="true"></span>Optimize clear
                         </button>
                     </form>
                 </div>

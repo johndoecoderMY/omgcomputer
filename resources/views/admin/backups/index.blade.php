@@ -12,7 +12,7 @@
                 onsubmit="return confirm('Run a full backup now? This may take several minutes.');">
                 @csrf
                 <button class="btn btn-primary" type="submit">
-                    <i class="fas fa-database me-2" aria-hidden="true"></i>Run backup now
+                    <i class="bi bi-database me-2" aria-hidden="true"></i>Run backup now
                 </button>
             </form>
         </x-slot:actions>
@@ -79,7 +79,7 @@
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary"
                                         href="{{ route('admin.backups.download', [$destination['disk'], basename($backup->path())]) }}">
-                                        <i class="fas fa-download me-1" aria-hidden="true"></i>Download
+                                        <i class="bi bi-download me-1" aria-hidden="true"></i>Download
                                     </a>
                                 </td>
                             </tr>

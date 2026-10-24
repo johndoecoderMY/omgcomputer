@@ -23,13 +23,13 @@
         :back-url="route('projects.index')" back-label="All projects">
         <x-slot:actions>
             <button class="btn" type="button" data-bs-toggle="modal" data-bs-target="#project-export-modal">
-                <i class="fas fa-file-pdf fa-fw me-2"></i>Export PDF
+                <i class="bi bi-filetype-pdf bi-fw me-2"></i>Export PDF
             </button>
-            <a href="{{ route('projects.calendar', $project) }}"><i class="fas fa-calendar-days fa-fw me-2"></i>Project calendar</a>
-            <a href="#project-schedule"><i class="fas fa-calendar-plus fa-fw me-2"></i>Schedule event</a>
-            <a href="{{ route('projects.edit', $project) }}"><i class="fas fa-pen fa-fw me-2"></i>Edit project</a>
-            <a href="{{ route('projects.tasks.create', $project) }}"><i class="fas fa-plus fa-fw me-2"></i>Add task</a>
-            <a href="{{ route('customers.create', ['project_id' => $project->id]) }}"><i class="fas fa-user-plus fa-fw me-2"></i>Add customer</a>
+            <a href="{{ route('projects.calendar', $project) }}"><i class="bi bi-calendar3 bi-fw me-2"></i>Project calendar</a>
+            <a href="#project-schedule"><i class="bi bi-calendar-plus bi-fw me-2"></i>Schedule event</a>
+            <a href="{{ route('projects.edit', $project) }}"><i class="bi bi-pencil bi-fw me-2"></i>Edit project</a>
+            <a href="{{ route('projects.tasks.create', $project) }}"><i class="bi bi-plus bi-fw me-2"></i>Add task</a>
+            <a href="{{ route('customers.create', ['project_id' => $project->id]) }}"><i class="bi bi-person-plus bi-fw me-2"></i>Add customer</a>
         </x-slot:actions>
     </x-page-header>
 
@@ -101,7 +101,7 @@
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-primary" type="submit"><i class="fas fa-file-pdf me-2"></i>Generate PDF</button>
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-filetype-pdf me-2"></i>Generate PDF</button>
                     </div>
                 </form>
             </div>
@@ -204,7 +204,7 @@
                 <p class="small text-body-secondary mb-0">Keep the project scope and requirements in one place.</p>
             </div>
             <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.edit', $project) }}">
-                <i class="fas fa-pen me-1" aria-hidden="true"></i>Edit requirements
+                <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit requirements
             </a>
         </div>
         <div class="card-body">
@@ -214,7 +214,7 @@
             <h3 class="h6">Checklist</h3>
             @forelse ($project->requirements as $requirement)
                 <div class="d-flex align-items-start gap-2 py-2 border-bottom">
-                    <i class="fas {{ $requirement->is_completed ? 'fa-check-square text-success' : 'fa-square text-body-secondary' }} mt-1"
+                    <i class="bi {{ $requirement->is_completed ? 'bi-check-square text-success' : 'bi-square text-body-secondary' }} mt-1"
                         aria-hidden="true"></i>
                     <span @class(['text-decoration-line-through text-body-secondary' => $requirement->is_completed])>
                         {{ $requirement->requirement }}
@@ -234,7 +234,7 @@
                 <p class="small text-body-secondary mb-0">See this project’s calendar and upcoming sessions.</p>
             </div>
             <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create-event-modal">
-                <i class="fas fa-calendar-plus me-1"></i>Add event
+                <i class="bi bi-calendar-plus me-1"></i>Add event
             </button>
         </div>
         <div class="card-body">
@@ -264,7 +264,7 @@
                                         @method('PATCH')
                                         <input type="hidden" name="visible_to_customer" value="{{ $event->visible_to_customer ? '0' : '1' }}">
                                         <button class="btn btn-sm {{ $event->visible_to_customer ? 'btn-outline-secondary' : 'btn-outline-primary' }}" type="submit">
-                                            <i class="fas {{ $event->visible_to_customer ? 'fa-eye-slash' : 'fa-eye' }} me-1" aria-hidden="true"></i>
+                                            <i class="bi {{ $event->visible_to_customer ? 'bi-eye-slash' : 'bi-eye' }} me-1" aria-hidden="true"></i>
                                             {{ $event->visible_to_customer ? 'Hide from customer' : 'Show to customer' }}
                                         </button>
                                     </form>
@@ -273,7 +273,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <button class="btn btn-sm btn-link text-danger" type="submit" aria-label="Remove {{ $event->title }}">
-                                            <i class="fas fa-trash" aria-hidden="true"></i>
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
                                         </button>
                                     </form>
                                 </div>
@@ -293,7 +293,7 @@
     <div class="card project-panel mb-4">        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="h5 mb-0">Flow charts & SOPs</h2>
             <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['project_id' => $project->id]) }}">
-                <i class="fas fa-plus me-1"></i>Create for this project
+                <i class="bi bi-plus me-1"></i>Create for this project
             </a>
         </div>
         <div class="card-body">
@@ -318,7 +318,7 @@
                     </div>
                     <div class="col-12 col-lg-4">
                         <button class="btn btn-sm btn-primary" type="submit">
-                            <i class="fas fa-link me-1"></i>Link selected
+                            <i class="bi bi-link me-1"></i>Link selected
                         </button>
                     </div>
                 </div>
@@ -342,7 +342,7 @@
                 </div>
                 <div class="col-12 col-lg-4">
                     <button class="btn btn-sm btn-outline-primary" type="submit">
-                        <i class="fas fa-copy me-1"></i>Duplicate selected for project
+                        <i class="bi bi-copy me-1"></i>Duplicate selected for project
                     </button>
                 </div>
             </form>
@@ -492,11 +492,11 @@
                         </div>
                         @error('url_sources')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         <button class="btn btn-sm btn-link px-0 mt-1" id="add-project-part-url-source" type="button">
-                            <i class="fas fa-plus me-1" aria-hidden="true"></i>Add another source
+                            <i class="bi bi-plus me-1" aria-hidden="true"></i>Add another source
                         </button>
                     </div>
                     <div class="col-12 col-lg-4">
-                        <button class="btn btn-primary w-100" type="submit"><i class="fas fa-plus me-1" aria-hidden="true"></i>Add recommendation</button>
+                        <button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus me-1" aria-hidden="true"></i>Add recommendation</button>
                     </div>
                 </form>
             @else
@@ -802,7 +802,7 @@
                                 @foreach ($task->subtasks as $subtask)
                                     <li class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="fas fa-turn-down text-body-tertiary" aria-hidden="true"></i>
+                                            <i class="bi bi-arrow-down text-body-tertiary" aria-hidden="true"></i>
                                             <a class="text-decoration-none" href="{{ route('tasks.show', $subtask) }}">{{ $subtask->title }}</a>
                                             <x-status-badge :status="$subtask->status" :label="\App\Models\Task::STATUSES[$subtask->status] ?? $subtask->status" />
                                             @if ($subtask->assignees->isNotEmpty())
@@ -819,7 +819,7 @@
                         @endif
                         <a class="btn btn-sm btn-link ps-0 mt-2"
                             href="{{ route('projects.tasks.create', ['project' => $project, 'parent_id' => $task->id]) }}">
-                            <i class="fas fa-plus me-1"></i>Add subtask
+                            <i class="bi bi-plus me-1"></i>Add subtask
                         </a>
                     </article>
                 @endforeach

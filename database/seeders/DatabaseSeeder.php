@@ -57,6 +57,7 @@ class DatabaseSeeder extends Seeder
             $this->call(DemoDataSeeder::class);
             $this->call(ShopDemoSeeder::class);
             $this->call(BusinessPlanTaskSeeder::class);
+            $this->call(RentalExpenseSeeder::class);
             $this->call(RepairTicketExampleSeeder::class);
         }
     }

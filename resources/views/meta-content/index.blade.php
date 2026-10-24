@@ -8,7 +8,7 @@
         description="Prepare and publish posts for your Facebook Page and Instagram professional account.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('meta-content.create') }}">
-                <i class="fas fa-plus me-2" aria-hidden="true"></i>Create content
+                <i class="bi bi-plus me-2" aria-hidden="true"></i>Create content
             </a>
         </x-slot:actions>
     </x-page-header>
