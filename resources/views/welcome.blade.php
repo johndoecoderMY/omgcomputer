@@ -22,6 +22,9 @@
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
                             <span class="bi bi-search me-2"></span>Track a repair
                         </a>
+                        <a class="btn btn-outline-secondary btn-lg rounded-pill px-4" href="{{ route('shop.preview.products.grid') }}">
+                            <span class="bi bi-shop me-2" aria-hidden="true"></span>Browse the shop
+                        </a>
                     </div>
                     <div class="d-flex flex-wrap gap-4 mt-5 text-700">
                         <span><span class="bi bi-check-circle text-primary me-2"></span>Clear explanations</span>

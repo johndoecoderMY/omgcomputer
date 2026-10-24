@@ -17,7 +17,7 @@
             <div class="row g-0">
                 <div class="col-lg-6 bg-body-tertiary p-3 p-lg-5">
                     <div class="d-flex align-items-center justify-content-center rounded-4 bg-white text-primary" style="min-height: clamp(16rem, 45vw, 30rem)">
-                        <i class="bi bi-box2 bi-5x" aria-hidden="true"></i>
+                        <i class="bi {{ $product->type === 'ready_built_pc' ? 'bi-pc-display-horizontal' : 'bi-box2' }} bi-5x" aria-hidden="true"></i>
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -40,6 +40,8 @@
                 </div>
             </div>
         </div>
+
+        @include('shop.preview.products._custom-pc-quote')
 
         <div class="row g-4 mt-2">
             <div class="col-lg-8">

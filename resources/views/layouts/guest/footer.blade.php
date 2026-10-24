@@ -8,6 +8,7 @@
                 <h2 class="h6 text-uppercase text-white opacity-85 mb-3">Our mission</h2>
                 <p class="text-600 mb-0">We help people and businesses solve computer problems with practical solutions, clear advice, and friendly local support. From repairs and upgrades to custom websites, our goal is to make technology easier to use.</p>
                 <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('shop.preview.products.grid') }}">Browse the shop</a>
                     <a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a>
                     <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('repairs.track.form') }}">Track a repair</a>
                 </div>
@@ -37,6 +38,7 @@
                     <div class="col-12 col-md-4">
                         <h2 class="h6 text-uppercase text-white opacity-85 mb-3">Quick links</h2>
                         <ul class="list-unstyled mb-0">
+                            <li class="mb-2"><a class="link-600" href="{{ route('shop.preview.products.grid') }}">Shop computer parts</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('repairs.track.form') }}">Track a repair</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('privacy') }}">Privacy policy</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('terms') }}">Terms of service</a></li>

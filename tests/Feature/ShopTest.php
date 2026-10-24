@@ -47,6 +47,17 @@ class ShopTest extends TestCase
             'reorder_level' => 1,
             'is_for_sale' => true,
         ]);
+        $readyBuiltPc = InventoryPart::query()->create([
+            'name' => 'Ready-built gaming PC',
+            'sku' => 'PC-READY-001',
+            'type' => 'ready_built_pc',
+            'description' => 'A ready-to-use gaming desktop PC.',
+            'cost_price' => 2200,
+            'selling_price' => 2899,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
         $hiddenPart = InventoryPart::query()->create([
             'name' => 'Internal hidden part',
             'sku' => 'INTERNAL-01',
@@ -71,8 +82,12 @@ class ShopTest extends TestCase
         $this->get(route('shop.preview.products.index'))
             ->assertOk()
             ->assertSee('OMG Computer shop')
-            ->assertSee('Find the right parts for your setup.')
+            ->assertSee('Parts and PCs for your setup.')
             ->assertSee('Public preview graphics card')
+            ->assertSee('Ready-built gaming PC')
+            ->assertSee('Ready-built PC')
+            ->assertSee('Get a custom PC quote')
+            ->assertSee('https://wa.me/601123881290')
             ->assertDontSee('PRIVATE-SKU-01')
             ->assertDontSee('Internal hidden part')
             ->assertDontSee('Unavailable preview part')
@@ -81,7 +96,13 @@ class ShopTest extends TestCase
             ->assertOk()
             ->assertSee('OMG Computer shop')
             ->assertSee('Public preview graphics card')
+            ->assertSee('Ready-built gaming PC')
+            ->assertSee('Get a custom PC quote')
             ->assertDontSee('Add to cart');
+        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+            ->assertOk()
+            ->assertSee('Ready-built gaming PC')
+            ->assertDontSee('Public preview graphics card');
         $this->get(route('shop.preview.products.show', $availablePart))
             ->assertOk()
             ->assertSee('Product information')
@@ -91,9 +112,28 @@ class ShopTest extends TestCase
             ->assertDontSee('PRIVATE-SKU-01')
             ->assertSee('Sign in to buy')
             ->assertSee(route('shop.products.purchase', $availablePart), false)
+            ->assertSee('Get a custom PC quote')
             ->assertDontSee('Add to cart');
+        $this->get(route('shop.preview.products.show', $readyBuiltPc))
+            ->assertOk()
+            ->assertSee('Ready-built gaming PC')
+            ->assertSee('Ready-built PC')
+            ->assertSee('RM 2,899.00')
+            ->assertSee('Get a custom PC quote');
         $this->get(route('shop.preview.products.show', $hiddenPart))->assertNotFound();
         $this->get(route('shop.preview.products.show', $outOfStockPart))->assertNotFound();
+    }
+
+    public function test_public_site_links_to_the_guest_shop(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee(route('shop.preview.products.grid'), false);
+
+        $this->get(route('shop.preview.products.index'))
+            ->assertOk()
+            ->assertSee('Shop computer parts')
+            ->assertSee(route('shop.preview.products.grid'), false);
     }
 
     public function test_product_list_and_grid_pagination_uses_consistent_navigation_for_guests_and_staff(): void
@@ -142,6 +182,36 @@ class ShopTest extends TestCase
             ->assertDontSee('<svg', false);
     }
 
+    public function test_staff_can_list_a_ready_built_pc_for_sale(): void
+    {
+        $staff = $this->staffUser();
+
+        $this->actingAs($staff)->post(route('shop.products.store'), [
+            'name' => 'Office PC package',
+            'sku' => 'PC-OFFICE-001',
+            'type' => 'ready_built_pc',
+            'description' => 'A ready-built desktop for office work.',
+            'cost_price' => 1400,
+            'selling_price' => 1799,
+            'stock_quantity' => 3,
+            'reorder_level' => 1,
+            'is_for_sale' => '1',
+        ])->assertRedirect(route('shop.products.index'));
+
+        $this->assertDatabaseHas('inventory_parts', [
+            'sku' => 'PC-OFFICE-001',
+            'type' => 'ready_built_pc',
+            'is_for_sale' => true,
+            'stock_quantity' => 3,
+        ]);
+
+        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+            ->assertOk()
+            ->assertSee('Office PC package')
+            ->assertSee('RM 1,799.00')
+            ->assertSee('Get a custom PC quote');
+    }
+
     public function test_sign_in_to_buy_returns_to_the_shop_product(): void
     {
         $staff = $this->staffUser();
@@ -171,7 +241,8 @@ class ShopTest extends TestCase
         $user = $this->staffUser();
         $this->actingAs($user)->get(route('shop.products.create'))
             ->assertOk()
-            ->assertSee('Opening stock');
+            ->assertSee('Opening stock')
+            ->assertSee('Ready-built PC');
         $this->actingAs($user)->post(route('shop.products.store'), [
             'name' => 'NVMe SSD',
             'sku' => 'SHOP-SSD-01',

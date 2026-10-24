@@ -21,6 +21,7 @@ class InventoryPart extends Model
         'case' => 'Case',
         'cooling' => 'Cooling',
         'peripheral' => 'Peripheral',
+        'ready_built_pc' => 'Ready-built PC',
         'other' => 'Other',
     ];
 

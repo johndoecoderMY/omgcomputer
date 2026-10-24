@@ -9,13 +9,14 @@
             <div class="row align-items-center g-4">
                 <div class="col-lg">
                     <span class="badge rounded-pill bg-white text-primary mb-3"><i class="bi bi-shop me-1" aria-hidden="true"></i>OMG Computer shop</span>
-                    <h1 class="display-6 fw-bold text-1000 mb-2">Find the right parts for your setup.</h1>
-                    <p class="lead text-700 mb-0">Explore our current computer parts and accessories. Sign in to place an order.</p>
+                    <h1 class="display-6 fw-bold text-1000 mb-2">Parts and PCs for your setup.</h1>
+                    <p class="lead text-700 mb-0">Explore computer parts, accessories, and ready-built PCs. Sign in to place an order.</p>
                 </div>
                 <div class="col-lg-auto">
                     <a class="btn btn-primary btn-lg rounded-pill px-4" href="{{ route('login') }}"><i class="bi bi-person me-2" aria-hidden="true"></i>Sign in to shop</a>
                 </div>
             </div>
+            @include('shop.preview.products._custom-pc-quote')
         </div>
 
         <form class="card border-0 shadow-sm mb-4" method="GET" action="{{ route('shop.preview.products.grid') }}">
@@ -63,7 +64,7 @@
                 <div class="col-6 col-lg-4 col-xl-3">
                     <article class="card border-0 shadow-sm h-100 overflow-hidden">
                         <a class="d-flex align-items-center justify-content-center bg-body-tertiary text-primary text-decoration-none" href="{{ route('shop.preview.products.show', $product) }}" aria-label="View {{ $product->name }}" style="aspect-ratio: 4 / 3">
-                            <i class="bi bi-box2 bi-3x" aria-hidden="true"></i>
+                            <i class="bi {{ $product->type === 'ready_built_pc' ? 'bi-pc-display-horizontal' : 'bi-box2' }} bi-3x" aria-hidden="true"></i>
                         </a>
                         <div class="card-body p-3 p-lg-4 d-flex flex-column">
                             <p class="small text-primary fw-semibold mb-1">{{ $types[$product->type] ?? $product->type }}</p>
