@@ -1,6 +1,7 @@
 <div class="row border-bottom border-200 hover-actions-trigger hover-shadow py-2 px-1 mx-0 email-row {{ $message['seen'] ? 'email-row-read' : 'email-row-unread' }}"
     data-email-row data-uid="{{ $message['uid'] }}" data-seen="{{ $message['seen'] ? '1' : '0' }}"
-    data-flagged="{{ ($message['flagged'] ?? false) ? '1' : '0' }}" data-to="{{ strtolower($message['to'] ?? '') }}">
+    data-flagged="{{ ($message['flagged'] ?? false) ? '1' : '0' }}" data-to="{{ strtolower($message['to'] ?? '') }}"
+    data-detail-url="{{ route('email.show', $message['uid']) }}">
     <div class="btn-group btn-group-sm z-2 hover-actions end-0 me-3 email-row-actions">
         <form method="POST" action="{{ route('email.action', [$message['uid'], 'archive']) }}">@csrf
             <button class="btn btn-tertiary hover-bg-200" type="submit" aria-label="Archive" title="Archive"><span class="fas fa-archive" aria-hidden="true"></span></button>

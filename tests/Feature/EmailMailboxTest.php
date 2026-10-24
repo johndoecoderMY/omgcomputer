@@ -80,7 +80,9 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($admin)->get(route('email.inbox'))
             ->assertOk()
             ->assertSee('Repair booking confirmation')
-            ->assertSee('Customer <customer@example.test>');
+            ->assertSee('Customer <customer@example.test>')
+            ->assertSee('data-detail-url="'.route('email.show', 25).'"', false)
+            ->assertSee('href="'.route('email.show', 25).'"', false);
 
         $this->actingAs($admin)->get(route('email.show', 25))
             ->assertOk()

@@ -121,6 +121,7 @@
 
 <style>
     .email-inbox .email-row { position: relative; }
+    .email-inbox [data-email-row] { cursor: pointer; }
     .email-inbox .email-row:hover { background-color: var(--falcon-body-bg, #fff); }
     .email-inbox .email-row-unread { background-color: var(--falcon-body-bg, #fff); }
     .email-inbox .email-row-read { background-color: var(--falcon-tertiary-bg, #f8f9fa); }
@@ -192,6 +193,7 @@
             row.dataset.seen = message.seen ? '1' : '0';
             row.dataset.flagged = message.flagged ? '1' : '0';
             row.dataset.to = (message.to || '').toLowerCase();
+            row.dataset.detailUrl = `${inbox.dataset.actionUrl.replace(/\/$/, '')}/${message.uid}`;
 
             const actions = document.createElement('div');
             actions.className = 'btn-group btn-group-sm z-2 hover-actions end-0 me-3 email-row-actions';
@@ -321,6 +323,12 @@
         };
 
         refreshButton.addEventListener('click', refreshInbox);
+        rows.addEventListener('click', (event) => {
+            if (!(event.target instanceof Element)) return;
+            const row = event.target.closest('[data-email-row]');
+            if (!row || event.target.closest('a, button, input, form, label, select, textarea')) return;
+            window.location.assign(row.dataset.detailUrl);
+        });
         selectAll.addEventListener('change', () => {
             rows.querySelectorAll('.email-select').forEach((input) => {
                 if (input.closest('[data-email-row]')?.classList.contains('d-none')) return;
