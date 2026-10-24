@@ -141,6 +141,10 @@
                                 data-header-search-item data-search-terms="database restore">
                                 <span class="fas fa-database me-2 text-primary" aria-hidden="true"></span>Backups
                             </a>
+                            <a class="dropdown-item px-x1 py-2" href="{{ route('admin.maintenance.index') }}" role="option"
+                                data-header-search-item data-search-terms="migrate database migration optimize clear caches">
+                                <span class="fas fa-tools me-2 text-primary" aria-hidden="true"></span>System maintenance
+                            </a>
                         @endrole
                         <a class="dropdown-item px-x1 py-2" href="{{ route('products.index') }}" role="option"
                             data-header-search-item data-search-terms="services catalog">

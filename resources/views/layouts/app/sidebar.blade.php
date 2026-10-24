@@ -329,6 +329,12 @@
                                     <span class="nav-link-text ps-1">Backups</span>
                                 </div>
                             </a>
+                            <a class="nav-link" href="{{ route('admin.maintenance.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="fas fa-tools"></span></span>
+                                    <span class="nav-link-text ps-1">System maintenance</span>
+                                </div>
+                            </a>
                         @else
                             <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">

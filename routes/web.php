@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminAccessController;
 use App\Http\Controllers\AdminBackupController;
+use App\Http\Controllers\AdminMaintenanceController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
@@ -151,6 +152,12 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'index')->name('index');
         Route::post('/run', 'run')->name('run');
         Route::get('/{disk}/{backup}/download', 'download')->name('download');
+    });
+    Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/migrate', 'migrate')->middleware('throttle:3,1')->name('migrate');
+        Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:3,1')->name('optimize-clear');
+        Route::post('/git-pull', 'gitPull')->middleware('throttle:3,1')->name('git-pull');
     });
     Route::prefix('attachments')->name('attachments.')->controller(AttachmentController::class)->group(function (): void {
         Route::get('/{attachment}/file', 'show')->name('show');

@@ -42,6 +42,8 @@ The staff-only Shop uses inventory parts as its product catalogue, with separate
 
 Run `php artisan migrate` to create the planning, inventory, billing, and shop tables. Keep a current database backup before applying migrations to an existing deployment.
 
+Administrators can use **System maintenance** to run migrations, clear Laravel optimization caches, or pull the configured Git branch. Git pull requires Git and a configured remote on the server; it only fast-forwards and refuses to run when tracked files have local changes.
+
 ## Teams, Suppliers, and SOP Flow Charts
 
 Authenticated users can maintain departments, teams, and many-to-many team memberships, so one member may belong to multiple teams; associate inventory parts with supplier contacts; and link reusable flow charts to projects using a fuzzy-searchable picker. The project table and linked flow-chart/SOP table use server-side Yajra DataTables; the linked-chart table shows only charts already associated with that project. Flow charts can also be created directly for a project or duplicated from selected templates. Product, service, and student FYP SOP flow charts are available from the Operations menu. Student FYP examples cover consultations, debugging, mentoring, project setup workshops, progress reviews, and small-group tech clinics. Developer setup examples cover Arduino CLI, ESP32 with Arduino IDE, Laravel project setup, and Laravel database table relationships. Seed examples with `php artisan db:seed` or run `php artisan db:seed --class="Database\\Seeders\\DeveloperSetupFlowChartSeeder"` against an existing database. Run `php artisan migrate` to add the related tables.
