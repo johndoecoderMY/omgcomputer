@@ -166,6 +166,7 @@ class MetaAdsController extends Controller
             'account_name' => $account['name'],
             'access_token' => $pending['access_token'],
             'token_expires_at' => $pending['expires_at'] ?? null,
+            'meta_user_id' => $pending['meta_user_id'],
             'connected_by_user_id' => $request->user()->id,
         ];
         if ($connection) {
@@ -202,6 +203,7 @@ class MetaAdsController extends Controller
             'category' => $page['category'] ?? null,
             'access_token' => $page['access_token'],
             'token_expires_at' => null,
+            'meta_user_id' => $pending['meta_user_id'],
             'connected_by_user_id' => $request->user()->id,
         ];
         if ($pageConnection) {

@@ -12,6 +12,7 @@ class MetaPageConnection extends Model
         'category',
         'access_token',
         'token_expires_at',
+        'meta_user_id',
         'connected_by_user_id',
     ];
 

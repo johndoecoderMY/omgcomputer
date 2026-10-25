@@ -23,6 +23,7 @@ use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketplaceShopController;
 use App\Http\Controllers\MetaAdsController;
+use App\Http\Controllers\MetaDataDeletionController;
 use App\Http\Controllers\MetaContentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
@@ -54,6 +55,13 @@ Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
+Route::view('/data-deletion', 'pages.data-deletion')->name('data-deletion.instructions');
+Route::post('/webhooks/meta/data-deletion', [MetaDataDeletionController::class, 'callback'])
+    ->middleware('throttle:30,1')
+    ->name('data-deletion.callback');
+Route::get('/data-deletion/status/{confirmationCode}', [MetaDataDeletionController::class, 'status'])
+    ->where('confirmationCode', '[A-Za-z0-9]{48}')
+    ->name('data-deletion.status');
 Route::view('/toc', 'pages.toc')->name('toc');
 Route::view('/terms', 'pages.toc')->name('terms');
 Route::redirect('/faq', '/#faq')->name('faq');

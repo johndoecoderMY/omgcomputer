@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'webhooks/meta/whatsapp',
+            'webhooks/meta/data-deletion',
             'webhooks/chip/collect/*',
             'webhooks/chip/shop/*',
         ]);

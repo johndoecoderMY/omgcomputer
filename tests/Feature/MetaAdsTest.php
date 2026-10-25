@@ -56,6 +56,7 @@ class MetaAdsTest extends TestCase
             'https://graph.facebook.com/v25.0/oauth/access_token*' => Http::sequence()
                 ->push(['access_token' => 'short-lived-token', 'expires_in' => 3600])
                 ->push(['access_token' => 'long-lived-token', 'expires_in' => 5184000]),
+            'https://graph.facebook.com/v25.0/me?*' => Http::response(['id' => '445566']),
             'https://graph.facebook.com/v25.0/me/adaccounts*' => Http::response([
                 'data' => [[
                     'id' => 'act_123456',
@@ -86,6 +87,7 @@ class MetaAdsTest extends TestCase
         $connection = MetaAdsConnection::query()->firstOrFail();
         $this->assertSame('act_123456', $connection->account_id);
         $this->assertSame('long-lived-token', $connection->access_token);
+        $this->assertSame('445566', $connection->meta_user_id);
         $this->assertNotSame('long-lived-token', $connection->getRawOriginal('access_token'));
         $this->assertSame($admin->id, $connection->connected_by_user_id);
 
@@ -99,6 +101,7 @@ class MetaAdsTest extends TestCase
             'https://graph.facebook.com/v25.0/oauth/access_token*' => Http::sequence()
                 ->push(['access_token' => 'short-user-token', 'expires_in' => 3600])
                 ->push(['access_token' => 'long-user-token', 'expires_in' => 5184000]),
+            'https://graph.facebook.com/v25.0/me?*' => Http::response(['id' => '778899']),
             'https://graph.facebook.com/v25.0/me/adaccounts*' => Http::response(['data' => []]),
             'https://graph.facebook.com/v25.0/me/accounts*' => Http::response(['data' => [[
                 'id' => '123456',
@@ -125,6 +128,7 @@ class MetaAdsTest extends TestCase
         $pageConnection = MetaPageConnection::query()->firstOrFail();
         $this->assertSame('123456', $pageConnection->page_id);
         $this->assertSame('page-access-secret', $pageConnection->access_token);
+        $this->assertSame('778899', $pageConnection->meta_user_id);
         $this->assertNotSame('page-access-secret', $pageConnection->getRawOriginal('access_token'));
         $this->assertSame('Computer Store', $pageConnection->category);
         $this->assertSame($admin->id, $pageConnection->connected_by_user_id);
@@ -221,6 +225,34 @@ class MetaAdsTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_meta_page_permission_error_is_shown_to_admin(): void
+    {
+        $admin = $this->admin();
+        MetaPageConnection::query()->create([
+            'page_id' => '123456',
+            'page_name' => 'OMG Computer Page',
+            'access_token' => 'page-access-secret',
+            'connected_by_user_id' => $admin->id,
+        ]);
+        Http::fake([
+            'https://graph.facebook.com/v25.0/123456/feed*' => Http::response([
+                'error' => [
+                    'message' => '(#200) If posting to a Page, requires pages_read_engagement and pages_manage_posts permission with sufficient administrative permission.',
+                    'type' => 'OAuthException',
+                    'code' => 200,
+                ],
+            ], 403),
+        ]);
+
+        $this->actingAs($admin)->post(route('meta-ads.page.posts.store'), [
+            'message' => 'Permission test post',
+        ])->assertRedirect(route('meta-ads.index'))
+            ->assertSessionHas('meta_ads_result', fn (array $result): bool => ! $result['success']
+                && str_contains($result['message'], 'Meta API error (#200)')
+                && str_contains($result['message'], 'pages_manage_posts')
+                && str_contains($result['message'], 'sufficient administrative permission'));
+    }
+
     public function test_account_selection_reuses_a_connection_even_after_its_row_id_has_advanced(): void
     {
         $admin = $this->admin();
@@ -243,6 +275,7 @@ class MetaAdsTest extends TestCase
             ->withSession(['meta_ads_pending' => [
                 'access_token' => 'new-token',
                 'expires_at' => null,
+                'meta_user_id' => '445566',
                 'accounts' => [[
                     'id' => 'act_333333',
                     'name' => 'Selected account',

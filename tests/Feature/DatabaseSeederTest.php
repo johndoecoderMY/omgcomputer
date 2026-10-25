@@ -6,6 +6,7 @@ use App\Models\BillingDocument;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\CustomerMessageTemplate;
+use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\MarketingCampaign;
 use App\Models\RepairTicket;
@@ -36,6 +37,23 @@ class DatabaseSeederTest extends TestCase
 
         $this->assertGreaterThan(0, $counts['customers']);
         $this->assertGreaterThan(0, $counts['inventory_parts']);
+        $this->assertGreaterThan(0, InventoryPart::query()->where('type', 'ready_built_pc')->count());
+        $this->assertDatabaseHas('inventory_parts', [
+            'sku' => 'DEMO-PC-OFFICE-001',
+            'type' => 'ready_built_pc',
+            'is_for_sale' => true,
+            'stock_quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('inventory_movements', [
+            'reference' => 'SEED-OPENING-DEMO-PC-OFFICE-001',
+            'type' => 'received',
+            'quantity_change' => 2,
+        ]);
+        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+            ->assertOk()
+            ->assertSee('Ready-built Office PC')
+            ->assertSee('Ready-built 1080p Gaming PC')
+            ->assertSee('Ready-built Performance Gaming PC');
         $this->assertGreaterThan(0, $counts['suppliers']);
         $this->assertDatabaseHas('suppliers', [
             'name' => 'Demo PC Components Supply',
@@ -54,6 +72,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertGreaterThan(0, $counts['customer_message_templates']);
 
         $this->seed();
+        $this->assertSame(
+            3,
+            InventoryPart::query()->whereIn('sku', [
+                'DEMO-PC-OFFICE-001',
+                'DEMO-PC-GAMING-001',
+                'DEMO-PC-GAMING-002',
+            ])->count(),
+        );
+        $this->assertSame(1, InventoryMovement::query()->where('reference', 'SEED-OPENING-DEMO-PC-OFFICE-001')->count());
         $this->assertSame($counts, [
             'customers' => Customer::query()->count(),
             'inventory_parts' => InventoryPart::query()->count(),

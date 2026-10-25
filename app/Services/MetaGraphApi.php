@@ -40,7 +40,7 @@ class MetaGraphApi
     }
 
     /**
-     * @return array{access_token: string, expires_at: ?string, accounts: list<array{id: string, name: string, account_id: string, currency: ?string, account_status: ?int}>, pages: list<array{id: string, name: string, access_token: string, category: ?string}>}
+     * @return array{access_token: string, expires_at: ?string, meta_user_id: string, accounts: list<array{id: string, name: string, account_id: string, currency: ?string, account_status: ?int}>, pages: list<array{id: string, name: string, access_token: string, category: ?string}>}
      */
     public function exchangeAuthorizationCode(string $code, string $redirectUri): array
     {
@@ -62,6 +62,12 @@ class MetaGraphApi
         ]);
         $token = $this->requiredString($longLived, 'access_token');
         $expiresIn = $longLived['expires_in'] ?? null;
+
+        $profile = $this->requestJson($token, 'GET', 'me', ['fields' => 'id']);
+        $metaUserId = $profile['id'] ?? null;
+        if (! is_string($metaUserId) || ! ctype_digit($metaUserId)) {
+            throw new RuntimeException('Meta did not return a valid account ID for data-deletion handling.');
+        }
 
         $accountResponse = $this->requestJson($token, 'GET', 'me/adaccounts', [
             'fields' => 'id,name,account_id,currency,account_status',
@@ -114,6 +120,7 @@ class MetaGraphApi
             'expires_at' => is_numeric($expiresIn) && (int) $expiresIn > 0
                 ? now()->addSeconds((int) $expiresIn)->toIso8601String()
                 : null,
+            'meta_user_id' => $metaUserId,
             'accounts' => $accounts,
             'pages' => $pages,
         ];
@@ -318,6 +325,18 @@ class MetaGraphApi
     {
         $body = $response->json();
         if (! $response->successful() || ! is_array($body) || isset($body['error'])) {
+            $error = is_array($body) ? ($body['error'] ?? null) : null;
+            $message = is_array($error) && is_string($error['message'] ?? null)
+                ? trim(preg_replace('/[\x00-\x1F\x7F]+/', ' ', $error['message']) ?? '')
+                : '';
+            $code = is_array($error) && is_numeric($error['code'] ?? null)
+                ? ' (#'.(int) $error['code'].')'
+                : '';
+
+            if ($message !== '') {
+                throw new RuntimeException('Meta API error'.$code.': '.mb_substr($message, 0, 600));
+            }
+
             throw new RuntimeException('Meta rejected the request. Check the app permissions, connected asset access, and connection.');
         }
 
