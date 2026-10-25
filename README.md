@@ -57,7 +57,7 @@ Task assignments and project-linked calendar events create in-app notifications,
 
 Member creation can provision cPanel mailboxes using `CPANEL_HOST`, `CPANEL_PORT`, `CPANEL_USERNAME`, `CPANEL_API_TOKEN`, `CPANEL_EMAIL_DOMAIN`, and `CPANEL_EMAIL_QUOTA`. New members receive a signed, expiring link at their personal contact address to verify that email and choose their own account password; no password is emailed. Administrators can also create a missing mailbox from that member's profile. Set `CPANEL_EMAIL_QUOTA=0` for unlimited mailbox quota; this applies to newly provisioned mailboxes and does not change existing mailbox quotas. Administrators can test HTTPS connectivity, token access, and mailbox-list permission from **Integrations → Test cPanel Email**; the test only lists mailbox records and does not create or modify them. Never commit real API tokens.
 
-Profile pictures use Laravel’s public disk. Run `php artisan storage:link` after setup so uploaded images can be served from `public/storage`.
+Profile pictures use Laravel’s public disk. Run `php artisan storage:link` after setup, or use **System Maintenance → Create storage link**, so uploaded images can be served from `public/storage`.
 
 ## Meta Content Publishing
 

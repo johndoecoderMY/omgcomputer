@@ -175,6 +175,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/migrate', 'migrate')->middleware('throttle:10,1')->name('migrate');
         Route::post('/migrate/fresh-seed', 'freshSeed')->middleware('throttle:3,1')->name('migrate.fresh-seed');
         Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:10,1')->name('optimize-clear');
+        Route::post('/storage-link', 'storageLink')->middleware('throttle:5,1')->name('storage-link');
         Route::post('/build-assets', 'buildAssets')->middleware('throttle:10,1')->name('build-assets');
         Route::post('/git-pull', 'gitPull')->middleware('throttle:10,1')->name('git-pull');
     });

@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Administration" title="System maintenance"
-        description="Run database migrations and clear Laravel's generated optimization caches."
+        description="Manage application maintenance tasks, database migrations, and generated storage links."
         :back-url="route('dashboard')" back-label="Dashboard" />
 
     @if (session('maintenance_success'))
@@ -98,6 +98,18 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100">
                 <div class="card-body">
+                    <h2 class="h5">Public storage link</h2>
+                    <p class="text-body-secondary">
+                        Create the <code>public/storage</code> link to <code>storage/app/public</code> so uploaded profile photos and other public files can be served by the website.
+                    </p>
+                    <form method="POST" action="{{ route('admin.maintenance.storage-link') }}"
+                        onsubmit="return confirm('Create the public storage link for uploaded files?');">
+                        @csrf
+                        <button class="btn btn-outline-primary" type="submit">
+                            <span class="bi bi-link-45deg me-2" aria-hidden="true"></span>Create storage link
+                        </button>
+                    </form>
+                    <hr>
                     <h2 class="h5">Clear optimization caches</h2>
                     <p class="text-body-secondary">
                         Clear cached configuration, routes, events, and compiled views so Laravel can rebuild them from the current application files.

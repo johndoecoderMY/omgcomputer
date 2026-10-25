@@ -26,6 +26,7 @@ class AdminMaintenanceTest extends TestCase
         $this->actingAs($member)->post(route('admin.maintenance.migrate'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.migrate.fresh-seed'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.storage-link'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
 
@@ -39,6 +40,7 @@ class AdminMaintenanceTest extends TestCase
             ->assertSee('Run pending migrations')
             ->assertSee('Fresh migrate & seed')
             ->assertSee('Optimize clear')
+            ->assertSee('Create storage link')
             ->assertSee('Git pull');
     }
 
@@ -123,6 +125,17 @@ class AdminMaintenanceTest extends TestCase
             ->assertRedirect(route('admin.maintenance.index'))
             ->assertSessionHas('maintenance_success', 'Laravel optimization caches cleared.')
             ->assertSessionHas('maintenance_output', 'Cached events cleared.');
+    }
+
+    public function test_administrator_can_confirm_existing_public_storage_link(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->post(route('admin.maintenance.storage-link'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'The public storage link is already configured.');
     }
 
     public function test_administrator_can_fresh_migrate_and_seed_after_typed_confirmation(): void

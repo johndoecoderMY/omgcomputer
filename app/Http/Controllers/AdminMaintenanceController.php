@@ -51,6 +51,57 @@ class AdminMaintenanceController extends Controller
         );
     }
 
+    public function storageLink(): RedirectResponse
+    {
+        $link = public_path('storage');
+        $target = storage_path('app/public');
+        $resolvedTarget = realpath($target);
+
+        if ($resolvedTarget !== false && realpath($link) === $resolvedTarget) {
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_success', 'The public storage link is already configured.');
+        }
+
+        if (file_exists($link) || is_link($link)) {
+            Log::warning('Admin storage link was not created because the public path is occupied.', [
+                'link' => $link,
+                'target' => $target,
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'The public/storage path already exists but does not point to the application storage directory. Resolve it manually before retrying.');
+        }
+
+        try {
+            $exitCode = Artisan::call('storage:link');
+            $output = trim(Artisan::output());
+        } catch (RuntimeException $exception) {
+            Log::error('Admin storage link command failed.', [
+                'reason' => Str::limit($exception->getMessage(), 200),
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'The storage link could not be created. Check filesystem permissions and application logs.');
+        }
+
+        if ($exitCode !== 0 || $resolvedTarget === false || realpath($link) !== $resolvedTarget) {
+            Log::error('Admin storage link command did not create the expected link.', [
+                'exit_code' => $exitCode,
+                'output' => $output,
+                'link' => $link,
+                'target' => $target,
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'The storage link could not be verified after creation. Check filesystem permissions and application logs.')
+                ->with('maintenance_output', $output);
+        }
+
+        return redirect()->route('admin.maintenance.index')
+            ->with('maintenance_success', 'The public storage link was created successfully.')
+            ->with('maintenance_output', $output);
+    }
+
     public function buildAssets(): RedirectResponse
     {
         try {
