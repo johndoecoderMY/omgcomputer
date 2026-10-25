@@ -174,6 +174,9 @@ class MetaAdsTest extends TestCase
             if ($request->method() === 'POST' && str_ends_with($path, '/123456_987654')) {
                 return Http::response(['success' => true]);
             }
+            if ($request->method() === 'DELETE' && str_ends_with($path, '/123456_987654')) {
+                return Http::response(['success' => true]);
+            }
 
             return Http::response(['error' => ['message' => 'Unexpected request']], 400);
         });
@@ -182,7 +185,8 @@ class MetaAdsTest extends TestCase
             ->assertOk()
             ->assertSee('OMG Computer Page')
             ->assertSee('1,250 followers')
-            ->assertSee('Existing post');
+            ->assertSee('Existing post')
+            ->assertSee('Delete post');
 
         $this->post(route('meta-ads.page.posts.store'), [
             'message' => 'New Page announcement',
@@ -201,6 +205,13 @@ class MetaAdsTest extends TestCase
         Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'POST'
             && str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/123456_987654')
             && ($request['message'] ?? null) === 'Edited post');
+
+        $this->delete(route('meta-ads.page.posts.delete', '123456_987654'))
+            ->assertRedirect(route('meta-ads.index'))
+            ->assertSessionHas('success', 'Page post deleted.');
+
+        Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'DELETE'
+            && str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/123456_987654'));
     }
 
     public function test_page_post_from_another_page_cannot_be_updated(): void
@@ -225,6 +236,30 @@ class MetaAdsTest extends TestCase
             ->assertSessionHas('meta_ads_result', fn (array $result): bool => ! $result['success']);
 
         Http::assertSentCount(1);
+    }
+
+    public function test_page_post_from_another_page_cannot_be_deleted(): void
+    {
+        $admin = $this->admin();
+        MetaPageConnection::query()->create([
+            'page_id' => '123456',
+            'page_name' => 'OMG Computer Page',
+            'access_token' => 'page-access-secret',
+            'connected_by_user_id' => $admin->id,
+        ]);
+        Http::fake([
+            'https://graph.facebook.com/v25.0/123456_987654*' => Http::response([
+                'id' => '123456_987654',
+                'from' => ['id' => '999999'],
+            ]),
+        ]);
+
+        $this->actingAs($admin)->delete(route('meta-ads.page.posts.delete', '123456_987654'))
+            ->assertRedirect(route('meta-ads.index'))
+            ->assertSessionHas('meta_ads_result', fn (array $result): bool => ! $result['success']);
+
+        Http::assertSentCount(1);
+        Http::assertNotSent(fn (ClientRequest $request): bool => $request->method() === 'DELETE');
     }
 
     public function test_meta_page_permission_error_is_shown_to_admin(): void

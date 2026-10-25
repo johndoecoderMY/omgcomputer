@@ -336,4 +336,26 @@ class MetaAdsController extends Controller
             ]);
         }
     }
+
+    public function deletePagePost(string $postId, MetaGraphApi $api): RedirectResponse
+    {
+        $pageConnection = MetaPageConnection::query()->firstOrFail();
+
+        try {
+            $api->deletePagePost($pageConnection, $postId);
+
+            return redirect()->route('meta-ads.index')->with('success', 'Page post deleted.');
+        } catch (RuntimeException $exception) {
+            Log::warning('Meta Page post could not be deleted.', [
+                'connection_id' => $pageConnection->id,
+                'post_id' => $postId,
+                'exception' => $exception::class,
+            ]);
+
+            return redirect()->route('meta-ads.index')->with('meta_ads_result', [
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
 }

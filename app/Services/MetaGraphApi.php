@@ -268,6 +268,20 @@ class MetaGraphApi
     public function updatePagePost(MetaPageConnection $connection, string $postId, string $message): void
     {
         $this->assertPageConnectionUsable($connection);
+        $this->assertPostBelongsToPage($connection, $postId);
+
+        $this->requestJson($connection->access_token, 'POST', $postId, ['message' => $message]);
+    }
+
+    public function deletePagePost(MetaPageConnection $connection, string $postId): void
+    {
+        $this->assertPageConnectionUsable($connection);
+        $this->assertPostBelongsToPage($connection, $postId);
+        $this->requestJson($connection->access_token, 'DELETE', $postId);
+    }
+
+    private function assertPostBelongsToPage(MetaPageConnection $connection, string $postId): void
+    {
         if (! preg_match('/^[0-9]+_[0-9]+$/', $postId)) {
             throw new RuntimeException('The Page post ID is invalid.');
         }
@@ -276,8 +290,6 @@ class MetaGraphApi
         if (($post['id'] ?? null) !== $postId || ($post['from']['id'] ?? null) !== $connection->page_id) {
             throw new RuntimeException('That post does not belong to the connected Page.');
         }
-
-        $this->requestJson($connection->access_token, 'POST', $postId, ['message' => $message]);
     }
 
     public function assertPageConnectionUsable(MetaPageConnection $connection): void
@@ -313,9 +325,11 @@ class MetaGraphApi
                 ->connectTimeout(5)
                 ->timeout(30);
 
-            $response = $method === 'POST'
-                ? $request->asForm()->post($url.'?'.http_build_query(['appsecret_proof' => $proof]), $parameters)
-                : $request->get($url, [...$parameters, 'appsecret_proof' => $proof]);
+            $response = match ($method) {
+                'POST' => $request->asForm()->post($url.'?'.http_build_query(['appsecret_proof' => $proof]), $parameters),
+                'DELETE' => $request->delete($url, [...$parameters, 'appsecret_proof' => $proof]),
+                default => $request->get($url, [...$parameters, 'appsecret_proof' => $proof]),
+            };
         } catch (ConnectionException) {
             throw new RuntimeException('Could not connect to Meta. Please try again.');
         }

@@ -173,6 +173,12 @@
                                                 <textarea class="form-control form-control-sm" name="message" rows="2" maxlength="63206" aria-label="Edit Page post text" required>{{ $pagePost['message'] }}</textarea>
                                                 <button class="btn btn-sm btn-outline-primary" type="submit">Update post</button>
                                             </form>
+                                            <form method="POST" action="{{ route('meta-ads.page.posts.delete', $pagePost['id']) }}" class="mt-2"
+                                                onsubmit="return confirm('Delete this post from the Facebook Page? This cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn btn-sm btn-outline-danger" type="submit">Delete post</button>
+                                            </form>
                                         @else
                                             <span class="text-body-secondary">This post cannot be edited here.</span>
                                         @endif

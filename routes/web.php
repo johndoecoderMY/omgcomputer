@@ -412,6 +412,9 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::patch('/page/posts/{postId}', 'updatePagePost')
             ->where('postId', '[0-9]+_[0-9]+')
             ->name('page.posts.update');
+        Route::delete('/page/posts/{postId}', 'deletePagePost')
+            ->where('postId', '[0-9]+_[0-9]+')
+            ->name('page.posts.delete');
     });
 
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');
