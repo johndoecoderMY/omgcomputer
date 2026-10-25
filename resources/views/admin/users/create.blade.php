@@ -7,7 +7,7 @@
     <x-page-header :eyebrow="$accountType === 'customers' ? 'Manage / Customer accounts' : 'Manage / Members'" :title="$accountType === 'customers' ? 'Create customer account' : 'Create member'"
         :description="$accountType === 'customers'
             ? 'New customer accounts can view projects and tickets linked to their account.'
-            : 'New members receive a secure password setup link at their personal contact email.'"
+            : 'New members receive a secure email verification and password setup link at their personal contact email.'"
         :back-url="route($accountType === 'customers' ? 'admin.users.customers' : 'admin.users.index')"
         :back-label="$accountType === 'customers' ? 'All customer accounts' : 'All members'" />
 
@@ -82,7 +82,7 @@
             @else
                 <div class="col-12">
                     <div class="alert alert-info mb-0">
-                        A one-time password setup link will be emailed to the personal contact address. The member sets their own password; no temporary password is sent.
+                        A secure email verification and password setup link will be emailed to the personal contact address. The member verifies the address and chooses their own password; no password is sent.
                     </div>
                 </div>
             @endif

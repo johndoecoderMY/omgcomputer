@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\MemberCreatedMail;
+use App\Mail\MemberInvitationMail;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserEmailMailbox;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -136,7 +138,7 @@ class AdminUserController extends Controller
                     $mailboxUsername = trim((string) $request->input('mailbox_username'));
                     $mailboxEmail = $mailboxUsername.'@'.config('services.cpanel.email_domain');
                     if ($cpanelEnabled && $mailboxUsername !== '' && strcasecmp((string) $value, $mailboxEmail) === 0) {
-                        $fail('Use a separate personal contact email so the member can receive the password setup link.');
+                        $fail('Use a separate personal contact email so the member can verify their address and set up their account.');
                     }
                 },
             ],
@@ -163,7 +165,7 @@ class AdminUserController extends Controller
             $user = User::query()->create([
                 ...collect($data)->except(['password', 'team_ids', 'mailbox_username'])->all(),
                 'password' => Hash::make($accountPassword),
-                'force_password_change' => ! $isMember,
+                'force_password_change' => true,
             ]);
             $user->teams()->sync($data['team_ids'] ?? []);
             $user->assignRole($role);
@@ -178,11 +180,9 @@ class AdminUserController extends Controller
 
         $warnings = [];
         if ($cpanelEnabled) {
-            $mailboxCreated = false;
             try {
                 $mailbox = $provisioner->provision($data['mailbox_username']);
                 $user->emailMailbox()->create($mailbox);
-                $mailboxCreated = true;
             } catch (\RuntimeException $exception) {
                 Log::warning('cPanel mailbox provisioning failed for a new member.', [
                     'user_id' => $user->id,
@@ -190,28 +190,16 @@ class AdminUserController extends Controller
                 ]);
                 $warnings[] = $exception->getMessage();
             }
-            if ($mailboxCreated && ! $this->sendMembershipCreatedEmail($user)) {
-                $warnings[] = 'The mailbox was created, but the membership email could not be sent to the personal contact email.';
-            }
         } else {
             $warnings[] = 'cPanel provisioning is not configured; create the mailbox manually if the member needs one.';
         }
 
-        try {
-            $inviteStatus = Password::sendResetLink(['email' => $user->email]);
-            if ($inviteStatus !== Password::RESET_LINK_SENT) {
-                $warnings[] = 'The account was created, but the password setup email could not be sent. Use the password reset page to send it again.';
-            }
-        } catch (TransportExceptionInterface $exception) {
-            Log::warning('Member password setup email could not be delivered.', [
-                'user_id' => $user->id,
-                'exception' => $exception::class,
-            ]);
-            $warnings[] = 'The account was created, but the password setup email could not be delivered. Check SMTP settings and resend the reset link.';
+        if (! $this->sendMemberInvitation($user)) {
+            $warnings[] = 'The account was created, but the email verification and password setup link could not be sent to the personal contact email.';
         }
 
         $response = redirect()->route('admin.users.edit', $user)
-            ->with('success', 'Member account created. A secure password setup link was sent to the personal contact email; no account password was emailed.');
+            ->with('success', 'Member account created. An email verification and password setup link was sent to the personal contact email; no password was emailed.');
 
         return $warnings === [] ? $response : $response->with('warning', implode(' ', $warnings));
     }
@@ -313,6 +301,30 @@ class AdminUserController extends Controller
             ));
         } catch (TransportExceptionInterface $exception) {
             Log::warning('Membership email could not be delivered.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function sendMemberInvitation(User $user): bool
+    {
+        $token = Password::createToken($user);
+        $expiresAt = now()->addMinutes((int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire'));
+        $invitationUrl = URL::temporarySignedRoute(
+            'member-invitation.show',
+            $expiresAt,
+            ['user' => $user->id, 'token' => $token],
+        );
+
+        try {
+            Mail::to($user->email)->send(new MemberInvitationMail($user->name, $invitationUrl));
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('Member email verification and password setup invitation could not be delivered.', [
                 'user_id' => $user->id,
                 'exception' => $exception::class,
             ]);

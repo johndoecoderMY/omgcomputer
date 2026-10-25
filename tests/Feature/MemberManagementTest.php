@@ -3,12 +3,12 @@
 namespace Tests\Feature;
 
 use App\Mail\MemberCreatedMail;
+use App\Mail\MemberInvitationMail;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +54,7 @@ class MemberManagementTest extends TestCase
         $repairTeam = Team::create(['department_id' => $department->id, 'name' => 'Repair']);
         $supportTeam = Team::create(['department_id' => $department->id, 'name' => 'Support']);
         Notification::fake();
+        Mail::fake();
         config(['services.cpanel.enabled' => false]);
 
         $this->get(route('admin.users.index'))
@@ -64,7 +65,7 @@ class MemberManagementTest extends TestCase
         $this->get(route('admin.users.create'))
             ->assertOk()
             ->assertSee('member')
-            ->assertSee('password setup link')
+            ->assertSee('email verification and password setup link')
             ->assertSee('js-user-search', false);
 
         $this->post(route('admin.users.store'), [
@@ -78,8 +79,10 @@ class MemberManagementTest extends TestCase
 
         $member = User::query()->where('email', 'new-member@example.test')->firstOrFail();
         $this->assertTrue($member->hasRole('member'));
-        $this->assertFalse($member->force_password_change);
-        Notification::assertSentTo($member, ResetPassword::class);
+        $this->assertTrue($member->force_password_change);
+        $this->assertNull($member->email_verified_at);
+        Mail::assertSent(MemberInvitationMail::class, fn (MemberInvitationMail $mail): bool => $mail->hasTo($member->email)
+            && str_contains($mail->render(), 'Verify email and set password'));
         $this->assertEqualsCanonicalizing(
             [$repairTeam->id, $supportTeam->id],
             $member->teams->modelKeys(),
@@ -194,16 +197,34 @@ class MemberManagementTest extends TestCase
             && $request['domain'] === 'example.test'
             && $request['quota'] === 0
             && filled($request['password']));
-        Notification::assertSentTo($member, ResetPassword::class);
-        Mail::assertSent(MemberCreatedMail::class, function (MemberCreatedMail $mail) use ($member): bool {
+        $invitation = null;
+        Mail::assertSent(MemberInvitationMail::class, function (MemberInvitationMail $mail) use ($member, &$invitation): bool {
+            $invitation = $mail;
             $rendered = $mail->render();
 
-            return $mail->hasTo('personal@example.test')
-                && str_contains($rendered, 'Your OMG Computer membership has been created')
-                && str_contains($rendered, route('login'))
+            return $mail->hasTo($member->email)
+                && str_contains($rendered, 'Verify email and set password')
                 && ! str_contains($rendered, $member->emailMailbox->password)
                 && ! str_contains($rendered, $member->emailMailbox->email);
         });
+        $this->assertNotNull($invitation);
+        $this->post(route('logout'));
+        $this->get($invitation->invitationUrl)
+            ->assertOk()
+            ->assertSee('Verify your email and set a password')
+            ->assertSee($member->email);
+        $this->post($invitation->invitationUrl, [
+            'password' => 'Strong-password-123!',
+            'password_confirmation' => 'Strong-password-123!',
+        ])->assertRedirect(route('login'))
+            ->assertSessionHas('status', 'Your email is verified and password is set. You can now sign in.');
+        $member->refresh();
+        $this->assertNotNull($member->email_verified_at);
+        $this->assertFalse($member->force_password_change);
+        $this->post(route('login'), [
+            'email' => $member->email,
+            'password' => 'Strong-password-123!',
+        ])->assertRedirect(route('dashboard', absolute: false));
     }
 
     public function test_admin_can_create_a_missing_mailbox_from_the_member_profile_once(): void
@@ -280,6 +301,7 @@ class MemberManagementTest extends TestCase
         $admin->assignRole('admin');
         $this->actingAs($admin);
         Notification::fake();
+        Mail::fake();
         config([
             'services.cpanel.enabled' => true,
             'services.cpanel.host' => 'cpanel.example.test',
@@ -304,7 +326,7 @@ class MemberManagementTest extends TestCase
 
         $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
         $this->assertNull($member->emailMailbox);
-        Notification::assertSentTo($member, ResetPassword::class);
+        Mail::assertSent(MemberInvitationMail::class, fn (MemberInvitationMail $mail): bool => $mail->hasTo($member->email));
     }
 
     public function test_member_management_is_restricted_and_administrator_cannot_delete_themselves(): void
