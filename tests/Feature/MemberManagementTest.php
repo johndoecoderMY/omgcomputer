@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\MemberCreatedMail;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -150,6 +152,7 @@ class MemberManagementTest extends TestCase
         $admin->assignRole('admin');
         $this->actingAs($admin);
         Notification::fake();
+        Mail::fake();
         config([
             'services.cpanel.enabled' => true,
             'services.cpanel.host' => 'cpanel.example.test',
@@ -192,6 +195,15 @@ class MemberManagementTest extends TestCase
             && $request['quota'] === 0
             && filled($request['password']));
         Notification::assertSentTo($member, ResetPassword::class);
+        Mail::assertSent(MemberCreatedMail::class, function (MemberCreatedMail $mail) use ($member): bool {
+            $rendered = $mail->render();
+
+            return $mail->hasTo('personal@example.test')
+                && str_contains($rendered, 'Your OMG Computer membership has been created')
+                && str_contains($rendered, route('login'))
+                && ! str_contains($rendered, $member->emailMailbox->password)
+                && ! str_contains($rendered, $member->emailMailbox->email);
+        });
     }
 
     public function test_admin_can_create_a_missing_mailbox_from_the_member_profile_once(): void
@@ -205,6 +217,7 @@ class MemberManagementTest extends TestCase
         ]);
         $member->assignRole('member');
         $this->actingAs($admin);
+        Mail::fake();
         config([
             'services.cpanel.enabled' => true,
             'services.cpanel.host' => 'cpanel.example.test',
@@ -238,6 +251,15 @@ class MemberManagementTest extends TestCase
             $member->emailMailbox->password,
             DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
         );
+        Mail::assertSent(MemberCreatedMail::class, function (MemberCreatedMail $mail) use ($member): bool {
+            $rendered = $mail->render();
+
+            return $mail->hasTo('mailbox.member.personal@example.test')
+                && str_contains($rendered, 'Your OMG Computer membership has been created')
+                && str_contains($rendered, route('login'))
+                && ! str_contains($rendered, $member->emailMailbox->password)
+                && ! str_contains($rendered, $member->emailMailbox->email);
+        });
         Http::assertSentCount(1);
 
         $this->post(route('admin.users.mailbox.create', $member), [

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\MemberCreatedMail;
 use App\Models\Team;
 use App\Models\User;
 use App\Models\UserEmailMailbox;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -176,15 +178,20 @@ class AdminUserController extends Controller
 
         $warnings = [];
         if ($cpanelEnabled) {
+            $mailboxCreated = false;
             try {
                 $mailbox = $provisioner->provision($data['mailbox_username']);
                 $user->emailMailbox()->create($mailbox);
+                $mailboxCreated = true;
             } catch (\RuntimeException $exception) {
                 Log::warning('cPanel mailbox provisioning failed for a new member.', [
                     'user_id' => $user->id,
                     'exception' => $exception::class,
                 ]);
                 $warnings[] = $exception->getMessage();
+            }
+            if ($mailboxCreated && ! $this->sendMembershipCreatedEmail($user)) {
+                $warnings[] = 'The mailbox was created, but the membership email could not be sent to the personal contact email.';
             }
         } else {
             $warnings[] = 'cPanel provisioning is not configured; create the mailbox manually if the member needs one.';
@@ -204,7 +211,7 @@ class AdminUserController extends Controller
         }
 
         $response = redirect()->route('admin.users.edit', $user)
-            ->with('success', 'Member account created. A secure password setup link was sent to the contact email; no password was emailed.');
+            ->with('success', 'Member account created. A secure password setup link was sent to the personal contact email; no account password was emailed.');
 
         return $warnings === [] ? $response : $response->with('warning', implode(' ', $warnings));
     }
@@ -288,7 +295,32 @@ class AdminUserController extends Controller
             return back()->with('warning', $exception->getMessage());
         }
 
+        if (! $this->sendMembershipCreatedEmail($user)) {
+            return back()
+                ->with('success', 'OMG Computer mailbox created for '.$user->name.'.')
+                ->with('warning', 'The mailbox was created, but the membership email could not be sent to the personal contact email.');
+        }
+
         return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'.');
+    }
+
+    private function sendMembershipCreatedEmail(User $user): bool
+    {
+        try {
+            Mail::to($user->email)->send(new MemberCreatedMail(
+                $user->name,
+                route('login'),
+            ));
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('Membership email could not be delivered.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     public function update(Request $request, User $user): RedirectResponse
