@@ -160,6 +160,7 @@
         ],
         str_starts_with($routeName, 'admin.access.') => [
             ['label' => 'Manage'],
+            ['label' => 'Members', 'url' => route('admin.users.index')],
             ['label' => 'Roles & permissions', 'url' => route('admin.access.index')],
         ],
         str_starts_with($routeName, 'admin.backups.') => [

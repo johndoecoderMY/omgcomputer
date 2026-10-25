@@ -35,6 +35,20 @@ class MetaAdsTest extends TestCase
         $this->actingAs($member)->get(route('meta-ads.index'))->assertForbidden();
     }
 
+    public function test_admin_manage_navigation_groups_marketing_tools_and_links_google_seo(): void
+    {
+        $response = $this->actingAs($this->admin())->get(route('meta-ads.index'));
+
+        $response->assertOk()
+            ->assertSee('Manage')
+            ->assertSee('Marketing')
+            ->assertSee(route('meta-ads.index'), false)
+            ->assertSee(route('meta-content.index'), false)
+            ->assertSee('href="https://search.google.com/search-console"', false)
+            ->assertSee('Google SEO')
+            ->assertSee('rel="noopener noreferrer"', false);
+    }
+
     public function test_admin_can_start_oauth_with_state_and_required_permissions(): void
     {
         $response = $this->actingAs($this->admin())->get(route('meta-ads.connect'));

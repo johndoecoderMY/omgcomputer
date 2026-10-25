@@ -343,18 +343,25 @@
                         @endrole
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('users.view'))
                             @role('admin')
-                            <a class="nav-link" href="{{ route('admin.users.index') }}">
+                            <a class="nav-link dropdown-indicator" href="#membersMenu" role="button" data-bs-toggle="collapse"
+                                aria-expanded="false" aria-controls="membersMenu">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-people"></span></span>
                                     <span class="nav-link-text ps-1">Members</span>
                                 </div>
                             </a>
-                            <a class="nav-link" href="{{ route('admin.access.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-person-lock"></span></span>
-                                    <span class="nav-link-text ps-1">Roles & permissions</span>
-                                </div>
-                            </a>
+                            <ul class="nav collapse" id="membersMenu">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('admin.users.index') }}">
+                                        <span class="nav-link-text ps-1">Member list</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('admin.access.index') }}">
+                                        <span class="nav-link-text ps-1">Roles &amp; permissions</span>
+                                    </a>
+                                </li>
+                            </ul>
                             <a class="nav-link" href="{{ route('admin.backups.index') }}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-database"></span></span>
@@ -367,7 +374,7 @@
                                     <span class="nav-link-text ps-1">System maintenance</span>
                                 </div>
                             </a>
-                        @else
+                            @else
                             <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-people"></span></span>
@@ -438,20 +445,38 @@
                             </a>
                         @endif
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
-                            <a class="nav-link" href="{{ route('meta-content.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-share"></span></span>
-                                    <span class="nav-link-text ps-1">Meta Content</span>
-                                </div>
-                            </a>
-                        @endif
-                        @if (auth()->user()->hasRole('admin'))
-                            <a class="nav-link" href="{{ route('meta-ads.index') }}">
+                            <a class="nav-link dropdown-indicator" href="#marketingMenu" role="button" data-bs-toggle="collapse"
+                                aria-expanded="false" aria-controls="marketingMenu">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-megaphone"></span></span>
-                                    <span class="nav-link-text ps-1">Meta Ads</span>
+                                    <span class="nav-link-text ps-1">Marketing</span>
                                 </div>
                             </a>
+                            <ul class="nav collapse" id="marketingMenu">
+                                @if (auth()->user()->hasRole('admin'))
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ route('meta-ads.index') }}">
+                                            <span class="nav-link-text ps-1">Meta Ads</span>
+                                        </a>
+                                    </li>
+                                @endif
+                                @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ route('meta-content.index') }}">
+                                            <span class="nav-link-text ps-1">Content</span>
+                                        </a>
+                                    </li>
+                                @endif
+                                @role('admin')
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="https://search.google.com/search-console"
+                                            target="_blank" rel="noopener noreferrer">
+                                            <span class="nav-link-text ps-1">Google SEO</span>
+                                            <span class="bi bi-box-arrow-up-right ms-1 small" aria-hidden="true"></span>
+                                        </a>
+                                    </li>
+                                @endrole
+                            </ul>
                         @endif
 
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('inventory.view'))
