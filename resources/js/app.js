@@ -92,8 +92,13 @@ if (userId && pusherKey && pusherCluster) {
             count.textContent = nextUnreadCount > 99 ? '99+' : String(nextUnreadCount);
             count.setAttribute('aria-label', `${nextUnreadCount} unread notifications`);
             count.classList.remove('d-none');
-            document.getElementById('navbarDropdownNotification')
-                ?.setAttribute('aria-label', `Notifications, ${nextUnreadCount} unread`);
+            const notificationLink = document.getElementById('navbarDropdownNotification');
+            notificationLink?.classList.add(
+                'notification-indicator',
+                'notification-indicator-primary',
+                'notification-indicator-fill',
+            );
+            notificationLink?.setAttribute('aria-label', `Notifications, ${nextUnreadCount} unread`);
         }
 
         if (list) {

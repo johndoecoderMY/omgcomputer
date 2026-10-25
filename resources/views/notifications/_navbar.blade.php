@@ -5,7 +5,7 @@
 @endphp
 
 <li class="nav-item dropdown d-flex align-items-center  px-2">
-    <a class="nav-link px-0 notification-indicator notification-indicator-primary notification-indicator-fill"
+    <a class="nav-link px-0 {{ $unreadNotificationCount > 0 ? 'notification-indicator notification-indicator-primary notification-indicator-fill' : '' }}"
         href="{{ route('notifications.index') }}" id="navbarDropdownNotification" role="button"
         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
         aria-label="Notifications, {{ $unreadNotificationCount }} unread"

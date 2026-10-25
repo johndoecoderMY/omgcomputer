@@ -291,6 +291,24 @@ class WorkspaceNotificationsTest extends TestCase
         $this->assertNotNull($unread->fresh()->read_at);
     }
 
+    public function test_notification_indicator_dot_is_hidden_when_there_are_no_unread_notifications(): void
+    {
+        $user = User::factory()->create();
+        $user->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => WorkspaceNotification::class,
+            'data' => ['title' => 'Read update', 'message' => 'Already read.'],
+            'read_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('notifications.index'))
+            ->assertOk()
+            ->assertSee('id="navbarDropdownNotification"', false)
+            ->assertDontSee('notification-indicator-primary', false)
+            ->assertSee('class="notification-indicator-number d-none"', false);
+    }
+
     public function test_users_cannot_read_another_users_notification(): void
     {
         $owner = User::factory()->create();
