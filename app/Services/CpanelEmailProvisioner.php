@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -14,7 +15,10 @@ class CpanelEmailProvisioner
         return (bool) config('services.cpanel.enabled');
     }
 
-    public function testConnection(): int
+    /**
+     * @return list<string>
+     */
+    public function testConnection(): array
     {
         $host = $this->host();
         $domain = strtolower((string) config('services.cpanel.email_domain'));
@@ -35,13 +39,18 @@ class CpanelEmailProvisioner
             throw new RuntimeException('cPanel rejected the API credentials. Check the cPanel username and API token, and confirm the token has access to the Email UAPI.');
         }
 
-        if (! $response->successful() || (int) $response->json('result.status') !== 1) {
-            throw new RuntimeException('cPanel UAPI responded but could not list mailboxes. Check the email domain and the API token permissions.');
+        if (! $response->successful() || $this->uapiStatus($response) !== 1) {
+            throw new RuntimeException($this->mailboxListFailureMessage($response));
         }
 
-        $mailboxes = $response->json('result.data');
+        $mailboxes = $response->json('data', $response->json('result.data', []));
 
-        return is_array($mailboxes) ? count($mailboxes) : 0;
+        return collect(is_array($mailboxes) ? $mailboxes : [])
+            ->map(fn (mixed $mailbox): mixed => is_array($mailbox) ? ($mailbox['email'] ?? null) : null)
+            ->filter(fn (mixed $email): bool => is_string($email) && filter_var(trim($email), FILTER_VALIDATE_EMAIL) !== false)
+            ->map(fn (string $email): string => trim($email))
+            ->values()
+            ->all();
     }
 
     /**
@@ -84,7 +93,7 @@ class CpanelEmailProvisioner
             throw new RuntimeException('Could not connect to cPanel UAPI. Check the host, port, and network access.', previous: $exception);
         }
 
-        if (! $response->successful() || (int) $response->json('result.status') !== 1) {
+        if (! $response->successful() || $this->uapiStatus($response) !== 1) {
             throw new RuntimeException('cPanel could not create the mailbox. Check the UAPI settings, domain, and mailbox name.');
         }
 
@@ -113,5 +122,40 @@ class CpanelEmailProvisioner
         }
 
         return $host;
+    }
+
+    private function mailboxListFailureMessage(Response $response): string
+    {
+        $details = collect([
+            $response->json('errors'),
+            $response->json('messages'),
+            $response->json('result.errors'),
+            $response->json('result.messages'),
+        ])->flatten()
+            ->filter(fn (mixed $message): bool => is_string($message) && trim($message) !== '')
+            ->map(fn (string $message): string => trim($message))
+            ->unique()
+            ->implode(' ');
+
+        if ($details !== '') {
+            $secrets = array_filter([
+                (string) config('services.cpanel.api_token'),
+                (string) config('services.cpanel.username'),
+            ]);
+            $details = str_replace($secrets, '[redacted]', $details);
+            $details = Str::limit($details, 300);
+        } else {
+            $details = "HTTP {$response->status()}, UAPI status ".var_export($this->uapiStatus($response), true).'.';
+        }
+
+        return 'cPanel could not list mailboxes: '.$details
+            .' Verify CPANEL_EMAIL_DOMAIN is a domain configured in this cPanel account (not the mail-server hostname) and that the API token can access Email UAPI.';
+    }
+
+    private function uapiStatus(Response $response): ?int
+    {
+        $status = $response->json('status', $response->json('result.status'));
+
+        return is_numeric($status) ? (int) $status : null;
     }
 }

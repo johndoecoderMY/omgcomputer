@@ -7,12 +7,13 @@ use App\Models\Team;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Tests\TestCase;
 
 class MemberManagementTest extends TestCase
@@ -156,13 +157,14 @@ class MemberManagementTest extends TestCase
             'services.cpanel.username' => 'cpanel-user',
             'services.cpanel.api_token' => 'private-api-token',
             'services.cpanel.email_domain' => 'example.test',
-            'services.cpanel.email_quota' => 1024,
+            'services.cpanel.email_quota' => 0,
         ]);
         $this->get(route('admin.users.create'))
             ->assertOk()
             ->assertSee('Preferred email name')
             ->assertSee('firstname.lastname')
-            ->assertSee('@example.test');
+            ->assertSee('@example.test')
+            ->assertSee('Mailbox quota: unlimited.');
         Http::fake([
             'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
                 'result' => ['status' => 1],
@@ -181,13 +183,13 @@ class MemberManagementTest extends TestCase
         $this->assertSame('provisioned.member@example.test', $member->emailMailbox->email);
         $this->assertNotSame(
             $member->emailMailbox->password,
-            \Illuminate\Support\Facades\DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
+            DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
         );
         Http::assertSent(fn (HttpRequest $request): bool => $request->url() === 'https://cpanel.example.test:2083/execute/Email/add_pop'
             && $request->hasHeader('Authorization', 'cpanel cpanel-user:private-api-token')
             && $request['email'] === 'provisioned.member'
             && $request['domain'] === 'example.test'
-            && $request['quota'] === 1024
+            && $request['quota'] === 0
             && filled($request['password']));
         Notification::assertSentTo($member, ResetPassword::class);
     }

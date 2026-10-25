@@ -12,8 +12,17 @@
         <div class="alert {{ $result['success'] ? 'alert-success' : 'alert-danger' }}" role="status">
             <strong>{{ $result['success'] ? 'Connection successful' : 'Connection not verified' }}</strong>
             <div>{{ $result['message'] }}</div>
-            @if ($result['success'] && isset($result['mailbox_count']))
-                <div class="small mt-1">Mailboxes found: {{ $result['mailbox_count'] }}</div>
+            @if ($result['success'] && isset($result['mailbox_emails']))
+                <div class="small mt-1">Mailboxes found: {{ count($result['mailbox_emails']) }}</div>
+                @if ($result['mailbox_emails'] !== [])
+                    <ul class="small mt-2 mb-0">
+                        @foreach ($result['mailbox_emails'] as $email)
+                            <li>{{ $email }}</li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="small mt-2">No mailboxes were returned for this domain.</div>
+                @endif
             @endif
         </div>
     @endif
@@ -77,6 +86,9 @@
                         <li>Whether the cPanel username and API token are accepted.</li>
                         <li>Whether cPanel can list mailboxes for <code>{{ $domain ?: 'your configured email domain' }}</code>.</li>
                     </ul>
+                    <p class="small text-body-secondary mt-3 mb-0">
+                        <code>CPANEL_EMAIL_DOMAIN</code> must be a domain listed in this cPanel account (for example, <code>omgcomputer.my</code>), not the mail-server hostname <code>mail.omgcomputer.my</code>.
+                    </p>
                 </div>
             </section>
         </div>

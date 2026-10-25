@@ -39,7 +39,7 @@ class IntegrationTestController extends Controller
         }
 
         try {
-            $mailboxCount = $cpanel->testConnection();
+            $mailboxEmails = $cpanel->testConnection();
         } catch (\RuntimeException $exception) {
             Log::warning('Configured cPanel connection test failed.', [
                 'reason' => $exception->getMessage(),
@@ -54,7 +54,7 @@ class IntegrationTestController extends Controller
         return back()->with('cpanel_result', [
             'success' => true,
             'message' => 'Connected to cPanel UAPI and verified mailbox access for '.config('services.cpanel.email_domain').'.',
-            'mailbox_count' => $mailboxCount,
+            'mailbox_emails' => $mailboxEmails,
         ]);
     }
 

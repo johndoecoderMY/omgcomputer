@@ -41,7 +41,7 @@ return [
         'username' => env('CPANEL_USERNAME'),
         'api_token' => env('CPANEL_API_TOKEN'),
         'email_domain' => env('CPANEL_EMAIL_DOMAIN'),
-        'email_quota' => (int) env('CPANEL_EMAIL_QUOTA', 1024),
+        'email_quota' => (int) env('CPANEL_EMAIL_QUOTA', 0),
         'enabled' => filled(env('CPANEL_HOST'))
             && filled(env('CPANEL_USERNAME'))
             && filled(env('CPANEL_API_TOKEN'))

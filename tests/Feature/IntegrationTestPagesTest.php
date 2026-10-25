@@ -33,13 +33,16 @@ class IntegrationTestPagesTest extends TestCase
         ]);
         Http::fake([
             'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
-                'result' => [
-                    'status' => 1,
-                    'data' => [
-                        ['email' => 'team@example.test'],
-                        ['email' => 'support@example.test'],
-                    ],
+                'data' => [
+                    ['suspended_incoming' => 0, 'suspended_login' => 0, 'login' => 'team@example.test', 'email' => 'team@example.test'],
+                    ['suspended_incoming' => 0, 'suspended_login' => 0, 'login' => 'support@example.test', 'email' => 'support@example.test'],
+                    ['login' => 'Main Account', 'email' => 'test-cpanel-user'],
                 ],
+                'errors' => null,
+                'warnings' => null,
+                'status' => 1,
+                'messages' => null,
+                'metadata' => ['transformed' => 1],
             ]),
         ]);
 
@@ -65,6 +68,8 @@ class IntegrationTestPagesTest extends TestCase
             ->assertOk()
             ->assertSee('Connection successful')
             ->assertSee('Mailboxes found: 2')
+            ->assertSee('team@example.test')
+            ->assertSee('support@example.test')
             ->assertDontSee('private-cpanel-token');
     }
 
@@ -92,6 +97,37 @@ class IntegrationTestPagesTest extends TestCase
             ->assertOk()
             ->assertSee('Connection not verified')
             ->assertSee('Check the cPanel username and API token');
+    }
+
+    public function test_cpanel_connection_test_shows_safe_uapi_error_details(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'test-cpanel-user',
+            'services.cpanel.api_token' => 'private-cpanel-token',
+            'services.cpanel.email_domain' => 'mail.omgcomputer.my',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
+                'data' => null,
+                'errors' => ['The domain mail.omgcomputer.my is not configured for this account.'],
+                'status' => 0,
+            ]),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))->assertOk();
+        $this->actingAs($admin)->post(route('reports.integrations.cpanel.check'))
+            ->assertRedirect(route('reports.integrations.cpanel'));
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))
+            ->assertOk()
+            ->assertSee('The domain mail.omgcomputer.my is not configured for this account.')
+            ->assertSee('not the mail-server hostname')
+            ->assertDontSee('private-cpanel-token');
     }
 
     public function test_cpanel_connection_test_requires_admin_access(): void
