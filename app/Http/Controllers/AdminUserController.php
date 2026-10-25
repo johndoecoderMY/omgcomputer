@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
@@ -161,7 +161,7 @@ class AdminUserController extends Controller
             'guard_name' => 'web',
         ]);
 
-        $user = DB::transaction(function () use ($data, $role, $accountPassword, $isMember): User {
+        $user = DB::transaction(function () use ($data, $role, $accountPassword): User {
             $user = User::query()->create([
                 ...collect($data)->except(['password', 'team_ids', 'mailbox_username'])->all(),
                 'password' => Hash::make($accountPassword),

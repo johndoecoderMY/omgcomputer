@@ -218,6 +218,7 @@ class MemberManagementTest extends TestCase
             'password_confirmation' => 'Strong-password-123!',
         ])->assertRedirect(route('login'))
             ->assertSessionHas('status', 'Your email is verified and password is set. You can now sign in.');
+        $this->get($invitation->invitationUrl)->assertForbidden();
         $member->refresh();
         $this->assertNotNull($member->email_verified_at);
         $this->assertFalse($member->force_password_change);
