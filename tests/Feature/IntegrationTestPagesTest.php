@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\IntegrationTestMail;
+use App\Models\User;
 use App\Models\WhatsAppInboundMessage;
 use App\Notifications\IntegrationTestNotification;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
@@ -17,6 +17,92 @@ use Tests\TestCase;
 class IntegrationTestPagesTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_admin_can_test_cpanel_connection_without_exposing_the_api_token(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'test-cpanel-user',
+            'services.cpanel.api_token' => 'private-cpanel-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
+                'result' => [
+                    'status' => 1,
+                    'data' => [
+                        ['email' => 'team@example.test'],
+                        ['email' => 'support@example.test'],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))
+            ->assertOk()
+            ->assertSee('cPanel Email UAPI')
+            ->assertSee('cpanel.example.test')
+            ->assertSee('example.test')
+            ->assertDontSee('private-cpanel-token');
+
+        $this->actingAs($admin)->post(route('reports.integrations.cpanel.check'))
+            ->assertRedirect(route('reports.integrations.cpanel'));
+
+        Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'GET'
+            && str_contains($request->url(), '/execute/Email/list_pops'));
+        Http::assertSent(fn (ClientRequest $request): bool => $request->hasHeader(
+            'Authorization',
+            'cpanel test-cpanel-user:private-cpanel-token',
+        ));
+        Http::assertSent(fn (ClientRequest $request): bool => str_contains($request->url(), 'example.test'));
+
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))
+            ->assertOk()
+            ->assertSee('Connection successful')
+            ->assertSee('Mailboxes found: 2')
+            ->assertDontSee('private-cpanel-token');
+    }
+
+    public function test_cpanel_connection_test_reports_invalid_api_credentials(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'test-cpanel-user',
+            'services.cpanel.api_token' => 'invalid-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([], 403),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))->assertOk();
+        $this->actingAs($admin)->post(route('reports.integrations.cpanel.check'))
+            ->assertRedirect(route('reports.integrations.cpanel'));
+        $this->actingAs($admin)->get(route('reports.integrations.cpanel'))
+            ->assertOk()
+            ->assertSee('Connection not verified')
+            ->assertSee('Check the cPanel username and API token');
+    }
+
+    public function test_cpanel_connection_test_requires_admin_access(): void
+    {
+        Role::findOrCreate('member', 'web');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+
+        $this->actingAs($member)->get(route('reports.integrations.cpanel'))->assertForbidden();
+        $this->actingAs($member)->post(route('reports.integrations.cpanel.check'))->assertForbidden();
+    }
 
     public function test_admin_can_check_whatsapp_phone_profile_without_sending_a_message(): void
     {
@@ -58,6 +144,36 @@ class IntegrationTestPagesTest extends TestCase
             ->assertSee('Example Repairs')
             ->assertSee('+60 12-345 6789')
             ->assertDontSee('test-meta-token');
+    }
+
+    public function test_whatsapp_permission_error_explains_required_meta_access(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.meta.access_token' => 'test-meta-token',
+            'services.meta.whatsapp_phone_number_id' => '123456789',
+            'services.meta.graph_api_version' => 'v25.0',
+        ]);
+        Http::fake([
+            'https://graph.facebook.com/v25.0/123456789*' => Http::response([
+                'error' => [
+                    'message' => 'Application does not have permission for this action',
+                    'type' => 'OAuthException',
+                    'code' => 10,
+                ],
+            ], 403),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.whatsapp'))->assertOk();
+        $this->actingAs($admin)->post(route('reports.integrations.whatsapp.check'))
+            ->assertRedirect(route('reports.integrations.whatsapp'));
+        $this->actingAs($admin)->get(route('reports.integrations.whatsapp'))
+            ->assertOk()
+            ->assertSee('Connection not verified')
+            ->assertSee('whatsapp_business_management')
+            ->assertSee('assign the WhatsApp Business Account and phone number');
     }
 
     public function test_meta_can_verify_the_whatsapp_webhook_with_the_configured_token(): void

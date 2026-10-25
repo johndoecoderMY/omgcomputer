@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\CompanyProfile;
 use App\Services\MailSettingsService;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,5 +26,9 @@ class AppServiceProvider extends ServiceProvider
         if (Schema::hasTable('email_server_settings')) {
             app(MailSettingsService::class)->apply();
         }
+
+        View::composer(['welcome', 'layouts.guest.footer'], function ($view): void {
+            $view->with('companyProfile', CompanyProfile::current());
+        });
     }
 }

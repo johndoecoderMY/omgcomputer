@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\IntegrationTestMail;
 use App\Notifications\IntegrationTestNotification;
+use App\Services\CpanelEmailProvisioner;
 use App\Services\MailSettingsService;
 use App\Services\ParcelTrackingService;
 use Illuminate\Http\Client\ConnectionException;
@@ -17,6 +18,46 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class IntegrationTestController extends Controller
 {
+    public function cpanel(CpanelEmailProvisioner $cpanel): View
+    {
+        return view('reports.integrations.cpanel', [
+            'cpanelReady' => $cpanel->configured(),
+            'host' => config('services.cpanel.host'),
+            'port' => config('services.cpanel.port'),
+            'usernameConfigured' => filled(config('services.cpanel.username')),
+            'domain' => config('services.cpanel.email_domain'),
+        ]);
+    }
+
+    public function checkCpanel(CpanelEmailProvisioner $cpanel): RedirectResponse
+    {
+        if (! $cpanel->configured()) {
+            return back()->with('cpanel_result', [
+                'success' => false,
+                'message' => 'Configure CPANEL_HOST, CPANEL_USERNAME, CPANEL_API_TOKEN, and CPANEL_EMAIL_DOMAIN in the server environment, then clear cached configuration.',
+            ]);
+        }
+
+        try {
+            $mailboxCount = $cpanel->testConnection();
+        } catch (\RuntimeException $exception) {
+            Log::warning('Configured cPanel connection test failed.', [
+                'reason' => $exception->getMessage(),
+            ]);
+
+            return back()->with('cpanel_result', [
+                'success' => false,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with('cpanel_result', [
+            'success' => true,
+            'message' => 'Connected to cPanel UAPI and verified mailbox access for '.config('services.cpanel.email_domain').'.',
+            'mailbox_count' => $mailboxCount,
+        ]);
+    }
+
     public function notifications(): View
     {
         return view('reports.integrations.notifications', [
@@ -119,12 +160,16 @@ class IntegrationTestController extends Controller
 
         if (! $response->successful()) {
             $message = $response->json('error.message');
+            $errorCode = $response->json('error.code');
+            $permissionGuidance = (int) $errorCode === 10
+                ? ' Grant the Meta app whatsapp_business_management permission, make sure the access token has that permission, and assign the WhatsApp Business Account and phone number to the token owner. For production access, complete any required Meta App Review and Advanced Access approval.'
+                : '';
 
             return back()->with('integration_result', [
                 'success' => false,
                 'message' => is_string($message) && $message !== ''
-                    ? mb_substr($message, 0, 400)
-                    : "Meta returned HTTP {$response->status()}. Check the access token, phone-number ID, and permissions.",
+                    ? mb_substr($message, 0, 400).$permissionGuidance
+                    : "Meta returned HTTP {$response->status()}. Check the access token, phone-number ID, and permissions.".$permissionGuidance,
             ]);
         }
 

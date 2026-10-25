@@ -14,6 +14,9 @@
     @if (session('maintenance_error'))
         <div class="alert alert-danger" role="alert">{{ session('maintenance_error') }}</div>
     @endif
+    @if ($errors->has('confirmation'))
+        <div class="alert alert-danger" role="alert">{{ $errors->first('confirmation') }}</div>
+    @endif
     @if (filled(session('maintenance_output')))
         <section class="card mb-3" aria-labelledby="maintenance-output-heading">
             <div class="card-header bg-body">
@@ -64,13 +67,29 @@
                 <div class="card-body">
                     <h2 class="h5">Database migrations</h2>
                     <p class="text-body-secondary">
-                        Apply pending migrations to the configured database. Back up the database before running migrations on a live site.
+                        Apply pending migrations to the configured database without changing existing tables or data. Back up the database before running migrations on a live site.
                     </p>
                     <form method="POST" action="{{ route('admin.maintenance.migrate') }}"
                         onsubmit="return confirm('Run pending database migrations now? Make sure you have a recent database backup.');">
                         @csrf
                         <button class="btn btn-primary" type="submit">
-                            <span class="bi bi-database me-2" aria-hidden="true"></span>Run migrations
+                            <span class="bi bi-database me-2" aria-hidden="true"></span>Run pending migrations
+                        </button>
+                    </form>
+                    <hr>
+                    <h3 class="h6 text-danger">Fresh database and seed</h3>
+                    <p class="small text-danger">
+                        Destructive: drop every database table and all existing data, recreate the schema, then run the database seeders. Only use this when you intentionally want to reset this database. Back up anything you need first.
+                    </p>
+                    <form method="POST" action="{{ route('admin.maintenance.migrate.fresh-seed') }}"
+                        onsubmit="return confirm('WARNING: This permanently deletes all database tables and data, then recreates the schema and runs seeders. Continue only if you have a backup and intend to reset this database.');">
+                        @csrf
+                        <label class="form-label small fw-semibold" for="fresh-seed-confirmation">Type RESET AND SEED DATABASE to confirm</label>
+                        <input class="form-control mb-2" id="fresh-seed-confirmation" name="confirmation"
+                            autocomplete="off" required pattern="RESET AND SEED DATABASE"
+                            value="{{ old('confirmation') }}">
+                        <button class="btn btn-danger" type="submit">
+                            <span class="bi bi-exclamation-triangle me-2" aria-hidden="true"></span>Fresh migrate &amp; seed
                         </button>
                     </form>
                 </div>

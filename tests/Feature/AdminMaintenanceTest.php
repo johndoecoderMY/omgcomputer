@@ -7,6 +7,7 @@ use App\Services\GitPullService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
+use Mockery\MockInterface;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -23,6 +24,7 @@ class AdminMaintenanceTest extends TestCase
 
         $this->actingAs($member)->get(route('admin.maintenance.index'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.migrate'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.migrate.fresh-seed'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
@@ -34,7 +36,8 @@ class AdminMaintenanceTest extends TestCase
             ->assertOk()
             ->assertSee('System maintenance')
             ->assertSee('Build assets')
-            ->assertSee('Run migrations')
+            ->assertSee('Run pending migrations')
+            ->assertSee('Fresh migrate & seed')
             ->assertSee('Optimize clear')
             ->assertSee('Git pull');
     }
@@ -45,7 +48,7 @@ class AdminMaintenanceTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->mock(GitPullService::class, function (\Mockery\MockInterface $mock): void {
+        $this->mock(GitPullService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('pull')->once();
         });
 
@@ -120,6 +123,40 @@ class AdminMaintenanceTest extends TestCase
             ->assertRedirect(route('admin.maintenance.index'))
             ->assertSessionHas('maintenance_success', 'Laravel optimization caches cleared.')
             ->assertSessionHas('maintenance_output', 'Cached events cleared.');
+    }
+
+    public function test_administrator_can_fresh_migrate_and_seed_after_typed_confirmation(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('migrate:fresh', ['--force' => true, '--seed' => true])
+            ->andReturn(0);
+        Artisan::shouldReceive('output')->once()->andReturn('Migration table created. Seeders completed.');
+
+        $this->actingAs($admin)->post(route('admin.maintenance.migrate.fresh-seed'), [
+            'confirmation' => 'RESET AND SEED DATABASE',
+        ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'Database tables were recreated and seeders completed.')
+            ->assertSessionHas('maintenance_output', 'Migration table created. Seeders completed.');
+    }
+
+    public function test_fresh_migration_requires_explicit_confirmation(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        Artisan::shouldReceive('call')->never();
+
+        $this->actingAs($admin)->from(route('admin.maintenance.index'))
+            ->post(route('admin.maintenance.migrate.fresh-seed'), [
+                'confirmation' => 'yes',
+            ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHasErrors('confirmation');
     }
 
     public function test_administrator_can_build_frontend_assets(): void

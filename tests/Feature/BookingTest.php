@@ -276,7 +276,7 @@ class BookingTest extends TestCase
             ->assertSee(route('bookings.create'))
             ->assertSee('Packages')
             ->assertDontSee('Website pricing')
-            ->assertSee('https://wa.me/601123881290')
+            ->assertSee('https://wa.me/60104224350')
             ->assertSee('Message us on WhatsApp')
             ->assertSee('Choose the service you need')
             ->assertDontSee('Online service booking is coming soon.');

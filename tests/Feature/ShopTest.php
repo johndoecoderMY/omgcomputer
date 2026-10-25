@@ -37,7 +37,7 @@ class ShopTest extends TestCase
         $this->actingAs($this->staffUser())->get(route('shop.cart'))->assertForbidden();
     }
 
-    public function test_guests_can_browse_read_only_shop_preview_pages(): void
+    public function test_guests_can_browse_the_read_only_shop_grid_and_product_details(): void
     {
         $availablePart = InventoryPart::query()->create([
             'name' => 'Public preview graphics card',
@@ -82,31 +82,22 @@ class ShopTest extends TestCase
             'is_for_sale' => true,
         ]);
 
-        $this->get(route('shop.preview.products.index'))
+        $this->get(route('shop.public'))
             ->assertOk()
             ->assertSee('OMG Computer shop')
-            ->assertSee('Parts and PCs for your setup.')
             ->assertSee('Public preview graphics card')
             ->assertSee('Ready-built gaming PC')
-            ->assertSee('Ready-built PC')
             ->assertSee('Get a custom PC quote')
-            ->assertSee('https://wa.me/601123881290')
+            ->assertDontSee('Add to cart')
+            ->assertDontSee('List view')
             ->assertDontSee('PRIVATE-SKU-01')
             ->assertDontSee('Internal hidden part')
-            ->assertDontSee('Unavailable preview part')
-            ->assertDontSee('Add to cart');
-        $this->get(route('shop.preview.products.grid'))
-            ->assertOk()
-            ->assertSee('OMG Computer shop')
-            ->assertSee('Public preview graphics card')
-            ->assertSee('Ready-built gaming PC')
-            ->assertSee('Get a custom PC quote')
-            ->assertDontSee('Add to cart');
-        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+            ->assertDontSee('Unavailable preview part');
+        $this->get(route('shop.public', ['type' => 'ready_built_pc']))
             ->assertOk()
             ->assertSee('Ready-built gaming PC')
             ->assertDontSee('Public preview graphics card');
-        $this->get(route('shop.preview.products.show', $availablePart))
+        $this->get(route('shop.public.products.show', $availablePart))
             ->assertOk()
             ->assertSee('Product information')
             ->assertSee('A graphics card for the preview catalogue.')
@@ -117,26 +108,26 @@ class ShopTest extends TestCase
             ->assertSee(route('shop.products.purchase', $availablePart), false)
             ->assertSee('Get a custom PC quote')
             ->assertDontSee('Add to cart');
-        $this->get(route('shop.preview.products.show', $readyBuiltPc))
+        $this->get(route('shop.public.products.show', $readyBuiltPc))
             ->assertOk()
             ->assertSee('Ready-built gaming PC')
             ->assertSee('Ready-built PC')
             ->assertSee('RM 2,899.00')
             ->assertSee('Get a custom PC quote');
-        $this->get(route('shop.preview.products.show', $hiddenPart))->assertNotFound();
-        $this->get(route('shop.preview.products.show', $outOfStockPart))->assertNotFound();
+        $this->get(route('shop.public.products.show', $hiddenPart))->assertNotFound();
+        $this->get(route('shop.public.products.show', $outOfStockPart))->assertNotFound();
     }
 
-    public function test_public_site_links_to_the_guest_shop(): void
+    public function test_public_site_links_to_the_shop_grid_and_legacy_list_redirects_there(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee(route('shop.preview.products.grid'), false);
+            ->assertSee(route('shop.public'), false);
 
-        $this->get(route('shop.preview.products.index'))
-            ->assertOk()
-            ->assertSee('Shop computer parts')
-            ->assertSee(route('shop.preview.products.grid'), false);
+        $this->get(route('shop.legacy-preview.list'))->assertRedirect(route('shop.public'));
+        $this->get(route('shop.legacy-preview.grid'))->assertRedirect(route('shop.public'));
+        $this->get(route('shop.legacy-preview.product', ['product' => 'old-product-link']))
+            ->assertRedirect(route('shop.public'));
     }
 
     public function test_product_list_and_grid_pagination_uses_consistent_navigation_for_guests_and_staff(): void
@@ -156,23 +147,21 @@ class ShopTest extends TestCase
         }
 
         $filters = ['search' => 'Pagination SSD', 'type' => 'storage', 'sort' => 'name'];
-        foreach (['shop.preview.products.index', 'shop.preview.products.grid'] as $routeName) {
-            $this->get(route($routeName, $filters))
-                ->assertOk()
-                ->assertSee('aria-label="Product pagination"', false)
-                ->assertSeeText('Showing 1 to 12 of 15 results')
-                ->assertSee('rel="next"', false)
-                ->assertSee('page=2', false)
-                ->assertSee('type=storage', false)
-                ->assertDontSee('sm:hidden')
-                ->assertDontSee('<svg', false);
+        $this->get(route('shop.public', $filters))
+            ->assertOk()
+            ->assertSee('aria-label="Product pagination"', false)
+            ->assertSeeText('Showing 1 to 12 of 15 results')
+            ->assertSee('rel="next"', false)
+            ->assertSee('page=2', false)
+            ->assertSee('type=storage', false)
+            ->assertDontSee('sm:hidden')
+            ->assertDontSee('<svg', false);
 
-            $this->get(route($routeName, [...$filters, 'page' => 2]))
-                ->assertOk()
-                ->assertSeeText('Showing 13 to 15 of 15 results')
-                ->assertSee('rel="prev"', false)
-                ->assertSee('Pagination SSD');
-        }
+        $this->get(route('shop.public', [...$filters, 'page' => 2]))
+            ->assertOk()
+            ->assertSeeText('Showing 13 to 15 of 15 results')
+            ->assertSee('rel="prev"', false)
+            ->assertSee('Pagination SSD');
 
         $staff = $this->staffUser();
         $this->actingAs($staff)
@@ -208,7 +197,7 @@ class ShopTest extends TestCase
             'stock_quantity' => 3,
         ]);
 
-        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+        $this->get(route('shop.public', ['type' => 'ready_built_pc']))
             ->assertOk()
             ->assertSee('Office PC package')
             ->assertSee('RM 1,799.00')

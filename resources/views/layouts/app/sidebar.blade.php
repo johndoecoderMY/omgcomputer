@@ -80,7 +80,7 @@
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
-                        <a class="nav-link" href="{{ route('shop.preview.products.grid') }}">
+                        <a class="nav-link" href="{{ route('shop.public') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
                                 <span class="nav-link-text ps-1">Browse products</span>
@@ -622,10 +622,22 @@
                                 <span class="nav-link-text ps-1">Test Notifications & Email</span>
                             </div>
                         </a>
+                        <a class="nav-link" href="{{ route('reports.integrations.cpanel') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-envelope-check"></span></span>
+                                <span class="nav-link-text ps-1">Test cPanel Email</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('email.settings') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-gear"></span></span>
                                 <span class="nav-link-text ps-1">Email Server Settings</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('admin.company-profile.edit') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-building"></span></span>
+                                <span class="nav-link-text ps-1">Company Profile</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('reports.integrations.tracking') }}">

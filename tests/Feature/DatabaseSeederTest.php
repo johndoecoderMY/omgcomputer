@@ -49,7 +49,7 @@ class DatabaseSeederTest extends TestCase
             'type' => 'received',
             'quantity_change' => 2,
         ]);
-        $this->get(route('shop.preview.products.grid', ['type' => 'ready_built_pc']))
+        $this->get(route('shop.public', ['type' => 'ready_built_pc']))
             ->assertOk()
             ->assertSee('Ready-built Office PC')
             ->assertSee('Ready-built 1080p Gaming PC')

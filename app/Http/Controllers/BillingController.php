@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BillingDocument;
+use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
@@ -577,8 +578,9 @@ class BillingController extends Controller
         File::ensureDirectoryExists($tempDirectory);
         $logoPath = public_path('assets/img/omg/logoex2.png');
         $logoData = is_file($logoPath) ? base64_encode((string) file_get_contents($logoPath)) : null;
+        $companyProfile = CompanyProfile::current();
         $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
-        $mpdf->WriteHTML(view('billing.pdf', compact('document', 'logoData'))->render());
+        $mpdf->WriteHTML(view('billing.pdf', compact('document', 'logoData', 'companyProfile'))->render());
         $filename = strtolower($document->number).'.pdf';
 
         return response($mpdf->Output($filename, 'S'))

@@ -42,6 +42,8 @@ class WorkspaceToastTest extends TestCase
             ->assertSee('bottom-0 end-0', false)
             ->assertSee('@media (max-width: 575.98px)', false)
             ->assertSee('Project created successfully.')
+            ->assertDontSee('class="alert alert-success"', false)
+            ->assertDontSee('class="alert alert-danger"', false)
             ->assertSee("document.querySelectorAll('.alert-success, .alert-danger')", false);
     }
 

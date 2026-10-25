@@ -7,8 +7,8 @@
     <div class="container">
         <nav class="small mb-3" aria-label="Breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('shop.preview.products.index') }}">Shop</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}">{{ $types[$product->type] ?? $product->type }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('shop.public') }}">Shop</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('shop.public', ['type' => $product->type]) }}">{{ $types[$product->type] ?? $product->type }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
             </ol>
         </nav>
@@ -34,14 +34,14 @@
                         <div class="border-top pt-4 mt-auto">
                             <p class="small text-body-secondary mb-3">Availability and pricing may change. Sign in to continue with your order.</p>
                             <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
-                            <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>More {{ strtolower($types[$product->type] ?? $product->type) }}</a>
+                            <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route('shop.public', ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>More {{ strtolower($types[$product->type] ?? $product->type) }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        @include('shop.preview.products._custom-pc-quote')
+        @include('shop.public.products._custom-pc-quote')
 
         <div class="row g-4 mt-2">
             <div class="col-lg-8">
@@ -75,12 +75,12 @@
             <section class="mt-5" aria-labelledby="related-products-title">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h2 class="h4 text-1000 mb-0" id="related-products-title">You may also like</h2>
-                    <a class="small" href="{{ route('shop.preview.products.grid', ['type' => $product->type]) }}">Browse {{ strtolower($types[$product->type] ?? $product->type) }}</a>
+                    <a class="small" href="{{ route('shop.public', ['type' => $product->type]) }}">Browse {{ strtolower($types[$product->type] ?? $product->type) }}</a>
                 </div>
                 <div class="row g-3">
                     @foreach ($relatedProducts as $relatedProduct)
                         <div class="col-6 col-lg-3">
-                            <a class="card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('shop.preview.products.show', $relatedProduct) }}">
+                            <a class="card h-100 border-0 shadow-sm text-decoration-none" href="{{ route('shop.public.products.show', $relatedProduct) }}">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center justify-content-center rounded-3 bg-body-tertiary text-primary mb-3" style="aspect-ratio: 4 / 3"><i class="bi bi-box2 bi-2x" aria-hidden="true"></i></div>
                                     <h3 class="h6 text-1000">{{ $relatedProduct->name }}</h3>

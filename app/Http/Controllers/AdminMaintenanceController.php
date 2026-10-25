@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\GitPullService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
@@ -25,6 +26,19 @@ class AdminMaintenanceController extends Controller
             'migrate',
             ['--force' => true],
             'Database migrations completed.',
+        );
+    }
+
+    public function freshSeed(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => ['required', 'in:RESET AND SEED DATABASE'],
+        ]);
+
+        return $this->runCommand(
+            'migrate:fresh',
+            ['--force' => true, '--seed' => true],
+            'Database tables were recreated and seeders completed.',
         );
     }
 

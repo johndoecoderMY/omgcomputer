@@ -4,7 +4,7 @@
 
 @section('content')
     @php
-        $whatsappContactUrl = 'https://wa.me/601123881290?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
+        $whatsappContactUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
         $configuredContactEmail = config('mail.from.address');
         $contactEmail = is_string($configuredContactEmail)
             && filter_var($configuredContactEmail, FILTER_VALIDATE_EMAIL)
@@ -28,7 +28,7 @@
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
                             <span class="bi bi-search me-2"></span>Track a repair
                         </a>
-                        <a class="btn btn-outline-secondary btn-lg rounded-pill px-4" href="{{ route('shop.preview.products.grid') }}">
+                        <a class="btn btn-outline-secondary btn-lg rounded-pill px-4" href="{{ route('shop.public') }}">
                             <span class="bi bi-shop me-2" aria-hidden="true"></span>Browse the shop
                         </a>
                     </div>
@@ -36,6 +36,11 @@
                         <span><span class="bi bi-check-circle text-primary me-2"></span>Clear explanations</span>
                         <span><span class="bi bi-check-circle text-primary me-2"></span>Practical solutions</span>
                     </div>
+                    @if ($companyProfile->facebook_url)
+                        <a class="btn btn-outline-primary rounded-pill px-4 mt-4" href="{{ $companyProfile->facebook_url }}" target="_blank" rel="noopener noreferrer">
+                            <span class="bi bi-facebook me-2" aria-hidden="true"></span>Follow us on Facebook
+                        </a>
+                    @endif
                 </div>
                 <div class="col-lg-6">
                     <img

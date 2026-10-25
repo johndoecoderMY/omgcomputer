@@ -39,13 +39,14 @@
             @if ($accountType !== 'customers')
             @if ($cpanelProvisioningEnabled)
                 <div class="col-md-6">
-                    <label class="form-label" for="mailbox_username">cPanel mailbox name</label>
+                    <label class="form-label" for="mailbox_username">Preferred email name</label>
                     <div class="input-group">
                         <input class="form-control" id="mailbox_username" name="mailbox_username" value="{{ old('mailbox_username') }}"
-                            maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._+-]*[A-Za-z0-9]|[A-Za-z0-9]" required>
+                            maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._+-]*[A-Za-z0-9]|[A-Za-z0-9]"
+                            placeholder="firstname.lastname" aria-describedby="mailbox-username-help" required>
                         <span class="input-group-text">{{ '@'.config('services.cpanel.email_domain') }}</span>
                     </div>
-                    <div class="form-text">The mailbox is provisioned by cPanel UAPI. Its generated password is stored encrypted for OMGComputer inbox access.</div>
+                    <div class="form-text" id="mailbox-username-help">Choose the preferred part before @ for the member's work email. The mailbox is provisioned by cPanel UAPI; its generated password is stored encrypted for OMGComputer inbox access.</div>
                 </div>
             @endif
             <div class="col-md-6">

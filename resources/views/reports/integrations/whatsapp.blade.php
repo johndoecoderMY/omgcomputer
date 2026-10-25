@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Integrations" title="WhatsApp Cloud API"
-        description="Verify your Meta access token and WhatsApp phone-number ID by reading the registered phone profile."
+        description="Verify your Meta access token and WhatsApp phone-number ID by reading the registered phone profile. This read-only check requires WhatsApp Business management access."
         :back-url="route('reports.marketing')" back-label="Marketing & WhatsApp" />
 
     <div class="row g-3">
@@ -21,7 +21,7 @@
                 <div class="card-body">
                     <ul class="list-group list-group-flush mb-3">
                         <li class="list-group-item px-0 d-flex justify-content-between">
-                            <span>Access token <code>META_ACCESS_TOKEN</code></span>
+                            <span>Access token <code>META_ACCESS_TOKEN</code> with <code>whatsapp_business_management</code></span>
                             <x-status-badge :status="filled(config('services.meta.access_token')) ? 'configured' : 'missing'" :label="filled(config('services.meta.access_token')) ? 'Configured' : 'Missing'" />
                         </li>
                         <li class="list-group-item px-0 d-flex justify-content-between">
@@ -51,7 +51,7 @@
                     <div class="mt-3 small">
                         <div class="fw-semibold">Webhook callback URL</div>
                         <code class="user-select-all">{{ route('webhooks.whatsapp.verify') }}</code>
-                        <p class="text-body-secondary mt-2 mb-0">Subscribe the Meta app to the WhatsApp <code>messages</code> webhook field. Incoming messages appear in the admin inbox after Meta verifies and calls this URL.</p>
+                        <p class="text-body-secondary mt-2 mb-0">Subscribe the Meta app to the WhatsApp <code>messages</code> webhook field. Incoming messages appear in the admin inbox after Meta verifies and calls this URL. The app needs <code>whatsapp_business_management</code> for this phone-profile check and <code>whatsapp_business_messaging</code> to send or receive messages. The token owner must have access to the WhatsApp Business Account and phone number; Meta may require App Review and Advanced Access for production.</p>
                     </div>
                     @unless ($whatsappReady)
                         <p class="small text-body-secondary mt-3 mb-0">

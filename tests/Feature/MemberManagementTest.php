@@ -158,6 +158,11 @@ class MemberManagementTest extends TestCase
             'services.cpanel.email_domain' => 'example.test',
             'services.cpanel.email_quota' => 1024,
         ]);
+        $this->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('Preferred email name')
+            ->assertSee('firstname.lastname')
+            ->assertSee('@example.test');
         Http::fake([
             'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
                 'result' => ['status' => 1],

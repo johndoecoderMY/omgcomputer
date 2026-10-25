@@ -10,6 +10,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
 use App\Http\Controllers\BusinessExpenseController;
 use App\Http\Controllers\ChipPaymentController;
+use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerMessageTemplateController;
 use App\Http\Controllers\DashboardController;
@@ -23,8 +24,8 @@ use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketplaceShopController;
 use App\Http\Controllers\MetaAdsController;
-use App\Http\Controllers\MetaDataDeletionController;
 use App\Http\Controllers\MetaContentController;
+use App\Http\Controllers\MetaDataDeletionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -97,11 +98,13 @@ Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::cla
 Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'])
     ->name('webhooks.chip.shop');
 
-Route::prefix('shop/preview')->name('shop.preview.')->controller(ShopController::class)->group(function (): void {
-    Route::get('/products', 'previewProducts')->name('products.index');
-    Route::get('/products/grid', 'previewProductsGrid')->name('products.grid');
-    Route::get('/products/{product}', 'previewProductDetails')->name('products.show');
+Route::controller(ShopController::class)->group(function (): void {
+    Route::get('/shop', 'publicProductsGrid')->name('shop.public');
+    Route::get('/shop/item/{product}', 'publicProductDetails')->name('shop.public.products.show');
 });
+Route::redirect('/shop/preview/products/grid', '/shop')->name('shop.legacy-preview.grid');
+Route::redirect('/shop/preview/products', '/shop')->name('shop.legacy-preview.list');
+Route::redirect('/shop/preview/products/{product}', '/shop')->name('shop.legacy-preview.product');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
@@ -134,6 +137,10 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/settings/test-smtp', [EmailServerSettingsController::class, 'sendTest'])->name('settings.test-smtp');
         Route::post('/settings/test-imap', [EmailServerSettingsController::class, 'testImap'])->name('settings.test-imap');
     });
+    Route::prefix('admin/company-profile')->name('admin.company-profile.')->middleware('role:admin')->controller(CompanyProfileController::class)->group(function (): void {
+        Route::get('/', 'edit')->name('edit');
+        Route::put('/', 'update')->name('update');
+    });
     Route::prefix('admin/access')->name('admin.access.')->middleware('role:admin')->controller(AdminAccessController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/roles', 'storeRole')->name('roles.store');
@@ -165,6 +172,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/migrate', 'migrate')->middleware('throttle:10,1')->name('migrate');
+        Route::post('/migrate/fresh-seed', 'freshSeed')->middleware('throttle:3,1')->name('migrate.fresh-seed');
         Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:10,1')->name('optimize-clear');
         Route::post('/build-assets', 'buildAssets')->middleware('throttle:10,1')->name('build-assets');
         Route::post('/git-pull', 'gitPull')->middleware('throttle:10,1')->name('git-pull');
@@ -374,6 +382,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/notifications', 'notifications')->name('notifications');
         Route::post('/notifications/send', 'sendTestNotification')->name('notifications.send');
         Route::post('/email/send', 'sendTestEmail')->name('email.send');
+        Route::get('/cpanel', 'cpanel')->name('cpanel');
+        Route::post('/cpanel/check', 'checkCpanel')->name('cpanel.check');
         Route::get('/whatsapp', 'whatsapp')->name('whatsapp');
         Route::post('/whatsapp/check', 'checkWhatsapp')->name('whatsapp.check');
         Route::get('/parcel-tracking', 'parcelTracking')->name('tracking');

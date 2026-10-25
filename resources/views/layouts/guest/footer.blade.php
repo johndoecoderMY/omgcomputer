@@ -7,8 +7,14 @@
                 </a>
                 <h2 class="h6 text-uppercase text-white opacity-85 mb-3">Our mission</h2>
                 <p class="text-600 mb-0">We help people and businesses solve computer problems with practical solutions, clear advice, and friendly local support. From repairs and upgrades to custom websites, our goal is to make technology easier to use.</p>
+                @if ($companyProfile->legal_name || $companyProfile->ssm_registration_number)
+                    <div class="text-600 small mt-3">
+                        @if ($companyProfile->legal_name)<div>{{ $companyProfile->legal_name }}</div>@endif
+                        @if ($companyProfile->ssm_registration_number)<div>SSM registration no.: {{ $companyProfile->ssm_registration_number }}</div>@endif
+                    </div>
+                @endif
                 <div class="d-flex flex-wrap gap-2 mt-4">
-                    <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('shop.preview.products.grid') }}">Browse the shop</a>
+                    <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('shop.public') }}">Browse the shop</a>
                     <a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a>
                     <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('repairs.track.form') }}">Track a repair</a>
                 </div>
@@ -23,6 +29,9 @@
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#contact">Contact</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#help">Help center</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#faq">Frequently asked questions</a></li>
+                            @if ($companyProfile->facebook_url)
+                                <li class="mb-2"><a class="link-600" href="{{ $companyProfile->facebook_url }}" target="_blank" rel="noopener noreferrer">Facebook</a></li>
+                            @endif
                             <li><a class="link-600" href="{{ route('bookings.create') }}">Book an appointment</a></li>
                         </ul>
                     </div>
@@ -38,7 +47,7 @@
                     <div class="col-12 col-md-4">
                         <h2 class="h6 text-uppercase text-white opacity-85 mb-3">Quick links</h2>
                         <ul class="list-unstyled mb-0">
-                            <li class="mb-2"><a class="link-600" href="{{ route('shop.preview.products.grid') }}">Shop computer parts</a></li>
+                            <li class="mb-2"><a class="link-600" href="{{ route('shop.public') }}">Shop computer parts</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('repairs.track.form') }}">Track a repair</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('privacy') }}">Privacy policy</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('data-deletion.instructions') }}">Data deletion</a></li>

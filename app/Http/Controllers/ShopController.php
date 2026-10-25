@@ -58,11 +58,11 @@ class ShopController extends Controller
         ]);
     }
 
-    public function previewProducts(Request $request): View
+    public function publicProductsGrid(Request $request): View
     {
         $products = $this->productListingQuery($request, true)->paginate(12)->withQueryString();
 
-        return view('shop.preview.products.index', [
+        return view('shop.public.products.grid', [
             'products' => $products,
             'productCount' => $products->total(),
             'types' => InventoryPart::TYPES,
@@ -70,23 +70,11 @@ class ShopController extends Controller
         ]);
     }
 
-    public function previewProductsGrid(Request $request): View
-    {
-        $products = $this->productListingQuery($request, true)->paginate(12)->withQueryString();
-
-        return view('shop.preview.products.grid', [
-            'products' => $products,
-            'productCount' => $products->total(),
-            'types' => InventoryPart::TYPES,
-            'filters' => $this->productListingFilters($request),
-        ]);
-    }
-
-    public function previewProductDetails(InventoryPart $product): View
+    public function publicProductDetails(InventoryPart $product): View
     {
         abort_unless($product->is_for_sale && $product->stock_quantity > 0, 404);
 
-        return view('shop.preview.products.show', [
+        return view('shop.public.products.show', [
             'product' => $product,
             'types' => InventoryPart::TYPES,
             'relatedProducts' => InventoryPart::query()
@@ -368,7 +356,7 @@ class ShopController extends Controller
     {
         $cart = $this->cartProducts($request);
         if ($cart->isEmpty()) {
-            return redirect()->route('shop.preview.products.grid')->with('info', 'Add a product to your cart before checkout.');
+            return redirect()->route('shop.public')->with('info', 'Add a product to your cart before checkout.');
         }
 
         $user = $request->user();

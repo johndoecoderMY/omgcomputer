@@ -5,14 +5,14 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="E-commerce" title="Shopping cart" description="Review quantities before creating a customer order.">
-        <x-slot name="actions"><a class="btn btn-outline-primary" href="{{ route('shop.preview.products.grid') }}"><i class="bi bi-arrow-left me-2"></i>Continue shopping</a></x-slot>
+        <x-slot name="actions"><a class="btn btn-outline-primary" href="{{ route('shop.public') }}"><i class="bi bi-arrow-left me-2"></i>Continue shopping</a></x-slot>
     </x-page-header>
     @if ($cart->isEmpty())
         <div class="card"><div class="card-body text-center py-5">
             <i class="bi bi-cart3 text-body-secondary bi-2x mb-3" aria-hidden="true"></i>
             <h2 class="h5">Your cart is empty</h2>
             <p class="text-body-secondary">Browse the product grid to add available items.</p>
-            <a class="btn btn-primary" href="{{ route('shop.preview.products.grid') }}">Browse products</a>
+            <a class="btn btn-primary" href="{{ route('shop.public') }}">Browse products</a>
         </div></div>
     @else
         <form class="card" method="POST" action="{{ route('shop.cart.update') }}">
@@ -25,7 +25,7 @@
                         @foreach ($cart as $id => $row)
                             <tr>
                                 <td>
-                                    <a class="fw-semibold text-decoration-none" href="{{ route('shop.preview.products.show', $row['product']) }}">{{ $row['product']->name }}</a>
+                                    <a class="fw-semibold text-decoration-none" href="{{ route('shop.public.products.show', $row['product']) }}">{{ $row['product']->name }}</a>
                                     <div class="small text-body-secondary">{{ $row['product']->sku ?: 'No SKU' }} · {{ $row['available'] }} available</div>
                                 </td>
                                 <td class="text-end text-nowrap">RM {{ number_format($row['price'], 2) }}</td>
