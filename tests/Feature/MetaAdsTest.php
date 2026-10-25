@@ -46,6 +46,8 @@ class MetaAdsTest extends TestCase
             'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts',
             $query['scope'] ?? null,
         );
+        $this->assertSame('rerequest', $query['auth_type'] ?? null);
+        $this->assertSame('true', $query['return_scopes'] ?? null);
         $this->assertSame(route('meta-ads.callback'), $query['redirect_uri'] ?? null);
         $this->assertSame(session('meta_ads_oauth_state'), $query['state'] ?? null);
     }

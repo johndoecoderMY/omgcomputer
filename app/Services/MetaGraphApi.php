@@ -35,6 +35,8 @@ class MetaGraphApi
             'redirect_uri' => $redirectUri,
             'state' => $state,
             'response_type' => 'code',
+            'auth_type' => 'rerequest',
+            'return_scopes' => 'true',
             'scope' => 'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts',
         ]);
     }
