@@ -29,6 +29,7 @@
         str_starts_with($routeName, 'inventory.'),
         str_starts_with($routeName, 'suppliers.'),
         str_starts_with($routeName, 'meta-content.'),
+        str_starts_with($routeName, 'meta-ads.'),
         str_starts_with($routeName, 'drama-content.') => 'Manage',
         str_starts_with($routeName, 'expenses.') => 'Operating costs',
         str_starts_with($routeName, 'billing.') => 'Billing & Payments',

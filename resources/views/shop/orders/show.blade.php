@@ -50,6 +50,22 @@
                     @elseif ($order->payment_status !== 'paid')
                         <p class="text-body-secondary mb-0">Fulfillment actions become available after CHiP confirms payment.</p>
                     @endif
+                    <hr>
+                    <form method="POST" action="{{ route('shop.orders.tracking-number', $order) }}">
+                        @csrf
+                        @method('PATCH')
+                        <label class="form-label" for="tracking_number">Shipment tracking number</label>
+                        <div class="input-group">
+                            <input class="form-control @error('tracking_number') is-invalid @enderror"
+                                id="tracking_number" name="tracking_number" value="{{ old('tracking_number', $order->tracking_number) }}"
+                                maxlength="100" placeholder="Enter after dispatch">
+                            <button class="btn btn-outline-primary" type="submit">Save tracking</button>
+                        </div>
+                        @error('tracking_number')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">The customer can see this number and request live courier updates from their order page.</div>
+                    </form>
                 </div>
             </div>
         </div>

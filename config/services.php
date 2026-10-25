@@ -64,12 +64,9 @@ return [
         'graph_api_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
     ],
 
-    'delivery' => [
-        'provider' => env('EASYPARCEL_PROVIDER', 'easyparcel'),
-        'authentication' => env('EASYPARCEL_AUTHENTICATION'),
-        'api_key' => env('EASYPARCEL_API_KEY'),
-        'api_url' => env('EASYPARCEL_API_URL'),
-        'environment' => env('EASYPARCEL_ENVIRONMENT', 'sandbox'),
+    'parcel_tracking' => [
+        'api_key' => env('TRACK17_API_KEY'),
+        'api_url' => env('TRACK17_API_URL', 'https://api.17track.net'),
     ],
 
     'chip' => [

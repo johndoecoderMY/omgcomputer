@@ -191,60 +191,81 @@ class IntegrationTestPagesTest extends TestCase
             ->assertDontSee('private-meta-token');
     }
 
-    public function test_easyparcel_rate_checker_returns_quoted_rates_without_booking(): void
+    public function test_parcel_tracker_registers_number_and_displays_17track_status(): void
     {
         $admin = User::factory()->create();
         Role::findOrCreate('admin', 'web');
         $admin->assignRole('admin');
         config([
-            'services.delivery.authentication' => 'test-easyparcel-auth',
-            'services.delivery.api_key' => 'test-easyparcel-key',
-            'services.delivery.api_url' => 'https://demo.connect.easyparcel.my/',
-            'services.delivery.environment' => 'sandbox',
+            'services.parcel_tracking.api_key' => 'test-17track-key',
+            'services.parcel_tracking.api_url' => 'https://api.17track.net',
         ]);
-        Http::fake([
-            'https://demo.connect.easyparcel.my/*' => Http::response([
-                'result' => [[
-                    'status' => 'Success',
-                    'remarks' => '',
-                    'rates' => [[
-                        'courier_name' => 'Example Courier',
-                        'service_name' => 'Parcel delivery',
-                        'service_detail' => 'pickup',
-                        'delivery' => '1-2 days',
-                        'price' => '8.50',
+        Http::fakeSequence()
+            ->push([
+                'code' => 0,
+                'data' => [
+                    'accepted' => [['number' => 'MY123456789', 'carrier' => 3011]],
+                    'rejected' => [],
+                ],
+            ])
+            ->push([
+                'code' => 0,
+                'data' => [
+                    'accepted' => [[
+                        'number' => 'MY123456789',
+                        'track_info' => [
+                            'latest_status' => [
+                                'status' => 'InTransit',
+                                'sub_status' => 'InTransit_Departure',
+                                'sub_status_descr' => 'Parcel departed sorting center',
+                            ],
+                            'latest_event' => [
+                                'time_iso' => '2026-10-25T02:00:00+08:00',
+                                'description' => 'Parcel departed sorting center',
+                            ],
+                            'tracking' => [
+                                'providers' => [[
+                                    'provider' => ['name' => 'J&T Express Malaysia'],
+                                    'events' => [[
+                                        'time_iso' => '2026-10-25T02:00:00+08:00',
+                                        'location' => 'Kuala Lumpur',
+                                        'description' => 'Parcel departed sorting center',
+                                        'stage' => 'InTransit',
+                                    ]],
+                                ]],
+                            ],
+                        ],
                     ]],
-                ]],
-            ]),
-        ]);
+                    'rejected' => [],
+                ],
+            ]);
 
-        $this->actingAs($admin)->get(route('reports.integrations.easyparcel'))
+        $this->actingAs($admin)->get(route('reports.integrations.tracking'))
             ->assertOk()
-            ->assertSee('EasyParcel Rate Checker')
-            ->assertSee('Pickup postcode')
-            ->assertSee('Check courier rates');
-        $this->actingAs($admin)->post(route('reports.integrations.easyparcel.rates'), [
-            'pick_code' => '10050',
-            'pick_state' => 'png',
-            'send_code' => '11950',
-            'send_state' => 'png',
-            'weight' => '1',
-        ])->assertRedirect(route('reports.integrations.easyparcel'));
+            ->assertSee('Parcel Tracker')
+            ->assertSee('Tracking number')
+            ->assertSee('Track parcel');
+        $this->actingAs($admin)->post(route('reports.integrations.tracking.lookup'), [
+            'tracking_number' => 'MY123456789',
+        ])->assertRedirect(route('reports.integrations.tracking'));
 
-        Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'POST'
-            && str_contains($request->url(), 'ac=MPRateCheckingBulk')
-            && $request['authentication'] === 'test-easyparcel-auth'
-            && $request['api'] === 'test-easyparcel-key'
-            && $request['bulk'][0]['pick_country'] === 'MY'
-            && $request['bulk'][0]['send_country'] === 'MY');
+        Http::assertSentCount(2);
+        Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/track/v2.4/register')
+            && $request->hasHeader('17token', 'test-17track-key')
+            && $request->data() === [['number' => 'MY123456789']]);
+        Http::assertSent(fn (ClientRequest $request): bool => str_ends_with($request->url(), '/track/v2.4/gettrackinfo')
+            && $request->hasHeader('17token', 'test-17track-key')
+            && $request->data() === [['number' => 'MY123456789', 'carrier' => 3011]]);
 
-        $this->actingAs($admin)->get(route('reports.integrations.easyparcel'))
+        $this->actingAs($admin)->get(route('reports.integrations.tracking'))
             ->assertOk()
-            ->assertSee('Rate lookup result')
-            ->assertSee('Example Courier')
-            ->assertSee('RM 8.50')
-            ->assertSee('No shipment was booked.')
-            ->assertDontSee('test-easyparcel-key');
+            ->assertSee('Tracking result')
+            ->assertSee('MY123456789')
+            ->assertSee('In transit')
+            ->assertSee('J&T Express Malaysia')
+            ->assertSee('Kuala Lumpur')
+            ->assertSee('Parcel departed sorting center')
+            ->assertDontSee('test-17track-key');
     }
 
     public function test_customer_cannot_use_admin_integration_test_pages(): void
@@ -255,7 +276,7 @@ class IntegrationTestPagesTest extends TestCase
 
         $this->actingAs($customer)->get(route('reports.integrations.whatsapp'))->assertForbidden();
         $this->actingAs($customer)->get(route('reports.integrations.whatsapp.inbox'))->assertForbidden();
-        $this->actingAs($customer)->get(route('reports.integrations.easyparcel'))->assertForbidden();
+        $this->actingAs($customer)->get(route('reports.integrations.tracking'))->assertForbidden();
         $this->actingAs($customer)->get(route('reports.integrations.notifications'))->assertForbidden();
         $this->actingAs($customer)->post(route('reports.integrations.notifications.send'))->assertForbidden();
         $this->actingAs($customer)->post(route('reports.integrations.email.send'))->assertForbidden();

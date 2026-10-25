@@ -18,6 +18,19 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q &amp; A</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#contact">Contact</a></li>
                 @auth
+                    @if (auth()->user()->hasRole('customer'))
+                        <li class="nav-item"><a class="nav-link" href="{{ route('shop.my-orders.index') }}">My orders</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('shop.tracking') }}">Track parcel</a></li>
+                        @php($cartItemCount = collect(session('shop_cart', []))->sum())
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}">
+                                <span class="bi bi-cart3 me-1" aria-hidden="true"></span>Cart
+                                @if ($cartItemCount > 0)
+                                    <span class="badge rounded-pill text-bg-primary">{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                    @endif
                     <li class="nav-item dropdown ms-lg-3">
                         <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-account-menu" type="button"
                             data-bs-toggle="dropdown" aria-expanded="false">

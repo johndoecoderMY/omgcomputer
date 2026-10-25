@@ -5,6 +5,12 @@
 @section('content')
     @php
         $whatsappContactUrl = 'https://wa.me/601123881290?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
+        $configuredContactEmail = config('mail.from.address');
+        $contactEmail = is_string($configuredContactEmail)
+            && filter_var($configuredContactEmail, FILTER_VALIDATE_EMAIL)
+            && $configuredContactEmail !== 'hello@example.com'
+                ? $configuredContactEmail
+                : null;
     @endphp
     <section class="py-8 py-lg-10 bg-body-tertiary overflow-hidden" id="home" style="min-height: 78vh;">
         <div class="container">
@@ -383,7 +389,12 @@
                         <div class="card-body p-4 p-lg-5">
                             <span class="bi bi-headset text-primary fs-2 mb-3"></span>
                             <h3 class="h3 fw-bold text-1000">Need a hand?</h3>
-                            <p class="text-700 mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next. Please use the contact details provided by the shop.</p>
+                            <p class="text-700 mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.</p>
+                            @if ($contactEmail)
+                                <a class="btn btn-outline-primary rounded-pill px-4 mt-3" href="mailto:{{ $contactEmail }}">
+                                    <span class="bi bi-envelope me-2" aria-hidden="true"></span>{{ $contactEmail }}
+                                </a>
+                            @endif
                             <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp</a>
                         </div>
                     </div>

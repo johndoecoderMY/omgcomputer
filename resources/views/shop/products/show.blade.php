@@ -7,7 +7,6 @@
     <x-page-header eyebrow="E-commerce / Products" :title="$product->name" :back-url="route('shop.products.index')" back-label="Back to products">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('shop.products.edit', $product) }}"><i class="bi bi-pencil me-2"></i>Edit product</a>
-            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2"></i>Cart</a>
         </x-slot>
     </x-page-header>
     <div class="row g-3">
@@ -34,16 +33,6 @@
                         <dt class="col-sm-4">Reorder level</dt><dd class="col-sm-8">{{ $product->reorder_level }}</dd>
                     </dl>
                 </div>
-                @if ($product->is_for_sale && $product->stock_quantity > 0)
-                    <div class="card-footer bg-body">
-                        <form class="d-flex flex-wrap gap-2 justify-content-end" method="POST" action="{{ route('shop.cart.add', $product) }}" data-cart-add-form>
-                            @csrf
-                            <label class="visually-hidden" for="quantity">Quantity</label>
-                            <input class="form-control" id="quantity" name="quantity" type="number" min="1" max="{{ $product->stock_quantity }}" value="1" required style="max-width: 7rem">
-                            <button class="btn btn-primary" type="submit"><i class="bi bi-cart-plus me-2"></i>Add to cart</button>
-                        </form>
-                    </div>
-                @endif
             </div>
         </div>
     </div>

@@ -4,10 +4,9 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="E-commerce" title="Product grid" description="Browse available inventory and prepare customer orders from the staff-only shop.">
+    <x-page-header eyebrow="E-commerce" title="Product grid" description="Browse available inventory and manage the products listed in the public shop.">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('shop.products.index', request()->query()) }}"><i class="bi bi-list me-2"></i>Product list</a>
-            <a class="btn btn-primary" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2"></i>View cart</a>
         </x-slot>
     </x-page-header>
 
@@ -40,7 +39,6 @@
                             <option value="price-low" @selected($filters['sort'] === 'price-low')>Price: low to high</option>
                             <option value="price-high" @selected($filters['sort'] === 'price-high')>Price: high to low</option>
                         </select>
-                        <a class="btn btn-sm btn-falcon-default" href="{{ route('shop.cart') }}" title="Shopping cart" aria-label="View shopping cart"><i class="bi bi-cart3" aria-hidden="true"></i></a>
                     </div>
                 </div>
             </div>
@@ -92,11 +90,6 @@
                                         title="Adjust quantity" aria-label="Adjust stock for {{ $product->name }}">
                                         <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                                     </button>
-                                    <form method="POST" action="{{ route('shop.cart.add', $product) }}" data-cart-add-form>
-                                        @csrf
-                                        <input type="hidden" name="quantity" value="1">
-                                        <button class="btn btn-sm btn-falcon-default" type="submit" title="Add to cart" aria-label="Add {{ $product->name }} to cart"><i class="bi bi-cart-plus" aria-hidden="true"></i></button>
-                                    </form>
                                 </div>
                             </div>
                         </article>

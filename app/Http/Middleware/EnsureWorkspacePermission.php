@@ -43,6 +43,24 @@ class EnsureWorkspacePermission
             'email.mailbox-settings.delete',
             'billing.chip.checkout',
             'billing.chip.return',
+            'shop.chip.return',
+            'shop.tracking',
+            'shop.tracking.lookup',
+            'shop.my-orders.index',
+            'shop.my-orders.show',
+            'shop.my-orders.tracking',
+        ], true)) {
+            return $next($request);
+        }
+
+        if ($user->hasRole('customer') && in_array((string) $request->route()?->getName(), [
+            'shop.products.purchase',
+            'shop.cart',
+            'shop.cart.add',
+            'shop.cart.update',
+            'shop.cart.remove',
+            'shop.checkout',
+            'shop.checkout.place',
         ], true)) {
             return $next($request);
         }

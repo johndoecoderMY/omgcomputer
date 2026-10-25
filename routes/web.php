@@ -22,6 +22,7 @@ use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MarketplaceShopController;
+use App\Http\Controllers\MetaAdsController;
 use App\Http\Controllers\MetaContentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProductController;
@@ -240,24 +241,35 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products/create', 'createProduct')->name('products.create');
         Route::post('/products', 'storeProduct')->name('products.store');
         Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');
-        Route::get('/products/{product}/purchase', 'beginProductPurchase')->name('products.purchase');
         Route::get('/products/{product}/edit', 'editProduct')->name('products.edit');
         Route::put('/products/{product}', 'updateProduct')->name('products.update');
         Route::get('/products/{product}', 'showProduct')->name('products.show');
+        Route::get('/orders', 'orders')->name('orders.index');
+        Route::get('/orders/datatable', 'ordersDatatable')->name('orders.datatable');
+        Route::get('/orders/status-board', 'orderStatusBoard')->name('orders.status-board');
+        Route::get('/orders/status-board/datatable', 'orderStatusDatatable')->name('orders.status-board.datatable');
+        Route::get('/orders/customer-preview', 'orderStatusPreview')->name('orders.customer-preview');
+        Route::patch('/orders/{order}/tracking-number', 'updateOrderTrackingNumber')->name('orders.tracking-number');
+        Route::get('/orders/{order}', 'showOrder')->name('orders.show');
+        Route::patch('/orders/{order}/status', 'updateOrderStatus')->name('orders.status');
+    });
+
+    Route::get('/shop/chip-return/{uuid}', [ShopController::class, 'chipReturn'])->name('shop.chip.return');
+    Route::prefix('shop')->name('shop.')->middleware('role:customer')->controller(ShopController::class)->group(function (): void {
+        Route::get('/products/{product}/purchase', 'beginProductPurchase')->name('products.purchase');
         Route::get('/cart', 'cart')->name('cart');
         Route::post('/cart/items/{product}', 'addToCart')->name('cart.add');
         Route::put('/cart', 'updateCart')->name('cart.update');
         Route::delete('/cart/items/{product}', 'removeFromCart')->name('cart.remove');
         Route::get('/checkout', 'checkout')->name('checkout');
         Route::post('/checkout', 'placeOrder')->name('checkout.place');
-        Route::get('/chip-return/{uuid}', 'chipReturn')->name('chip.return');
-        Route::get('/orders', 'orders')->name('orders.index');
-        Route::get('/orders/datatable', 'ordersDatatable')->name('orders.datatable');
-        Route::get('/orders/status-board', 'orderStatusBoard')->name('orders.status-board');
-        Route::get('/orders/status-board/datatable', 'orderStatusDatatable')->name('orders.status-board.datatable');
-        Route::get('/orders/customer-preview', 'orderStatusPreview')->name('orders.customer-preview');
-        Route::get('/orders/{order}', 'showOrder')->name('orders.show');
-        Route::patch('/orders/{order}/status', 'updateOrderStatus')->name('orders.status');
+        Route::get('/tracking', 'customerTracking')->name('tracking');
+        Route::post('/tracking', 'trackCustomerParcel')->middleware('throttle:5,1')->name('tracking.lookup');
+        Route::get('/my-orders', 'customerOrders')->name('my-orders.index');
+        Route::get('/my-orders/{order}', 'customerOrder')->name('my-orders.show');
+        Route::post('/my-orders/{order}/tracking', 'refreshCustomerOrderTracking')
+            ->middleware('throttle:5,1')
+            ->name('my-orders.tracking');
     });
 
     Route::prefix('billing')->name('billing.')->controller(BillingController::class)->group(function (): void {
@@ -356,8 +368,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/email/send', 'sendTestEmail')->name('email.send');
         Route::get('/whatsapp', 'whatsapp')->name('whatsapp');
         Route::post('/whatsapp/check', 'checkWhatsapp')->name('whatsapp.check');
-        Route::get('/easyparcel', 'easyParcel')->name('easyparcel');
-        Route::post('/easyparcel/rates', 'checkEasyParcel')->name('easyparcel.rates');
+        Route::get('/parcel-tracking', 'parcelTracking')->name('tracking');
+        Route::post('/parcel-tracking', 'trackParcel')->name('tracking.lookup');
     });
     Route::prefix('reports/integrations/whatsapp')->name('reports.integrations.whatsapp.')->middleware('role:admin')->controller(WhatsAppInboxController::class)->group(function (): void {
         Route::get('/inbox', 'index')->name('inbox');
@@ -377,6 +389,21 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::put('/{metaContentPost}', 'update')->name('update');
         Route::post('/{metaContentPost}/publish', 'publish')->name('publish');
         Route::delete('/{metaContentPost}', 'destroy')->name('destroy');
+    });
+    Route::prefix('meta-ads')->name('meta-ads.')->middleware('role:admin')->controller(MetaAdsController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::get('/connect', 'connect')->name('connect');
+        Route::get('/callback', 'callback')->name('callback');
+        Route::post('/account', 'selectAccount')->name('account.select');
+        Route::delete('/connection', 'disconnect')->name('disconnect');
+        Route::post('/campaigns', 'storeCampaign')->name('campaigns.store');
+        Route::patch('/campaigns/{campaignId}', 'updateCampaign')->whereNumber('campaignId')->name('campaigns.update');
+        Route::post('/page', 'selectPage')->name('page.select');
+        Route::delete('/page', 'disconnectPage')->name('page.disconnect');
+        Route::post('/page/posts', 'storePagePost')->name('page.posts.store');
+        Route::patch('/page/posts/{postId}', 'updatePagePost')
+            ->where('postId', '[0-9]+_[0-9]+')
+            ->name('page.posts.update');
     });
 
     Route::post('/events', [ProjectEventController::class, 'store'])->middleware('not-customer')->name('events.store');

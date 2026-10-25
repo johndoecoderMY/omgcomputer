@@ -75,6 +75,38 @@
                     </li>
                     <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">Shop</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
+                        <a class="nav-link" href="{{ route('shop.preview.products.grid') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
+                                <span class="nav-link-text ps-1">Browse products</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('shop.cart') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-cart3"></span></span>
+                                <span class="nav-link-text ps-1">Cart &amp; checkout</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('shop.my-orders.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-receipt"></span></span>
+                                <span class="nav-link-text ps-1">My orders</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('shop.tracking') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-geo-alt"></span></span>
+                                <span class="nav-link-text ps-1">Track a parcel</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
                             <div class="col-auto navbar-vertical-label">Projects &amp; billing</div>
                             <div class="col ps-0">
                                 <hr class="mb-0 navbar-vertical-divider">
@@ -373,11 +405,6 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.cart') }}">
-                                    <span class="nav-link-text ps-1">Cart &amp; checkout</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
                                 <a class="nav-link" href="{{ route('shop.orders.index') }}">
                                     <span class="nav-link-text ps-1">Orders</span>
                                 </a>
@@ -415,6 +442,14 @@
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-share"></span></span>
                                     <span class="nav-link-text ps-1">Meta Content</span>
+                                </div>
+                            </a>
+                        @endif
+                        @if (auth()->user()->hasRole('admin'))
+                            <a class="nav-link" href="{{ route('meta-ads.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-megaphone"></span></span>
+                                    <span class="nav-link-text ps-1">Meta Ads</span>
                                 </div>
                             </a>
                         @endif
@@ -593,10 +628,10 @@
                                 <span class="nav-link-text ps-1">Email Server Settings</span>
                             </div>
                         </a>
-                        <a class="nav-link" href="{{ route('reports.integrations.easyparcel') }}">
+                        <a class="nav-link" href="{{ route('reports.integrations.tracking') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-truck"></span></span>
-                                <span class="nav-link-text ps-1">EasyParcel Rate Checker</span>
+                                <span class="nav-link-text ps-1">Parcel Tracker</span>
                             </div>
                         </a>
                         <a class="nav-link" href="{{ route('marketplace-shops.index') }}">

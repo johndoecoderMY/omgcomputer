@@ -22,7 +22,7 @@ class ShopTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_shop_pages_are_hidden_from_guests_and_customer_accounts(): void
+    public function test_shop_management_is_hidden_from_customers_and_cart_is_customer_only(): void
     {
         $this->get(route('shop.products.index'))->assertRedirect(route('login'));
         $this->get(route('shop.cart'))->assertRedirect(route('login'));
@@ -32,6 +32,9 @@ class ShopTest extends TestCase
         $customer->assignRole('customer');
 
         $this->actingAs($customer)->get(route('shop.products.index'))->assertForbidden();
+        $this->actingAs($customer)->get(route('shop.cart'))->assertOk();
+        $this->actingAs($customer)->get(route('shop.orders.index'))->assertForbidden();
+        $this->actingAs($this->staffUser())->get(route('shop.cart'))->assertForbidden();
     }
 
     public function test_guests_can_browse_read_only_shop_preview_pages(): void
@@ -212,9 +215,11 @@ class ShopTest extends TestCase
             ->assertSee('Get a custom PC quote');
     }
 
-    public function test_sign_in_to_buy_returns_to_the_shop_product(): void
+    public function test_sign_in_to_buy_adds_the_product_to_the_customer_cart(): void
     {
-        $staff = $this->staffUser();
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
         $product = InventoryPart::query()->create([
             'name' => 'Sign-in purchase product',
             'sku' => 'SHOP-SIGNIN-01',
@@ -229,11 +234,12 @@ class ShopTest extends TestCase
         $this->get(route('shop.products.purchase', $product))
             ->assertRedirect(route('login'));
         $this->post(route('login'), [
-            'email' => $staff->email,
+            'email' => $customer->email,
             'password' => 'password',
         ])->assertRedirect(route('shop.products.purchase', $product));
         $this->get(route('shop.products.purchase', $product))
-            ->assertRedirect(route('shop.products.show', $product));
+            ->assertRedirect(route('shop.cart'))
+            ->assertSessionHas('shop_cart', [$product->id => 1]);
     }
 
     public function test_staff_can_manage_products_browse_paginated_list_and_grid(): void
@@ -295,7 +301,7 @@ class ShopTest extends TestCase
             ->assertOk()
             ->assertDontSee('id="shop-products-grid-table"', false)
             ->assertSee('NVMe SSD')
-            ->assertSee('Add to cart');
+            ->assertDontSee('Add to cart');
         $this->actingAs($user)->get(route('shop.products.grid', ['type' => 'storage']))
             ->assertOk()
             ->assertSee('NVMe SSD');
@@ -304,10 +310,12 @@ class ShopTest extends TestCase
             ->assertSee('Fast storage with warranty.');
     }
 
-    public function test_staff_can_create_chip_sandbox_order_from_cart_and_orders_use_datatables(): void
+    public function test_customer_can_create_chip_sandbox_order_from_cart_and_staff_orders_use_datatables(): void
     {
         Notification::fake();
-        $user = $this->staffUser();
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create(['email' => 'shop@example.test']);
+        $user->assignRole('customer');
         $notifiedAdmin = User::factory()->create();
         $notifiedAdmin->assignRole('admin');
         $customer = Customer::query()->create([
@@ -349,7 +357,10 @@ class ShopTest extends TestCase
         $this->get(route('shop.cart'))->assertOk()->assertSee('USB keyboard');
         $this->get(route('shop.checkout'))->assertOk()->assertSee('Order summary');
         $this->post(route('shop.checkout.place'), [
-            'customer_id' => $customer->id,
+            'customer_id' => Customer::query()->create([
+                'name' => 'Unrelated customer',
+                'email' => 'other@example.test',
+            ])->id,
             'customer_address' => '1 Main Street',
         ])->assertRedirect('https://gate.chip-in.asia/checkout/shop-1');
         Notification::assertSentTo(
@@ -364,13 +375,15 @@ class ShopTest extends TestCase
         $this->assertSame(90.0, (float) $order->total);
         $this->assertSame(2, $order->items->firstOrFail()->quantity);
         $this->assertSame(2, $product->fresh()->stock_quantity);
+        $this->assertSame($customer->id, $order->customer_id);
+        $this->assertSame($user->id, $order->user_id);
         $this->assertDatabaseHas('inventory_movements', [
             'inventory_part_id' => $product->id,
             'reference' => $order->order_number,
             'quantity_change' => -2,
         ]);
 
-        $this->get(route('shop.orders.index'))->assertOk()->assertSee('data-datatable', false);
+        $this->actingAs($notifiedAdmin)->get(route('shop.orders.index'))->assertOk()->assertSee('data-datatable', false);
         $this->getJson(route('shop.orders.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -378,7 +391,7 @@ class ShopTest extends TestCase
         ]))->assertOk()
             ->assertJsonPath('recordsTotal', 1)
             ->assertJsonPath('data.0.order', fn (string $orderLink): bool => str_contains($orderLink, $order->order_number));
-        $this->get(route('shop.orders.show', $order))->assertOk()->assertSee('Shop customer');
+        $this->get(route('shop.orders.show', $order))->assertOk()->assertSee($user->name);
         $this->get(route('shop.orders.status-board'))->assertOk()->assertSee('data-datatable', false);
         $this->getJson(route('shop.orders.status-board.datatable', [
             'draw' => 1,
@@ -490,12 +503,112 @@ class ShopTest extends TestCase
             ->assertRedirect(route('shop.orders.status-board'));
 
         $this->assertSame('processing', $order->fresh()->status);
+        $this->patch(route('shop.orders.tracking-number', $order), [
+            'tracking_number' => 'MY-STAFF-TRACK-123',
+        ])->assertRedirect(route('shop.orders.show', $order));
+        $this->assertSame('MY-STAFF-TRACK-123', $order->fresh()->tracking_number);
         Notification::assertSentTo(
             $recipient,
             WorkspaceNotification::class,
             fn (WorkspaceNotification $notification): bool => $notification->title === 'Shop order status updated',
         );
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
+    }
+
+    public function test_customer_can_refresh_tracking_only_for_their_own_orders(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+        $otherCustomer = User::factory()->create();
+        $otherCustomer->assignRole('customer');
+        $legacyOrderCreator = User::factory()->create();
+        $order = ShopOrder::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'order_number' => 'SHOP-'.now()->format('Y').'-000201',
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'user_id' => $legacyOrderCreator->id,
+            'tracking_number' => 'MY-CUSTOMER-TRACK-201',
+            'status' => 'processing',
+            'payment_status' => 'paid',
+            'subtotal' => 100,
+            'total' => 100,
+        ]);
+        $otherOrder = ShopOrder::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'order_number' => 'SHOP-'.now()->format('Y').'-000202',
+            'customer_name' => $otherCustomer->name,
+            'customer_email' => $otherCustomer->email,
+            'user_id' => $otherCustomer->id,
+            'tracking_number' => 'MY-OTHER-TRACK-202',
+            'status' => 'processing',
+            'payment_status' => 'paid',
+            'subtotal' => 100,
+            'total' => 100,
+        ]);
+        config([
+            'services.parcel_tracking.api_key' => 'server-only-test-key',
+            'services.parcel_tracking.api_url' => 'https://api.17track.net',
+        ]);
+        Http::fakeSequence()
+            ->push(['code' => 0, 'data' => ['accepted' => [['number' => 'MY-CUSTOMER-TRACK-201', 'carrier' => 3011]], 'rejected' => []]])
+            ->push(['code' => 0, 'data' => ['accepted' => [[
+                'number' => 'MY-CUSTOMER-TRACK-201',
+                'track_info' => [
+                    'latest_status' => ['status' => 'InTransit'],
+                    'latest_event' => ['description' => 'Parcel departed sorting center'],
+                    'tracking' => ['providers' => [[
+                        'provider' => ['name' => 'Pos Malaysia'],
+                        'events' => [[
+                            'time_iso' => '2026-10-25T02:00:00+08:00',
+                            'location' => 'Kuala Lumpur',
+                            'description' => 'Parcel departed sorting center',
+                        ]],
+                    ]]],
+                ],
+            ]], 'rejected' => []]]);
+
+        $this->actingAs($customer)->get(route('shop.my-orders.index'))
+            ->assertOk()
+            ->assertSee($order->order_number)
+            ->assertDontSee($otherOrder->order_number);
+        $this->post(route('shop.my-orders.tracking', $order))
+            ->assertRedirect(route('shop.my-orders.show', $order));
+        $this->get(route('shop.my-orders.show', $order))
+            ->assertOk()
+            ->assertSee('MY-CUSTOMER-TRACK-201')
+            ->assertSee('Parcel departed sorting center')
+            ->assertDontSee('server-only-test-key');
+        $this->get(route('shop.my-orders.show', $otherOrder))->assertNotFound();
+    }
+
+    public function test_customer_can_look_up_a_parcel_from_the_tracking_page(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+        config([
+            'services.parcel_tracking.api_key' => 'server-only-test-key',
+            'services.parcel_tracking.api_url' => 'https://api.17track.net',
+        ]);
+        Http::fakeSequence()
+            ->push(['code' => 0, 'data' => ['accepted' => [['number' => 'MY-LOOKUP-301']], 'rejected' => []]])
+            ->push(['code' => 0, 'data' => ['accepted' => [[
+                'number' => 'MY-LOOKUP-301',
+                'track_info' => ['latest_status' => ['status' => 'Delivered'], 'tracking' => ['providers' => []]],
+            ]], 'rejected' => []]]);
+
+        $this->actingAs($customer)->get(route('shop.tracking'))
+            ->assertOk()
+            ->assertSee('Track a parcel');
+        $this->post(route('shop.tracking.lookup'), ['tracking_number' => 'MY-LOOKUP-301'])
+            ->assertRedirect(route('shop.tracking'));
+        $this->get(route('shop.tracking'))
+            ->assertOk()
+            ->assertSee('MY-LOOKUP-301')
+            ->assertSee('Delivered')
+            ->assertDontSee('server-only-test-key');
     }
 
     public function test_shop_demo_seeder_populates_sample_orders_idempotently(): void
@@ -632,9 +745,11 @@ class ShopTest extends TestCase
         $this->assertSame(5, $part->fresh()->stock_quantity);
     }
 
-    public function test_staff_navbar_always_shows_the_shopping_cart_item_count(): void
+    public function test_only_customer_navbar_shows_the_shopping_cart_item_count(): void
     {
-        $user = $this->staffUser();
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('customer');
         $product = InventoryPart::query()->create([
             'name' => 'USB mouse',
             'sku' => 'SHOP-MOUSE-01',
@@ -645,6 +760,9 @@ class ShopTest extends TestCase
             'reorder_level' => 1,
             'is_for_sale' => true,
         ]);
+
+        $this->actingAs($this->staffUser())->get(route('dashboard'))
+            ->assertDontSee('data-cart-count', false);
 
         $this->actingAs($user)->get(route('shop.cart'))
             ->assertOk()
@@ -667,7 +785,9 @@ class ShopTest extends TestCase
 
     public function test_adding_a_product_asynchronously_returns_the_updated_cart_count(): void
     {
-        $user = $this->staffUser();
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('customer');
         $product = InventoryPart::query()->create([
             'name' => 'USB webcam',
             'sku' => 'SHOP-CAM-01',

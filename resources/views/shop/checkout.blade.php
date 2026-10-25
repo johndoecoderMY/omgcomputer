@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="E-commerce" title="Checkout" description="Create a customer order and continue to secure CHiP payment.">
+    <x-page-header eyebrow="E-commerce" title="Checkout" description="Confirm your delivery details and continue to secure CHiP payment.">
         <x-slot name="actions"><a class="btn btn-outline-secondary" href="{{ route('shop.cart') }}"><i class="bi bi-arrow-left me-2"></i>Back to cart</a></x-slot>
     </x-page-header>
     @unless ($chipEnabled)
@@ -19,22 +19,17 @@
             <div class="card h-100">
                 <div class="card-header fw-semibold">Customer and delivery</div>
                 <div class="card-body">
+                    @error('customer')
+                        <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                    @enderror
                     <div class="mb-3">
-                        <label class="form-label" for="customer_id">Customer</label>
-                        <select class="form-select js-user-search @error('customer_id') is-invalid @enderror" id="customer_id" name="customer_id" required data-placeholder="Choose a customer">
-                            <option value="">Select customer</option>
-                            @foreach ($customers as $customer)
-                                <option value="{{ $customer->id }}" data-address="{{ $customer->address }}" @selected((string) old('customer_id') === (string) $customer->id)>
-                                    {{ $customer->name }}{{ $customer->email ? ' · '.$customer->email : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('customer_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                        <div class="form-text">CHiP sends the payment link to this customer’s email address.</div>
+                        <div class="fw-semibold">{{ auth()->user()->name }}</div>
+                        <div class="text-body-secondary">{{ auth()->user()->email }}</div>
+                        <div class="form-text">CHiP will send the payment link to your account email.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="customer_address">Delivery address <span class="text-body-secondary">(optional)</span></label>
-                        <textarea class="form-control @error('customer_address') is-invalid @enderror" id="customer_address" name="customer_address" rows="3" maxlength="3000">{{ old('customer_address') }}</textarea>
+                        <textarea class="form-control @error('customer_address') is-invalid @enderror" id="customer_address" name="customer_address" rows="3" maxlength="3000">{{ old('customer_address', $customer?->address ?? auth()->user()->address) }}</textarea>
                         @error('customer_address')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div>
@@ -70,22 +65,3 @@
     </form>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const customer = document.getElementById('customer_id');
-        const address = document.getElementById('customer_address');
-        const selected = customer?.options[customer.selectedIndex];
-        if (selected?.dataset.address && !address.value) {
-            address.value = selected.dataset.address;
-        }
-        customer?.addEventListener('change', () => {
-            const selected = customer.options[customer.selectedIndex];
-            if (selected?.dataset.address && !address.value) {
-                address.value = selected.dataset.address;
-            }
-        });
-    });
-</script>
-@endpush

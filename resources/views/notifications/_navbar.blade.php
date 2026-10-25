@@ -4,7 +4,7 @@
     $recentNotifications = $notificationUser->notifications()->latest()->limit(6)->get();
 @endphp
 
-<li class="nav-item dropdown d-flex align-items-center">
+<li class="nav-item dropdown d-flex align-items-center  px-2">
     <a class="nav-link px-0 notification-indicator notification-indicator-primary notification-indicator-fill"
         href="{{ route('notifications.index') }}" id="navbarDropdownNotification" role="button"
         data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"

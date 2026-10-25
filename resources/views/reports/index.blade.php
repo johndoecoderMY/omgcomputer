@@ -59,39 +59,35 @@
                         <span class="bi bi-truck-front fs-2 text-primary" aria-hidden="true"></span>
                         <div>
                             <h2 class="h5 mb-1 text-primary">Delivery API readiness</h2>
-                            <p class="small text-body-secondary mb-0">Recommended starting point: EasyParcel Malaysia</p>
+                            <p class="small text-body-secondary mb-0">Parcel status lookup via 17TRACK</p>
                         </div>
                     </div>
                     <x-status-badge status="not_connected" label="Not connected" />
                 </div>
                 <div class="card-body row g-3 align-items-center">
                     <div class="col-lg-8">
-                        <p class="mb-2">EasyParcel is a practical first option to evaluate because its API supports rate checks across courier services from a single integration. Confirm the couriers, coverage, and account terms you need before building the connection.</p>
+                        <p class="mb-2">Look up shipment progress across supported courier services with a tracking number. 17TRACK offers a one-time free trial allocation for eligible new API accounts; check its current terms before using it for ongoing shipment volume.</p>
                         <div class="d-flex flex-wrap gap-2">
-                            <x-status-badge :status="$deliverySetup['authentication'] ? 'configured' : 'missing'" :label="'Authentication '.($deliverySetup['authentication'] ? 'configured' : 'not set')" />
-                            <x-status-badge :status="$deliverySetup['api_key'] ? 'configured' : 'missing'" :label="'API key '.($deliverySetup['api_key'] ? 'configured' : 'not set')" />
-                            <x-status-badge :status="$deliverySetup['api_url'] ? 'configured' : 'missing'" :label="'API URL '.($deliverySetup['api_url'] ? 'configured' : 'not set')" />
-                            <span class="badge text-bg-light border">Environment: {{ ucfirst($deliveryEnvironment ?: 'not set') }}</span>
+                            <x-status-badge :status="$trackingApiConfigured ? 'configured' : 'missing'" :label="'17TRACK API key '.($trackingApiConfigured ? 'configured' : 'not set')" />
                         </div>
                         <p class="small text-body-secondary mt-2 mb-0">
-                            Credentials are not stored in the database or shown here. Add them to the server environment as
-                            <code>EASYPARCEL_AUTHENTICATION</code>, <code>EASYPARCEL_API_KEY</code>, and <code>EASYPARCEL_API_URL</code> after creating an API account.
-                            Configuration readiness does not mean the API has been tested.
+                            The API key is kept server-side. Set <code>TRACK17_API_KEY</code> in the server environment after creating a 17TRACK API account.
+                            Configuration readiness does not mean a tracking lookup has been tested.
                         </p>
                     </div>
                     <div class="col-lg-4 text-lg-end">
                         @role('admin')
-                            <a class="btn btn-primary mb-2" href="{{ route('reports.integrations.easyparcel') }}">
-                                <span class="bi bi-search me-2" aria-hidden="true"></span>Open rate checker
+                            <a class="btn btn-primary mb-2" href="{{ route('reports.integrations.tracking') }}">
+                                <span class="bi bi-truck me-2" aria-hidden="true"></span>Open parcel tracker
                             </a>
                         @endrole
-                        <a class="btn btn-outline-primary" href="https://developers.easyparcel.com/" target="_blank" rel="noopener noreferrer">
-                            <span class="bi bi-box-arrow-up-right me-2" aria-hidden="true"></span>EasyParcel API docs
+                        <a class="btn btn-outline-primary" href="https://api.17track.net/en/doc" target="_blank" rel="noopener noreferrer">
+                            <span class="bi bi-box-arrow-up-right me-2" aria-hidden="true"></span>17TRACK API docs
                         </a>
                     </div>
                 </div>
                 <div class="card-footer bg-body small text-body-secondary">
-                    The rate checker requests quotations only. It does not book shipments, buy labels, or request tracking.
+                    Tracking registers a number with 17TRACK and retrieves available courier updates; it does not book shipments or buy labels.
                 </div>
             </div>
         </div>

@@ -46,8 +46,7 @@ class AnalyticsReportsTest extends TestCase
     {
         $user = $this->adminUser();
         config([
-            'services.delivery.api_key' => null,
-            'services.delivery.api_url' => null,
+            'services.parcel_tracking.api_key' => null,
         ]);
         InventoryPart::query()->create([
             'name' => 'USB-C adapter',
@@ -87,32 +86,23 @@ class AnalyticsReportsTest extends TestCase
         $this->actingAs($user)->get(route('reports.index'))
             ->assertOk()
             ->assertSee('Delivery API readiness')
-            ->assertSee('EasyParcel Malaysia')
-            ->assertSee('EasyParcel API docs')
-            ->assertSee('EASYPARCEL_API_KEY')
+            ->assertSee('17TRACK')
+            ->assertSee('17TRACK API docs')
+            ->assertSee('TRACK17_API_KEY')
             ->assertSee('not set');
         $this->assertSame(1, MarketingCampaign::query()->count());
     }
 
-    public function test_delivery_api_readiness_displays_presence_without_exposing_credentials(): void
+    public function test_parcel_tracking_readiness_displays_presence_without_exposing_credentials(): void
     {
         config([
-            'services.delivery.provider' => 'easyparcel',
-            'services.delivery.authentication' => 'test-delivery-auth',
-            'services.delivery.api_key' => 'test-delivery-secret',
-            'services.delivery.api_url' => 'https://api.example.test',
-            'services.delivery.environment' => 'sandbox',
+            'services.parcel_tracking.api_key' => 'test-tracking-secret',
         ]);
 
         $this->actingAs($this->adminUser())->get(route('reports.index'))
             ->assertOk()
-            ->assertSee('Authentication configured')
-            ->assertSee('API key configured')
-            ->assertSee('API URL configured')
-            ->assertSee('Environment: Sandbox')
-            ->assertDontSee('test-delivery-auth')
-            ->assertDontSee('test-delivery-secret')
-            ->assertDontSee('https://api.example.test');
+            ->assertSee('17TRACK API key configured')
+            ->assertDontSee('test-tracking-secret');
     }
 
     public function test_marketing_page_reports_meta_configuration_presence_without_exposing_secrets(): void

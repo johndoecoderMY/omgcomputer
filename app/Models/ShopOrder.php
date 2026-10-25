@@ -30,6 +30,7 @@ class ShopOrder extends Model
         'stock_reserved',
         'provider_purchase_id',
         'checkout_url',
+        'tracking_number',
         'subtotal',
         'total',
         'currency',

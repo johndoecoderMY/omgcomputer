@@ -6,19 +6,23 @@ use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
+use App\Models\User;
 use App\Services\ChipCollect;
 use App\Services\InventoryStock;
+use App\Services\ParcelTrackingService;
 use App\Services\WorkspaceNotifier;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -223,11 +227,20 @@ class ShopController extends Controller
         return view('shop.products.show', compact('product'));
     }
 
-    public function beginProductPurchase(InventoryPart $product): RedirectResponse
+    public function beginProductPurchase(Request $request, InventoryPart $product): RedirectResponse
     {
         abort_unless($product->is_for_sale && $product->stock_quantity > 0, 404);
+        $cart = $request->session()->get(self::CART_KEY, []);
+        $quantity = (int) ($cart[$product->id] ?? 0) + 1;
+        if ($quantity > $product->stock_quantity) {
+            throw ValidationException::withMessages([
+                'quantity' => "Only {$product->stock_quantity} of {$product->name} are currently in stock.",
+            ]);
+        }
+        $cart[$product->id] = $quantity;
+        $request->session()->put(self::CART_KEY, $cart);
 
-        return redirect()->route('shop.products.show', $product);
+        return redirect()->route('shop.cart')->with('success', 'Product added to cart.');
     }
 
     public function editProduct(InventoryPart $product): View
@@ -355,17 +368,15 @@ class ShopController extends Controller
     {
         $cart = $this->cartProducts($request);
         if ($cart->isEmpty()) {
-            return redirect()->route('shop.products.grid')->with('info', 'Add a product to your cart before checkout.');
+            return redirect()->route('shop.preview.products.grid')->with('info', 'Add a product to your cart before checkout.');
         }
+
+        $user = $request->user();
 
         return view('shop.checkout', [
             'cart' => $cart,
             'subtotal' => $cart->sum(fn (array $row): float => $row['price'] * $row['quantity']),
-            'customers' => Customer::query()
-                ->whereNotNull('email')
-                ->where('email', '<>', '')
-                ->orderBy('name')
-                ->get(['id', 'name', 'email', 'phone', 'address']),
+            'customer' => $this->customerForUser($user),
             'chipEnabled' => (bool) config('services.chip.enabled'),
         ]);
     }
@@ -374,30 +385,31 @@ class ShopController extends Controller
     {
         abort_unless(config('services.chip.enabled'), 503, 'CHiP checkout is not configured. Set the sandbox credentials before placing shop orders.');
         $data = $request->validate([
-            'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'customer_address' => ['nullable', 'string', 'max:3000'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
-        $customer = Customer::query()->findOrFail($data['customer_id']);
-        if (! filter_var($customer->email, FILTER_VALIDATE_EMAIL)) {
-            throw ValidationException::withMessages(['customer_id' => 'The selected customer needs a valid email address for CHiP checkout.']);
-        }
         $cart = $this->cartProducts($request);
         if ($cart->isEmpty()) {
             return redirect()->route('shop.cart')->with('error', 'Your cart is empty.');
         }
 
+        $user = $request->user();
+        if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+            throw ValidationException::withMessages(['customer' => 'Your account needs a valid email address for CHiP checkout.']);
+        }
+        $customer = $this->resolveCustomerForUser($user);
+
         $subtotal = round($cart->sum(fn (array $row): float => $row['price'] * $row['quantity']), 2);
-        $order = DB::transaction(function () use ($cart, $customer, $data, $subtotal, $request): ShopOrder {
+        $order = DB::transaction(function () use ($cart, $customer, $data, $subtotal, $request, $user): ShopOrder {
             $order = ShopOrder::query()->create([
                 'uuid' => (string) Str::uuid(),
                 'order_number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'customer_id' => $customer->id,
-                'user_id' => $request->user()->id,
-                'customer_name' => $customer->name,
-                'customer_email' => $customer->email,
-                'customer_phone' => $customer->phone,
-                'customer_address' => $data['customer_address'] ?? $customer->address,
+                'user_id' => $user->id,
+                'customer_name' => $user->name,
+                'customer_email' => $user->email,
+                'customer_phone' => $user->phone,
+                'customer_address' => $data['customer_address'] ?? $customer->address ?? $user->address,
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
                 'currency' => config('services.chip.currency', 'MYR'),
@@ -505,6 +517,119 @@ class ShopController extends Controller
     public function orderStatusPreview(): View
     {
         return view('shop.orders.customer-preview');
+    }
+
+    public function updateOrderTrackingNumber(Request $request, ShopOrder $order): RedirectResponse
+    {
+        $data = $request->validate([
+            'tracking_number' => ['nullable', 'string', 'min:3', 'max:100'],
+        ]);
+        $order->update([
+            'tracking_number' => filled($data['tracking_number'] ?? null)
+                ? trim($data['tracking_number'])
+                : null,
+        ]);
+
+        return redirect()->route('shop.orders.show', $order)
+            ->with('success', $order->tracking_number
+                ? 'Tracking number saved. The customer can now view parcel updates.'
+                : 'Tracking number removed from the order.');
+    }
+
+    public function customerTracking(): View
+    {
+        return view('shop.tracking', [
+            'apiKeyConfigured' => filled(config('services.parcel_tracking.api_key')),
+        ]);
+    }
+
+    public function trackCustomerParcel(Request $request, ParcelTrackingService $tracking): RedirectResponse
+    {
+        $data = $request->validate([
+            'tracking_number' => ['required', 'string', 'min:3', 'max:100'],
+        ]);
+        $number = trim($data['tracking_number']);
+        try {
+            return back()->withInput(['tracking_number' => $number])->with(
+                'customer_tracking_result',
+                $this->cachedParcelTracking($tracking, $number),
+            );
+        } catch (RuntimeException $exception) {
+            return back()->withInput(['tracking_number' => $number])
+                ->with('customer_tracking_error', $exception->getMessage());
+        }
+    }
+
+    public function customerOrders(Request $request): View
+    {
+        $orders = ShopOrder::query()
+            ->where(function (Builder $query) use ($request): void {
+                $query->where('user_id', $request->user()->id)
+                    ->orWhereRaw('LOWER(customer_email) = ?', [strtolower(trim($request->user()->email))]);
+            })
+            ->latest()
+            ->paginate(10);
+
+        return view('shop.orders.customer-index', compact('orders'));
+    }
+
+    public function customerOrder(Request $request, ShopOrder $order): View
+    {
+        $order = $this->customerOwnedOrder($request, $order)->load('items');
+
+        return view('shop.orders.customer-show', [
+            'order' => $order,
+            'tracking' => $this->sessionTrackingForOrder($request, $order),
+        ]);
+    }
+
+    public function refreshCustomerOrderTracking(
+        Request $request,
+        ShopOrder $order,
+        ParcelTrackingService $tracking,
+    ): RedirectResponse {
+        $order = $this->customerOwnedOrder($request, $order);
+        if (blank($order->tracking_number)) {
+            return redirect()->route('shop.my-orders.show', $order)
+                ->with('error', 'Tracking is not available for this order yet.');
+        }
+
+        try {
+            return redirect()->route('shop.my-orders.show', $order)->with(
+                'customer_parcel_tracking',
+                $this->cachedParcelTracking($tracking, $order->tracking_number),
+            );
+        } catch (RuntimeException $exception) {
+            return redirect()->route('shop.my-orders.show', $order)
+                ->with('customer_tracking_error', $exception->getMessage());
+        }
+    }
+
+    private function customerOwnedOrder(Request $request, ShopOrder $order): ShopOrder
+    {
+        $user = $request->user();
+        $emailMatches = strtolower(trim($order->customer_email)) === strtolower(trim($user->email));
+        abort_unless($order->user_id === $user->id || $emailMatches, 404);
+
+        return $order;
+    }
+
+    private function sessionTrackingForOrder(Request $request, ShopOrder $order): ?array
+    {
+        $tracking = $request->session()->get('customer_parcel_tracking');
+        if (! is_array($tracking)
+            || strcasecmp((string) ($tracking['number'] ?? ''), (string) $order->tracking_number) !== 0) {
+            return null;
+        }
+
+        return $tracking;
+    }
+
+    private function cachedParcelTracking(ParcelTrackingService $tracking, string $number): array
+    {
+        $cacheKey = 'parcel-tracking:'.hash('sha256', strtoupper($number));
+
+        return Cache::remember($cacheKey, now()->addMinutes(5), fn (): array => $tracking->track($number));
     }
 
     public function ordersDatatable(Request $request)
@@ -618,7 +743,10 @@ class ShopController extends Controller
     public function chipReturn(string $uuid, Request $request, ChipCollect $chip, WorkspaceNotifier $notifier): RedirectResponse
     {
         $order = ShopOrder::query()->where('uuid', $uuid)->firstOrFail();
-        abort_unless($request->user() && ! $request->user()->hasRole('customer'), 403);
+        $user = $request->user();
+        if ($user->hasRole('customer')) {
+            abort_unless($order->user_id === $user->id, 404);
+        }
         if ($order->payment_status !== 'paid' && $order->provider_purchase_id) {
             $purchase = $chip->purchase($order->provider_purchase_id);
             abort_unless(($purchase['id'] ?? null) === $order->provider_purchase_id, 502, 'CHiP returned a different purchase.');
@@ -630,13 +758,39 @@ class ShopController extends Controller
             }
         }
         $order->refresh();
+        $destination = $user->hasRole('customer')
+            ? route('shop.cart')
+            : route('shop.orders.show', $order);
 
-        return redirect()->route('shop.orders.show', $order)->with(
+        return redirect($destination)->with(
             $order->payment_status === 'paid' ? 'success' : 'info',
             $order->payment_status === 'paid'
                 ? 'CHiP confirmed the shop order payment.'
                 : 'Payment has not been confirmed yet. The order will update after CHiP confirms it.',
         );
+    }
+
+    private function customerForUser(User $user): ?Customer
+    {
+        $email = strtolower(trim($user->email));
+        if ($email === '') {
+            return null;
+        }
+
+        return Customer::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function resolveCustomerForUser(User $user): Customer
+    {
+        return $this->customerForUser($user) ?? Customer::query()->create([
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'address' => $user->address,
+        ]);
     }
 
     private function markOrderPaid(ShopOrder $order, WorkspaceNotifier $notifier): void

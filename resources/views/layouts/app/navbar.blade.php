@@ -12,7 +12,7 @@
         </div>
     </a>
     <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
-        <li class="nav-item ps-2 pe-0">
+        <li class="nav-item ps-2 pe-0 px-2">
             <div class="dropdown theme-control-dropdown"><a
                     class="nav-link d-flex align-items-center dropdown-toggle fs-9 pe-1 py-0"
                     href="navbar-vertical.html#" role="button" id="themeSwitchDropdown" data-bs-toggle="dropdown"
@@ -38,7 +38,17 @@
             </div>
         </li>
 
-        @unless (auth()->user()->hasRole('customer'))
+        @if (auth()->user()->hasRole('customer'))
+            <li class="nav-item d-none d-sm-block">
+                <a class="nav-link px-2" href="{{ route('shop.tracking') }}" title="Track a parcel">
+                    <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>Track parcel
+                </a>
+            </li>
+            <li class="nav-item d-none d-sm-block">
+                <a class="nav-link px-2" href="{{ route('shop.my-orders.index') }}" title="My shop orders">
+                    <span class="bi bi-receipt me-1" aria-hidden="true"></span>My orders
+                </a>
+            </li>
             @php
                 $cartItemCount = collect(session('shop_cart', []))->sum();
             @endphp
@@ -53,7 +63,7 @@
                     </span>
                 </a>
             </li>
-        @endunless
+        @endif
 
         @auth
             @include('notifications._navbar')
