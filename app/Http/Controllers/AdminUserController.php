@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Team;
 use App\Models\User;
-use App\Support\DataTableQueryBuilder;
+use App\Models\UserEmailMailbox;
 use App\Services\CpanelEmailProvisioner;
+use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,9 +18,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
-use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\QueryBuilder\AllowedFilter;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -241,6 +242,53 @@ class AdminUserController extends Controller
             ->get());
 
         return redirect()->route('admin.users.edit', $user)->with('success', 'Member permissions updated.');
+    }
+
+    public function createMailbox(Request $request, User $user, CpanelEmailProvisioner $provisioner): RedirectResponse
+    {
+        if (! $user->hasAnyRole(['admin', 'member'])) {
+            return back()->with('warning', 'Only a member account can have an OMG Computer mailbox.');
+        }
+
+        if ($user->emailMailbox()->exists()) {
+            return back()->with('warning', 'This member already has an OMG Computer mailbox.');
+        }
+
+        if (! $provisioner->configured()) {
+            return back()->with('warning', 'cPanel email provisioning is not configured.');
+        }
+
+        $domain = strtolower((string) config('services.cpanel.email_domain'));
+        $data = $request->validate([
+            'mailbox_username' => [
+                'required',
+                'string',
+                'max:64',
+                'regex:/^[A-Za-z0-9](?:[A-Za-z0-9._+-]*[A-Za-z0-9])?$/',
+                function (string $attribute, string $value, \Closure $fail) use ($domain, $user): void {
+                    $email = strtolower($value).'@'.$domain;
+                    if (strcasecmp($email, $user->email) === 0) {
+                        $fail('The work mailbox must be different from the member’s personal sign-in email.');
+                    } elseif (UserEmailMailbox::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+                        $fail('This mailbox address is already assigned to another account.');
+                    }
+                },
+            ],
+        ]);
+
+        try {
+            $mailbox = $provisioner->provision(strtolower($data['mailbox_username']));
+            $user->emailMailbox()->create($mailbox);
+        } catch (\RuntimeException $exception) {
+            Log::warning('cPanel mailbox provisioning failed from a member profile.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+
+            return back()->with('warning', $exception->getMessage());
+        }
+
+        return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'.');
     }
 
     public function update(Request $request, User $user): RedirectResponse

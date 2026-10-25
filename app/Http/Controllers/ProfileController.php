@@ -35,9 +35,10 @@ class ProfileController extends Controller
         $isCustomerAccount = $member->hasRole('customer') && ! $member->hasAnyRole(['admin', 'member']);
 
         return view('profile.member', [
-            'user' => $member->load('teams.department'),
+            'user' => $member->load(['teams.department', 'emailMailbox']),
             'canManageAccount' => auth()->user()->hasRole('admin'),
             'isCustomerAccount' => $isCustomerAccount,
+            'cpanelProvisioningEnabled' => (bool) config('services.cpanel.enabled'),
         ]);
     }
 

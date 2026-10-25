@@ -194,6 +194,63 @@ class MemberManagementTest extends TestCase
         Notification::assertSentTo($member, ResetPassword::class);
     }
 
+    public function test_admin_can_create_a_missing_mailbox_from_the_member_profile_once(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create([
+            'name' => 'Mailbox Member',
+            'email' => 'mailbox.member.personal@example.test',
+        ]);
+        $member->assignRole('member');
+        $this->actingAs($admin);
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+            'services.cpanel.email_quota' => 0,
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
+                'result' => ['status' => 1],
+            ]),
+        ]);
+
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertSee('OMG Computer mailbox')
+            ->assertSee('Preferred email name')
+            ->assertSee('@example.test')
+            ->assertSee('Create mailbox');
+
+        $this->post(route('admin.users.mailbox.create', $member), [
+            'mailbox_username' => 'mailbox.member',
+        ])->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('success', 'OMG Computer mailbox created for Mailbox Member.');
+
+        $member->refresh();
+        $this->assertSame('mailbox.member@example.test', $member->emailMailbox->email);
+        $this->assertNotSame(
+            $member->emailMailbox->password,
+            DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
+        );
+        Http::assertSentCount(1);
+
+        $this->post(route('admin.users.mailbox.create', $member), [
+            'mailbox_username' => 'mailbox.member',
+        ])->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('warning', 'This member already has an OMG Computer mailbox.');
+        Http::assertSentCount(1);
+
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertSee('mailbox.member@example.test');
+    }
+
     public function test_member_creation_reports_cpanel_uapi_rejection_without_hiding_the_error(): void
     {
         $this->seed(PlannerRoleSeeder::class);

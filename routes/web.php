@@ -159,6 +159,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/customers', 'storeCustomer')->name('customers.store');
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::post('/{user}/mailbox', 'createMailbox')->middleware(['role:admin', 'throttle:5,1'])->name('mailbox.create');
         Route::get('/{user}/edit', 'edit')->name('edit');
         Route::put('/{user}/permissions', 'updatePermissions')->name('permissions.update');
         Route::put('/{user}', 'update')->name('update');

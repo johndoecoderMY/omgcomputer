@@ -386,7 +386,7 @@
                     updateColumnCounts();
                 }
             });
-            sortable.option('filter', 'a, button');
+            sortable.option('filter', 'a, button:not(.task-kanban-drag-handle)');
             sortable.option('preventOnFilter', false);
             sortable.option('handle', '.task-kanban-drag-handle');
             sortable.option('delay', 150);
