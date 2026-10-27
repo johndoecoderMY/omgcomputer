@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Organization" title="Edit team"
+    <x-page-header eyebrow="Members & organization" title="Edit team"
         :back-url="route('teams.index')" back-label="All teams" />
     @if ($errors->any())<div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
 

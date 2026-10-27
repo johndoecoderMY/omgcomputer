@@ -19,6 +19,13 @@
 @endphp
 
 <style>
+    .app-toast-container .toast {
+        --falcon-toast-bg: var(--falcon-emphasis-bg);
+        --falcon-toast-color: var(--falcon-body-color);
+        --falcon-toast-header-bg: var(--falcon-emphasis-bg);
+        --falcon-toast-header-color: var(--falcon-body-color);
+    }
+
     .app-toast-container {
         bottom: calc(env(safe-area-inset-bottom, 0px) + .75rem);
         top: auto !important;

@@ -197,6 +197,15 @@ class ProjectTaskTest extends TestCase
         ]);
     }
 
+    public function test_kanban_status_changes_reload_the_task_list_without_resetting_its_page(): void
+    {
+        $this->actingAs($this->adminUser())
+            ->get(route('tasks.index'))
+            ->assertOk()
+            ->assertSee('const refreshTaskList = () =>', false)
+            ->assertSee('window.jQuery(listTable).DataTable().ajax.reload(null, false)', false);
+    }
+
     public function test_projects_show_task_progress_and_subtasks_cannot_be_nested_or_cross_project(): void
     {
         $this->actingAs($this->adminUser());

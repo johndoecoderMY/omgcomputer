@@ -10,14 +10,183 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
 
 class AdminMaintenanceController extends Controller
 {
+    private const SEEDER_GROUPS = [
+        [
+            'name' => 'Roles and workspace setup',
+            'seeders' => [
+                [
+                    'class' => \Database\Seeders\PlannerRoleSeeder::class,
+                    'name' => 'Planner roles and permissions',
+                    'description' => 'Creates the admin, member, and customer roles and permissions. Users without a role are assigned the member role.',
+                ],
+                [
+                    'class' => \Database\Seeders\DepartmentTeamSeeder::class,
+                    'name' => 'Departments and teams',
+                    'description' => 'Adds the sample departments and teams used by the workspace.',
+                ],
+            ],
+        ],
+        [
+            'name' => 'Projects and plans',
+            'seeders' => [
+                [
+                    'class' => \Database\Seeders\OmgComputerProjectSeeder::class,
+                    'name' => 'OMG Computer project',
+                    'description' => 'Adds starter requirements, technology, estimate items, and events to the OMG Computer project.',
+                ],
+                [
+                    'class' => \Database\Seeders\BusinessPlanTaskSeeder::class,
+                    'name' => 'Business plan tasks',
+                    'description' => 'Adds sample planning tasks to the OMG Computer project.',
+                ],
+                [
+                    'class' => \Database\Seeders\SiemProjectSeeder::class,
+                    'name' => 'SIEM learning project',
+                    'description' => 'Adds a sample SIEM project and tasks.',
+                ],
+            ],
+        ],
+        [
+            'name' => 'Messages and SOP examples',
+            'seeders' => [
+                [
+                    'class' => \Database\Seeders\CustomerMessageTemplateSeeder::class,
+                    'name' => 'Customer message templates',
+                    'description' => 'Adds example customer email, SMS, and WhatsApp templates.',
+                ],
+                [
+                    'class' => \Database\Seeders\ServiceSopExampleSeeder::class,
+                    'name' => 'Service SOP example',
+                    'description' => 'Adds an example laptop repair service workflow.',
+                ],
+                [
+                    'class' => \Database\Seeders\StudentFypSopSeeder::class,
+                    'name' => 'Student FYP SOP examples',
+                    'description' => 'Adds student consultation, debugging, mentoring, and review workflows.',
+                ],
+                [
+                    'class' => \Database\Seeders\SoftwareStructureSopSeeder::class,
+                    'name' => 'Software structure SOP examples',
+                    'description' => 'Adds website structure and database design workflow examples.',
+                ],
+                [
+                    'class' => \Database\Seeders\DeveloperSetupFlowChartSeeder::class,
+                    'name' => 'Developer setup workflows',
+                    'description' => 'Adds Arduino, ESP32, Laravel setup, and database relationship examples.',
+                ],
+            ],
+        ],
+        [
+            'name' => 'Sample inventory and business data',
+            'seeders' => [
+                [
+                    'class' => \Database\Seeders\SupplierSeeder::class,
+                    'name' => 'Sample suppliers',
+                    'description' => 'Adds demo supplier records used by the sample inventory seeders.',
+                ],
+                [
+                    'class' => \Database\Seeders\PcPartsSeeder::class,
+                    'name' => 'Sample PC parts',
+                    'description' => 'Adds demo parts, sample opening-stock movements, and marks the parts for sale. Requires the inventory migrations.',
+                ],
+                [
+                    'class' => \Database\Seeders\ReadyBuiltPcSeeder::class,
+                    'name' => 'Sample ready-built PCs',
+                    'description' => 'Adds demo ready-built PCs and sample opening-stock movements. Requires the inventory migrations.',
+                ],
+                [
+                    'class' => \Database\Seeders\RentalExpenseSeeder::class,
+                    'name' => 'Sample rental expense',
+                    'description' => 'Adds a sample monthly shop rental expense.',
+                ],
+                [
+                    'class' => \Database\Seeders\DemoDataSeeder::class,
+                    'name' => 'General demo data',
+                    'description' => 'Adds sample project, inventory, customer, task, and marketing data. Requires the support@omgcomputer.my user and related migrations.',
+                ],
+            ],
+        ],
+        [
+            'name' => 'Shop demo orders',
+            'seeders' => [
+                [
+                    'class' => \Database\Seeders\ShopDemoSeeder::class,
+                    'name' => 'Sample shop orders',
+                    'description' => 'Adds five example shop orders. Requires test@example.com, the demo customers, and the sample PC parts to exist.',
+                ],
+            ],
+        ],
+    ];
+
     public function index(): View
     {
-        return view('admin.maintenance.index');
+        return view('admin.maintenance.index', [
+            'seederGroups' => self::SEEDER_GROUPS,
+        ]);
+    }
+
+    public function seedSelected(Request $request): RedirectResponse
+    {
+        $seederClasses = collect(self::SEEDER_GROUPS)
+            ->flatMap(fn (array $group): array => array_column($group['seeders'], 'class'))
+            ->all();
+
+        $validated = $request->validate([
+            'seeders' => ['required', 'array', 'min:1'],
+            'seeders.*' => ['required', 'string', 'distinct', Rule::in($seederClasses)],
+        ]);
+
+        $output = [];
+        foreach ($validated['seeders'] as $seederClass) {
+            try {
+                $exitCode = Artisan::call('db:seed', [
+                    '--class' => $seederClass,
+                    '--force' => true,
+                ]);
+                $seederOutput = trim(Artisan::output());
+            } catch (QueryException|RuntimeException $exception) {
+                Log::error('Admin selected database seeder failed.', [
+                    'seeder' => $seederClass,
+                    'exception' => $exception->getMessage(),
+                ]);
+
+                $output[] = $seederClass."\nSeeder execution stopped before command output was available.";
+
+                return redirect()->route('admin.maintenance.index')
+                    ->with('maintenance_error', 'A selected seeder could not be completed. Any earlier selected seeders may already have completed; review the application logs.')
+                    ->with('maintenance_output', implode("\n\n", $output));
+            }
+
+            $output[] = $seederClass.($seederOutput === '' ? '' : "\n".$seederOutput);
+            if ($exitCode !== 0) {
+                Log::error('Admin selected database seeder returned a failure status.', [
+                    'seeder' => $seederClass,
+                    'exit_code' => $exitCode,
+                    'output' => $seederOutput,
+                ]);
+
+                return redirect()->route('admin.maintenance.index')
+                    ->with('maintenance_error', 'A selected seeder failed. Any earlier selected seeders may already have completed; review the output and application logs.')
+                    ->with('maintenance_output', implode("\n\n", $output));
+            }
+        }
+
+        $names = collect(self::SEEDER_GROUPS)
+            ->flatMap(fn (array $group): array => $group['seeders'])
+            ->keyBy('class');
+        $selectedNames = collect($validated['seeders'])
+            ->map(fn (string $class): string => $names[$class]['name'])
+            ->implode(', ');
+
+        return redirect()->route('admin.maintenance.index')
+            ->with('maintenance_success', 'Selected seeders completed: '.$selectedNames.'.')
+            ->with('maintenance_output', implode("\n\n", $output));
     }
 
     public function migrate(): RedirectResponse

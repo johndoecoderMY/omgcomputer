@@ -95,6 +95,30 @@ class EmailMailboxTest extends TestCase
             ->assertSessionHas('mailbox_success', 'Email archived.');
     }
 
+    public function test_html_email_is_shown_in_a_restricted_frame(): void
+    {
+        $admin = $this->admin();
+        $this->mock(EmailMailboxService::class, function (MockInterface $mock) use ($admin): void {
+            $mock->shouldReceive('message')->once()->with($admin, 26)->andReturn([
+                'uid' => 26,
+                'subject' => 'HTML email',
+                'from' => 'sender@example.test',
+                'to' => 'support@example.test',
+                'date' => 'Wed, 21 Oct 2026 10:00:00 +0800',
+                'seen' => true,
+                'body' => 'Email content',
+                'body_html' => '<meta http-equiv="Content-Security-Policy"><p>Email content</p>',
+            ]);
+        });
+
+        $this->actingAs($admin)->get(route('email.show', 26))
+            ->assertOk()
+            ->assertSee('sandbox=""', false)
+            ->assertSee('referrerpolicy="no-referrer"', false)
+            ->assertSee('srcdoc="&lt;meta http-equiv=&quot;Content-Security-Policy&quot;&gt;&lt;p&gt;Email content&lt;/p&gt;"', false)
+            ->assertSee('Remote images, scripts, and external resources are blocked for privacy and safety.');
+    }
+
     public function test_inbox_shows_mailbox_connection_errors_without_failing_the_page(): void
     {
         $admin = $this->admin();

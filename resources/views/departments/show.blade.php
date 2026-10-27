@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Organization / Departments" :title="$department->name" :back-url="route('departments.index')" back-label="All departments">
+    <x-page-header eyebrow="Members & organization / Departments" :title="$department->name" :back-url="route('departments.index')" back-label="All departments">
         <x-slot:actions><a class="btn btn-outline-primary" href="{{ route('departments.edit', $department) }}">Edit</a><a class="btn btn-outline-danger" href="{{ route('departments.delete', $department) }}">Delete</a></x-slot:actions>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif

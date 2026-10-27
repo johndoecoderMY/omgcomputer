@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Organization / Departments" :title="'Edit '.$department->name" :back-url="route('departments.show', $department)" back-label="Back to department" />
+    <x-page-header eyebrow="Members & organization / Departments" :title="'Edit '.$department->name" :back-url="route('departments.show', $department)" back-label="Back to department" />
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
     <form method="POST" action="{{ route('departments.update', $department) }}">
         @csrf

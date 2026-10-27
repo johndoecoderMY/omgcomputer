@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Organization" title="Departments" description="Create and maintain the departments that teams belong to.">
+    <x-page-header eyebrow="Members & organization" title="Departments" description="Create and maintain the departments that teams belong to.">
         <x-slot:actions><a class="btn btn-primary" href="{{ route('departments.create') }}">Add department</a><a class="btn btn-outline-primary" href="{{ route('teams.index') }}">Manage teams</a></x-slot:actions>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif

@@ -124,12 +124,15 @@ class EmailMailboxService
 
             $item = $overview[0];
             $structure = imap_fetchstructure($connection, (string) $uid, FT_UID);
-            $body = $structure
-                ? $this->bodyPart($connection, $uid, $structure)
-                : imap_body($connection, (string) $uid, FT_UID);
+            $parts = $structure
+                ? $this->bodyParts($connection, $uid, $structure)
+                : ['plain' => (string) imap_body($connection, (string) $uid, FT_UID), 'html' => ''];
+            $plainBody = trim($parts['plain']);
+            $htmlBody = trim($parts['html']);
 
-            if (! is_string($body)) {
-                $body = '';
+            if ($htmlBody === '' && $this->looksLikeHtml($plainBody)) {
+                $htmlBody = $plainBody;
+                $plainBody = '';
             }
 
             return [
@@ -139,7 +142,8 @@ class EmailMailboxService
                 'to' => $this->decodeHeader($item->to ?? ''),
                 'date' => $item->date ?? '',
                 'seen' => (bool) ($item->seen ?? false),
-                'body' => trim(strip_tags(html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
+                'body' => $plainBody !== '' ? $plainBody : $this->plainTextFromHtml($htmlBody),
+                'body_html' => $htmlBody !== '' ? $this->secureHtmlForDisplay($htmlBody) : null,
             ];
         } finally {
             imap_close($connection);
@@ -248,45 +252,113 @@ class EmailMailboxService
         return imap_mail_move($connection, (string) $uid, $target, CP_UID);
     }
 
-    private function bodyPart(Connection $connection, int $uid, object $part, string $partNumber = ''): string
+    /**
+     * @return array{plain: string, html: string}
+     */
+    private function bodyParts(Connection $connection, int $uid, object $part, string $partNumber = ''): array
     {
         $type = (int) ($part->type ?? 0);
+
+        if (strtoupper((string) ($part->disposition ?? '')) === 'ATTACHMENT'
+            || $this->partFilename($part) !== '') {
+            return ['plain' => '', 'html' => ''];
+        }
+
         if ($type === 1 && isset($part->parts) && is_array($part->parts)) {
-            $plain = '';
-            $html = '';
+            $bodies = ['plain' => '', 'html' => ''];
             foreach ($part->parts as $index => $child) {
                 $number = $partNumber === '' ? (string) ($index + 1) : $partNumber.'.'.($index + 1);
-                $content = $this->bodyPart($connection, $uid, $child, $number);
-                if ((int) ($child->type ?? 0) === 0) {
-                    $subtype = strtolower((string) ($child->subtype ?? 'plain'));
-                    if ($subtype === 'plain' && $plain === '') {
-                        $plain = $content;
-                    } elseif ($subtype === 'html' && $html === '') {
-                        $html = $content;
+                $childBodies = $this->bodyParts($connection, $uid, $child, $number);
+                foreach (['plain', 'html'] as $format) {
+                    if ($bodies[$format] === '' && $childBodies[$format] !== '') {
+                        $bodies[$format] = $childBodies[$format];
                     }
-                } elseif ($content !== '' && $plain === '' && $html === '') {
-                    $plain = $content;
                 }
             }
 
-            return $plain !== '' ? $plain : $html;
+            return $bodies;
         }
 
-        if ($type !== 0 || strtoupper((string) ($part->disposition ?? '')) === 'ATTACHMENT') {
-            return '';
+        if ($type !== 0) {
+            return ['plain' => '', 'html' => ''];
         }
 
         $section = $partNumber === '' ? '1' : $partNumber;
         $content = imap_fetchbody($connection, (string) $uid, $section, FT_UID);
         if (! is_string($content)) {
-            return '';
+            return ['plain' => '', 'html' => ''];
         }
 
-        return match ((int) ($part->encoding ?? 0)) {
+        $content = match ((int) ($part->encoding ?? 0)) {
             3 => base64_decode($content, true) ?: '',
             4 => quoted_printable_decode($content),
             default => $content,
         };
+        $charset = $this->partCharset($part);
+        if ($charset !== '' && strcasecmp($charset, 'UTF-8') !== 0) {
+            try {
+                $content = mb_convert_encoding($content, 'UTF-8', $charset);
+            } catch (\ValueError) {
+                // Keep the decoded body when a sender declares an unsupported charset.
+            }
+        }
+
+        return match (strtolower((string) ($part->subtype ?? 'plain'))) {
+            'html' => ['plain' => '', 'html' => $content],
+            'plain' => ['plain' => $content, 'html' => ''],
+            default => ['plain' => '', 'html' => ''],
+        };
+    }
+
+    private function partFilename(object $part): string
+    {
+        foreach (['parameters', 'dparameters'] as $property) {
+            foreach (($part->{$property} ?? []) as $parameter) {
+                if (in_array(strtolower((string) ($parameter->attribute ?? '')), ['filename', 'name'], true)) {
+                    return (string) ($parameter->value ?? '');
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function partCharset(object $part): string
+    {
+        foreach (($part->parameters ?? []) as $parameter) {
+            if (strtolower((string) ($parameter->attribute ?? '')) === 'charset') {
+                return (string) ($parameter->value ?? '');
+            }
+        }
+
+        return '';
+    }
+
+    private function looksLikeHtml(string $body): bool
+    {
+        return preg_match('/<(?:!doctype\s+html|html|head|body|style|table|div|p)\b/i', $body) === 1;
+    }
+
+    private function plainTextFromHtml(string $html): string
+    {
+        $html = preg_replace('/<(?:head|style|script)\b[^>]*>.*?<\/(?:head|style|script)\s*>/is', ' ', $html) ?? $html;
+        $html = preg_replace('/<\/(?:p|div|tr|li|h[1-6]|br)\s*>/i', "\n", $html) ?? $html;
+
+        return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    }
+
+    private function secureHtmlForDisplay(string $html): string
+    {
+        $policy = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'";
+        $meta = '<meta http-equiv="Content-Security-Policy" content="'.e($policy).'">';
+
+        if (preg_match('/<head\b[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE) === 1) {
+            $insertAt = $match[0][1] + strlen($match[0][0]);
+
+            return substr_replace($html, $meta, $insertAt, 0);
+        }
+
+        return '<!doctype html><html><head><meta charset="utf-8">'.$meta.'</head><body>'.$html.'</body></html>';
     }
 
     private function decodeHeader(string $value): string

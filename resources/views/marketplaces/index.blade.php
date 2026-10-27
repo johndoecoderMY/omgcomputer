@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Integrations" title="E-commerce Shops"
-        description="Connect Shopee and Lazada stores, then manually import recent orders."
+        description="Connect Shopee and Lazada stores, then import orders."
         :back-url="route('reports.index')" back-label="Reports overview">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="https://open.shopee.com/" target="_blank" rel="noopener noreferrer">Shopee Open Platform</a>
@@ -28,6 +28,9 @@
             </ul>
         </div>
     @endif
+    <div class="alert alert-info" role="status">
+        Connected Shopee shops synchronize recently changed orders every 15 minutes when the Laravel scheduler is running. Manual imports are still available below. Shipment initiation and shipping-label retrieval are not available yet.
+    </div>
 
     <div class="card p-2 mb-4">
         <div class="card-header bg-body">

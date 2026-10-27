@@ -233,6 +233,32 @@
                             </li>
                         </ul>
 
+                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('billing.view'))
+                            <a class="nav-link dropdown-indicator" href="#billingMenu" role="button" data-bs-toggle="collapse"
+                                aria-expanded="false" aria-controls="billingMenu">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-file-earmark-spreadsheet"></span></span>
+                                    <span class="nav-link-text ps-1">Billing &amp; Payments</span>
+                                </div>
+                            </a>
+                            <ul class="nav collapse" id="billingMenu">
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('billing.index', ['type' => 'quotation']) }}">
+                                        <span class="nav-link-text ps-1">Quotations</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('billing.index', ['type' => 'invoice']) }}">
+                                        <span class="nav-link-text ps-1">Invoices</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('billing.index', ['status' => 'partial']) }}">
+                                        <span class="nav-link-text ps-1">Part-paid invoices</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        @endif
 
                     </li>
 
@@ -327,27 +353,13 @@
                             </div>
                         </a>
 
-                        @role('admin')
-                        <a class="nav-link" href="{{ route('teams.index') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-people"></span></span>
-                                <span class="nav-link-text ps-1">Teams</span>
-                            </div>
-                        </a>
-                        <a class="nav-link" href="{{ route('departments.index') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
-                                <span class="nav-link-text ps-1">Departments</span>
-                            </div>
-                        </a>
-                        @endrole
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('users.view'))
                             @role('admin')
                             <a class="nav-link dropdown-indicator" href="#membersMenu" role="button" data-bs-toggle="collapse"
                                 aria-expanded="false" aria-controls="membersMenu">
                                 <div class="d-flex align-items-center">
                                     <span class="nav-link-icon"><span class="bi bi-people"></span></span>
-                                    <span class="nav-link-text ps-1">Members</span>
+                                    <span class="nav-link-text ps-1">Members &amp; organization</span>
                                 </div>
                             </a>
                             <ul class="nav collapse" id="membersMenu">
@@ -359,6 +371,16 @@
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ route('admin.access.index') }}">
                                         <span class="nav-link-text ps-1">Roles &amp; permissions</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('teams.index') }}">
+                                        <span class="nav-link-text ps-1">Teams</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('departments.index') }}">
+                                        <span class="nav-link-text ps-1">Departments</span>
                                     </a>
                                 </li>
                             </ul>
@@ -401,6 +423,11 @@
                             </div>
                         </a>
                         <ul class="nav collapse" id="shopMenu">
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ route('shop.custom-pc-builder') }}">
+                                    <span class="nav-link-text ps-1">Custom PC builder</span>
+                                </a>
+                            </li>
                             <li class="nav-item">
                                 <a class="nav-link" href="{{ route('shop.products.index') }}">
                                     <span class="nav-link-text ps-1">Products</span>
@@ -541,43 +568,6 @@
                         </a>
                     </li>
                     @endrole
-
-                    {{-- Billing & Payments --}}
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('billing.view'))
-                        <li class="nav-item">
-                            <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
-                                <div class="col-auto navbar-vertical-label">Finance</div>
-                                <div class="col ps-0">
-                                    <hr class="mb-0 navbar-vertical-divider">
-                                </div>
-                            </div>
-                            <a class="nav-link dropdown-indicator" href="#billingMenu" role="button" data-bs-toggle="collapse"
-                                aria-expanded="false" aria-controls="billingMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-file-earmark-spreadsheet"></span></span>
-                                    <span class="nav-link-text ps-1">Billing & Payments</span>
-                                </div>
-                            </a>
-
-                            <ul class="nav collapse" id="billingMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('billing.index', ['type' => 'quotation']) }}">
-                                        <span class="nav-link-text ps-1">Quotations</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('billing.index', ['type' => 'invoice']) }}">
-                                        <span class="nav-link-text ps-1">Invoices</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('billing.index', ['status' => 'partial']) }}">
-                                        <span class="nav-link-text ps-1">Part-paid invoices</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    @endif
 
                     {{-- Reports --}}
                     @role('admin')

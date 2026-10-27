@@ -36,8 +36,10 @@ class AdminAccessAndProjectManagementTest extends TestCase
             ->assertSee('aria-controls="membersMenu"', false)
             ->assertSee(route('admin.users.index'), false)
             ->assertSee(route('admin.access.index'), false)
-            ->assertSee('>Members</a>', false)
+            ->assertSee('Members &amp; organization', false)
             ->assertSee('Member list')
+            ->assertSee(route('teams.index'), false)
+            ->assertSee(route('departments.index'), false)
             ->assertSee('Permissions matrix')
             ->assertSee('Role information')
             ->assertSee('data-bs-target="#add-permission-modal"', false)
@@ -45,6 +47,8 @@ class AdminAccessAndProjectManagementTest extends TestCase
             ->assertSee('id="role-users-tab"', false)
             ->assertSee('id="all-permissions-tab"', false)
             ->assertDontSee('User roles');
+        $this->get(route('teams.index'))->assertOk()->assertSee('Members & organization');
+        $this->get(route('departments.index'))->assertOk()->assertSee('Members & organization');
         $this->get(route('admin.users.index'))->assertOk()->assertSee('Members');
         $this->get(route('admin.users.customers'))->assertOk()->assertSee('Customer accounts');
         $this->get(route('admin.users.edit', $member))->assertOk()->assertSee('Account roles');

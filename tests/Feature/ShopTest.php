@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BillingDocument;
 use App\Models\Customer;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
@@ -32,6 +33,7 @@ class ShopTest extends TestCase
         $customer->assignRole('customer');
 
         $this->actingAs($customer)->get(route('shop.products.index'))->assertForbidden();
+        $this->actingAs($customer)->get(route('shop.custom-pc-builder'))->assertForbidden();
         $this->actingAs($customer)->get(route('shop.cart'))->assertOk();
         $this->actingAs($customer)->get(route('shop.orders.index'))->assertForbidden();
         $this->actingAs($this->staffUser())->get(route('shop.cart'))->assertForbidden();
@@ -204,6 +206,60 @@ class ShopTest extends TestCase
             ->assertSee('Get a custom PC quote');
     }
 
+    public function test_staff_can_build_a_custom_pc_draft_quotation_from_in_stock_components(): void
+    {
+        config(['billing.tax_rate' => 6]);
+        $staff = $this->staffUser();
+        $cpu = InventoryPart::query()->create([
+            'name' => 'Builder test CPU',
+            'sku' => 'BUILDER-CPU-01',
+            'type' => 'cpu',
+            'selling_price' => 250,
+            'cost_price' => 180,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+        ]);
+        $outOfStockGpu = InventoryPart::query()->create([
+            'name' => 'Unavailable builder GPU',
+            'sku' => 'BUILDER-GPU-01',
+            'type' => 'gpu',
+            'selling_price' => 600,
+            'cost_price' => 450,
+            'stock_quantity' => 0,
+            'reorder_level' => 1,
+        ]);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('Custom PC builder')
+            ->assertSee($cpu->name)
+            ->assertSee('6.00%')
+            ->assertDontSee($outOfStockGpu->name)
+            ->assertSee(route('billing.store'), false);
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'type' => 'quotation',
+            'customer_name' => 'Custom build customer',
+            'customer_email' => 'custom-build@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 6,
+            'notes' => 'Custom PC build',
+            'items' => [[
+                'inventory_part_id' => $cpu->id,
+                'quantity' => 1,
+                'unit_price' => 250,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $quote = BillingDocument::query()->where('customer_email', 'custom-build@example.test')->firstOrFail();
+        $this->assertSame('quotation', $quote->type);
+        $this->assertSame('draft', $quote->status);
+        $this->assertSame(6.0, (float) $quote->tax_rate);
+        $this->assertSame(265.0, (float) $quote->total);
+        $this->assertSame($cpu->id, $quote->items()->firstOrFail()->inventory_part_id);
+        $this->assertSame(2, $cpu->fresh()->stock_quantity);
+    }
+
     public function test_sign_in_to_buy_adds_the_product_to_the_customer_cart(): void
     {
         $this->seed(PlannerRoleSeeder::class);
@@ -237,7 +293,8 @@ class ShopTest extends TestCase
         $this->actingAs($user)->get(route('shop.products.create'))
             ->assertOk()
             ->assertSee('Opening stock')
-            ->assertSee('Ready-built PC');
+            ->assertSee('Ready-built PC')
+            ->assertSee('To list a completed desktop');
         $this->actingAs($user)->post(route('shop.products.store'), [
             'name' => 'NVMe SSD',
             'sku' => 'SHOP-SSD-01',
@@ -277,6 +334,7 @@ class ShopTest extends TestCase
             ->assertSee('data-datatable', false)
             ->assertSee(route('shop.products.datatable'), false)
             ->assertSee('shop-stock-modal', false)
+            ->assertSee(route('shop.custom-pc-builder'), false)
             ->assertSee(route('shop.products.grid'), false);
         $this->actingAs($user)->getJson(route('shop.products.datatable', [
             'draw' => 1,

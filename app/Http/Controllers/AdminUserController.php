@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\MemberCreatedMail;
 use App\Mail\MemberInvitationMail;
 use App\Models\Team;
 use App\Models\User;
@@ -181,7 +180,7 @@ class AdminUserController extends Controller
         $warnings = [];
         if ($cpanelEnabled) {
             try {
-                $mailbox = $provisioner->provision($data['mailbox_username']);
+                $mailbox = $provisioner->provision($data['mailbox_username'], $accountPassword);
                 $user->emailMailbox()->create($mailbox);
             } catch (\RuntimeException $exception) {
                 Log::warning('cPanel mailbox provisioning failed for a new member.', [
@@ -272,8 +271,13 @@ class AdminUserController extends Controller
         ]);
 
         try {
-            $mailbox = $provisioner->provision(strtolower($data['mailbox_username']));
+            $accountPassword = Str::random(64);
+            $mailbox = $provisioner->provision(strtolower($data['mailbox_username']), $accountPassword);
             $user->emailMailbox()->create($mailbox);
+            $user->forceFill([
+                'password' => Hash::make($accountPassword),
+                'force_password_change' => true,
+            ])->save();
         } catch (\RuntimeException $exception) {
             Log::warning('cPanel mailbox provisioning failed from a member profile.', [
                 'user_id' => $user->id,
@@ -283,32 +287,14 @@ class AdminUserController extends Controller
             return back()->with('warning', $exception->getMessage());
         }
 
-        if (! $this->sendMembershipCreatedEmail($user)) {
+        $status = Password::sendResetLink(['email' => $user->email]);
+        if ($status !== Password::RESET_LINK_SENT) {
             return back()
                 ->with('success', 'OMG Computer mailbox created for '.$user->name.'.')
-                ->with('warning', 'The mailbox was created, but the membership email could not be sent to the personal contact email.');
+                ->with('warning', 'The mailbox password now matches a temporary app password, but a password reset link could not be sent. Ask the member to use Forgot password before signing in to email.');
         }
 
-        return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'.');
-    }
-
-    private function sendMembershipCreatedEmail(User $user): bool
-    {
-        try {
-            Mail::to($user->email)->send(new MemberCreatedMail(
-                $user->name,
-                route('login'),
-            ));
-        } catch (TransportExceptionInterface $exception) {
-            Log::warning('Membership email could not be delivered.', [
-                'user_id' => $user->id,
-                'exception' => $exception::class,
-            ]);
-
-            return false;
-        }
-
-        return true;
+        return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'. A password reset link was sent so the member can set matching app and mailbox passwords.');
     }
 
     private function sendMemberInvitation(User $user): bool

@@ -5,12 +5,41 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminBackupTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_full_backup_uses_the_active_database_and_includes_account_and_permission_tables(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+
+        $this->assertSame(
+            [config('database.default')],
+            config('backup.backup.source.databases'),
+        );
+
+        foreach ([
+            'users',
+            'roles',
+            'permissions',
+            'model_has_roles',
+            'model_has_permissions',
+            'role_has_permissions',
+        ] as $table) {
+            $this->assertTrue(Schema::hasTable($table), "Expected backup table [{$table}] to exist.");
+        }
+
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->assertDatabaseHas('model_has_roles', [
+            'model_id' => $admin->id,
+            'model_type' => User::class,
+        ]);
+    }
 
     public function test_only_planner_administrators_can_view_and_download_backups(): void
     {
@@ -35,6 +64,7 @@ class AdminBackupTest extends TestCase
             ->assertSee(route('admin.backups.index'))
             ->assertSee('backup-test-app')
             ->assertSee('Storage available')
+            ->assertSee('user accounts, roles, permissions, role assignments, and direct permission assignments')
             ->assertSee('No backup archives found on this disk.')
             ->assertSee('Age: unavailable until a backup archive exists.')
             ->assertSee('Run backup now');

@@ -18,11 +18,11 @@
         str_starts_with($routeName, 'projects.') => $isCustomer ? null : 'Projects',
         str_starts_with($routeName, 'customers.'),
         str_starts_with($routeName, 'admin.users.customers') => 'Customers',
-        str_starts_with($routeName, 'development.flowcharts.'),
         str_starts_with($routeName, 'teams.'),
         str_starts_with($routeName, 'departments.'),
         str_starts_with($routeName, 'admin.users.'),
-        str_starts_with($routeName, 'admin.access.'),
+        str_starts_with($routeName, 'admin.access.') => 'Members & organization',
+        str_starts_with($routeName, 'development.flowcharts.'),
         str_starts_with($routeName, 'admin.backups.'),
         str_starts_with($routeName, 'products.'),
         str_starts_with($routeName, 'products_services.'),
@@ -106,9 +106,9 @@
             ['label' => 'Customers'],
             ['label' => 'Accounts', 'url' => route('admin.users.customers')],
         ],
-        str_starts_with($routeName, 'admin.users.') => [
-            ['label' => 'Manage'],
-            ['label' => 'Members', 'url' => route('admin.users.index')],
+        str_starts_with($routeName, 'admin.users.'),
+        str_starts_with($routeName, 'admin.access.') => [
+            ['label' => 'Members & organization', 'url' => route('admin.users.index')],
         ],
         str_starts_with($routeName, 'development.flowcharts.') => [
             ['label' => 'Manage'],
@@ -135,11 +135,11 @@
             ['label' => 'Copywriting', 'url' => route('customer-messages.index')],
         ],
         str_starts_with($routeName, 'teams.') => [
-            ['label' => 'Manage'],
+            ['label' => 'Members & organization', 'url' => route('admin.users.index')],
             ['label' => 'Teams', 'url' => route('teams.index')],
         ],
         str_starts_with($routeName, 'departments.') => [
-            ['label' => 'Manage'],
+            ['label' => 'Members & organization', 'url' => route('admin.users.index')],
             ['label' => 'Departments', 'url' => route('departments.index')],
         ],
         str_starts_with($routeName, 'products.') || str_starts_with($routeName, 'products_services.') => [
@@ -159,8 +159,7 @@
             ['label' => 'Drama Content', 'url' => route('drama-content.index')],
         ],
         str_starts_with($routeName, 'admin.access.') => [
-            ['label' => 'Manage'],
-            ['label' => 'Members', 'url' => route('admin.users.index')],
+            ['label' => 'Members & organization', 'url' => route('admin.users.index')],
             ['label' => 'Roles & permissions', 'url' => route('admin.access.index')],
         ],
         str_starts_with($routeName, 'admin.backups.') => [

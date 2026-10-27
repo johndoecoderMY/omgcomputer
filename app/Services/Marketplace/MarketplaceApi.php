@@ -131,6 +131,38 @@ class MarketplaceApi
         $orders = $shop->platform === 'shopee'
             ? $this->shopeeOrders($shop, $from, $to)
             : $this->lazadaOrders($shop, $from, $to);
+        $imported = $this->storeOrders($shop, $orders);
+
+        $shop->forceFill(['last_order_import_at' => now()])->save();
+
+        return $imported;
+    }
+
+    public function syncRecentShopeeOrders(MarketplaceShop $shop): int
+    {
+        if ($shop->platform !== 'shopee') {
+            throw new RuntimeException('Automatic order sync is currently available for Shopee shops only.');
+        }
+
+        $this->ensureFreshToken($shop);
+        $now = now();
+        $from = $shop->last_order_import_at
+            ? $shop->last_order_import_at->copy()->subMinutes(30)
+            : $now->copy()->subDays(14);
+        $from = $from->max($now->copy()->subDays(14));
+        $orders = $this->shopeeOrders($shop, $from, $now, 'update_time');
+        $imported = $this->storeOrders($shop, $orders);
+
+        $shop->forceFill(['last_order_import_at' => $now])->save();
+
+        return $imported;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $orders
+     */
+    private function storeOrders(MarketplaceShop $shop, array $orders): int
+    {
         $imported = 0;
 
         foreach ($orders as $order) {
@@ -158,8 +190,6 @@ class MarketplaceApi
             );
             $imported++;
         }
-
-        $shop->forceFill(['last_order_import_at' => now()])->save();
 
         return $imported;
     }
@@ -236,17 +266,26 @@ class MarketplaceApi
     /**
      * @return list<array<string, mixed>>
      */
-    private function shopeeOrders(MarketplaceShop $shop, Carbon $from, Carbon $to): array
+    private function shopeeOrders(
+        MarketplaceShop $shop,
+        Carbon $from,
+        Carbon $to,
+        string $timeRangeField = 'create_time',
+    ): array
     {
         $all = [];
         $cursor = '';
         $path = '/api/v2/order/get_order_list';
-        $start = $from->copy()->startOfDay()->timestamp;
-        $end = $to->copy()->endOfDay()->timestamp;
+        $start = $timeRangeField === 'create_time'
+            ? $from->copy()->startOfDay()->timestamp
+            : $from->timestamp;
+        $end = $timeRangeField === 'create_time'
+            ? $to->copy()->endOfDay()->timestamp
+            : $to->timestamp;
 
         for ($page = 0; $page < 100; $page++) {
             $data = $this->shopeeRequest($shop, $path, [
-                'time_range_field' => 'create_time',
+                'time_range_field' => $timeRangeField,
                 'time_from' => $start,
                 'time_to' => $end,
                 'page_size' => 100,

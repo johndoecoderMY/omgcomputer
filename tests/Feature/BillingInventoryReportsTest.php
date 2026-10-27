@@ -21,6 +21,26 @@ class BillingInventoryReportsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_new_billing_documents_use_the_configured_tax_rate(): void
+    {
+        config(['billing.tax_rate' => 6]);
+        $user = $this->adminUser();
+
+        $this->actingAs($user)
+            ->get(route('billing.create', ['type' => 'invoice']))
+            ->assertOk()
+            ->assertSee('value="6.00"', false);
+
+        $data = $this->documentData('invoice', null, 1);
+        $data['tax_rate'] = config('billing.tax_rate');
+        $this->actingAs($user)->post(route('billing.store'), $data);
+
+        $document = BillingDocument::query()->firstOrFail();
+        $this->assertSame(6.0, (float) $document->tax_rate);
+        $this->assertSame(0.6, (float) $document->tax_amount);
+        $this->assertSame(10.6, (float) $document->total);
+    }
+
     public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
     {
         $user = $this->adminUser();

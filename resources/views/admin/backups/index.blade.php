@@ -28,6 +28,7 @@
     <div class="alert alert-info" role="status">
         <strong>Backup set:</strong> {{ $backupName }}
         <span class="ms-2">Scheduled daily at 2:00 AM when the Laravel scheduler is running.</span>
+        <div class="mt-2">Full archives include the configured database: user accounts, roles, permissions, role assignments, and direct permission assignments.</div>
     </div>
 
     @forelse ($destinations as $destination)

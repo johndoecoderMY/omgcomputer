@@ -80,11 +80,18 @@ class CompanyProfileTest extends TestCase
 
         $this->get('/')
             ->assertOk()
+            ->assertSee('OMG Empire (OMG Computer)')
             ->assertSee('OMG Computer Sdn Bhd')
             ->assertSee('202601001234')
             ->assertSee('https://www.facebook.com/omgcomputer')
             ->assertDontSee('PRIVATE-TIN-123')
             ->assertDontSee('PRIVATE-SST-123');
+
+        $this->actingAs($this->adminUser())
+            ->get(route('admin.company-profile.edit'))
+            ->assertOk()
+            ->assertSee('OMG Empire (OMG Computer)')
+            ->assertSee('SSM registration no.: 202601001234');
 
         $document = BillingDocument::query()->create([
             'number' => 'INV-TEST-001',

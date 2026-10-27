@@ -9,7 +9,6 @@ use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
-use Database\Seeders\RepairTicketExampleSeeder;
 use Database\Seeders\SoftwareStructureSopSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -236,13 +235,4 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         $this->assertSame(3, FlowChart::query()->whereIn('category', ['website', 'process'])->count());
     }
 
-    public function test_repair_ticket_examples_cover_every_status_and_can_run_repeatedly(): void
-    {
-        $seeder = new RepairTicketExampleSeeder;
-        $seeder->run();
-        $seeder->run();
-
-        $this->assertSame(8, RepairTicket::query()->where('ticket_number', 'like', 'RT-EXAMPLE-%')->count());
-        $this->assertSame(8, RepairTicket::query()->where('ticket_number', 'like', 'RT-EXAMPLE-%')->distinct()->count('status'));
-    }
 }

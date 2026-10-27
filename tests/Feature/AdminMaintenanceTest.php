@@ -24,6 +24,7 @@ class AdminMaintenanceTest extends TestCase
 
         $this->actingAs($member)->get(route('admin.maintenance.index'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.migrate'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.seed'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.migrate.fresh-seed'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.storage-link'))->assertForbidden();
@@ -37,6 +38,8 @@ class AdminMaintenanceTest extends TestCase
             ->assertOk()
             ->assertSee('System maintenance')
             ->assertSee('Build assets')
+            ->assertSee('Run selected seeders')
+            ->assertSee('This does not drop tables or clear existing data.')
             ->assertSee('Run pending migrations')
             ->assertSee('Fresh migrate & seed')
             ->assertSee('Optimize clear')
@@ -125,6 +128,88 @@ class AdminMaintenanceTest extends TestCase
             ->assertRedirect(route('admin.maintenance.index'))
             ->assertSessionHas('maintenance_success', 'Laravel optimization caches cleared.')
             ->assertSessionHas('maintenance_output', 'Cached events cleared.');
+    }
+
+    public function test_administrator_can_run_only_selected_seeders(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('db:seed', [
+                '--class' => \Database\Seeders\PlannerRoleSeeder::class,
+                '--force' => true,
+            ])
+            ->andReturn(0);
+        Artisan::shouldReceive('output')->once()->andReturn('Planner roles and permissions seeded.');
+
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('db:seed', [
+                '--class' => \Database\Seeders\DepartmentTeamSeeder::class,
+                '--force' => true,
+            ])
+            ->andReturn(0);
+        Artisan::shouldReceive('output')->once()->andReturn('Departments and teams seeded.');
+
+        $this->actingAs($admin)->post(route('admin.maintenance.seed'), [
+            'seeders' => [
+                \Database\Seeders\PlannerRoleSeeder::class,
+                \Database\Seeders\DepartmentTeamSeeder::class,
+            ],
+        ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'Selected seeders completed: Planner roles and permissions, Departments and teams.')
+            ->assertSessionHas('maintenance_output', implode("\n\n", [
+                \Database\Seeders\PlannerRoleSeeder::class."\nPlanner roles and permissions seeded.",
+                \Database\Seeders\DepartmentTeamSeeder::class."\nDepartments and teams seeded.",
+            ]));
+    }
+
+    public function test_administrator_cannot_run_a_seeder_outside_the_allowlist(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        Artisan::shouldReceive('call')->never();
+
+        $this->actingAs($admin)->from(route('admin.maintenance.index'))
+            ->post(route('admin.maintenance.seed'), [
+                'seeders' => ['App\\Seeders\\UnexpectedSeeder'],
+            ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHasErrors('seeders.0');
+    }
+
+    public function test_selected_seeder_failure_is_reported_and_stops_later_seeders(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('db:seed', [
+                '--class' => \Database\Seeders\PlannerRoleSeeder::class,
+                '--force' => true,
+            ])
+            ->andReturn(1);
+        Artisan::shouldReceive('output')->once()->andReturn('Seeder execution failed.');
+
+        Artisan::shouldReceive('call')->never()->with('db:seed', [
+            '--class' => \Database\Seeders\DepartmentTeamSeeder::class,
+            '--force' => true,
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.seed'), [
+            'seeders' => [
+                \Database\Seeders\PlannerRoleSeeder::class,
+                \Database\Seeders\DepartmentTeamSeeder::class,
+            ],
+        ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_error', 'A selected seeder failed. Any earlier selected seeders may already have completed; review the output and application logs.')
+            ->assertSessionHas('maintenance_output', \Database\Seeders\PlannerRoleSeeder::class."\nSeeder execution failed.");
     }
 
     public function test_administrator_can_confirm_existing_public_storage_link(): void

@@ -110,6 +110,7 @@ class BillingController extends Controller
                 'customer_phone' => $customer?->phone,
                 'customer_address' => $customer?->address,
                 'issue_date' => now()->toDateString(),
+                'tax_rate' => config('billing.tax_rate', 6),
                 'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticket->issue_description}" : null,
             ]),
             'lines' => [[

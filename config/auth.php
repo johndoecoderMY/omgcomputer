@@ -4,6 +4,8 @@ use App\Models\User;
 
 return [
 
+    'seed_admin_password' => env('SEED_ADMIN_PASSWORD'),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

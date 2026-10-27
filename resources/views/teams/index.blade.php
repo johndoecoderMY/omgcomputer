@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Organization" title="Teams" description="Organize staff into department-based teams and manage team membership.">
+    <x-page-header eyebrow="Members & organization" title="Teams" description="Organize staff into department-based teams and manage team membership.">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('departments.index') }}">Manage departments</a>
             <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#create-team-modal">

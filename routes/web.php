@@ -173,6 +173,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/migrate', 'migrate')->middleware('throttle:10,1')->name('migrate');
+        Route::post('/seed', 'seedSelected')->middleware('throttle:5,1')->name('seed');
         Route::post('/migrate/fresh-seed', 'freshSeed')->middleware('throttle:3,1')->name('migrate.fresh-seed');
         Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:10,1')->name('optimize-clear');
         Route::post('/storage-link', 'storageLink')->middleware('throttle:5,1')->name('storage-link');
@@ -256,6 +257,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products', 'products')->name('products.index');
         Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
         Route::get('/products/grid', 'productsGrid')->name('products.grid');
+        Route::get('/custom-pc-builder', 'customPcBuilder')->name('custom-pc-builder');
         Route::get('/products/create', 'createProduct')->name('products.create');
         Route::post('/products', 'storeProduct')->name('products.store');
         Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');

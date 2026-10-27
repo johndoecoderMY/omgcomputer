@@ -156,6 +156,55 @@ class MarketplaceShopTest extends TestCase
             ->assertSee('Test Shopee Store');
     }
 
+    public function test_scheduled_shopee_sync_updates_orders_by_last_update_time(): void
+    {
+        config([
+            'services.marketplaces.shopee.partner_id' => '12345',
+            'services.marketplaces.shopee.partner_key' => 'shopee-test-key',
+        ]);
+        $shop = MarketplaceShop::query()->create([
+            'platform' => 'shopee',
+            'external_shop_id' => '98765',
+            'shop_name' => 'Test Shopee Store',
+            'access_token' => 'valid-access-token',
+            'refresh_token' => 'valid-refresh-token',
+            'access_token_expires_at' => now()->addHours(2),
+            'refresh_token_expires_at' => now()->addDays(10),
+        ]);
+        $order = $shop->orders()->create([
+            'external_order_id' => 'ORDER-1001',
+            'status' => 'READY_TO_SHIP',
+            'raw_payload' => ['order_sn' => 'ORDER-1001'],
+        ]);
+        Http::fake([
+            'https://partner.shopeemobile.com/api/v2/order/get_order_list*' => Http::response([
+                'response' => [
+                    'order_list' => [[
+                        'order_sn' => 'ORDER-1001',
+                        'order_status' => 'SHIPPED',
+                        'create_time' => now()->subDays(2)->timestamp,
+                        'update_time' => now()->timestamp,
+                    ]],
+                    'more' => false,
+                    'next_cursor' => '',
+                ],
+            ]),
+        ]);
+
+        $this->artisan('marketplaces:sync-shopee-orders')->assertSuccessful();
+
+        $this->assertSame('SHIPPED', $order->fresh()->status);
+        $this->assertSame('SHIPPED', $order->fresh()->raw_payload['order_status']);
+        $this->assertNotNull($shop->fresh()->last_order_import_at);
+        Http::assertSent(function (ClientRequest $request): bool {
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return $request->method() === 'GET'
+                && str_contains($request->url(), '/api/v2/order/get_order_list')
+                && ($query['time_range_field'] ?? null) === 'update_time';
+        });
+    }
+
     public function test_lazada_oauth_uses_signed_token_exchange_and_stores_the_seller(): void
     {
         $admin = $this->admin();

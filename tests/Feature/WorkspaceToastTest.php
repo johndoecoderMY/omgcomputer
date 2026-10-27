@@ -2,14 +2,22 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Project;
+use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class WorkspaceToastTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(PlannerRoleSeeder::class);
+    }
 
     public function test_validation_errors_are_shown_as_workspace_toasts(): void
     {
@@ -21,6 +29,8 @@ class WorkspaceToastTest extends TestCase
             ->assertOk()
             ->assertSee('data-app-toast-container', false)
             ->assertSee('bottom-0 end-0', false)
+            ->assertSee('--falcon-toast-bg: var(--falcon-emphasis-bg)', false)
+            ->assertSee('--falcon-toast-header-bg: var(--falcon-emphasis-bg)', false)
             ->assertSee('@media (max-width: 575.98px)', false)
             ->assertSee('Please check your input')
             ->assertSee('The name field is required.')
@@ -40,6 +50,8 @@ class WorkspaceToastTest extends TestCase
             ->assertOk()
             ->assertSee('data-app-toast-container', false)
             ->assertSee('bottom-0 end-0', false)
+            ->assertSee('--falcon-toast-bg: var(--falcon-emphasis-bg)', false)
+            ->assertSee('--falcon-toast-header-bg: var(--falcon-emphasis-bg)', false)
             ->assertSee('@media (max-width: 575.98px)', false)
             ->assertSee('Project created successfully.')
             ->assertDontSee('class="alert alert-success"', false)

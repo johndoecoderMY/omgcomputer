@@ -8,6 +8,7 @@
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('shop.orders.status-board') }}"><i class="bi bi-truck me-2"></i>Order status</a>
             <a class="btn btn-outline-primary" href="{{ route('shop.products.grid') }}"><i class="bi bi-grid me-2"></i>Product grid</a>
+            <a class="btn btn-outline-primary" href="{{ route('shop.custom-pc-builder') }}"><i class="bi bi-pc-display-horizontal me-2"></i>Custom PC builder</a>
             <a class="btn btn-primary" href="{{ route('shop.products.create') }}"><i class="bi bi-plus me-2"></i>Add product</a>
         </x-slot>
     </x-page-header>

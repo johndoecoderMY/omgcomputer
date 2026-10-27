@@ -88,6 +88,32 @@ class ShopController extends Controller
         ]);
     }
 
+    public function customPcBuilder(): View
+    {
+        $componentTypes = [
+            'cpu',
+            'gpu',
+            'ram',
+            'motherboard',
+            'storage',
+            'power_supply',
+            'case',
+            'cooling',
+        ];
+
+        return view('shop.custom-pc-builder', [
+            'components' => InventoryPart::query()
+                ->whereIn('type', $componentTypes)
+                ->where('stock_quantity', '>', 0)
+                ->orderBy('type')
+                ->orderBy('name')
+                ->get()
+                ->groupBy('type'),
+            'componentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($componentTypes)),
+            'taxRate' => config('billing.tax_rate', 6),
+        ]);
+    }
+
     public function productsDatatable(Request $request)
     {
         return DataTables::eloquent(DataTableQueryBuilder::for(

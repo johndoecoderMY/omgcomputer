@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -56,7 +57,7 @@ class CpanelEmailProvisioner
     /**
      * @return array{email: string, password: string}
      */
-    public function provision(string $username): array
+    public function provision(string $username, string $password): array
     {
         if (! $this->configured()) {
             throw new RuntimeException('cPanel email provisioning is not configured.');
@@ -74,12 +75,13 @@ class CpanelEmailProvisioner
         $username = strtolower($username);
         $domain = strtolower($domain);
         $email = $username.'@'.$domain;
-        $password = Str::random(48);
-        $url = sprintf(
-            'https://%s:%d/execute/Email/add_pop',
-            $host,
-            $port,
-        );
+        if (in_array(strtolower($email), array_map('strtolower', $this->testConnection()), true)) {
+            $this->updateMailboxPassword($email, $password);
+
+            return ['email' => $email, 'password' => $password];
+        }
+
+        $url = sprintf('https://%s:%d/execute/Email/add_pop', $host, $port);
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'cpanel '.config('services.cpanel.username').':'.config('services.cpanel.api_token'),
@@ -101,6 +103,52 @@ class CpanelEmailProvisioner
             'email' => $email,
             'password' => $password,
         ];
+    }
+
+    public function syncUserPassword(User $user, string $password): void
+    {
+        $mailbox = $user->emailMailbox;
+        if (! $mailbox) {
+            return;
+        }
+
+        $this->updateMailboxPassword($mailbox->email, $password);
+        $mailbox->password = $password;
+        $mailbox->save();
+    }
+
+    private function updateMailboxPassword(string $email, string $password): void
+    {
+        if (! $this->configured()) {
+            throw new RuntimeException('cPanel email provisioning is not configured.');
+        }
+
+        $parts = explode('@', $email);
+        $domain = strtolower((string) config('services.cpanel.email_domain'));
+        if (count($parts) !== 2
+            || strcasecmp($parts[1], $domain) !== 0
+            || ! preg_match('/^[A-Za-z0-9](?:[A-Za-z0-9._+-]*[A-Za-z0-9])?$/', $parts[0])
+            || $password === '') {
+            throw new RuntimeException('The saved mailbox address or password is invalid for this cPanel domain.');
+        }
+
+        $host = $this->host();
+        $url = sprintf('https://%s:%d/execute/Email/passwd_pop', $host, (int) config('services.cpanel.port'));
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'cpanel '.config('services.cpanel.username').':'.config('services.cpanel.api_token'),
+            ])->acceptJson()->asForm()->connectTimeout(5)->timeout(20)->post($url, [
+                'email' => strtolower($parts[0]),
+                'domain' => $domain,
+                'password' => $password,
+            ]);
+        } catch (ConnectionException $exception) {
+            throw new RuntimeException('Could not connect to cPanel UAPI to synchronize the mailbox password.', previous: $exception);
+        }
+
+        if (! $response->successful() || $this->uapiStatus($response) !== 1) {
+            throw new RuntimeException('cPanel could not synchronize the mailbox password. Check the Email UAPI permissions and mailbox settings.');
+        }
     }
 
     private function host(): string

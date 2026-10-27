@@ -2,16 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Mail\MemberCreatedMail;
 use App\Mail\MemberInvitationMail;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\PlannerRoleSeeder;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -22,23 +23,24 @@ class MemberManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_local_database_seeder_creates_admin_member_and_customer_accounts(): void
+    public function test_local_database_seeder_creates_only_an_admin_that_must_change_its_password(): void
     {
+        config(['auth.seed_admin_password' => 'SeedAdmin!Test-Password-2026']);
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertTrue(User::where('email', 'test@example.com')->firstOrFail()->hasRole('admin'));
-        $this->assertTrue(User::where('email', 'member@example.com')->firstOrFail()->hasRole('member'));
-        $customer = User::where('email', 'customer@example.com')->firstOrFail();
-        $this->assertTrue($customer->hasRole('customer'));
-        $this->assertTrue($customer->hasVerifiedEmail());
-        $this->assertFalse($customer->force_password_change);
+        $admin = User::where('email', 'support@omgcomputer.my')->firstOrFail();
+        $this->assertTrue($admin->hasRole('admin'));
+        $this->assertTrue($admin->hasVerifiedEmail());
+        $this->assertTrue($admin->force_password_change);
+        $this->assertTrue(Hash::check('SeedAdmin!Test-Password-2026', $admin->password));
+        $this->assertSame(1, User::query()->count());
 
         $this->post(route('login'), [
-            'email' => 'customer@example.com',
-            'password' => 'password',
-        ])->assertRedirect(route('dashboard', absolute: false));
-        $this->assertAuthenticatedAs($customer);
-        $this->get(route('projects.index'))->assertOk();
+            'email' => 'support@omgcomputer.my',
+            'password' => 'SeedAdmin!Test-Password-2026',
+        ])->assertRedirect(route('password.first-login'));
+        $this->assertAuthenticatedAs($admin);
+        $this->get(route('password.first-login'))->assertOk();
     }
 
     public function test_administrator_can_create_members_with_default_role_and_assign_individual_permissions(): void
@@ -172,7 +174,14 @@ class MemberManagementTest extends TestCase
             ->assertSee('@example.test')
             ->assertSee('Mailbox quota: unlimited.');
         Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
+                'data' => [],
+                'result' => ['status' => 1],
+            ]),
             'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
+                'result' => ['status' => 1],
+            ]),
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
                 'result' => ['status' => 1],
             ]),
         ]);
@@ -187,6 +196,7 @@ class MemberManagementTest extends TestCase
 
         $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
         $this->assertSame('provisioned.member@example.test', $member->emailMailbox->email);
+        $this->assertTrue(Hash::check($member->emailMailbox->password, $member->password));
         $this->assertNotSame(
             $member->emailMailbox->password,
             DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
@@ -222,6 +232,11 @@ class MemberManagementTest extends TestCase
         $member->refresh();
         $this->assertNotNull($member->email_verified_at);
         $this->assertFalse($member->force_password_change);
+        $this->assertSame('Strong-password-123!', $member->emailMailbox->password);
+        Http::assertSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
+            && $request['email'] === 'provisioned.member'
+            && $request['domain'] === 'example.test'
+            && $request['password'] === 'Strong-password-123!');
         $this->post(route('login'), [
             'email' => $member->email,
             'password' => 'Strong-password-123!',
@@ -249,8 +264,13 @@ class MemberManagementTest extends TestCase
             'services.cpanel.email_domain' => 'example.test',
             'services.cpanel.email_quota' => 0,
         ]);
+        Notification::fake();
         Http::fake([
-            'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
+                'data' => [['email' => 'mailbox.member@example.test']],
+                'result' => ['status' => 1],
+            ]),
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
                 'result' => ['status' => 1],
             ]),
         ]);
@@ -265,30 +285,25 @@ class MemberManagementTest extends TestCase
         $this->post(route('admin.users.mailbox.create', $member), [
             'mailbox_username' => 'mailbox.member',
         ])->assertRedirect(route('members.show', $member))
-            ->assertSessionHas('success', 'OMG Computer mailbox created for Mailbox Member.');
+            ->assertSessionHas('success', 'OMG Computer mailbox created for Mailbox Member. A password reset link was sent so the member can set matching app and mailbox passwords.');
 
         $member->refresh();
         $this->assertSame('mailbox.member@example.test', $member->emailMailbox->email);
+        $this->assertTrue($member->force_password_change);
+        $this->assertTrue(Hash::check($member->emailMailbox->password, $member->password));
         $this->assertNotSame(
             $member->emailMailbox->password,
             DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
         );
-        Mail::assertSent(MemberCreatedMail::class, function (MemberCreatedMail $mail) use ($member): bool {
-            $rendered = $mail->render();
-
-            return $mail->hasTo('mailbox.member.personal@example.test')
-                && str_contains($rendered, 'Your OMG Computer membership has been created')
-                && str_contains($rendered, route('login'))
-                && ! str_contains($rendered, $member->emailMailbox->password)
-                && ! str_contains($rendered, $member->emailMailbox->email);
-        });
-        Http::assertSentCount(1);
+        Notification::assertSentTo($member, ResetPassword::class);
+        Http::assertSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
+            && $request['password'] === $member->emailMailbox->password);
 
         $this->post(route('admin.users.mailbox.create', $member), [
             'mailbox_username' => 'mailbox.member',
         ])->assertRedirect(route('members.show', $member))
             ->assertSessionHas('warning', 'This member already has an OMG Computer mailbox.');
-        Http::assertSentCount(1);
+        Http::assertSentCount(2);
 
         $this->get(route('members.show', $member))
             ->assertOk()
@@ -313,8 +328,12 @@ class MemberManagementTest extends TestCase
             'services.cpanel.email_quota' => 1024,
         ]);
         Http::fake([
-            'https://cpanel.example.test:2083/execute/Email/add_pop' => Http::response([
-                'result' => ['status' => 0, 'errors' => ['Mailbox already exists']],
+            'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
+                'data' => [['email' => 'existing.member@example.test']],
+                'result' => ['status' => 1],
+            ]),
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
+                'result' => ['status' => 0, 'errors' => ['Cannot update mailbox']],
             ]),
         ]);
 
@@ -323,7 +342,7 @@ class MemberManagementTest extends TestCase
             'email' => 'personal@example.test',
             'mailbox_username' => 'existing.member',
         ])->assertRedirect()
-            ->assertSessionHas('warning', fn (string $warning): bool => str_contains($warning, 'cPanel could not create the mailbox'));
+            ->assertSessionHas('warning', fn (string $warning): bool => str_contains($warning, 'cPanel could not synchronize the mailbox password'));
 
         $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
         $this->assertNull($member->emailMailbox);

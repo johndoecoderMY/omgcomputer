@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
             app(MailSettingsService::class)->apply();
         }
 
-        View::composer(['welcome', 'layouts.guest.footer'], function ($view): void {
+        View::composer(['welcome', 'layouts.guest.footer', 'layouts.app.footer'], function ($view): void {
             $view->with('companyProfile', CompanyProfile::current());
         });
     }

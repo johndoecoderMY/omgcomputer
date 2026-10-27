@@ -66,7 +66,7 @@
 
         <hr class="border-secondary opacity-50 my-4">
         <div class="d-flex flex-column flex-sm-row justify-content-between gap-2">
-            <p class="text-600 fs-10 mb-0">&copy; {{ date('Y') }} OMG Computer. All rights reserved.</p>
+            <p class="text-600 fs-10 mb-0">&copy; {{ date('Y') }} OMG Empire (OMG Computer). All rights reserved.</p>
          </div>
     </div>
 </footer>

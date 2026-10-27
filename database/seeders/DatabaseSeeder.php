@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
@@ -16,50 +17,75 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->seedAccessControl();
+        $this->seedLocalAdministrator();
+        $this->seedBaselineApplicationData();
+
+        if (app()->environment(['local', 'testing'])) {
+            $this->seedLocalDemoData();
+        }
+    }
+
+    private function seedAccessControl(): void
+    {
         $this->call(PlannerRoleSeeder::class);
+    }
 
-        if (app()->environment(['local', 'testing'])) {
-            foreach ([
-                ['name' => 'Test Admin', 'email' => 'test@example.com', 'role' => 'admin'],
-                ['name' => 'Test Member', 'email' => 'member@example.com', 'role' => 'member'],
-                ['name' => 'Test Customer', 'email' => 'customer@example.com', 'role' => 'customer'],
-            ] as $account) {
-                $user = User::firstOrCreate(
-                    ['email' => $account['email']],
-                    [
-                        'name' => $account['name'],
-                        'password' => Hash::make('password'),
-                        'email_verified_at' => now(),
-                        'force_password_change' => false,
-                    ],
-                );
-                if ($account['role'] === 'customer' && ! $user->hasVerifiedEmail()) {
-                    $user->forceFill(['email_verified_at' => now()])->save();
-                }
-                if (Hash::check('password', $user->password) && ! $user->force_password_change) {
-                    // $user->forceFill(['force_password_change' => true])->save();
-                }
-                $user->syncRoles($account['role']);
-            }
+    private function seedLocalAdministrator(): void
+    {
+        if (! app()->environment(['local', 'testing'])) {
+            return;
         }
 
-        $this->call(DepartmentTeamSeeder::class);
-        $this->call(OmgComputerProjectSeeder::class);
-        // $this->call(SiemProjectSeeder::class);
-        $this->call(CustomerMessageTemplateSeeder::class);
-        $this->call(ServiceSopExampleSeeder::class);
-        $this->call(StudentFypSopSeeder::class);
-        $this->call(SoftwareStructureSopSeeder::class);
-        $this->call(DeveloperSetupFlowChartSeeder::class);
-
-        if (app()->environment(['local', 'testing'])) {
-            $this->call(PcPartsSeeder::class);
-            $this->call(ReadyBuiltPcSeeder::class);
-            $this->call(DemoDataSeeder::class);
-            $this->call(ShopDemoSeeder::class);
-            $this->call(BusinessPlanTaskSeeder::class);
-            $this->call(RentalExpenseSeeder::class);
-            $this->call(RepairTicketExampleSeeder::class);
+        $initialPassword = config('auth.seed_admin_password');
+        if (! is_string($initialPassword) || strlen($initialPassword) < 12) {
+            throw new RuntimeException('Set SEED_ADMIN_PASSWORD to a value of at least 12 characters before seeding a local or testing database.');
         }
+
+        $admin = User::query()->where('email', 'support@omgcomputer.my')->first();
+        $legacyAdmin = false;
+        if (! $admin) {
+            $admin = User::query()->where('email', 'test@example.com')->first();
+            $legacyAdmin = (bool) $admin;
+        }
+
+        $isNewAdmin = ! $admin;
+        $admin ??= new User;
+        $attributes = [
+            'name' => $admin->name ?: 'Test Admin',
+            'email' => 'support@omgcomputer.my',
+            'email_verified_at' => $admin->email_verified_at ?? now(),
+        ];
+        if ($isNewAdmin || $legacyAdmin) {
+            $attributes['password'] = Hash::make($initialPassword);
+            $attributes['force_password_change'] = true;
+        }
+
+        $admin->forceFill($attributes)->save();
+        $admin->syncRoles('admin');
+    }
+
+    private function seedBaselineApplicationData(): void
+    {
+        $this->call([
+            DepartmentTeamSeeder::class,
+            OmgComputerProjectSeeder::class,
+            CustomerMessageTemplateSeeder::class,
+            ServiceSopExampleSeeder::class,
+            StudentFypSopSeeder::class,
+            SoftwareStructureSopSeeder::class,
+            DeveloperSetupFlowChartSeeder::class,
+        ]);
+    }
+
+    private function seedLocalDemoData(): void
+    {
+        $this->call([
+            PcPartsSeeder::class,
+            ReadyBuiltPcSeeder::class,
+            DemoDataSeeder::class,
+            BusinessPlanTaskSeeder::class,
+            RentalExpenseSeeder::class,
+        ]);
     }
 }

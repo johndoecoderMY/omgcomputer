@@ -14,8 +14,14 @@
     @if (session('maintenance_error'))
         <div class="alert alert-danger" role="alert">{{ session('maintenance_error') }}</div>
     @endif
-    @if ($errors->has('confirmation'))
-        <div class="alert alert-danger" role="alert">{{ $errors->first('confirmation') }}</div>
+    @if ($errors->any())
+        <div class="alert alert-danger" role="alert">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     @endif
     @if (filled(session('maintenance_output')))
         <section class="card mb-3" aria-labelledby="maintenance-output-heading">
@@ -65,6 +71,39 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100">
                 <div class="card-body">
+                    <h2 class="h5">Run selected seeders</h2>
+                    <p class="text-body-secondary">
+                        Choose one or more seeders to add or update only their data. This does not drop tables or clear existing data.
+                        Some demo seeders have prerequisites noted below. Back up the database before running seeders on a live site.
+                    </p>
+                    @php($selectedSeeders = old('seeders', []))
+                    @php($selectedSeeders = is_array($selectedSeeders) ? $selectedSeeders : [])
+                    <form method="POST" action="{{ route('admin.maintenance.seed') }}"
+                        onsubmit="return confirm('Run only the selected seeders? They may add or update database records.');">
+                        @csrf
+                        @foreach ($seederGroups as $groupIndex => $group)
+                            <fieldset class="mb-3">
+                                <legend class="h6">{{ $group['name'] }}</legend>
+                                @foreach ($group['seeders'] as $seederIndex => $seeder)
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="seeders[]"
+                                            id="seeder-{{ $groupIndex }}-{{ $seederIndex }}"
+                                            value="{{ $seeder['class'] }}"
+                                            @checked(in_array($seeder['class'], $selectedSeeders, true))>
+                                        <label class="form-check-label fw-semibold"
+                                            for="seeder-{{ $groupIndex }}-{{ $seederIndex }}">
+                                            {{ $seeder['name'] }}
+                                        </label>
+                                        <div class="form-text">{{ $seeder['description'] }}</div>
+                                    </div>
+                                @endforeach
+                            </fieldset>
+                        @endforeach
+                        <button class="btn btn-outline-primary" type="submit">
+                            <span class="bi bi-play-circle me-2" aria-hidden="true"></span>Run selected seeders
+                        </button>
+                    </form>
+                    <hr>
                     <h2 class="h5">Database migrations</h2>
                     <p class="text-body-secondary">
                         Apply pending migrations to the configured database without changing existing tables or data. Back up the database before running migrations on a live site.

@@ -67,12 +67,19 @@
             </div>
         </div>
         <div class="card-body">
-            <div class="email-message-body">{{ $message['body'] }}</div>
+            @if (filled($message['body_html'] ?? null))
+                <iframe class="email-message-frame" title="Email content" sandbox="" referrerpolicy="no-referrer"
+                    srcdoc="{{ $message['body_html'] }}"></iframe>
+                <p class="form-text mb-0 mt-2">Remote images, scripts, and external resources are blocked for privacy and safety.</p>
+            @else
+                <div class="email-message-body">{{ $message['body'] }}</div>
+            @endif
         </div>
     </article>
 </div>
 <style>
     .email-message-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .email-message-frame { display: block; width: 100%; min-height: 65vh; border: 0; background: #fff; }
     @media print { .navbar, .sidebar, .card:first-child { display: none !important; } }
 </style>
 @endsection

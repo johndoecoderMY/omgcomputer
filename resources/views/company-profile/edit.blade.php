@@ -24,7 +24,7 @@
         <div class="card p-2">
             <div class="card-header bg-body">
                 <h2 class="h5 mb-1">Legal and tax registration</h2>
-                <p class="small text-body-secondary mb-0">Tax numbers are included on billing PDFs and are not shown on the public website.</p>
+                <p class="small text-body-secondary mb-0">The SSM registration number appears in guest and signed-in footers. Tax identification and SST numbers are included on billing PDFs only.</p>
             </div>
             <div class="card-body">
                 <div class="row g-3">

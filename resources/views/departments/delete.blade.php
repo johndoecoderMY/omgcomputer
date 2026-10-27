@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container py-3">
-    <x-page-header eyebrow="Organization / Departments" title="Delete department" :back-url="route('departments.show', $department)" back-label="Cancel" />
+    <x-page-header eyebrow="Members & organization / Departments" title="Delete department" :back-url="route('departments.show', $department)" back-label="Cancel" />
     <div class="card border-danger"><div class="card-body">
         @if ($department->teams->isNotEmpty())
             <div class="alert alert-warning">This department still has teams. Move or delete those teams before deleting the department.</div>

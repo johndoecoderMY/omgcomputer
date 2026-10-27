@@ -250,6 +250,11 @@
         const filters = document.querySelector('[data-task-filters]');
         const taskModal = document.querySelector('#task-details-modal');
         if (!board || !listView || !boardView) return;
+        const listTable = document.querySelector('table[data-datatable]');
+        const refreshTaskList = () => {
+            if (!window.jQuery || !listTable || !window.jQuery.fn.DataTable.isDataTable(listTable)) return;
+            window.jQuery(listTable).DataTable().ajax.reload(null, false);
+        };
         let errorBox = boardView.querySelector('[data-task-kanban-error]');
         if (!errorBox) {
             errorBox = document.createElement('div');
@@ -372,6 +377,7 @@
                     if (updated.status !== nextStatus) {
                         throw new Error('The server returned a different task status.');
                     }
+                    refreshTaskList();
                 } catch (error) {
                     const nextSibling = originalPosition?.nextSibling;
                     sourceZone.insertBefore(

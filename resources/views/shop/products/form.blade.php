@@ -29,6 +29,7 @@
                             <option value="{{ $value }}" @selected(old('type', $product->type) === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
+                    <div class="form-text">To list a completed desktop, choose “Ready-built PC” and enable the shop listing below.</div>
                     @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
