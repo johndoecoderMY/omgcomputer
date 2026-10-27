@@ -8,11 +8,9 @@
         :description="$accountType === 'customers'
             ? 'Manage sign-in accounts with customer access.'
             : 'Manage staff accounts with admin or member roles, teams, and permissions.'"
-        :back-url="route('admin.access.index')" back-label="Roles & permissions">
+     >
         <x-slot:actions>
-            <a class="btn btn-outline-primary" href="{{ route($accountType === 'customers' ? 'admin.users.index' : 'admin.users.customers') }}">
-                <i class="bi bi-arrow-left-right me-2" aria-hidden="true"></i>{{ $accountType === 'customers' ? 'View members' : 'View customer accounts' }}
-            </a>
+        
             <a class="btn btn-primary" href="{{ route($accountType === 'customers' ? 'admin.users.customers.create' : 'admin.users.create') }}">
                 <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Create {{ $accountType === 'customers' ? 'customer account' : 'member' }}
             </a>
