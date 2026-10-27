@@ -168,6 +168,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('admin/backups')->name('admin.backups.')->middleware('role:admin')->controller(AdminBackupController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/run', 'run')->name('run');
+        Route::post('/export-tables', 'exportTables')->middleware('throttle:5,1')->name('export-tables');
         Route::get('/{disk}/{backup}/download', 'download')->name('download');
     });
     Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {

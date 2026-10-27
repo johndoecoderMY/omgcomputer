@@ -116,7 +116,59 @@ class EmailMailboxTest extends TestCase
             ->assertSee('sandbox=""', false)
             ->assertSee('referrerpolicy="no-referrer"', false)
             ->assertSee('srcdoc="&lt;meta http-equiv=&quot;Content-Security-Policy&quot;&gt;&lt;p&gt;Email content&lt;/p&gt;"', false)
-            ->assertSee('Remote images, scripts, and external resources are blocked for privacy and safety.');
+            ->assertSee('Remote images are blocked for privacy.')
+            ->assertSee('Inline images included with the email can still display.')
+            ->assertSee('Load remote images for this email');
+    }
+
+    public function test_remote_images_require_an_explicit_opt_in_and_can_be_disabled_again(): void
+    {
+        $admin = $this->admin();
+        $this->mock(EmailMailboxService::class, function (MockInterface $mock) use ($admin): void {
+            $mock->shouldReceive('message')->once()->with($admin, 28, true)->andReturn([
+                'uid' => 28,
+                'subject' => 'Email with remote images',
+                'from' => 'sender@example.test',
+                'to' => 'support@example.test',
+                'date' => 'Wed, 21 Oct 2026 10:00:00 +0800',
+                'seen' => true,
+                'body' => 'Email content',
+                'body_html' => '<p>Email content</p>',
+            ]);
+        });
+
+        $this->actingAs($admin)->get(route('email.show', ['uid' => 28, 'load_remote_images' => 1]))
+            ->assertOk()
+            ->assertSee('Remote HTTPS images are enabled for this email.')
+            ->assertSee('Block remote images');
+    }
+
+    public function test_email_image_policy_allows_only_data_images_by_default_and_https_when_requested(): void
+    {
+        $service = app(EmailMailboxService::class);
+        $method = new \ReflectionMethod(EmailMailboxService::class, 'secureHtmlForDisplay');
+
+        $privateHtml = $method->invoke($service, '<p>Email</p>', false);
+        $this->assertStringContainsString('img-src data:', $privateHtml);
+        $this->assertStringNotContainsString('img-src data: https:', $privateHtml);
+
+        $remoteHtml = $method->invoke($service, '<p>Email</p>', true);
+        $this->assertStringContainsString('img-src data: https:', $remoteHtml);
+        $this->assertStringContainsString("default-src &#039;none&#039;", $remoteHtml);
+    }
+
+    public function test_inline_cid_image_references_are_replaced_with_embedded_image_data(): void
+    {
+        $service = app(EmailMailboxService::class);
+        $method = new \ReflectionMethod(EmailMailboxService::class, 'embedInlineImages');
+        $html = '<img src="cid:logo%40example.test" alt="Logo">';
+        $inlineImage = 'data:image/png;base64,aGVsbG8=';
+
+        $result = $method->invoke($service, $html, [
+            'logo@example.test' => $inlineImage,
+        ]);
+
+        $this->assertSame('<img src="'.$inlineImage.'" alt="Logo">', $result);
     }
 
     public function test_inbox_shows_mailbox_connection_errors_without_failing_the_page(): void

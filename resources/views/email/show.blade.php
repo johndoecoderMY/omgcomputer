@@ -70,7 +70,18 @@
             @if (filled($message['body_html'] ?? null))
                 <iframe class="email-message-frame" title="Email content" sandbox="" referrerpolicy="no-referrer"
                     srcdoc="{{ $message['body_html'] }}"></iframe>
-                <p class="form-text mb-0 mt-2">Remote images, scripts, and external resources are blocked for privacy and safety.</p>
+                <div class="form-text mt-2">
+                    @if ($remoteImagesEnabled)
+                        <p class="mb-1">Remote HTTPS images are enabled for this email. Loading them may notify the sender or reveal information about your visit. Scripts and other external resources remain blocked.</p>
+                        <a href="{{ route('email.show', $message['uid']) }}">Block remote images</a>
+                    @else
+                        <p class="mb-1">Remote images are blocked for privacy. Inline images included with the email can still display.</p>
+                        <a href="{{ route('email.show', ['uid' => $message['uid'], 'load_remote_images' => 1]) }}"
+                            onclick="return confirm('Load remote HTTPS images for this email? The sender may be notified or receive information about your visit.');">
+                            Load remote images for this email
+                        </a>
+                    @endif
+                </div>
             @else
                 <div class="email-message-body">{{ $message['body'] }}</div>
             @endif

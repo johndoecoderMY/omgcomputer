@@ -25,6 +25,49 @@
         <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
     @endif
 
+    <section class="card mb-4" aria-labelledby="selected-table-export-heading">
+        <div class="card-body">
+            <h2 class="h5" id="selected-table-export-heading">Export selected database tables</h2>
+            <p class="text-body-secondary">
+                Choose tables to export. The download is a ZIP of CSV data files plus a manifest listing each table's columns.
+                This is a data export, not a restorable database backup; use <strong>Run backup now</strong> for a full backup.
+            </p>
+            <form method="POST" action="{{ route('admin.backups.export-tables') }}"
+                onsubmit="return confirm('Export the selected table data to a ZIP file?');">
+                @csrf
+                @error('tables')
+                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                @enderror
+                @error('tables.*')
+                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                @enderror
+                @if ($databaseTables->isEmpty())
+                    <div class="alert alert-warning mb-0" role="alert">No database tables are available to export.</div>
+                @else
+                    @php($selectedTables = old('tables', []))
+                    @php($selectedTables = is_array($selectedTables) ? $selectedTables : [])
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 mb-3">
+                        @foreach ($databaseTables as $table)
+                            <div class="col">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="tables[]"
+                                        id="export-table-{{ $loop->index }}" value="{{ $table }}"
+                                        @checked(in_array($table, $selectedTables, true))>
+                                    <label class="form-check-label" for="export-table-{{ $loop->index }}">
+                                        {{ $table }}
+                                    </label>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="bi bi-file-earmark-zip me-2" aria-hidden="true"></i>Export selected tables
+                    </button>
+                @endif
+            </form>
+        </div>
+    </section>
+
     <div class="alert alert-info" role="status">
         <strong>Backup set:</strong> {{ $backupName }}
         <span class="ms-2">Scheduled daily at 2:00 AM when the Laravel scheduler is running.</span>

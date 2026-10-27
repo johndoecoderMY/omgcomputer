@@ -113,7 +113,7 @@ class EmailMailboxService
         }
     }
 
-    public function message(User $user, int $uid): array
+    public function message(User $user, int $uid, bool $allowRemoteImages = false): array
     {
         $connection = $this->connect($user);
         try {
@@ -126,9 +126,9 @@ class EmailMailboxService
             $structure = imap_fetchstructure($connection, (string) $uid, FT_UID);
             $parts = $structure
                 ? $this->bodyParts($connection, $uid, $structure)
-                : ['plain' => (string) imap_body($connection, (string) $uid, FT_UID), 'html' => ''];
+                : ['plain' => (string) imap_body($connection, (string) $uid, FT_UID), 'html' => '', 'inline_images' => []];
             $plainBody = trim($parts['plain']);
-            $htmlBody = trim($parts['html']);
+            $htmlBody = $this->embedInlineImages(trim($parts['html']), $parts['inline_images']);
 
             if ($htmlBody === '' && $this->looksLikeHtml($plainBody)) {
                 $htmlBody = $plainBody;
@@ -143,7 +143,7 @@ class EmailMailboxService
                 'date' => $item->date ?? '',
                 'seen' => (bool) ($item->seen ?? false),
                 'body' => $plainBody !== '' ? $plainBody : $this->plainTextFromHtml($htmlBody),
-                'body_html' => $htmlBody !== '' ? $this->secureHtmlForDisplay($htmlBody) : null,
+                'body_html' => $htmlBody !== '' ? $this->secureHtmlForDisplay($htmlBody, $allowRemoteImages) : null,
             ];
         } finally {
             imap_close($connection);
@@ -253,19 +253,40 @@ class EmailMailboxService
     }
 
     /**
-     * @return array{plain: string, html: string}
+     * @return array{plain: string, html: string, inline_images: array<string, string>}
      */
     private function bodyParts(Connection $connection, int $uid, object $part, string $partNumber = ''): array
     {
         $type = (int) ($part->type ?? 0);
+        $subtype = strtolower((string) ($part->subtype ?? ''));
+        $contentId = trim((string) ($part->id ?? ''), " \t\n\r\0\x0B<>");
+        $disposition = strtoupper((string) ($part->disposition ?? ''));
 
-        if (strtoupper((string) ($part->disposition ?? '')) === 'ATTACHMENT'
-            || $this->partFilename($part) !== '') {
-            return ['plain' => '', 'html' => ''];
+        if ($type === 5 && $contentId !== '' && $disposition !== 'ATTACHMENT') {
+            $section = $partNumber === '' ? '1' : $partNumber;
+            $content = imap_fetchbody($connection, (string) $uid, $section, FT_UID);
+            $content = $this->decodePartContent($content, (int) ($part->encoding ?? 0));
+            $mimeSubtype = match ($subtype) {
+                'jpg', 'jpeg' => 'jpeg',
+                'png', 'gif', 'webp', 'bmp' => $subtype,
+                default => null,
+            };
+
+            if ($content !== '' && strlen($content) <= 2 * 1024 * 1024 && $mimeSubtype !== null) {
+                return [
+                    'plain' => '',
+                    'html' => '',
+                    'inline_images' => [strtolower($contentId) => 'data:image/'.$mimeSubtype.';base64,'.base64_encode($content)],
+                ];
+            }
+        }
+
+        if ($disposition === 'ATTACHMENT' || $this->partFilename($part) !== '') {
+            return ['plain' => '', 'html' => '', 'inline_images' => []];
         }
 
         if ($type === 1 && isset($part->parts) && is_array($part->parts)) {
-            $bodies = ['plain' => '', 'html' => ''];
+            $bodies = ['plain' => '', 'html' => '', 'inline_images' => []];
             foreach ($part->parts as $index => $child) {
                 $number = $partNumber === '' ? (string) ($index + 1) : $partNumber.'.'.($index + 1);
                 $childBodies = $this->bodyParts($connection, $uid, $child, $number);
@@ -274,26 +295,23 @@ class EmailMailboxService
                         $bodies[$format] = $childBodies[$format];
                     }
                 }
+                $bodies['inline_images'] = array_merge($bodies['inline_images'], $childBodies['inline_images']);
             }
 
             return $bodies;
         }
 
         if ($type !== 0) {
-            return ['plain' => '', 'html' => ''];
+            return ['plain' => '', 'html' => '', 'inline_images' => []];
         }
 
         $section = $partNumber === '' ? '1' : $partNumber;
         $content = imap_fetchbody($connection, (string) $uid, $section, FT_UID);
         if (! is_string($content)) {
-            return ['plain' => '', 'html' => ''];
+            return ['plain' => '', 'html' => '', 'inline_images' => []];
         }
 
-        $content = match ((int) ($part->encoding ?? 0)) {
-            3 => base64_decode($content, true) ?: '',
-            4 => quoted_printable_decode($content),
-            default => $content,
-        };
+        $content = $this->decodePartContent($content, (int) ($part->encoding ?? 0));
         $charset = $this->partCharset($part);
         if ($charset !== '' && strcasecmp($charset, 'UTF-8') !== 0) {
             try {
@@ -304,10 +322,43 @@ class EmailMailboxService
         }
 
         return match (strtolower((string) ($part->subtype ?? 'plain'))) {
-            'html' => ['plain' => '', 'html' => $content],
-            'plain' => ['plain' => $content, 'html' => ''],
-            default => ['plain' => '', 'html' => ''],
+            'html' => ['plain' => '', 'html' => $content, 'inline_images' => []],
+            'plain' => ['plain' => $content, 'html' => '', 'inline_images' => []],
+            default => ['plain' => '', 'html' => '', 'inline_images' => []],
         };
+    }
+
+    private function decodePartContent(string|false $content, int $encoding): string
+    {
+        if (! is_string($content)) {
+            return '';
+        }
+
+        return match ($encoding) {
+            3 => base64_decode($content, true) ?: '',
+            4 => quoted_printable_decode($content),
+            default => $content,
+        };
+    }
+
+    /**
+     * @param  array<string, string>  $inlineImages
+     */
+    private function embedInlineImages(string $html, array $inlineImages): string
+    {
+        if ($html === '' || $inlineImages === []) {
+            return $html;
+        }
+
+        return preg_replace_callback(
+            '/cid:([^\'"\s<>]+)/i',
+            static function (array $match) use ($inlineImages): string {
+                $contentId = strtolower(trim(rawurldecode(html_entity_decode($match[1], ENT_QUOTES | ENT_HTML5, 'UTF-8')), '<>'));
+
+                return $inlineImages[$contentId] ?? $match[0];
+            },
+            $html,
+        ) ?? $html;
     }
 
     private function partFilename(object $part): string
@@ -347,9 +398,10 @@ class EmailMailboxService
         return trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
-    private function secureHtmlForDisplay(string $html): string
+    private function secureHtmlForDisplay(string $html, bool $allowRemoteImages = false): string
     {
-        $policy = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'";
+        $imageSources = $allowRemoteImages ? 'data: https:' : 'data:';
+        $policy = "default-src 'none'; img-src {$imageSources}; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'";
         $meta = '<meta http-equiv="Content-Security-Policy" content="'.e($policy).'">';
 
         if (preg_match('/<head\b[^>]*>/i', $html, $match, PREG_OFFSET_CAPTURE) === 1) {

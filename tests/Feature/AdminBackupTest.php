@@ -53,6 +53,7 @@ class AdminBackupTest extends TestCase
         $member = User::factory()->create();
         $member->assignRole('member');
         $this->actingAs($member)->get(route('admin.backups.index'))->assertForbidden();
+        $this->post(route('admin.backups.export-tables'))->assertForbidden();
         $this->get(route('admin.backups.download', ['disk' => 'backup_test', 'backup' => 'private.zip']))
             ->assertForbidden();
 
@@ -64,6 +65,9 @@ class AdminBackupTest extends TestCase
             ->assertSee(route('admin.backups.index'))
             ->assertSee('backup-test-app')
             ->assertSee('Storage available')
+            ->assertSee('Export selected database tables')
+            ->assertSee('name="tables[]"', false)
+            ->assertSee('users')
             ->assertSee('user accounts, roles, permissions, role assignments, and direct permission assignments')
             ->assertSee('No backup archives found on this disk.')
             ->assertSee('Age: unavailable until a backup archive exists.')
@@ -107,5 +111,51 @@ class AdminBackupTest extends TestCase
         $this->get(route('admin.backups.download', ['disk' => 'backup_test', 'backup' => $filename]))
             ->assertOk()
             ->assertHeader('content-type', 'application/zip');
+    }
+
+    public function test_planner_administrator_can_export_only_selected_database_tables(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['name' => 'Table Export Test']);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('admin.backups.export-tables'), [
+            'tables' => ['users'],
+        ]);
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/zip');
+
+        $archivePath = tempnam(sys_get_temp_dir(), 'selected-export-test-');
+        $this->assertNotFalse($archivePath);
+        file_put_contents($archivePath, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertSame(true, $zip->open($archivePath));
+        $this->assertNotFalse($zip->locateName('tables/users.csv'));
+        $this->assertFalse($zip->locateName('tables/roles.csv'));
+        $csv = $zip->getFromName('tables/users.csv');
+        $manifest = $zip->getFromName('manifest.json');
+        $zip->close();
+        unlink($archivePath);
+
+        $this->assertIsString($csv);
+        $this->assertStringContainsString('email', $csv);
+        $this->assertStringContainsString('Table Export Test', $csv);
+        $this->assertIsString($manifest);
+        $this->assertSame(['users'], array_keys(json_decode($manifest, true, flags: JSON_THROW_ON_ERROR)['tables']));
+    }
+
+    public function test_selected_database_export_rejects_unknown_tables(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->from(route('admin.backups.index'))
+            ->post(route('admin.backups.export-tables'), [
+                'tables' => ['users; DROP TABLE users'],
+            ])->assertRedirect(route('admin.backups.index'))
+            ->assertSessionHasErrors('tables.0');
     }
 }

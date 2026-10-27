@@ -121,13 +121,17 @@ class EmailMailboxController extends Controller
 
     public function show(Request $request, int $uid, EmailMailboxService $mailbox): View|RedirectResponse
     {
+        $remoteImagesEnabled = $request->boolean('load_remote_images');
+
         try {
-            $message = $mailbox->message($request->user(), $uid);
+            $message = $remoteImagesEnabled
+                ? $mailbox->message($request->user(), $uid, true)
+                : $mailbox->message($request->user(), $uid);
         } catch (RuntimeException $exception) {
             return redirect()->route('email.inbox')->with('mailbox_error', $exception->getMessage());
         }
 
-        return view('email.show', compact('message'));
+        return view('email.show', compact('message', 'remoteImagesEnabled'));
     }
 
     public function action(Request $request, int $uid, string $action, EmailMailboxService $mailbox): RedirectResponse
