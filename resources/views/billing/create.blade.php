@@ -15,6 +15,32 @@
         @if ($ticket)<input type="hidden" name="repair_ticket_id" value="{{ $ticket->id }}">@endif
         @if ($project)<input type="hidden" name="project_id" value="{{ $project->id }}">@endif
         <div class="card mb-3"><div class="card-header fw-semibold">Customer and dates</div><div class="card-body row g-3">
+            @if (! empty($customerRecipients))
+                <div class="col-12">
+                    <label class="form-label" for="customer-recipient">Select customer record or account</label>
+                    <select class="form-select" id="customer-recipient" name="customer_recipient_key">
+                        <option value="">Choose a customer...</option>
+                        @foreach (['Customer records', 'Customer accounts'] as $groupName)
+                            @php($groupRecipients = collect($customerRecipients)->where('group', $groupName))
+                            @if ($groupRecipients->isNotEmpty())
+                                <optgroup label="{{ $groupName }}">
+                                    @foreach ($groupRecipients as $recipient)
+                                        <option value="{{ $recipient['key'] }}"
+                                            data-name="{{ $recipient['name'] }}"
+                                            data-email="{{ $recipient['email'] }}"
+                                            data-phone="{{ $recipient['phone'] }}"
+                                            data-address="{{ $recipient['address'] }}"
+                                            @selected(old('customer_recipient_key', $selectedCustomerRecipientKey) === $recipient['key'])>
+                                            {{ $recipient['name'] }}{{ $recipient['email'] ? ' · '.$recipient['email'] : '' }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                        @endforeach
+                    </select>
+                    <div class="form-text">Choose a saved customer record or registered customer account to fill the details below.</div>
+                </div>
+            @endif
             @if ($projectRecipients->isNotEmpty())
                 <div class="col-12">
                     <label class="form-label" for="project-recipient">Customer recipient from this project</label>
@@ -58,6 +84,19 @@
 
 @push('scripts')
 <script>
+(() => {
+    const customerRecipientSelect = document.getElementById('customer-recipient');
+    if (!customerRecipientSelect) return;
+
+    customerRecipientSelect.addEventListener('change', () => {
+        const option = customerRecipientSelect.selectedOptions[0];
+        document.getElementById('customer_name').value = option.dataset.name || '';
+        document.getElementById('customer_email').value = option.dataset.email || '';
+        document.getElementById('customer_phone').value = option.dataset.phone || '';
+        document.getElementById('customer_address').value = option.dataset.address || '';
+    });
+})();
+
 (() => {
     const recipientSelect = document.getElementById('project-recipient');
     if (!recipientSelect) return;

@@ -108,6 +108,8 @@ class BillingController extends Controller
             'project' => $project,
             'projectRecipients' => $projectRecipients,
             'selectedRecipientKey' => $selectedRecipientKey,
+            'customerRecipients' => $this->customerRecipients(),
+            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey($customer),
             'document' => new BillingDocument([
                 'type' => $type,
                 'customer_name' => $customer?->name,
@@ -154,6 +156,8 @@ class BillingController extends Controller
             'project' => $document->project,
             'projectRecipients' => $projectRecipients,
             'selectedRecipientKey' => $selectedRecipientKey,
+            'customerRecipients' => $this->customerRecipients(),
+            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey(null, $document->customer_email),
             'document' => $document,
             'lines' => $document->items->map(fn ($item) => [
                 'inventory_part_id' => $item->inventory_part_id,
@@ -166,6 +170,51 @@ class BillingController extends Controller
             'formAction' => route('billing.documents.update', $document),
             'editing' => true,
         ]);
+    }
+
+    private function customerRecipients(): array
+    {
+        $records = Customer::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Customer $customer): array => [
+                'key' => 'customer-record:'.$customer->id,
+                'group' => 'Customer records',
+                'name' => (string) $customer->name,
+                'email' => (string) $customer->email,
+                'phone' => (string) $customer->phone,
+                'address' => (string) $customer->address,
+            ]);
+
+        $accounts = User::role('customer')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'phone', 'address'])
+            ->map(fn (User $account): array => [
+                'key' => 'customer-account:'.$account->id,
+                'group' => 'Customer accounts',
+                'name' => (string) $account->name,
+                'email' => (string) $account->email,
+                'phone' => (string) $account->phone,
+                'address' => (string) $account->address,
+            ]);
+
+        return $records->concat($accounts)->values()->all();
+    }
+
+    private function selectedCustomerRecipientKey(?Customer $customer, ?string $email = null): string
+    {
+        $recipientEmail = strtolower(trim($customer?->email ?? $email ?? ''));
+        if ($recipientEmail === '') {
+            return '';
+        }
+
+        foreach ($this->customerRecipients() as $recipient) {
+            if (strtolower(trim((string) $recipient['email'])) === strtolower(trim($recipientEmail))) {
+                return $recipient['key'];
+            }
+        }
+
+        return '';
     }
 
     private function projectRecipients(Project $project)
