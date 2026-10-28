@@ -537,11 +537,16 @@ class BillingController extends Controller
 
     public function updateQuotationStatus(BillingDocument $document, Request $request): RedirectResponse
     {
-        abort_unless(! $request->user()->hasRole('customer'), 403);
+        $user = $request->user();
+        if ($user->hasRole('customer')) {
+            abort_unless(in_array($dataStatus = $request->input('status'), ['accepted', 'rejected'], true), 403);
+            abort_unless($document->status === 'sent' && $document->type === 'quotation', 422);
+            abort_unless($this->customerDocumentsQuery($user)->whereKey($document->id)->exists(), 404);
+        }
 
         $data = $request->validate([
             'status' => ['required', Rule::in(['sent', 'accepted', 'rejected'])],
-            'delivery' => ['nullable', Rule::in(['in_app'])],
+            'delivery' => ['nullable', Rule::in(['in_app', 'whatsapp'])],
         ]);
 
         DB::transaction(function () use ($document, $data): void {
@@ -581,7 +586,17 @@ class BillingController extends Controller
             ->route('billing.documents.show', $document)
             ->with('success', $data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app'
                 ? 'Quotation marked as sent and added to the customer panel.'
-                : 'Quotation status updated.');
+                : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.'));
+    }
+
+    public function respondToQuotationFromEmail(Request $request, BillingDocument $document, string $status): View
+    {
+        abort_unless($document->type === 'quotation', 404);
+        abort_unless(in_array($status, ['accepted', 'rejected'], true), 404);
+        abort_unless($document->status === 'sent', 422, 'This quotation has not been sent or has already been responded to.');
+        $document->update(['status' => $status]);
+
+        return view('billing.quotation-response', compact('document', 'status'));
     }
 
     public function sendQuotation(BillingDocument $document, Request $request): RedirectResponse
@@ -594,6 +609,7 @@ class BillingController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
+        $emailSent = false;
         try {
             app(MailSettingsService::class)->apply();
             $document->load(['items', 'payments']);
@@ -603,6 +619,7 @@ class BillingController extends Controller
                 $pdf,
                 strtolower($document->number).'.pdf',
             ));
+            $emailSent = true;
         } catch (Throwable $exception) {
             Log::warning('Quotation email could not be sent.', [
                 'document_id' => $document->id,
@@ -610,8 +627,6 @@ class BillingController extends Controller
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),
             ]);
-
-            return back()->with('error', 'The quotation email could not be sent. Check the email server settings and try again.');
         }
 
         $document->update([
@@ -619,7 +634,20 @@ class BillingController extends Controller
             'status' => 'sent',
         ]);
 
-        return back()->with('success', 'Quotation '.$document->number.' was sent to '.$data['email'].'.');
+        $matchingAccounts = User::role('customer')
+            ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($data['email']))])
+            ->get();
+        $matchingAccounts->each(fn (User $customer) => $customer->notify(new QuotationInAppNotification($document)));
+
+        if (! $emailSent) {
+            return back()->with('error', 'Quotation was added to the customer panel, but the email could not be sent. Check the email server settings and try again.');
+        }
+
+        $delivery = $matchingAccounts->isEmpty()
+            ? 'Quotation '.$document->number.' was emailed to '.$data['email'].'.'
+            : 'Quotation '.$document->number.' was sent to the customer panel and emailed to '.$data['email'].'.';
+
+        return back()->with('success', $delivery);
     }
 
     public function storePayment(BillingDocument $document, Request $request): RedirectResponse

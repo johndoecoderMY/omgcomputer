@@ -53,12 +53,17 @@
                     <p class="mb-3">Send a test message to <strong>{{ auth()->user()->email }}</strong>.</p>
                     <p class="small text-body-secondary">From address: {{ $fromAddress ?: 'Not configured' }}</p>
                     <p><a href="{{ route('email.settings') }}">Configure an SMTP server</a> to send mail through your existing account.</p>
-                    <form method="POST" action="{{ route('reports.integrations.email.send') }}">
-                        @csrf
-                        <button class="btn btn-outline-primary" type="submit">
-                            <span class="bi bi-send me-2" aria-hidden="true"></span>Send test email
-                        </button>
-                    </form>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('reports.integrations.email.send') }}">
+                            @csrf
+                            <button class="btn btn-outline-primary" type="submit">
+                                <span class="bi bi-send me-2" aria-hidden="true"></span>Send test email
+                            </button>
+                        </form>
+                        <a class="btn btn-outline-secondary" href="{{ route('reports.integrations.email.preview') }}">
+                            <span class="bi bi-window me-2" aria-hidden="true"></span>Preview email layout
+                        </a>
+                    </div>
                 </div>
                 <div class="card-footer bg-body small text-body-secondary">
                     The email is sent to your own account address. Delivery errors are reported by the configured mail transport.

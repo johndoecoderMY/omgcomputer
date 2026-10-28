@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\IntegrationTestMail;
+use App\Models\BillingDocument;
 use App\Notifications\IntegrationTestNotification;
 use App\Services\ChipCollect;
 use App\Services\CpanelEmailProvisioner;
@@ -108,6 +109,23 @@ class IntegrationTestController extends Controller
             'success' => true,
             'message' => "A test email was sent to {$user->email}.",
         ]);
+    }
+
+    public function emailPreview(): View
+    {
+        $document = new BillingDocument([
+                'number' => 'QUO-000123',
+                'type' => 'quotation',
+                'customer_name' => 'Sample Customer',
+                'customer_email' => 'customer@example.com',
+            'total' => 2480,
+        ]);
+        $document->id = 1;
+        $document->exists = true;
+
+        $emailHtml = view('emails.quotation', compact('document'))->render();
+
+        return view('reports.integrations.email-preview', compact('document', 'emailHtml'));
     }
 
     public function whatsapp(): View

@@ -3,6 +3,15 @@
 @section('title', $document->number)
 
 @section('content')
+@php
+    $whatsappNumber = preg_replace('/\D+/', '', (string) $document->customer_phone);
+    if (str_starts_with($whatsappNumber, '0')) {
+        $whatsappNumber = '60'.substr($whatsappNumber, 1);
+    }
+    $quotationWhatsappUrl = $whatsappNumber !== ''
+        ? 'https://wa.me/'.$whatsappNumber.'?text='.rawurlencode('Hi '.$document->customer_name.', here is your quotation '.$document->number.' from OMG Computer (RM '.number_format((float) $document->total, 2).'). Please view or download it here: '.route('billing.documents.show', $document))
+        : '';
+@endphp
 <div class="container-fluid py-3">
     <x-page-header eyebrow="{{ ucfirst($document->type) }}" :title="$document->number" :back-url="route('billing.index')" back-label="Back to billing">
         <x-slot name="actions">
@@ -13,6 +22,9 @@
                 <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-quotation-modal">
                     <span class="bi bi-send me-2"></span>{{ $document->status === 'rejected' ? 'Resend quotation' : 'Mark as sent' }}
                 </button>
+            @elseif (auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success"><span class="bi bi-check-circle me-2"></span>Accept quotation</button></form>
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger"><span class="bi bi-x-circle me-2"></span>Reject quotation</button></form>
             @elseif (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success">Mark accepted</button></form>
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger">Mark rejected</button></form>
@@ -31,28 +43,48 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="text-body-secondary mb-3">Choose how to send this quotation to the customer. The email option attaches the quotation PDF.</p>
+                        <p class="text-body-secondary mb-3">Send the quotation PDF by email, and automatically add it to the customer panel when the customer has an account.</p>
                         <div class="d-grid gap-3">
                             <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="border rounded p-3">
                                 @csrf
-                                <label class="form-label fw-semibold" for="quotation-send-email"><span class="bi bi-envelope me-2"></span>Email PDF</label>
+                                <label class="form-label fw-semibold" for="quotation-send-email"><span class="bi bi-envelope me-2"></span>Email quotation PDF</label>
+                                <div class="small text-body-secondary mb-2">Also appears in the customer panel when this email belongs to a registered account.</div>
                                 <input class="form-control mb-3" id="quotation-send-email" type="email" name="email" value="{{ old('email', $document->customer_email) }}" placeholder="Customer email" required>
-                                <button class="btn btn-primary w-100" type="submit">Send PDF by email</button>
+                                <button class="btn btn-primary w-100" type="submit">Send quotation</button>
                             </form>
-                            <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="border rounded p-3">
-                                @csrf
-                                <input type="hidden" name="status" value="sent">
-                                <input type="hidden" name="delivery" value="in_app">
-                                <div class="fw-semibold mb-1"><span class="bi bi-app-indicator me-2"></span>Send in app</div>
-                                <div class="small text-body-secondary mb-3">Notify the customer in their account. The PDF will be available on the quotation page.</div>
-                                <button class="btn btn-outline-primary w-100" type="submit">Send to customer panel</button>
-                            </form>
+                            @if ($quotationWhatsappUrl !== '')
+                                <div class="border rounded p-3">
+                                    <div class="fw-semibold mb-1"><span class="bi bi-whatsapp me-2"></span>WhatsApp</div>
+                                    <div class="small text-body-secondary mb-3">Open a WhatsApp message containing the quotation details and customer-panel link.</div>
+                                    <a class="btn btn-success w-100 quotation-whatsapp-link" href="{{ $quotationWhatsappUrl }}" target="_blank" rel="noopener" data-status-url="{{ route('billing.documents.quotation-status', $document) }}" data-csrf="{{ csrf_token() }}">Open WhatsApp draft</a>
+                                </div>
+                            @else
+                                <div class="alert alert-secondary mb-0">Add a customer phone number to create a WhatsApp quotation link.</div>
+                            @endif
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     @endif
+
+    @push('scripts')
+    <script>
+    document.querySelectorAll('.quotation-whatsapp-link').forEach((link) => {
+        link.addEventListener('click', () => {
+            fetch(link.dataset.statusUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': link.dataset.csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new URLSearchParams({ status: 'sent', delivery: 'whatsapp' }),
+            });
+        });
+    });
+    </script>
+    @endpush
 
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif

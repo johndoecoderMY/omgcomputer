@@ -314,6 +314,11 @@
 
         charts.forEach(({ element, data }) => {
             if (!element) return;
+            const nonZeroData = data.filter(({ value }) => Number(value) > 0);
+            if (nonZeroData.length === 0) {
+                element.innerHTML = '<div class="d-flex h-100 align-items-center justify-content-center text-body-secondary small">No data yet</div>';
+                return;
+            }
             const chart = window.echarts.init(element);
             chart.setOption({
                 tooltip: { trigger: 'item' },
@@ -326,7 +331,7 @@
                     itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
                     label: { show: false },
                     emphasis: { label: { show: true, fontSize: 16, fontWeight: 'bold' } },
-                    data: data.map(({ badgeClass, ...item }) => ({
+                    data: nonZeroData.map(({ badgeClass, ...item }) => ({
                         ...item,
                         itemStyle: { color: colorForStatusBadge(badgeClass) },
                     })),

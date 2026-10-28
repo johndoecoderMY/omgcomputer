@@ -80,13 +80,17 @@ class DashboardController extends Controller
                     'name' => $label,
                     'value' => (int) ($taskStatusCounts[$status] ?? 0),
                     'badgeClass' => 'text-bg-'.StatusBadge::colorClass($status),
-                ])->values(),
+                ])
+                ->filter(fn (array $item): bool => $item['value'] > 0)
+                ->values(),
             'ticketStatusChart' => collect(RepairTicket::STATUSES)
                 ->map(fn (string $label, string $status): array => [
                     'name' => $label,
                     'value' => (int) ($ticketStatusCounts[$status] ?? 0),
                     'badgeClass' => 'text-bg-'.StatusBadge::colorClass($status),
-                ])->values(),
+                ])
+                ->filter(fn (array $item): bool => $item['value'] > 0)
+                ->values(),
             'ticketArrivalChart' => collect(range(6, 0))
                 ->map(function (int $daysAgo) use ($ticketArrivals): array {
                     $date = today()->subDays($daysAgo);

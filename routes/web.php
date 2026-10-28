@@ -100,6 +100,10 @@ Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::cla
 Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'])
     ->name('webhooks.chip.shop');
 
+Route::get('/quotations/{document}/respond/{status}', [BillingController::class, 'respondToQuotationFromEmail'])
+    ->middleware('signed')
+    ->name('billing.quotations.respond');
+
 Route::controller(ShopController::class)->group(function (): void {
     Route::get('/shop', 'publicProductsGrid')->name('shop.public');
     Route::get('/shop/item/{product}', 'publicProductDetails')->name('shop.public.products.show');
@@ -395,6 +399,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/notifications', 'notifications')->name('notifications');
         Route::post('/notifications/send', 'sendTestNotification')->name('notifications.send');
         Route::post('/email/send', 'sendTestEmail')->name('email.send');
+        Route::get('/email-preview', 'emailPreview')->name('email.preview');
         Route::get('/cpanel', 'cpanel')->name('cpanel');
         Route::post('/cpanel/check', 'checkCpanel')->name('cpanel.check');
         Route::get('/whatsapp', 'whatsapp')->name('whatsapp');

@@ -643,6 +643,12 @@
                                 <span class="nav-link-text ps-1">Test cPanel Email</span>
                             </div>
                         </a>
+                        <a class="nav-link" href="{{ route('reports.integrations.email.preview') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-envelope-paper"></span></span>
+                                <span class="nav-link-text ps-1">Email Layout Preview</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('email.settings') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-gear"></span></span>

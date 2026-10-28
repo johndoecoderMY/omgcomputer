@@ -46,6 +46,7 @@ class EnsureWorkspacePermission
             'billing.datatable',
             'billing.documents.show',
             'billing.documents.pdf',
+            'billing.documents.quotation-status',
             'billing.chip.checkout',
             'billing.chip.return',
             'shop.chip.return',
