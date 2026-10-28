@@ -17,6 +17,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#help">Help</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q &amp; A</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#contact">Contact</a></li>
+                <li class="nav-item ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a></li>
                 @auth
                     @if (auth()->user()->hasRole('customer'))
                         <li class="nav-item"><a class="nav-link" href="{{ route('shop.my-orders.index') }}">My orders</a></li>
@@ -51,7 +52,6 @@
                 @else
                     <li class="nav-item ms-lg-3"><a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('login') }}">Sign in</a></li>
                 @endauth
-                <li class="nav-item ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3" href="{{ route('bookings.create') }}">Book a service</a></li>
             </ul>
         </div>
     </div>

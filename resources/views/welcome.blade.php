@@ -16,50 +16,58 @@
                     : 'hello@omgcomputer.my'
             );
     @endphp
-    <section class="py-8 py-lg-10 bg-body-tertiary overflow-hidden" id="home" style="min-height: 78vh;">
+    <style>
+        .landing-hero { min-height: 720px; padding-top: 118px; background: linear-gradient(135deg, var(--falcon-gray-100, #fff) 0%, var(--falcon-body-bg, #edf2f9) 100%); overflow: hidden; }
+        .landing-hero .hero-title { max-width: 760px; color: var(--falcon-gray-1000, #172033); font-size: clamp(3rem, 6vw, 5.6rem); line-height: .96; letter-spacing: -.055em; }
+        .landing-hero .hero-title span { color: var(--falcon-primary); }
+        .landing-hero .hero-kicker { color: var(--falcon-primary); background: rgba(var(--falcon-primary-rgb), .08); border: 1px solid rgba(var(--falcon-primary-rgb), .18); }
+        .landing-hero .hero-copy { max-width: 590px; }
+        .landing-hero .hero-primary-button { color: #fff; background: var(--falcon-primary); border-color: var(--falcon-primary); box-shadow: 0 12px 30px rgba(var(--falcon-primary-rgb), .22); }
+        .landing-hero .hero-primary-button:hover { filter: brightness(.92); }
+        .landing-hero .hero-visual { position: relative; }
+        .landing-hero .hero-image { border-radius: 28px; ; box-shadow: 0 28px 70px rgba(23,32,51,.16); }
+        .landing-hero .hero-float { position: absolute; z-index: 2; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.96); border: 1px solid rgba(23,32,51,.08); border-radius: 16px; box-shadow: 0 16px 40px rgba(23,32,51,.14); }
+        .landing-hero .hero-float-one { left: -24px; top: 18%; }
+        .landing-hero .hero-float-two { right: -12px; bottom: 12%; }
+        .landing-hero .hero-float-icon { width: 52px; height: 52px; display: grid; place-items: center; flex-shrink: 0; border-radius: 15px; color: var(--falcon-primary); background: rgba(var(--falcon-primary-rgb), .08); }
+        @media (max-width: 991.98px) { .landing-hero { min-height: auto; padding-top: 130px; } .landing-hero .hero-float-one { left: 0; } .landing-hero .hero-float-two { right: 0; } }
+        @media (max-width: 575.98px) { .landing-hero { padding-top: 112px; } .landing-hero .hero-title { letter-spacing: -.04em; } .landing-hero .hero-actions .btn { width: 100%; } .landing-hero .hero-float { max-width: 210px; padding: .65rem !important; } }
+    </style>
+
+    <section class="landing-hero d-flex align-items-center" id="home">
         <div class="container">
-            <div class="row align-items-center g-5 py-lg-4">
+            <div class="row align-items-center g-5 py-5">
                 <div class="col-lg-6">
-                    <span class="badge rounded-pill badge-subtle-primary mb-3 px-3 py-2">
-                        <span class="bi bi-tools me-2"></span>Local computer repair &amp; support
+                    <span class="hero-kicker badge rounded-pill mb-4 px-3 py-2">
+                        <span class="bi bi-tools me-2"></span>Computer repair &amp; technology support
                     </span>
-                    <h1 class="display-2 fw-bold text-1000 mb-3">Computer trouble?<br><span class="text-primary">We can help.</span></h1>
-                    <p class="lead text-700 mb-4">Friendly computer repairs and support, plus custom websites for businesses and organizations.</p>
-                    <div class="d-flex flex-wrap gap-3">
+                    <h1 class="hero-title fw-bold mb-4">Computer trouble?<br><span>We’ll fix it.</span></h1>
+                    <p class="hero-copy lead text-700 mb-4">Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.</p>
+                    <div class="hero-actions d-flex flex-wrap gap-3">
+                        <a class="hero-primary-button btn btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}">
+                            <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
+                        </a>
                         <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer">
-                            <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>WhatsApp
+                            <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>WhatsApp us
                         </a>
-                        @if ($contactEmail)
-                            <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="mailto:{{ $contactEmail }}">
-                                <span class="bi bi-envelope me-2" aria-hidden="true"></span>Email
-                            </a>
-                        @endif
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
-                            <span class="bi bi-search me-2"></span>Track
+                            <span class="bi bi-search me-2"></span>Track repair
                         </a>
-                        <a class="btn btn-outline-secondary btn-lg rounded-pill px-4" href="{{ route('shop.public') }}">
+                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('shop.public') }}">
                             <span class="bi bi-shop me-2" aria-hidden="true"></span>Shop
                         </a>
                     </div>
-                    <div class="d-flex flex-wrap gap-4 mt-5 text-700">
-                        <span><span class="bi bi-check-circle text-primary me-2"></span>Clear explanations</span>
-                        <span><span class="bi bi-check-circle text-primary me-2"></span>Practical solutions</span>
+                    <div class="d-flex flex-wrap gap-4 mt-5 text-700 small">
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Clear diagnosis</span>
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Practical solutions</span>
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Friendly support</span>
                     </div>
-                    @if ($companyProfile->facebook_url)
-                        <a class="btn btn-outline-primary rounded-pill px-4 mt-4" href="{{ $companyProfile->facebook_url }}" target="_blank" rel="noopener noreferrer">
-                            <span class="bi bi-facebook me-2" aria-hidden="true"></span>Follow us on Facebook
-                        </a>
-                    @endif
                 </div>
                 <div class="col-lg-6">
-                    <img
-                        class="img-fluid w-100 rounded-4 shadow-lg"
-                        src="{{ asset('assets/img/omg/computer-repair-placeholder.svg') }}"
-                        alt="Illustration of a desktop computer, laptop, and repair tools"
-                        width="960"
-                        height="680"
-                        fetchpriority="high"
-                    >
+                    <div class="hero-visual">
+                        <img class="hero-image img-fluid w-100" src="{{ asset('assets/img/omg/computer-repair-placeholder.svg') }}" alt="Illustration of a desktop computer, laptop, and repair tools" width="960" height="680" fetchpriority="high">
+                         
+                    </div>
                 </div>
             </div>
         </div>
