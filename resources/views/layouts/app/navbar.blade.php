@@ -79,7 +79,7 @@
                         </a>
                         <a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}">
                             <span class="bi bi-cart3 me-2 text-body-secondary" aria-hidden="true"></span>Cart
-                            <span class="notification-indicator-number" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
+                            <span class="notification-indicator-number" style="position: static; width: auto; height: auto; min-width: 1.5rem; padding: 0.15rem 0.45rem; color: var(--falcon-white); background: var(--falcon-primary); border-radius: 1rem; top: auto; right: auto;" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
                         </a>
                         <div class="dropdown-divider"></div>
                     @endif
