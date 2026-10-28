@@ -58,8 +58,12 @@ class ShopController extends Controller
         ]);
     }
 
-    public function publicProductsGrid(Request $request): View
+    public function publicProductsGrid(Request $request): View|RedirectResponse
     {
+        if ($request->user() && $request->user()->hasRole('customer') && ! $request->routeIs('shop.panel')) {
+            return redirect()->route('shop.panel', $request->query());
+        }
+
         $products = $this->productListingQuery($request, true)->paginate(12)->withQueryString();
 
         return view('shop.public.products.grid', [
@@ -70,8 +74,12 @@ class ShopController extends Controller
         ]);
     }
 
-    public function publicProductDetails(InventoryPart $product): View
+    public function publicProductDetails(InventoryPart $product, Request $request): View|RedirectResponse
     {
+        if ($request->user() && $request->user()->hasRole('customer') && ! $request->routeIs('shop.panel.products.show')) {
+            return redirect()->route('shop.panel.products.show', $product);
+        }
+
         abort_unless($product->is_for_sale && $product->stock_quantity > 0, 404);
 
         return view('shop.public.products.show', [

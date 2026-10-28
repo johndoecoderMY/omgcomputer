@@ -80,7 +80,7 @@
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
-                        <a class="nav-link" href="{{ route('shop.public') }}">
+                        <a class="nav-link" href="{{ auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
                                 <span class="nav-link-text ps-1">Browse products</span>

@@ -9,7 +9,7 @@
         </button>
         <div class="collapse navbar-collapse" id="guestNavbar">
             <ul class="navbar-nav ms-auto align-items-lg-center">
-                <li class="nav-item"><a class="nav-link" href="{{ route('shop.public') }}">Shop</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ auth()->check() && auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">Shop</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#services">Services</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#website-pricing">Packages</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#how-it-works">How it works</a></li>

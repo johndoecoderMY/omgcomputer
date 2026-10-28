@@ -1,4 +1,4 @@
-@extends('layouts.guest')
+@extends(auth()->check() && auth()->user()->hasRole('customer') ? 'layouts.app' : 'layouts.guest')
 
 @section('title', $product->name.' | OMG Computer')
 

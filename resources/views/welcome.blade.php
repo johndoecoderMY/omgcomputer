@@ -53,7 +53,7 @@
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
                             <span class="bi bi-search me-2"></span>Track repair
                         </a>
-                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('shop.public') }}">
+                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ auth()->check() && auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">
                             <span class="bi bi-shop me-2" aria-hidden="true"></span>Shop
                         </a>
                     </div>

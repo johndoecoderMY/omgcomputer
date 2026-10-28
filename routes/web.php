@@ -278,6 +278,10 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     });
 
     Route::get('/shop/chip-return/{uuid}', [ShopController::class, 'chipReturn'])->name('shop.chip.return');
+    Route::middleware('role:customer')->controller(ShopController::class)->group(function (): void {
+        Route::get('/panel/shop', 'publicProductsGrid')->name('shop.panel');
+        Route::get('/panel/shop/products/{product}', 'publicProductDetails')->name('shop.panel.products.show');
+    });
     Route::prefix('shop')->name('shop.')->middleware('role:customer')->controller(ShopController::class)->group(function (): void {
         Route::get('/products/{product}/purchase', 'beginProductPurchase')->name('products.purchase');
         Route::get('/cart', 'cart')->name('cart');
