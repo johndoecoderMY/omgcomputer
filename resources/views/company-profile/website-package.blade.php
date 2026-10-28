@@ -39,72 +39,37 @@
             </form>
         </div>
         <div class="col-xl-8">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                    <div><h2 class="h5 mb-1">Website structure flow</h2><div class="small text-body-secondary">Suggested customer journey and staff access paths</div></div>
-                    <a class="btn btn-sm btn-outline-primary" href="{{ url('/') }}" target="_blank" rel="noopener"><span class="bi bi-box-arrow-up-right me-1"></span>View website</a>
+                    <div><h2 class="h5 mb-1">Website flow charts</h2><div class="small text-body-secondary">Use the built-in Development Flow Charts editor.</div></div>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{{ route('development.flowcharts.index', ['category' => 'website']) }}"><span class="bi bi-diagram-3 me-1"></span>All flow charts</a>
+                        <a class="btn btn-sm btn-primary" href="{{ route('development.flowcharts.create', ['category' => 'website_structure']) }}"><span class="bi bi-plus me-1"></span>Create flow chart</a>
+                    </div>
                 </div>
-                <div class="card-body bg-body-tertiary overflow-auto">
-                    <div class="min-vh-25" style="min-width:660px">
-                        <div class="d-flex justify-content-center"><div class="rounded-pill bg-dark text-white px-4 py-3 fw-semibold">Website visitor</div></div>
-                        <div class="text-center text-primary fs-4">↓</div>
-                        <div class="d-flex justify-content-center"><div class="rounded-3 border bg-white px-4 py-3 text-center fw-semibold shadow-sm">Landing page / Home</div></div>
-                        <div class="text-center text-primary fs-4">↓</div>
-                        <div id="website-flow-pages" class="d-flex justify-content-center flex-wrap gap-2 mb-2"></div>
-                        <div class="row justify-content-center g-3 mt-2">
-                            <div class="col-5 text-center">
-                                <div class="text-primary fs-4">↘</div>
-                                <div class="rounded-3 border border-success bg-white p-3 shadow-sm">
-                                    <span class="bi bi-person-check text-success fs-3"></span>
-                                    <div class="fw-semibold mt-1">Customer / User</div>
-                                    <div class="small text-body-secondary">Sign in or register</div>
-                                    <div class="text-success my-1">↓</div>
-                                    <div class="bg-success-subtle rounded-2 p-2 small">Customer panel<br>Shop · Billing · Repairs · Orders</div>
-                                </div>
+                <div class="card-body">
+                    @forelse ($websiteFlowCharts as $flowChart)
+                        <div class="border rounded-3 p-3 mb-2 d-flex justify-content-between align-items-center gap-3">
+                            <div>
+                                <div class="fw-semibold">{{ $flowChart->title ?: $flowChart->categoryLabel() }}</div>
+                                <div class="small text-body-secondary">{{ $flowChart->categoryLabel() }} · {{ count($flowChart->steps ?? []) }} nodes</div>
                             </div>
-                            <div class="col-5 text-center">
-                                <div class="text-primary fs-4">↙</div>
-                                <div class="rounded-3 border border-danger bg-white p-3 shadow-sm">
-                                    <span class="bi bi-shield-check text-danger fs-3"></span>
-                                    <div class="fw-semibold mt-1">Admin / Member</div>
-                                    <div class="small text-body-secondary">Role-based sign in</div>
-                                    <div class="text-danger my-1">↓</div>
-                                    <div class="bg-danger-subtle rounded-2 p-2 small">Admin panel<br>Operations · Reports · Settings</div>
-                                </div>
+                            <div class="d-flex gap-2">
+                                <a class="btn btn-sm btn-outline-primary" href="{{ route('development.flowcharts.show', $flowChart) }}">Open</a>
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ route('development.flowcharts.edit', $flowChart) }}">Edit</a>
                             </div>
                         </div>
-                    </div>
+                    @empty
+                        <div class="text-center border rounded-3 py-5 bg-body-tertiary">
+                            <span class="bi bi-diagram-3 fs-1 text-primary"></span>
+                            <h3 class="h5 mt-3">No website flow chart yet</h3>
+                            <p class="text-body-secondary mb-3">Create the website journey, structure, or sitemap using the built-in flow chart editor.</p>
+                            <a class="btn btn-primary" href="{{ route('development.flowcharts.create', ['category' => 'website_structure']) }}"><span class="bi bi-plus me-1"></span>Create website flow chart</a>
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-(() => {
-    const textarea = document.getElementById('website-pages');
-    const container = document.getElementById('website-flow-pages');
-
-    const renderFlow = () => {
-        container.innerHTML = '';
-        const pages = [...new Set(textarea.value.split(/\r?\n/).map(page => page.trim()).filter(Boolean))].slice(0, 30);
-        if (!pages.length) {
-            container.innerHTML = '<span class="text-body-secondary small">Add pages to preview the structure.</span>';
-            return;
-        }
-
-        pages.forEach((page, index) => {
-            const node = document.createElement('span');
-            node.className = 'badge rounded-pill text-bg-white border px-3 py-2 fw-normal text-dark shadow-sm';
-            node.textContent = `${index + 1}. ${page}`;
-            container.appendChild(node);
-        });
-    };
-
-    textarea.addEventListener('input', renderFlow);
-    renderFlow();
-})();
-</script>
-@endpush

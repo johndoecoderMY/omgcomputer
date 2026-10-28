@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyProfile;
+use App\Models\FlowChart;
 use App\Models\WebsitePackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,12 @@ class CompanyProfileController extends Controller
                 'Contact us',
             ];
 
-        return view('company-profile.website-package', compact('websitePackage', 'pages'));
+        $websiteFlowCharts = FlowChart::query()
+            ->whereIn('category', FlowChart::WEBSITE_CATEGORIES)
+            ->latest()
+            ->get();
+
+        return view('company-profile.website-package', compact('websitePackage', 'pages', 'websiteFlowCharts'));
     }
 
     public function updateWebsitePackage(Request $request): RedirectResponse
