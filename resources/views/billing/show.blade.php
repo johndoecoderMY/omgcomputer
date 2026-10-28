@@ -9,25 +9,51 @@
             <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="bi bi-filetype-pdf me-2"></span>PDF</a>
             @if (! auth()->user()->hasRole('customer') && ($document->status === 'draft' || ($document->type === 'quotation' && $document->status === 'rejected')))<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="bi bi-pencil me-2"></span>{{ $document->status === 'rejected' ? 'Edit rejected quotation' : 'Edit draft' }}</a>@endif
             @if ($document->repairTicket)<a class="btn btn-outline-secondary" href="{{ route('tickets.show', $document->repairTicket) }}"><span class="bi bi-ticket-perforated me-2"></span>{{ $document->repairTicket->ticket_number }}</a>@endif
-            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'sent', 'rejected'], true))
-                <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="d-flex gap-2 align-items-center">
-                    @csrf
-                    <input class="form-control form-control-sm" style="width: 13rem" type="email" name="email" value="{{ old('email', $document->customer_email) }}" placeholder="Customer email" required>
-                    <button class="btn btn-primary text-nowrap"><span class="bi bi-envelope me-2"></span>Send quotation</button>
-                </form>
-            @endif
-            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'draft')
-                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="sent"><button class="btn btn-primary">Mark as sent</button></form>
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'rejected'], true))
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-quotation-modal">
+                    <span class="bi bi-send me-2"></span>{{ $document->status === 'rejected' ? 'Resend quotation' : 'Mark as sent' }}
+                </button>
             @elseif (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success">Mark accepted</button></form>
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger">Mark rejected</button></form>
-            @elseif (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'rejected')
-                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="sent"><button class="btn btn-primary">Resend quotation</button></form>
             @endif
             @if (! auth()->user()->hasRole('customer') && (($document->type === 'quotation' && $document->status === 'accepted') || ($document->type === 'invoice' && $document->status === 'draft')))<form method="POST" action="{{ route('billing.documents.convert', $document) }}">@csrf<button class="btn btn-primary" onclick="return confirm('Issue this document and deduct listed stock?')">{{ $document->type === 'quotation' ? 'Convert to invoice' : 'Issue invoice' }}</button></form>@endif
             @if (! auth()->user()->hasRole('customer') && ! in_array($document->status, ['void', 'paid'], true) && (float) $document->paid_amount === 0.0)<form method="POST" action="{{ route('billing.documents.void', $document) }}">@csrf<button class="btn btn-outline-danger" onclick="return confirm('Void this document?')">Void</button></form>@endif
         </x-slot>
     </x-page-header>
+
+    @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'rejected'], true))
+        <div class="modal fade" id="send-quotation-modal" tabindex="-1" aria-labelledby="send-quotation-modal-label" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="send-quotation-modal-label">{{ $document->status === 'rejected' ? 'Resend quotation' : 'Send quotation' }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-body-secondary mb-3">Choose how to send this quotation to the customer. The email option attaches the quotation PDF.</p>
+                        <div class="d-grid gap-3">
+                            <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="border rounded p-3">
+                                @csrf
+                                <label class="form-label fw-semibold" for="quotation-send-email"><span class="bi bi-envelope me-2"></span>Email PDF</label>
+                                <input class="form-control mb-3" id="quotation-send-email" type="email" name="email" value="{{ old('email', $document->customer_email) }}" placeholder="Customer email" required>
+                                <button class="btn btn-primary w-100" type="submit">Send PDF by email</button>
+                            </form>
+                            <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="border rounded p-3">
+                                @csrf
+                                <input type="hidden" name="status" value="sent">
+                                <input type="hidden" name="delivery" value="in_app">
+                                <div class="fw-semibold mb-1"><span class="bi bi-app-indicator me-2"></span>Send in app</div>
+                                <div class="small text-body-secondary mb-3">Notify the customer in their account. The PDF will be available on the quotation page.</div>
+                                <button class="btn btn-outline-primary w-100" type="submit">Send to customer panel</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif

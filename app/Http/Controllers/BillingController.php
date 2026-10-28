@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\QuotationMail;
+use App\Notifications\QuotationInAppNotification;
 use App\Services\MailSettingsService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -495,7 +496,10 @@ class BillingController extends Controller
                 $documents->whereHas('project', fn (Builder $projects) => $projects->visibleToCustomer($user))
                     ->orWhereHas('repairTicket.project', fn (Builder $projects) => $projects->visibleToCustomer($user))
                     ->orWhereHas('repairTicket.customer', fn (Builder $customers) => $customers
-                        ->whereRaw('LOWER(TRIM(email)) = ?', [$email]));
+                        ->whereRaw('LOWER(TRIM(email)) = ?', [$email]))
+                    ->orWhere(function (Builder $directDocument): void {
+                        $directDocument->whereNull('project_id')->whereNull('repair_ticket_id');
+                    });
             });
     }
 
@@ -537,6 +541,7 @@ class BillingController extends Controller
 
         $data = $request->validate([
             'status' => ['required', Rule::in(['sent', 'accepted', 'rejected'])],
+            'delivery' => ['nullable', Rule::in(['in_app'])],
         ]);
 
         DB::transaction(function () use ($document, $data): void {
@@ -562,9 +567,21 @@ class BillingController extends Controller
             $locked->update(['status' => $data['status']]);
         });
 
+        if ($data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app') {
+            $email = strtolower(trim((string) $document->customer_email));
+            if ($email !== '') {
+                User::role('customer')
+                    ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
+                    ->get()
+                    ->each(fn (User $customer) => $customer->notify(new QuotationInAppNotification($document)));
+            }
+        }
+
         return redirect()
             ->route('billing.documents.show', $document)
-            ->with('success', 'Quotation status updated.');
+            ->with('success', $data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app'
+                ? 'Quotation marked as sent and added to the customer panel.'
+                : 'Quotation status updated.');
     }
 
     public function sendQuotation(BillingDocument $document, Request $request): RedirectResponse
