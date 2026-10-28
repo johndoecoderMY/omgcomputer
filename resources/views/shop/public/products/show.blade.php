@@ -32,8 +32,19 @@
                         <p class="text-700 mb-4">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
 
                         <div class="border-top pt-4 mt-auto">
-                            <p class="small text-body-secondary mb-3">Availability and pricing may change. Sign in to continue with your order.</p>
-                            <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
+                            <p class="small text-body-secondary mb-3">Availability and pricing may change.</p>
+                            @guest
+                                <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
+                            @elseif (auth()->user()->hasRole('customer'))
+                                <form class="js-add-to-cart mb-2" action="{{ route('shop.cart.add', $product) }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button class="btn btn-primary btn-lg rounded-pill w-100" type="submit"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i><span>Add to cart</span></button>
+                                </form>
+                                <a class="btn btn-outline-primary rounded-pill w-100" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2" aria-hidden="true"></i>View cart</a>
+                            @else
+                                <p class="text-body-secondary">Sign in with a customer account to place an order.</p>
+                            @endguest
                             <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route('shop.public', ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>More {{ strtolower($types[$product->type] ?? $product->type) }}</a>
                         </div>
                     </div>
@@ -94,4 +105,9 @@
         @endif
     </div>
 </section>
+@auth
+    @if (auth()->user()->hasRole('customer'))
+        @include('shop.public.products._ajax-add-to-cart')
+    @endif
+@endauth
 @endsection

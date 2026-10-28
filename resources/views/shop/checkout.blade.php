@@ -10,7 +10,7 @@
     @unless ($chipEnabled)
         <div class="alert alert-warning" role="status">
             <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
-            CHiP checkout is not configured. Add sandbox credentials to enable order placement.
+            CHiP checkout is not configured. Add the API credentials from your CHiP merchant portal to enable order placement.
         </div>
     @endunless
     <form class="row g-3" method="POST" action="{{ route('shop.checkout.place') }}">
@@ -57,7 +57,7 @@
                 <div class="card-body">
                     <p class="small text-body-secondary">Stock is reserved when the order is created. Unpaid orders release their reservation if CHiP reports a failed or cancelled payment.</p>
                     <button class="btn btn-primary w-100" type="submit" @disabled(! $chipEnabled)>
-                        <i class="bi bi-lock me-2" aria-hidden="true"></i>Continue to CHiP sandbox
+                        <i class="bi bi-lock me-2" aria-hidden="true"></i>Continue to secure payment
                     </button>
                 </div>
             </div>

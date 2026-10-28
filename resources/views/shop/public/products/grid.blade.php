@@ -10,10 +10,14 @@
                 <div class="col-lg">
                     <span class="badge rounded-pill bg-white text-primary mb-3"><i class="bi bi-shop me-1" aria-hidden="true"></i>OMG Computer shop</span>
                     <h1 class="display-6 fw-bold text-1000 mb-2">Parts and PCs for your setup.</h1>
-                    <p class="lead text-700 mb-0">Explore computer parts, accessories, and ready-built PCs. Sign in to place an order.</p>
+                    <p class="lead text-700 mb-0">Explore computer parts, accessories, and ready-built PCs.@guest Sign in to place an order.@else @if(auth()->user()->hasRole('customer')) Add products to your cart and check out online.@else Sign in with a customer account to place an order.@endif @endguest</p>
                 </div>
                 <div class="col-lg-auto">
-                    <a class="btn btn-primary btn-lg rounded-pill px-4" href="{{ route('login') }}"><i class="bi bi-person me-2" aria-hidden="true"></i>Sign in to shop</a>
+                    @guest
+                        <a class="btn btn-primary btn-lg rounded-pill px-4" href="{{ route('login') }}"><i class="bi bi-person me-2" aria-hidden="true"></i>Sign in to shop</a>
+                    @elseif (auth()->user()->hasRole('customer'))
+                        <a class="btn btn-primary btn-lg rounded-pill px-4" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2" aria-hidden="true"></i>View cart</a>
+                    @endif
                 </div>
             </div>
             @include('shop.public.products._custom-pc-quote')
@@ -71,6 +75,15 @@
                             <p class="small text-700 mb-3 d-none d-sm-block">{{ \Illuminate\Support\Str::limit($product->description ?: 'Contact us for product details.', 90) }}</p>
                             <div class="mt-auto">
                                 <p class="h5 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</p>
+                                @auth
+                                    @if (auth()->user()->hasRole('customer'))
+                                        <form class="js-add-to-cart mb-2" action="{{ route('shop.cart.add', $product) }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="quantity" value="1">
+                                            <button class="btn btn-primary btn-sm w-100" type="submit"><i class="bi bi-cart-plus me-1" aria-hidden="true"></i><span>Add to cart</span></button>
+                                        </form>
+                                    @endif
+                                @endauth
                                 <a class="btn btn-outline-primary btn-sm w-100" href="{{ route('shop.public.products.show', $product) }}">View details<i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a>
                             </div>
                         </div>
@@ -95,4 +108,9 @@
         <p class="small text-body-secondary text-center mt-3 mb-0">Availability and pricing may change.</p>
     </div>
 </section>
+@auth
+    @if (auth()->user()->hasRole('customer'))
+        @include('shop.public.products._ajax-add-to-cart')
+    @endif
+@endauth
 @endsection

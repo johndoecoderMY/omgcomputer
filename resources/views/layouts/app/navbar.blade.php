@@ -56,9 +56,9 @@
                 <a class="nav-link px-0 notification-indicator notification-indicator-warning notification-indicator-fill"
                     href="{{ route('shop.cart') }}"
                     aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}"
-                    title="Shopping cart" data-cart-count>
+                    title="Shopping cart">
                     <span class="bi bi-cart3" style="font-size: 22px;" aria-hidden="true"></span>
-                    <span class="notification-indicator-number" style="width: auto; min-width: 1rem; padding: 0 .15rem;" aria-hidden="true">
+                    <span class="notification-indicator-number" style="width: auto; min-width: 1rem; padding: 0 .15rem;" aria-hidden="true" data-cart-count>
                         {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
                     </span>
                 </a>

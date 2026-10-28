@@ -33,10 +33,10 @@
                             @if (auth()->user()->hasRole('customer'))
                                 <li><a class="dropdown-item" href="{{ route('shop.my-orders.index') }}"><span class="bi bi-bag-check me-2" aria-hidden="true"></span>My orders</a></li>
                                 <li><a class="dropdown-item" href="{{ route('shop.tracking') }}"><span class="bi bi-truck me-2" aria-hidden="true"></span>Track parcel</a></li>
-                                <li><a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}"><span class="bi bi-cart3 me-2" aria-hidden="true"></span>Cart @if ($cartItemCount > 0)<span class="badge rounded-pill text-bg-primary ms-1">{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>@endif</a></li>
+                                <li><a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}"><span class="bi bi-cart3 me-2" aria-hidden="true"></span>Cart @if ($cartItemCount > 0)<span class="badge rounded-pill text-bg-primary ms-1" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>@endif</a></li>
                                 <li><hr class="dropdown-divider"></li>
                             @endif
-                            <li><a class="dropdown-item" href="{{ route('dashboard') }}"><span class="bi bi-speedometer2 me-2" aria-hidden="true"></span>Go to workspace</a></li>
+                            <li><a class="dropdown-item" href="{{ route('dashboard') }}"><span class="bi bi-speedometer2 me-2" aria-hidden="true"></span>Go to panel</a></li>
                             <li>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf

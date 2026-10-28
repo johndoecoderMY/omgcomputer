@@ -55,7 +55,7 @@
                             <li class="mb-2"><a class="link-600" href="{{ route('data-deletion.instructions') }}">Data deletion</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('terms') }}">Terms of service</a></li>
                             @auth
-                                <li><a class="link-600" href="{{ route('dashboard') }}">Go to workspace</a></li>
+                                <li><a class="link-600" href="{{ route('dashboard') }}">Go to panel</a></li>
                             @else
                                 <li><a class="link-600" href="{{ route('login') }}">Sign in</a></li>
                                 <li><a class="link-600" href="{{ route('register') }}">Create an account</a></li>

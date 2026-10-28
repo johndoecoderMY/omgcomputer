@@ -397,7 +397,7 @@ class ShopController extends Controller
 
     public function placeOrder(Request $request, ChipCollect $chip, WorkspaceNotifier $notifier): RedirectResponse
     {
-        abort_unless(config('services.chip.enabled'), 503, 'CHiP checkout is not configured. Set the sandbox credentials before placing shop orders.');
+        abort_unless(config('services.chip.enabled'), 503, 'CHiP checkout is not configured. Set the CHiP credentials before placing shop orders.');
         $data = $request->validate([
             'customer_address' => ['nullable', 'string', 'max:3000'],
             'notes' => ['nullable', 'string', 'max:2000'],
