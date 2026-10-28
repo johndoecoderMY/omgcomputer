@@ -655,12 +655,6 @@
                                 <span class="nav-link-text ps-1">Email Server Settings</span>
                             </div>
                         </a>
-                        <a class="nav-link" href="{{ route('admin.website-package.edit') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
-                                <span class="nav-link-text ps-1">Website Package</span>
-                            </div>
-                        </a>
                         <a class="nav-link" href="{{ route('admin.company-profile.edit') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-building"></span></span>

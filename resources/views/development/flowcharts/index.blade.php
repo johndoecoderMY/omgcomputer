@@ -8,6 +8,9 @@
         description="Map website journeys, site structures, sitemaps, business processes, product procedures, service SOPs, and student FYP support.">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('development.sops') }}"><i class="bi bi-book me-2"></i>SOP Library</a>
+            @if (auth()->user()->hasRole('admin'))
+                <a class="btn btn-outline-primary" href="{{ route('development.website-package.edit') }}"><i class="bi bi-box-seam me-2"></i>Website package</a>
+            @endif
             <a class="btn btn-primary" href="{{ route('development.flowcharts.create') }}">
                 <i class="bi bi-plus me-2"></i>New flow chart
             </a>

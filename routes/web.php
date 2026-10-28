@@ -148,10 +148,6 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'edit')->name('edit');
         Route::put('/', 'update')->name('update');
     });
-    Route::prefix('admin/website-package')->name('admin.website-package.')->middleware('role:admin')->controller(CompanyProfileController::class)->group(function (): void {
-        Route::get('/', 'websitePackage')->name('edit');
-        Route::put('/', 'updateWebsitePackage')->name('update');
-    });
     Route::prefix('admin/access')->name('admin.access.')->middleware('role:admin')->controller(AdminAccessController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/roles', 'storeRole')->name('roles.store');
@@ -521,6 +517,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('development')->name('development.')->group(function (): void {
         Route::get('/overview', [DevelopmentController::class, 'index'])->name('overview');
         Route::get('/plan', [DevelopmentController::class, 'plan'])->name('plan');
+        Route::get('/website-package', [CompanyProfileController::class, 'websitePackage'])->name('website-package.edit')->middleware('role:admin');
+        Route::put('/website-package', [CompanyProfileController::class, 'updateWebsitePackage'])->name('website-package.update')->middleware('role:admin');
         Route::get('/sops', [FlowChartController::class, 'sops'])->name('sops');
         Route::get('/sops/create', [FlowChartController::class, 'createSop'])->name('sops.create');
         Route::get('/sops/datatable', [FlowChartController::class, 'sopsDatatable'])->name('sops.datatable');

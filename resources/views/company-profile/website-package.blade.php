@@ -6,7 +6,7 @@
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Website management" title="Website package & structure"
         description="Customise the business platform package and preview the public, customer and admin website flow."
-        :back-url="route('dashboard')" back-label="Dashboard" />
+        :back-url="route('development.flowcharts.index')" back-label="Flow charts" />
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
@@ -24,13 +24,13 @@
 
     <div class="row g-3">
         <div class="col-xl-4">
-            <form class="card h-100" method="POST" action="{{ route('admin.website-package.update') }}">
+            <form class="card h-100" method="POST" action="{{ route('development.website-package.update') }}">
                 @csrf
                 @method('PUT')
                 <div class="card-header"><h2 class="h5 mb-0">Package configuration</h2></div>
                 <div class="card-body">
                     <label class="form-label" for="website-package-notes">Package summary</label>
-                    <textarea class="form-control mb-3" id="website-package-notes" name="website_package_notes" rows="5" maxlength="5000" placeholder="Describe the recommended website package.">{{ old('website_package_notes', $companyProfile->website_package_notes ?: 'One complete OMG Computer business platform: public website, customer portal, online shop, billing, repair operations and admin management.') }}</textarea>
+                    <textarea class="form-control mb-3" id="website-package-notes" name="website_package_notes" rows="5" maxlength="5000" placeholder="Describe the recommended website package.">{{ old('website_package_notes', $websitePackage->package_notes ?: 'One complete OMG Computer business platform: public website, customer portal, online shop, billing, repair operations and admin management.') }}</textarea>
                     <label class="form-label" for="website-pages">Public website structure</label>
                     <textarea class="form-control" id="website-pages" name="website_pages" rows="10" maxlength="8000" required>{{ old('website_pages', implode("\n", $pages)) }}</textarea>
                     <div class="form-text">Add one page per line. The flow chart updates while you edit.</div>

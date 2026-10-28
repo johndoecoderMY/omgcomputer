@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CompanyProfile;
+use App\Models\WebsitePackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
@@ -19,9 +20,9 @@ class CompanyProfileController extends Controller
 
     public function websitePackage(): View
     {
-        $companyProfile = CompanyProfile::current();
-        $pages = is_array($companyProfile->website_pages) && $companyProfile->website_pages !== []
-            ? $companyProfile->website_pages
+        $websitePackage = WebsitePackage::current();
+        $pages = is_array($websitePackage->pages) && $websitePackage->pages !== []
+            ? $websitePackage->pages
             : [
                 'Home / Landing page',
                 'Services and packages',
@@ -31,7 +32,7 @@ class CompanyProfileController extends Controller
                 'Contact us',
             ];
 
-        return view('company-profile.website-package', compact('companyProfile', 'pages'));
+        return view('company-profile.website-package', compact('websitePackage', 'pages'));
     }
 
     public function updateWebsitePackage(Request $request): RedirectResponse
@@ -53,14 +54,14 @@ class CompanyProfileController extends Controller
             return back()->withErrors(['website_pages' => 'Add at least one website page.'])->withInput();
         }
 
-        $profile = CompanyProfile::query()->firstOrNew(['id' => 'primary']);
-        $profile->fill([
-            'website_package_notes' => $data['website_package_notes'] ?: null,
-            'website_pages' => $pages,
+        $websitePackage = WebsitePackage::query()->firstOrNew(['id' => 'primary']);
+        $websitePackage->fill([
+            'package_notes' => $data['website_package_notes'] ?: null,
+            'pages' => $pages,
         ]);
-        $profile->save();
+        $websitePackage->save();
 
-        return Redirect::route('admin.website-package.edit')
+        return Redirect::route('development.website-package.edit')
             ->with('success', 'Website package and structure saved.');
     }
 
