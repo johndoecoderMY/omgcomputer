@@ -56,6 +56,8 @@ Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
 Route::view('/privacy', 'pages.privacy')->name('privacy');
+Route::view('/refund-policy', 'pages.refund-policy')->name('refund-policy');
+Route::view('/shipping-policy', 'pages.shipping-policy')->name('shipping-policy');
 Route::view('/data-deletion', 'pages.data-deletion')->name('data-deletion.instructions');
 Route::post('/webhooks/meta/data-deletion', [MetaDataDeletionController::class, 'callback'])
     ->middleware('throttle:30,1')
@@ -393,6 +395,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/whatsapp/check', 'checkWhatsapp')->name('whatsapp.check');
         Route::get('/parcel-tracking', 'parcelTracking')->name('tracking');
         Route::post('/parcel-tracking', 'trackParcel')->name('tracking.lookup');
+        Route::get('/chip', 'chip')->name('chip');
+        Route::post('/chip/check', 'checkChip')->name('chip.check');
     });
     Route::prefix('reports/integrations/whatsapp')->name('reports.integrations.whatsapp.')->middleware('role:admin')->controller(WhatsAppInboxController::class)->group(function (): void {
         Route::get('/inbox', 'index')->name('inbox');

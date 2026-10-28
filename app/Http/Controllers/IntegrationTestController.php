@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\IntegrationTestMail;
 use App\Notifications\IntegrationTestNotification;
+use App\Services\ChipCollect;
 use App\Services\CpanelEmailProvisioner;
 use App\Services\MailSettingsService;
 use App\Services\ParcelTrackingService;
@@ -192,6 +193,43 @@ class IntegrationTestController extends Controller
                 'code_verification_status' => $phone['code_verification_status'] ?? null,
                 'platform_type' => $phone['platform_type'] ?? null,
             ],
+        ]);
+    }
+
+    public function chip(): View
+    {
+        return view('reports.integrations.chip', [
+            'chipConfigured' => (bool) config('services.chip.enabled'),
+            'apiUrl' => config('services.chip.api_url'),
+            'brandIdConfigured' => filled(config('services.chip.brand_id')),
+            'secretKeyConfigured' => filled(config('services.chip.secret_key')),
+            'currency' => config('services.chip.currency', 'MYR'),
+        ]);
+    }
+
+    public function checkChip(ChipCollect $chip): RedirectResponse
+    {
+        if (! config('services.chip.enabled')) {
+            return back()->with('chip_result', [
+                'success' => false,
+                'message' => 'Configure CHIP_SECRET_KEY and CHIP_BRAND_ID in the server environment, then clear cached configuration.',
+            ]);
+        }
+
+        try {
+            $chip->testConnection();
+        } catch (\Throwable $exception) {
+            Log::warning('CHIP Collect connection test failed.', ['exception' => $exception::class]);
+
+            return back()->with('chip_result', [
+                'success' => false,
+                'message' => 'CHIP could not be reached or the configured credentials were rejected. Check CHIP_SECRET_KEY, CHIP_BRAND_ID, CHIP_API_URL, and the server network connection.',
+            ]);
+        }
+
+        return back()->with('chip_result', [
+            'success' => true,
+            'message' => 'CHIP Collect accepted the credentials and returned a valid callback public key.',
         ]);
     }
 

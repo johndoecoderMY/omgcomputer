@@ -9,6 +9,18 @@ use RuntimeException;
 
 class ChipCollect
 {
+    public function testConnection(): void
+    {
+        $key = $this->request()
+            ->get($this->endpoint('/public_key/'))
+            ->throw()
+            ->json();
+
+        if (! is_string($key) || openssl_pkey_get_public($key) === false) {
+            throw new RuntimeException('CHIP returned an invalid public key. Check the API URL and credentials.');
+        }
+    }
+
     public function createPurchase(array $payload): array
     {
         $response = $this->request()

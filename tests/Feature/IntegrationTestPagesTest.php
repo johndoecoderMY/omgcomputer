@@ -16,6 +16,56 @@ use Tests\TestCase;
 
 class IntegrationTestPagesTest extends TestCase
 {
+    public function test_admin_can_test_chip_connection_without_exposing_secret(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.chip.secret_key' => 'private-chip-secret',
+            'services.chip.brand_id' => 'brand-123',
+            'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
+            'services.chip.currency' => 'MYR',
+            'services.chip.enabled' => true,
+        ]);
+        $publicKey = "-----BEGIN PUBLIC KEY-----\n".
+            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPF3VE4+gT75ApxadwRf\n".
+            "bw4gGIx2d4xw9bK4SIi9kGvbRv1piftAl/cbqvjm5fE99q0UulHjU0MCQgLDvj5L\n".
+            "kSzspKhzIs3wkbu4/i+MBj78GMv4Qa453dTiVcZG5A0F1988gQPei8s0do281iXT\n".
+            "tW/o43CQXHKPnG7iIi47QCT7JoTI8iX8VJizMtfAowIGNWh803UuYbti4dRyic/C\n".
+            "grBkzuwHBbvtpcp8ncVQ6wKUkUn5ZbXBbrhBNmbXgDzQgsb4HErymjqYcd2ySyVD\n".
+            "1jNA1MMnJZhbDqrBRhYjsbUtJTrSpPlHD2XezGVKVQKzJVPemAbSS3/40zkaRAaD\n".
+            "EQIDAQAB\n-----END PUBLIC KEY-----";
+        Http::fake([
+            'https://gate.chip-in.asia/api/v1/public_key/' => Http::response(json_encode($publicKey), 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.chip'))
+            ->assertOk()
+            ->assertSee('CHIP Collect')
+            ->assertSee('gate.chip-in.asia')
+            ->assertDontSee('private-chip-secret');
+        $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
+            ->assertRedirect(route('reports.integrations.chip'));
+        Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'GET'
+            && $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
+            && $request->hasHeader('Authorization', 'Bearer private-chip-secret'));
+        $this->actingAs($admin)->get(route('reports.integrations.chip'))
+            ->assertOk()
+            ->assertSee('Connection successful')
+            ->assertDontSee('private-chip-secret');
+    }
+
+    public function test_chip_connection_test_requires_admin_access(): void
+    {
+        Role::findOrCreate('member', 'web');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+
+        $this->actingAs($member)->get(route('reports.integrations.chip'))->assertForbidden();
+        $this->actingAs($member)->post(route('reports.integrations.chip.check'))->assertForbidden();
+    }
+
     use RefreshDatabase;
 
     public function test_admin_can_test_cpanel_connection_without_exposing_the_api_token(): void

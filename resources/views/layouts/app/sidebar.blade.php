@@ -661,6 +661,12 @@
                                 <span class="nav-link-text ps-1">Parcel Tracker</span>
                             </div>
                         </a>
+                        <a class="nav-link" href="{{ route('reports.integrations.chip') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-credit-card"></span></span>
+                                <span class="nav-link-text ps-1">Test CHIP Collect</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('marketplace-shops.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-shop"></span></span>

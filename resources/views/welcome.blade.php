@@ -6,11 +6,15 @@
     @php
         $whatsappContactUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
         $configuredContactEmail = config('mail.from.address');
-        $contactEmail = is_string($configuredContactEmail)
-            && filter_var($configuredContactEmail, FILTER_VALIDATE_EMAIL)
-            && $configuredContactEmail !== 'hello@example.com'
-                ? $configuredContactEmail
-                : null;
+        $contactEmail = is_string($companyProfile->email) && filter_var($companyProfile->email, FILTER_VALIDATE_EMAIL)
+            ? $companyProfile->email
+            : (
+                is_string($configuredContactEmail)
+                && filter_var($configuredContactEmail, FILTER_VALIDATE_EMAIL)
+                && $configuredContactEmail !== 'hello@example.com'
+                    ? $configuredContactEmail
+                    : 'hello@omgcomputer.my'
+            );
     @endphp
     <section class="py-8 py-lg-10 bg-body-tertiary overflow-hidden" id="home" style="min-height: 78vh;">
         <div class="container">
@@ -22,14 +26,19 @@
                     <h1 class="display-2 fw-bold text-1000 mb-3">Computer trouble?<br><span class="text-primary">We can help.</span></h1>
                     <p class="lead text-700 mb-4">Friendly computer repairs and support, plus custom websites for businesses and organizations.</p>
                     <div class="d-flex flex-wrap gap-3">
-                        <a class="btn btn-primary btn-lg rounded-pill px-4" href="#services">Explore our services</a>
-                        <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ route('bookings.create') }}"><span class="bi bi-calendar-check me-2"></span>Book an appointment</a>
-                        <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Contact us</a>
+                        <a class="btn btn-success btn-lg rounded-pill px-4" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer">
+                            <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>WhatsApp
+                        </a>
+                        @if ($contactEmail)
+                            <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="mailto:{{ $contactEmail }}">
+                                <span class="bi bi-envelope me-2" aria-hidden="true"></span>Email
+                            </a>
+                        @endif
                         <a class="btn btn-outline-primary btn-lg rounded-pill px-4" href="{{ route('repairs.track.form') }}">
-                            <span class="bi bi-search me-2"></span>Track a repair
+                            <span class="bi bi-search me-2"></span>Track
                         </a>
                         <a class="btn btn-outline-secondary btn-lg rounded-pill px-4" href="{{ route('shop.public') }}">
-                            <span class="bi bi-shop me-2" aria-hidden="true"></span>Browse the shop
+                            <span class="bi bi-shop me-2" aria-hidden="true"></span>Shop
                         </a>
                     </div>
                     <div class="d-flex flex-wrap gap-4 mt-5 text-700">

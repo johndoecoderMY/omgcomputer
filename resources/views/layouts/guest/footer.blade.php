@@ -50,6 +50,8 @@
                             <li class="mb-2"><a class="link-600" href="{{ route('shop.public') }}">Shop computer parts</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('repairs.track.form') }}">Track a repair</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('privacy') }}">Privacy policy</a></li>
+                            <li class="mb-2"><a class="link-600" href="{{ route('refund-policy') }}">Refund policy</a></li>
+                            <li class="mb-2"><a class="link-600" href="{{ route('shipping-policy') }}">Shipping policy</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('data-deletion.instructions') }}">Data deletion</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ route('terms') }}">Terms of service</a></li>
                             @auth
