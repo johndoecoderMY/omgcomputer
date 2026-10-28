@@ -17,6 +17,53 @@ class CompanyProfileController extends Controller
         ]);
     }
 
+    public function websitePackage(): View
+    {
+        $companyProfile = CompanyProfile::current();
+        $pages = is_array($companyProfile->website_pages) && $companyProfile->website_pages !== []
+            ? $companyProfile->website_pages
+            : [
+                'Home / Landing page',
+                'Services and packages',
+                'Shop and ready-built PCs',
+                'Custom PC builder',
+                'Repair booking and tracking',
+                'Contact us',
+            ];
+
+        return view('company-profile.website-package', compact('companyProfile', 'pages'));
+    }
+
+    public function updateWebsitePackage(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'website_package_notes' => ['nullable', 'string', 'max:5000'],
+            'website_pages' => ['required', 'string', 'max:8000'],
+        ]);
+
+        $pages = collect(preg_split('/\r\n|\r|\n/', trim($data['website_pages'])) ?: [])
+            ->map(fn (string $page): string => trim($page))
+            ->filter()
+            ->unique()
+            ->take(30)
+            ->values()
+            ->all();
+
+        if ($pages === []) {
+            return back()->withErrors(['website_pages' => 'Add at least one website page.'])->withInput();
+        }
+
+        $profile = CompanyProfile::query()->firstOrNew(['id' => 'primary']);
+        $profile->fill([
+            'website_package_notes' => $data['website_package_notes'] ?: null,
+            'website_pages' => $pages,
+        ]);
+        $profile->save();
+
+        return Redirect::route('admin.website-package.edit')
+            ->with('success', 'Website package and structure saved.');
+    }
+
     public function update(Request $request): RedirectResponse
     {
         $data = $request->validate([

@@ -22,7 +22,16 @@ class CompanyProfile extends Model
         'email',
         'website_url',
         'facebook_url',
+        'website_package_notes',
+        'website_pages',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'website_pages' => 'array',
+        ];
+    }
 
     public static function current(): self
     {

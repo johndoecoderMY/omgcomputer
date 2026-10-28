@@ -148,6 +148,10 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'edit')->name('edit');
         Route::put('/', 'update')->name('update');
     });
+    Route::prefix('admin/website-package')->name('admin.website-package.')->middleware('role:admin')->controller(CompanyProfileController::class)->group(function (): void {
+        Route::get('/', 'websitePackage')->name('edit');
+        Route::put('/', 'updateWebsitePackage')->name('update');
+    });
     Route::prefix('admin/access')->name('admin.access.')->middleware('role:admin')->controller(AdminAccessController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/roles', 'storeRole')->name('roles.store');
