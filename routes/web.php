@@ -109,6 +109,7 @@ Route::redirect('/shop/preview/products', '/shop')->name('shop.legacy-preview.li
 Route::redirect('/shop/preview/products/{product}', '/shop')->name('shop.legacy-preview.product');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
+    Route::view('/customer/contact', 'customer.contact')->name('customer.contact');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');

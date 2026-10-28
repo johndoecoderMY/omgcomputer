@@ -9,7 +9,7 @@
         <x-slot name="actions">
             <a class="btn btn-primary" href="{{ route('bookings.account-create') }}"><i class="bi bi-calendar-plus me-2" aria-hidden="true"></i>Book a service</a>
             <a class="btn btn-outline-primary" href="{{ route('shop.panel') }}"><i class="bi bi-shop me-2" aria-hidden="true"></i>Browse shop</a>
-            <a class="btn btn-outline-secondary" href="{{ route('contact') }}"><i class="bi bi-headset me-2" aria-hidden="true"></i>Contact us</a>
+            <a class="btn btn-outline-secondary" href="{{ route('customer.contact') }}"><i class="bi bi-headset me-2" aria-hidden="true"></i>Contact us</a>
         </x-slot>
     </x-page-header>
 

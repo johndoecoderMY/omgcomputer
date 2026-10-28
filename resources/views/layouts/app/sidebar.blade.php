@@ -157,7 +157,7 @@
                                     <h2 class="h6 mb-1">Need help?</h2>
                                     <p class="small text-body-secondary mb-3">Get in touch with our team.</p>
                                     <div class="d-grid">
-                                        <a class="btn btn-sm btn-primary" href="{{ route('contact') }}">Contact us</a>
+                                        <a class="btn btn-sm btn-primary" href="{{ auth()->user()->hasRole('customer') ? route('customer.contact') : route('contact') }}">Contact us</a>
                                     </div>
                                 </div>
                             </div>

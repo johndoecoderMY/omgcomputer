@@ -30,6 +30,7 @@ class EnsureWorkspacePermission
         }
 
         if (in_array((string) $request->route()?->getName(), [
+            'customer.contact',
             'email.inbox',
             'email.poll',
             'email.compose',
