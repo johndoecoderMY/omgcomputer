@@ -44,6 +44,8 @@ class EnsureWorkspacePermission
             'billing.chip.checkout',
             'billing.chip.return',
             'shop.chip.return',
+            'shop.panel',
+            'shop.panel.products.show',
             'shop.tracking',
             'shop.tracking.lookup',
             'shop.my-orders.index',
