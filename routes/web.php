@@ -310,6 +310,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
         Route::put('/{document}', 'update')->name('documents.update');
         Route::post('/{document}/quotation-status', 'updateQuotationStatus')->name('documents.quotation-status');
+        Route::post('/{document}/send', 'sendQuotation')->name('documents.send');
         Route::get('/{document}', 'show')->name('documents.show');
         Route::post('/{document}/issue', 'issue')->name('documents.convert');
         Route::post('/{document}/payments', 'storePayment')->name('documents.payments.store');

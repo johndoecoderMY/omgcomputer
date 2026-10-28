@@ -18,12 +18,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\QuotationMail;
+use App\Services\MailSettingsService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Mpdf\Mpdf;
 use Spatie\QueryBuilder\AllowedFilter;
+use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
 class BillingController extends Controller
@@ -479,7 +484,7 @@ class BillingController extends Controller
 
     public function updateQuotationStatus(BillingDocument $document, Request $request): RedirectResponse
     {
-        abort_unless($request->user()->hasRole('admin'), 403);
+        abort_unless(! $request->user()->hasRole('customer'), 403);
 
         $data = $request->validate([
             'status' => ['required', Rule::in(['sent', 'accepted', 'rejected'])],
@@ -511,6 +516,44 @@ class BillingController extends Controller
         return redirect()
             ->route('billing.documents.show', $document)
             ->with('success', 'Quotation status updated.');
+    }
+
+    public function sendQuotation(BillingDocument $document, Request $request): RedirectResponse
+    {
+        abort_unless(! $request->user()->hasRole('customer'), 403);
+        abort_unless($document->type === 'quotation', 404);
+        abort_unless(in_array($document->status, ['draft', 'sent', 'rejected'], true), 422, 'This quotation cannot be sent in its current status.');
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ]);
+
+        try {
+            app(MailSettingsService::class)->apply();
+            $document->load(['items', 'payments']);
+            $pdf = $this->renderPdf($document);
+            Mail::to($data['email'])->send(new QuotationMail(
+                $document,
+                $pdf,
+                strtolower($document->number).'.pdf',
+            ));
+        } catch (Throwable $exception) {
+            Log::warning('Quotation email could not be sent.', [
+                'document_id' => $document->id,
+                'email' => $data['email'],
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return back()->with('error', 'The quotation email could not be sent. Check the email server settings and try again.');
+        }
+
+        $document->update([
+            'customer_email' => $data['email'],
+            'status' => 'sent',
+        ]);
+
+        return back()->with('success', 'Quotation '.$document->number.' was sent to '.$data['email'].'.');
     }
 
     public function storePayment(BillingDocument $document, Request $request): RedirectResponse
@@ -575,6 +618,15 @@ class BillingController extends Controller
     {
         $this->authorizeCustomerDocument($request, $document);
         $document->load(['items', 'payments']);
+        $filename = strtolower($document->number).'.pdf';
+
+        return response($this->renderPdf($document))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
+    }
+
+    private function renderPdf(BillingDocument $document): string
+    {
         $tempDirectory = storage_path('app/mpdf-tmp');
         File::ensureDirectoryExists($tempDirectory);
         $logoPath = public_path('assets/img/omg/logoex2.png');
@@ -582,11 +634,8 @@ class BillingController extends Controller
         $companyProfile = CompanyProfile::current();
         $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
         $mpdf->WriteHTML(view('billing.pdf', compact('document', 'logoData', 'companyProfile'))->render());
-        $filename = strtolower($document->number).'.pdf';
 
-        return response($mpdf->Output($filename, 'S'))
-            ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
+        return $mpdf->Output(strtolower($document->number).'.pdf', 'S');
     }
 
     private function validateLineItems(array $items): void
