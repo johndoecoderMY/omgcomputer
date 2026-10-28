@@ -39,30 +39,9 @@
         </li>
 
         @if (auth()->user()->hasRole('customer'))
-            <li class="nav-item d-none d-sm-block">
-                <a class="nav-link px-2" href="{{ route('shop.tracking') }}" title="Track a parcel">
-                    <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>Track parcel
-                </a>
-            </li>
-            <li class="nav-item d-none d-sm-block">
-                <a class="nav-link px-2" href="{{ route('shop.my-orders.index') }}" title="My shop orders">
-                    <span class="bi bi-receipt me-1" aria-hidden="true"></span>My orders
-                </a>
-            </li>
             @php
                 $cartItemCount = collect(session('shop_cart', []))->sum();
             @endphp
-            <li class="nav-item d-none d-sm-block">
-                <a class="nav-link px-0 notification-indicator notification-indicator-warning notification-indicator-fill"
-                    href="{{ route('shop.cart') }}"
-                    aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}"
-                    title="Shopping cart">
-                    <span class="bi bi-cart3" style="font-size: 22px;" aria-hidden="true"></span>
-                    <span class="notification-indicator-number" style="width: auto; min-width: 1rem; padding: 0 .15rem;" aria-hidden="true" data-cart-count>
-                        {{ $cartItemCount > 99 ? '99+' : $cartItemCount }}
-                    </span>
-                </a>
-            </li>
         @endif
 
         @auth
@@ -91,6 +70,19 @@
                         <div class="small text-body-secondary text-break">{{ auth()->user()->email }}</div>
                     </div>
                     <div class="dropdown-divider"></div>
+                    @if (auth()->user()->hasRole('customer'))
+                        <a class="dropdown-item" href="{{ route('shop.tracking') }}">
+                            <span class="bi bi-geo-alt me-2 text-body-secondary" aria-hidden="true"></span>Track parcel
+                        </a>
+                        <a class="dropdown-item" href="{{ route('shop.my-orders.index') }}">
+                            <span class="bi bi-receipt me-2 text-body-secondary" aria-hidden="true"></span>My orders
+                        </a>
+                        <a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}">
+                            <span class="bi bi-cart3 me-2 text-body-secondary" aria-hidden="true"></span>Cart
+                            <span class="notification-indicator-number" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                    @endif
                     <a class="dropdown-item" href="{{ route('profile.edit') }}">
                         <span class="bi bi-person me-2 text-body-secondary" aria-hidden="true"></span>Profile and account
                     </a>
