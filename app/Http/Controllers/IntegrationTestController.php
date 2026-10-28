@@ -123,9 +123,29 @@ class IntegrationTestController extends Controller
         $document->id = 1;
         $document->exists = true;
 
-        $emailHtml = view('emails.quotation', compact('document'))->render();
+        $previews = [
+            'quotation' => [
+                'label' => 'Quotation',
+                'subject' => 'Quotation '.$document->number.' from OMG Computer',
+                'html' => view('emails.quotation', compact('document'))->render(),
+            ],
+            'member_invitation' => [
+                'label' => 'Member invitation',
+                'subject' => 'Verify your email and set up your OMG Computer account',
+                'html' => view('emails.member-invitation', [
+                    'recipientName' => 'Sample Member',
+                    'invitationUrl' => url('/verify-email/sample-preview'),
+                ])->render(),
+            ],
+            'test_email' => [
+                'label' => 'Test email',
+                'subject' => 'OMG Computer test email',
+                'html' => view('emails.integration-test', ['recipientName' => 'Sample User'])->render(),
+            ],
+        ];
+        $emailHtml = $previews['quotation']['html'];
 
-        return view('reports.integrations.email-preview', compact('document', 'emailHtml'));
+        return view('reports.integrations.email-preview', compact('document', 'emailHtml', 'previews'));
     }
 
     public function whatsapp(): View
