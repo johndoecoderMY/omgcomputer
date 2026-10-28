@@ -31,16 +31,25 @@
         </div>
     </div>
 
-    <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">Quotation email</h2>
+    <div class="card overflow-hidden">
+        <div class="card-header bg-body-tertiary d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <div>
+                <div class="small text-body-secondary">Subject</div>
+                <div class="fw-semibold">Quotation {{ $document->number }} from OMG Computer</div>
+            </div>
             <div class="btn-group" role="group" aria-label="Preview width">
-                <button class="btn btn-sm btn-outline-secondary active" type="button" data-preview-width="100%">Desktop</button>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-preview-width="390px">Mobile</button>
+                <button class="btn btn-sm btn-outline-secondary active" type="button" data-preview-width="100%">
+                    <span class="bi bi-display me-1"></span>Desktop
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-preview-width="390px">
+                    <span class="bi bi-phone me-1"></span>Mobile
+                </button>
             </div>
         </div>
-        <div class="bg-body-tertiary rounded border p-3 overflow-auto">
-            <iframe id="quotation-email-preview" title="Quotation email preview" class="bg-white border rounded mx-auto d-block" style="width:100%;max-width:100%;min-height:620px;border:0"></iframe>
+        <div class="bg-body-secondary-subtle p-3 p-md-4 overflow-auto">
+            <div class="mx-auto" style="max-width:100%" id="email-preview-shell">
+                <iframe id="quotation-email-preview" title="Quotation email preview" class="bg-white border-0 rounded-3 mx-auto d-block" style="width:100%;max-width:100%;height:780px;"></iframe>
+            </div>
         </div>
     </div>
 </div>

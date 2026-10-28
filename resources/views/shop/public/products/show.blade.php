@@ -1,5 +1,48 @@
 @extends(auth()->check() && auth()->user()->hasRole('customer') ? 'layouts.app' : 'layouts.guest')
 
+@php
+    $specifications = collect();
+
+    foreach (preg_split('/\r\n|\r|\n/', trim((string) $product->description)) ?: [] as $line) {
+        $line = trim(preg_replace('/^[\s]*[-*•]\s*/u', '', trim($line)));
+        if ($line === '') {
+            continue;
+        }
+
+        if (preg_match('/^([^:]{1,50}):\s*(.+)$/u', $line, $matches)) {
+            $specifications->push(['label' => trim($matches[1]), 'value' => trim($matches[2])]);
+        }
+    }
+
+    if ($specifications->isEmpty() && filled($product->description)) {
+        $detailText = preg_replace('/^Sample ready-built (?:office|gaming|performance )?desktop with\s*/iu', '', (string) $product->description);
+        $detailText = preg_replace('/\.$/', '', $detailText ?? '');
+        $detailParts = preg_split('/,\s*(?=AMD|GeForce|NVIDIA|Intel|[0-9]|Wi-Fi|Windows)|,\s+and\s+|\s+and\s+(?=[0-9]|Wi-Fi|Windows)/iu', $detailText ?? '') ?: [];
+
+        foreach ($detailParts as $detail) {
+            $detail = trim($detail);
+            if ($detail === '') {
+                continue;
+            }
+
+            $label = match (true) {
+                preg_match('/AMD Ryzen|AMD EPYC|Intel Core/i', $detail) === 1 => 'Processor',
+                preg_match('/GeForce|Radeon|RTX|GTX/i', $detail) === 1 => 'Graphics',
+                preg_match('/DDR[345]|memory/i', $detail) === 1 => 'Memory',
+                preg_match('/NVMe|SSD|HDD/i', $detail) === 1 => 'Storage',
+                preg_match('/power supply|W power/i', $detail) === 1 => 'Power supply',
+                preg_match('/Wi-Fi/i', $detail) === 1 => 'Connectivity',
+                preg_match('/Windows/i', $detail) === 1 => 'Operating system',
+                default => null,
+            };
+
+            if ($label) {
+                $specifications->push(['label' => $label, 'value' => $detail]);
+            }
+        }
+    }
+@endphp
+
 @section('title', $product->name.' | OMG Computer')
 
 @section('content')
@@ -25,11 +68,11 @@
                         <span class="badge rounded-pill badge-subtle-primary align-self-start mb-3">{{ $types[$product->type] ?? $product->type }}</span>
                         <h1 class="display-6 fw-bold text-1000 mb-3">{{ $product->name }}</h1>
                         <p class="h2 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</p>
-                        <div class="d-flex align-items-center gap-2 text-success mb-4">
-                            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                            <span class="fw-semibold">In stock</span>
+                        <div class="d-flex align-items-center gap-2 {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }} mb-4">
+                            <i class="bi {{ $product->stock_quantity > 0 ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }}" aria-hidden="true"></i>
+                            <span class="fw-semibold">{{ $product->stock_quantity > 0 ? 'In stock' : 'Out of stock' }}</span>
                         </div>
-                        <p class="text-700 mb-4">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
+                        <p class="text-700 mb-4 text-pre-line">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
 
                         <div class="border-top pt-4 mt-auto">
                             <p class="small text-body-secondary mb-3">Availability and pricing may change.</p>
@@ -59,7 +102,7 @@
                 <section class="card border-0 shadow-sm h-100" aria-labelledby="product-information-title">
                     <div class="card-body p-4">
                         <h2 class="h5 text-1000 mb-3" id="product-information-title">Product information</h2>
-                        <p class="text-700 mb-0">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
+                        <p class="text-700 mb-0 text-pre-line">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
                     </div>
                 </section>
             </div>
@@ -68,13 +111,19 @@
                     <div class="card-body p-4">
                         <h2 class="h5 text-1000 mb-3" id="product-specifications-title">Specifications</h2>
                         <dl class="mb-0">
-                            <div class="d-flex justify-content-between gap-3 py-2 border-bottom">
+                            @foreach ($specifications as $specification)
+                                <div class="d-flex justify-content-between gap-3 py-2 border-bottom">
+                                    <dt class="fw-normal text-body-secondary flex-shrink-0">{{ $specification['label'] }}</dt>
+                                    <dd class="mb-0 text-end">{{ $specification['value'] }}</dd>
+                                </div>
+                            @endforeach
+                            <div class="d-flex justify-content-between gap-3 py-2 {{ $specifications->isNotEmpty() ? 'border-top mt-2' : '' }}">
                                 <dt class="fw-normal text-body-secondary">Category</dt>
                                 <dd class="mb-0 text-end">{{ $types[$product->type] ?? $product->type }}</dd>
                             </div>
                             <div class="d-flex justify-content-between gap-3 py-2">
                                 <dt class="fw-normal text-body-secondary">Availability</dt>
-                                <dd class="mb-0 text-success fw-semibold">In stock</dd>
+                                <dd class="mb-0 {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }} fw-semibold">{{ $product->stock_quantity > 0 ? 'In stock' : 'Out of stock' }}</dd>
                             </div>
                         </dl>
                     </div>
