@@ -19,7 +19,27 @@ class Project extends Model
         'customer_user_id',
         'description',
         'requirements_notes',
+        'business_background',
+        'user_roles',
+        'objectives',
+        'problem_statement',
+        'proposed_solution',
+        'scope_in',
+        'scope_out',
+        'planning_status',
+        'start_date',
+        'target_end_date',
+        'budget',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'target_end_date' => 'date',
+            'budget' => 'decimal:2',
+        ];
+    }
 
     protected static function booted(): void
     {
@@ -109,6 +129,21 @@ class Project extends Model
     public function requirements(): HasMany
     {
         return $this->hasMany(ProjectRequirement::class)->orderBy('sort_order');
+    }
+
+    public function modules(): HasMany
+    {
+        return $this->hasMany(ProjectModule::class)->orderBy('sort_order');
+    }
+
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(ProjectMilestone::class)->orderBy('sort_order');
+    }
+
+    public function qualityItems(): HasMany
+    {
+        return $this->hasMany(ProjectQualityItem::class);
     }
 
     public function links(): HasMany

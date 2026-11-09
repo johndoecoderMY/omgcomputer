@@ -48,19 +48,26 @@
             return query.split(/\s+/).every(matchesFuzzy) ? data : null;
         };
 
-        $('select.js-project-search, select.js-user-search').each(function () {
-            const select = $(this);
-            const modal = select.closest('.modal');
+        window.initializeProjectAjaxControls = (container = document) => {
+            window.jQuery(container).find('select.js-project-search, select.js-user-search')
+                .addBack('select.js-project-search, select.js-user-search').each(function () {
+                    const select = window.jQuery(this);
+                    if (select.hasClass('select2-hidden-accessible')) {
+                        return;
+                    }
+                    const modal = select.closest('.modal');
 
-            select.select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: select.data('placeholder'),
-                allowClear: !select.prop('multiple'),
-                matcher: fuzzySelectMatcher,
-                dropdownParent: modal.length ? modal : $(document.body),
-            });
-        });
+                    select.select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        placeholder: select.data('placeholder'),
+                        allowClear: !select.prop('multiple'),
+                        matcher: fuzzySelectMatcher,
+                        dropdownParent: modal.length ? modal : window.jQuery(document.body),
+                    });
+                });
+        };
+        window.initializeProjectAjaxControls();
 
         window.jQuery.fn.dataTable.ext.errMode = 'none';
 

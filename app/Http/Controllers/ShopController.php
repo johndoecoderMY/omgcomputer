@@ -107,17 +107,22 @@ class ShopController extends Controller
             'power_supply',
             'case',
             'cooling',
+            'operating_system',
+            'software',
         ];
+        $additionalComponentTypes = ['peripheral', 'other'];
+        $builderComponentTypes = [...$componentTypes, ...$additionalComponentTypes];
 
         return view('shop.custom-pc-builder', [
             'components' => InventoryPart::query()
-                ->whereIn('type', $componentTypes)
+                ->whereIn('type', $builderComponentTypes)
                 ->where('stock_quantity', '>', 0)
                 ->orderBy('type')
                 ->orderBy('name')
                 ->get()
                 ->groupBy('type'),
             'componentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($componentTypes)),
+            'additionalComponentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($additionalComponentTypes)),
             'taxRate' => config('billing.tax_rate', 6),
         ]);
     }

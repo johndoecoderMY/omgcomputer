@@ -32,6 +32,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectEventController;
 use App\Http\Controllers\ProjectExportController;
+use App\Http\Controllers\ProjectPlanningController;
 use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
@@ -41,9 +42,11 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WhatsAppInboxController;
 use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Controllers\WebsitePreviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
+Route::get('/website-previews', [WebsitePreviewController::class, 'index'])->name('website-previews.index');
 Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
     ->name('repairs.track.form');
 Route::post('/track-repair', [RepairTicketController::class, 'track'])
@@ -456,6 +459,23 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('projects')->name('projects.')->group(function (): void {
         Route::get('/datatable', [ProjectController::class, 'datatable'])->name('datatable');
         Route::middleware('not-customer')->group(function (): void {
+            Route::get('/{project}/planning', [ProjectPlanningController::class, 'show'])->name('planning');
+            Route::put('/{project}/planning/overview', [ProjectPlanningController::class, 'updateOverview'])->name('planning.overview.update');
+            Route::post('/{project}/planning/requirements', [ProjectPlanningController::class, 'storeRequirement'])->name('planning.requirements.store');
+            Route::put('/{project}/planning/requirements/{requirement}', [ProjectPlanningController::class, 'updateRequirement'])->name('planning.requirements.update');
+            Route::delete('/{project}/planning/requirements/{requirement}', [ProjectPlanningController::class, 'destroyRequirement'])->name('planning.requirements.destroy');
+            Route::post('/{project}/planning/modules', [ProjectPlanningController::class, 'storeModule'])->name('planning.modules.store');
+            Route::put('/{project}/planning/modules/{module}', [ProjectPlanningController::class, 'updateModule'])->name('planning.modules.update');
+            Route::delete('/{project}/planning/modules/{module}', [ProjectPlanningController::class, 'destroyModule'])->name('planning.modules.destroy');
+            Route::post('/{project}/planning/modules/{module}/features', [ProjectPlanningController::class, 'storeFeature'])->name('planning.features.store');
+            Route::put('/{project}/planning/modules/{module}/features/{feature}', [ProjectPlanningController::class, 'updateFeature'])->name('planning.features.update');
+            Route::delete('/{project}/planning/modules/{module}/features/{feature}', [ProjectPlanningController::class, 'destroyFeature'])->name('planning.features.destroy');
+            Route::post('/{project}/planning/milestones', [ProjectPlanningController::class, 'storeMilestone'])->name('planning.milestones.store');
+            Route::put('/{project}/planning/milestones/{milestone}', [ProjectPlanningController::class, 'updateMilestone'])->name('planning.milestones.update');
+            Route::delete('/{project}/planning/milestones/{milestone}', [ProjectPlanningController::class, 'destroyMilestone'])->name('planning.milestones.destroy');
+            Route::post('/{project}/planning/quality-items', [ProjectPlanningController::class, 'storeQualityItem'])->name('planning.quality-items.store');
+            Route::put('/{project}/planning/quality-items/{item}', [ProjectPlanningController::class, 'updateQualityItem'])->name('planning.quality-items.update');
+            Route::delete('/{project}/planning/quality-items/{item}', [ProjectPlanningController::class, 'destroyQualityItem'])->name('planning.quality-items.destroy');
             Route::get('/{project}/calendar/events', [ProjectEventController::class, 'projectEvents'])->name('calendar.events');
             Route::get('/{project}/calendar', [ProjectEventController::class, 'projectIndex'])->name('calendar');
             Route::get('/create', [ProjectController::class, 'create'])->name('create');
@@ -517,6 +537,14 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('development')->name('development.')->group(function (): void {
         Route::get('/overview', [DevelopmentController::class, 'index'])->name('overview');
         Route::get('/plan', [DevelopmentController::class, 'plan'])->name('plan');
+        Route::middleware('role:admin')->prefix('website-previews')->name('website-previews.')->controller(WebsitePreviewController::class)->group(function (): void {
+            Route::get('/', 'manage')->name('manage');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{websitePreview}/edit', 'edit')->name('edit');
+            Route::put('/{websitePreview}', 'update')->name('update');
+            Route::delete('/{websitePreview}', 'destroy')->name('destroy');
+        });
         Route::get('/website-package', [CompanyProfileController::class, 'websitePackage'])->name('website-package.edit')->middleware('role:admin');
         Route::put('/website-package', [CompanyProfileController::class, 'updateWebsitePackage'])->name('website-package.update')->middleware('role:admin');
         Route::get('/sops', [FlowChartController::class, 'sops'])->name('sops');

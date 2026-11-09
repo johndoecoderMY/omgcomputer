@@ -14,6 +14,11 @@
                 id="update_password_password" name="password" type="password" autocomplete="new-password" required>
             @error('password', 'updatePassword')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
+        <div class="col-md-6">
+            <label class="form-label" for="update_password_password_confirmation">Confirm new password</label>
+            <input class="form-control" id="update_password_password_confirmation"
+                name="password_confirmation" type="password" autocomplete="new-password" required>
+        </div>
     </div>
     <div class="d-flex justify-content-end mt-3">
         <button class="btn btn-primary" type="submit">Change password</button>

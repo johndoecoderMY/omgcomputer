@@ -19,6 +19,7 @@ class BusinessPlanTaskSeeder extends Seeder
             [
                 'title' => 'Validate the repair shop location and requirements',
                 'description' => 'Confirm the Kampar location, operating costs, business registration, and local licensing before committing capital.',
+                'status' => 'done',
                 'subtasks' => [
                     'Compare premises rent, utilities, deposits, and lease terms',
                     'Confirm business registration and local council requirements',
@@ -54,29 +55,52 @@ class BusinessPlanTaskSeeder extends Seeder
             ],
         ];
 
+        $completedSubtasks = [
+            'Compare premises rent, utilities, deposits, and lease terms',
+            'Confirm business registration and local council requirements',
+            'Register OMG Computer with SSM',
+            'Register OMG Computer on Meta for business pages and social media',
+        ];
+
         foreach ($plan as $item) {
             $task = Task::query()->firstOrCreate(
                 ['project_id' => $project->id, 'title' => $item['title']],
                 [
                     'description' => $item['description'],
-                    'status' => 'backlog',
+                    'status' => $item['status'] ?? 'backlog',
                     'priority' => 'medium',
                 ],
             );
 
+            if (($item['status'] ?? null) === 'done' && $task->status !== 'done') {
+                $task->update(['status' => 'done']);
+            }
+
             foreach ($item['subtasks'] as $subtaskTitle) {
-                Task::query()->firstOrCreate(
+                $isCompleted = in_array($subtaskTitle, $completedSubtasks, true);
+                $description = $subtaskTitle === 'Register for a payment gateway'
+                    ? 'Business plan implementation task. Selected payment gateway provider: Chips-In Asia.'
+                    : 'Business plan implementation task.';
+                $subtask = Task::query()->firstOrCreate(
                     [
                         'project_id' => $project->id,
                         'parent_task_id' => $task->id,
                         'title' => $subtaskTitle,
                     ],
                     [
-                        'description' => 'Business plan implementation task.',
-                        'status' => 'backlog',
+                        'description' => $description,
+                        'status' => $isCompleted ? 'done' : 'backlog',
                         'priority' => 'medium',
                     ],
                 );
+
+                if ($isCompleted && $subtask->status !== 'done') {
+                    $subtask->update(['status' => 'done']);
+                }
+
+                if ($subtaskTitle === 'Register for a payment gateway' && $subtask->description !== $description) {
+                    $subtask->update(['description' => $description]);
+                }
             }
         }
     }

@@ -70,11 +70,12 @@ return [
     ],
 
     'chip' => [
-        'secret_key' => env('CHIP_SECRET_KEY'),
+        'secret_key' => env('CHIP_SECRET_KEY') ?: env('CHIP_SECRET_KEY_TEST'),
+        'test_secret_key' => env('CHIP_SECRET_KEY_TEST'),
         'brand_id' => env('CHIP_BRAND_ID'),
         'api_url' => env('CHIP_API_URL', 'https://gate.chip-in.asia/api/v1'),
         'currency' => env('CHIP_CURRENCY', 'MYR'),
-        'enabled' => filled(env('CHIP_SECRET_KEY')) && filled(env('CHIP_BRAND_ID')),
+        'enabled' => filled(env('CHIP_SECRET_KEY') ?: env('CHIP_SECRET_KEY_TEST')) && filled(env('CHIP_BRAND_ID')),
     ],
 
     'marketplaces' => [

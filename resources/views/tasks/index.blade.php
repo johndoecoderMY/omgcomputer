@@ -3,57 +3,118 @@
 @section('title', $project ? $project->name.' Tasks' : 'My Tasks')
 
 @section('content')
-<div class="container-fluid py-3">
+<style>
+    .task-filter-fab,
+    .task-view-fab {
+        display: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .task-filter-fab,
+        .task-view-fab {
+            position: fixed;
+            right: 1rem;
+            z-index: 1030;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 .5rem 1.25rem rgba(23, 32, 51, .28);
+        }
+
+        .task-filter-fab {
+            bottom: 1rem;
+        }
+
+        .task-view-fab {
+            bottom: 4.5rem;
+        }
+    }
+</style>
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header :eyebrow="$project?->name ?? 'System'" :title="$project ? 'Tasks' : 'My Tasks'"
         :description="$project ? 'Review tasks and subtasks for '.$project->name.'.' : 'Review tasks and subtasks across all projects.'"
         :back-url="$project ? route('projects.show', $project) : null"
         back-label="Back to project">
         <x-slot:actions>
-            <a class="btn btn-primary" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}">
+            <a class="btn btn-primary" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}" data-project-ajax-modal>
                 <i class="bi bi-plus me-2"></i>Add task
             </a>
         </x-slot:actions>
     </x-page-header>
 
-    <div class="d-flex justify-content-end mb-3">
-        <div class="btn-group" role="group" aria-label="Task view">
-            <button class="btn btn-outline-secondary active" type="button" data-task-view="list" aria-pressed="true">
-                <i class="bi bi-list me-1"></i>List
-            </button>
-            <button class="btn btn-outline-secondary" type="button" data-task-view="kanban" aria-pressed="false">
-                <i class="bi bi-layout-three-columns me-1"></i>Kanban
-            </button>
-        </div>
+    <div class="d-flex justify-content-end gap-2 mb-3">
+        <button class="btn btn-outline-primary d-none d-lg-inline-flex" type="button" data-task-filter-trigger data-bs-toggle="modal" data-bs-target="#task-filters-modal">
+            <i class="bi bi-filter me-2" aria-hidden="true"></i>Filters
+        </button>
+        <button class="btn btn-outline-secondary d-none d-lg-inline-flex" type="button" aria-label="Task view" data-bs-toggle="modal" data-bs-target="#task-view-modal">
+            <i class="bi bi-layout-three-columns me-2" aria-hidden="true"></i><span data-task-view-label>List view</span>
+        </button>
     </div>
 
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
 
-    <div class="card card-body mb-3 p-2" data-task-filters>
-        <div class="row g-2 align-items-end">
-            <div class="col-sm-5 col-lg-3">
-                <label class="form-label" for="task-status">Status</label>
-                <select class="form-select" id="task-status" data-datatable-filter>
-                    <option value="">All statuses</option>
-                    @foreach ($statuses as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                    @endforeach
-                </select>
+    <button class="task-filter-fab btn btn-primary rounded-pill px-4 py-3" type="button" data-task-filter-trigger data-bs-toggle="modal" data-bs-target="#task-filters-modal">
+        <i class="bi bi-filter me-2" aria-hidden="true"></i>Filters
+    </button>
+    <button class="task-view-fab btn btn-outline-primary rounded-pill px-4 py-3" type="button" aria-label="Task view" data-bs-toggle="modal" data-bs-target="#task-view-modal">
+        <i class="bi bi-layout-three-columns me-2" aria-hidden="true"></i><span data-task-view-label>List view</span>
+    </button>
+
+    <div class="modal fade" id="task-filters-modal" tabindex="-1" aria-labelledby="task-filters-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="task-filters-title">Filter tasks</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" data-task-filters>
+                    <div class="mb-3">
+                        <label class="form-label" for="task-status">Status</label>
+                        <select class="form-select" id="task-status" data-datatable-filter>
+                            <option value="">All statuses</option>
+                            @foreach ($statuses as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="task-priority">Priority</label>
+                        <select class="form-select" id="task-priority" data-datatable-filter>
+                            <option value="">All priorities</option>
+                            @foreach ($priorities as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="task-search">Search tasks</label>
+                        <input class="form-control" id="task-search" type="search" data-datatable-search
+                            placeholder="Search tasks, projects, or assignees">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-task-filter-reset>Reset</button>
+                    <button class="btn btn-primary" type="button" data-bs-dismiss="modal">Done</button>
+                </div>
             </div>
-            <div class="col-sm-5 col-lg-3">
-                <label class="form-label" for="task-priority">Priority</label>
-                <select class="form-select" id="task-priority" data-datatable-filter>
-                    <option value="">All priorities</option>
-                    @foreach ($priorities as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-sm-5 col-lg-3">
-                <label class="form-label" for="task-search">Search tasks</label>
-                <input class="form-control" id="task-search" type="search" data-datatable-search
-                    placeholder="Search tasks, projects, or assignees">
+        </div>
+    </div>
+    <div class="modal fade" id="task-view-modal" tabindex="-1" aria-labelledby="task-view-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="task-view-title">Choose task view</h2>
+                    <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body d-grid gap-2">
+                    <button class="btn btn-outline-secondary active" type="button" data-task-view="list" aria-pressed="true" data-bs-dismiss="modal">
+                        <i class="bi bi-list me-2" aria-hidden="true"></i>List
+                    </button>
+                    <button class="btn btn-outline-secondary" type="button" data-task-view="kanban" aria-pressed="false" data-bs-dismiss="modal">
+                        <i class="bi bi-layout-three-columns me-2" aria-hidden="true"></i>Kanban
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -90,7 +151,7 @@
                 <span class="small text-body-secondary"><span data-task-total>{{ count($boardTasks) }}</span> tasks</span>
             </div>
             <div class="col-auto">
-                <a class="btn btn-sm btn-falcon-default" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}">
+                <a class="btn btn-sm btn-falcon-default" href="{{ $project ? route('projects.tasks.create', $project) : route('tasks.create') }}" data-project-ajax-modal>
                     <span class="bi bi-plus me-2" aria-hidden="true"></span>Add task
                 </a>
             </div>
@@ -243,11 +304,12 @@
     .task-kanban-drag-handle:active { cursor: grabbing; }
 </style>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    const initializeTaskBoard = () => {
         const board = document.querySelector('[data-task-kanban]');
         const listView = document.querySelector('[data-task-list-view]');
         const boardView = document.querySelector('[data-task-kanban-view]');
-        const filters = document.querySelector('[data-task-filters]');
+        const filterTriggers = document.querySelectorAll('[data-task-filter-trigger]');
+        const viewLabels = document.querySelectorAll('[data-task-view-label]');
         const taskModal = document.querySelector('#task-details-modal');
         if (!board || !listView || !boardView) return;
         const listTable = document.querySelector('table[data-datatable]');
@@ -263,16 +325,41 @@
             errorBox.dataset.taskKanbanError = '';
             boardView.prepend(errorBox);
         }
-        if (!window.Sortable) {
-            errorBox.textContent = 'Task board drag-and-drop could not be initialized.';
-            errorBox.classList.remove('d-none');
-            return;
-        }
-
         const setError = (message = '') => {
             errorBox.textContent = message;
             errorBox.classList.toggle('d-none', !message);
         };
+
+        const setTaskView = (view) => {
+            const kanban = view === 'kanban';
+            listView.classList.toggle('d-none', kanban);
+            boardView.classList.toggle('d-none', !kanban);
+            filterTriggers.forEach((trigger) => trigger.classList.toggle('d-none', kanban));
+            viewLabels.forEach((label) => {
+                label.textContent = kanban ? 'Kanban view' : 'List view';
+            });
+            document.querySelectorAll('[data-task-view]').forEach((viewButton) => {
+                const active = viewButton.dataset.taskView === view;
+                viewButton.classList.toggle('active', active);
+                viewButton.setAttribute('aria-pressed', String(active));
+            });
+        };
+
+        document.querySelectorAll('[data-task-view]').forEach((button) => {
+            button.addEventListener('click', () => setTaskView(button.dataset.taskView));
+        });
+        document.querySelector('[data-task-filter-reset]')?.addEventListener('click', () => {
+            const status = document.querySelector('#task-status');
+            const priority = document.querySelector('#task-priority');
+            const search = document.querySelector('#task-search');
+            status.value = '';
+            priority.value = '';
+            search.value = '';
+            status.dispatchEvent(new Event('change', { bubbles: true }));
+            priority.dispatchEvent(new Event('change', { bubbles: true }));
+            search.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        setTaskView('list');
 
         taskModal.addEventListener('show.bs.modal', (event) => {
             const trigger = event.relatedTarget;
@@ -293,6 +380,11 @@
             });
             taskModal.querySelector('[data-task-modal-open]').href = trigger.dataset.taskUrl;
         });
+
+        if (!window.Sortable) {
+            setError('Task board drag-and-drop could not be initialized.');
+            return;
+        }
 
         const updateColumnCounts = () => {
             board.querySelectorAll('[data-task-column]').forEach((column) => {
@@ -405,20 +497,8 @@
         });
         updateColumnCounts();
 
-        document.querySelectorAll('[data-task-view]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const kanban = button.dataset.taskView === 'kanban';
-                listView.classList.toggle('d-none', kanban);
-                boardView.classList.toggle('d-none', !kanban);
-                filters.classList.toggle('d-none', kanban);
-                document.querySelectorAll('[data-task-view]').forEach((viewButton) => {
-                    const active = viewButton === button;
-                    viewButton.classList.toggle('active', active);
-                    viewButton.setAttribute('aria-pressed', String(active));
-                });
-            });
-        });
-
-    });
+    };
+    document.addEventListener('DOMContentLoaded', initializeTaskBoard);
+    window.addEventListener('project:content-updated', initializeTaskBoard);
 </script>
 @endpush

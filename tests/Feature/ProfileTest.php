@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -34,10 +35,28 @@ class ProfileTest extends TestCase
             ->assertSee('d-flex align-items-center justify-content-center px-2 py-0', false)
             ->assertSee('id="navbarDropdownUser"', false)
             ->assertSee('aria-label="Open account menu for '.$user->name.'"', false)
+            ->assertSee('Email inbox')
+            ->assertSee('Tasks')
             ->assertSee('Profile and account')
             ->assertSee('action="'.route('logout').'"', false)
             ->assertDontSee('navbar-vertical.html#!')
             ->assertDontSee('../pages/user/settings.html');
+    }
+
+    public function test_admin_account_menu_links_to_email_calendar_and_tasks(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('href="'.route('email.inbox').'"', false)
+            ->assertSee('Email inbox')
+            ->assertSee('href="'.route('calendar').'"', false)
+            ->assertSee('Calendar')
+            ->assertSee('href="'.route('tasks.index').'"', false)
+            ->assertSee('Tasks');
     }
 
     public function test_customer_profile_hides_team_and_department_information(): void
@@ -115,6 +134,24 @@ class ProfileTest extends TestCase
             'actor_id' => $user->id,
             'event' => 'profile_updated',
         ]);
+    }
+
+    public function test_profile_password_update_requires_matching_confirmation(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Confirm new password');
+
+        $this->put(route('password.update'), [
+            'current_password' => 'password',
+            'password' => 'A-new-safe-password-2026',
+            'password_confirmation' => 'A-different-safe-password-2026',
+        ])->assertSessionHasErrors('password', null, 'updatePassword');
+
+        $this->assertFalse(Hash::check('A-new-safe-password-2026', $user->fresh()->password));
     }
 
     public function test_user_can_upload_replace_and_remove_their_profile_photo(): void
@@ -266,6 +303,7 @@ class ProfileTest extends TestCase
         $this->actingAs($user)->put('/password', [
             'current_password' => 'password',
             'password' => 'New-password-123!',
+            'password_confirmation' => 'New-password-123!',
         ])->assertRedirect();
 
         $this->getJson(route('profile.activity', ['draw' => 1, 'start' => 0, 'length' => 25]))

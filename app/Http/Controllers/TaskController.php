@@ -8,8 +8,8 @@ use App\Models\User;
 use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
-use App\Support\StatusBadge;
 use App\Support\DataTableQueryBuilder;
+use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -123,7 +123,7 @@ class TaskController extends Controller
                     return;
                 }
 
-                $tasks                ->where(fn (Builder $matches) => $matches
+                $tasks->where(fn (Builder $matches) => $matches
                     ->where('tasks.title', 'like', "%{$search}%")
                     ->orWhere('tasks.description', 'like', "%{$search}%")
                     ->orWhereHas('project', fn (Builder $project) => $project->where('name', 'like', "%{$search}%"))
@@ -206,6 +206,9 @@ class TaskController extends Controller
             'priorities' => Task::PRIORITIES,
             'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
+            'planningRequirements' => $project?->requirements()->orderBy('sort_order')->get() ?? collect(),
+            'planningFeatures' => $project?->modules()->with('features.module')->get()->flatMap(fn ($module) => $module->features) ?? collect(),
+            'planningMilestones' => $project?->milestones()->orderBy('sort_order')->get() ?? collect(),
         ]);
     }
 
@@ -239,6 +242,7 @@ class TaskController extends Controller
             $project = Project::query()->findOrFail($data['project_id']);
         }
         unset($data['project_id']);
+        $this->assertPlanningReferences($data, $project);
 
         $task = Task::query()->create([
             ...$data,
@@ -257,7 +261,16 @@ class TaskController extends Controller
 
     public function show(Request $request, Task $task): View
     {
-        $task->load(['parent', 'project', 'assignees', 'subtasks.assignees', 'attachments.uploader']);
+        $task->load([
+            'parent',
+            'project',
+            'assignees',
+            'requirement',
+            'feature.module',
+            'milestone',
+            'subtasks.assignees',
+            'attachments.uploader',
+        ]);
 
         $canManageTask = $request->user()->hasRole('admin')
             || (int) $task->created_by_user_id === (int) $request->user()->id
@@ -279,6 +292,9 @@ class TaskController extends Controller
             'priorities' => Task::PRIORITIES,
             'users' => auth()->user()->hasRole('admin') ? AssignmentAccess::users()->get(['id', 'name']) : collect(),
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
+            'planningRequirements' => $task->project?->requirements()->orderBy('sort_order')->get() ?? collect(),
+            'planningFeatures' => $task->project?->modules()->with('features.module')->get()->flatMap(fn ($module) => $module->features) ?? collect(),
+            'planningMilestones' => $task->project?->milestones()->orderBy('sort_order')->get() ?? collect(),
         ]);
     }
 
@@ -291,6 +307,7 @@ class TaskController extends Controller
         $assignees = $request->user()->hasRole('admin') ? $data['assignees'] : $existingAssigneeIds;
         $projectId = array_key_exists('project_id', $data) ? $data['project_id'] : $task->project_id;
         unset($data['assignees'], $data['project_id']);
+        $this->assertPlanningReferences($data, $projectId ? Project::query()->findOrFail($projectId) : null);
         if ($task->parent_task_id === null) {
             $task->project_id = $projectId;
             $task->subtasks()->update(['project_id' => $projectId]);
@@ -319,6 +336,7 @@ class TaskController extends Controller
 
         $data = $this->validatedData($request);
         unset($data['parent_id'], $data['project_id']);
+        unset($data['project_requirement_id'], $data['project_feature_id'], $data['project_milestone_id']);
         $assignees = $data['assignees'];
         unset($data['assignees']);
         if (! $request->user()->hasRole('admin')) {
@@ -439,6 +457,9 @@ class TaskController extends Controller
             'assignees_present' => ['sometimes', 'boolean'],
             'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'parent_id' => ['nullable', 'integer', 'exists:tasks,id'],
+            'project_requirement_id' => ['nullable', 'integer', 'exists:project_requirements,id'],
+            'project_feature_id' => ['nullable', 'integer', 'exists:project_features,id'],
+            'project_milestone_id' => ['nullable', 'integer', 'exists:project_milestones,id'],
         ]);
         $assignees = $request->exists('assignees_present')
             ? ($data['assignees'] ?? [])
@@ -455,6 +476,22 @@ class TaskController extends Controller
         }
 
         return $data;
+    }
+
+    private function assertPlanningReferences(array $data, ?Project $project): void
+    {
+        $references = [
+            'project_requirement_id' => $project?->requirements()->whereKey($data['project_requirement_id'] ?? null)->exists(),
+            'project_feature_id' => $project?->modules()->whereHas('features', fn (Builder $features) => $features->whereKey($data['project_feature_id'] ?? null))->exists(),
+            'project_milestone_id' => $project?->milestones()->whereKey($data['project_milestone_id'] ?? null)->exists(),
+        ];
+        foreach ($references as $field => $belongsToProject) {
+            if (! empty($data[$field]) && ! $belongsToProject) {
+                throw ValidationException::withMessages([
+                    $field => 'The selected planning item must belong to the task project.',
+                ]);
+            }
+        }
     }
 
     private function validatedParent(Project $project, ?int $parentId): ?Task

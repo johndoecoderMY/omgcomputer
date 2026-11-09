@@ -6,6 +6,7 @@ use App\Models\FlowChart;
 use App\Models\Project;
 use App\Models\User;
 use Database\Seeders\DeveloperSetupFlowChartSeeder;
+use Database\Seeders\PlannerRoleSeeder;
 use Database\Seeders\ServiceSopExampleSeeder;
 use Database\Seeders\SoftwareStructureSopSeeder;
 use Database\Seeders\StudentFypSopSeeder;
@@ -107,6 +108,8 @@ class FlowChartTest extends TestCase
             ->assertSee('Sitemap')
             ->assertSee('Live preview')
             ->assertSee('Choose a side arrow on the source node')
+            ->assertSee('Drag a node by its handle')
+            ->assertSee('data-preview-drag-handle', false)
             ->assertDontSee('flow-chart-connections-modal');
 
         $home = (string) Str::uuid();
@@ -164,6 +167,57 @@ class FlowChartTest extends TestCase
             ->assertRedirect(route('development.flowcharts.index'));
 
         $this->assertDatabaseMissing('flow_charts', ['id' => $flowChart->id]);
+    }
+
+    public function test_flow_chart_create_update_and_layout_saves_support_ajax_responses(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        $stepId = (string) Str::uuid();
+        $response = $this->postJson(route('development.flowcharts.store'), [
+            'title' => 'AJAX website journey',
+            'category' => 'website',
+            'steps' => [
+                ['id' => $stepId, 'label' => 'Home', 'kind' => 'page', 'connections' => []],
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('message', 'Flow chart created successfully.')
+            ->assertJsonPath('flow_chart.title', 'AJAX website journey');
+
+        $flowChart = FlowChart::query()->findOrFail($response->json('flow_chart.id'));
+        $this->get(route('development.flowcharts.edit', $flowChart))
+            ->assertOk()
+            ->assertSee('data-flow-chart-form', false)
+            ->assertSee('data-flow-chart-save-feedback', false);
+
+        $this->putJson(route('development.flowcharts.update', $flowChart), [
+            'title' => 'Updated AJAX website journey',
+            'category' => 'website',
+            'steps' => [
+                ['id' => $stepId, 'label' => 'Home page', 'kind' => 'page', 'connections' => []],
+            ],
+        ])->assertOk()
+            ->assertJsonPath('message', 'Flow chart updated successfully.')
+            ->assertJsonPath('flow_chart.title', 'Updated AJAX website journey');
+
+        $this->patchJson(route('development.flowcharts.layout', $flowChart), [
+            'positions' => [['id' => $stepId, 'x' => 180, 'y' => 120]],
+        ])->assertOk()
+            ->assertJsonPath('message', 'Flow chart positions saved.');
+
+        $this->assertSame(180, $flowChart->fresh()->steps[0]['x']);
+        $this->assertSame(120, $flowChart->fresh()->steps[0]['y']);
+
+        $project = Project::query()->create(['name' => 'AJAX project']);
+        $flowChart->projects()->attach($project);
+        $this->postJson(route('development.flowcharts.tasks.store', $flowChart), [
+            'project_id' => $project->id,
+        ])->assertOk()
+            ->assertJsonPath('created_count', 1)
+            ->assertJsonPath('tasks.0.title', 'Home page');
     }
 
     public function test_flow_chart_rejects_connections_to_unknown_steps(): void

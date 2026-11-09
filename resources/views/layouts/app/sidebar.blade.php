@@ -718,24 +718,6 @@
                             </div>
                         </a>
 
-                        @role('admin')
-                        <a class="nav-link dropdown-indicator" href="#errorPagesMenu" role="button"
-                            data-bs-toggle="collapse" aria-expanded="false" aria-controls="errorPagesMenu">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-exclamation-triangle"></span></span>
-                                <span class="nav-link-text ps-1">Error pages</span>
-                            </div>
-                        </a>
-                        <ul class="nav collapse" id="errorPagesMenu">
-                            @foreach (['403' => 'Forbidden', '404' => 'Not found', '419' => 'Session expired', '429' => 'Too many requests', '500' => 'Server error', '503' => 'Unavailable'] as $code => $label)
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('error-pages.preview', $code) }}">
-                                        <span class="nav-link-text ps-1">{{ $code }} · {{ $label }}</span>
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-                        @endrole
                     </li>
                 @endif
             </ul>

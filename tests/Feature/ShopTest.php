@@ -89,6 +89,14 @@ class ShopTest extends TestCase
             ->assertSee('OMG Computer shop')
             ->assertSee('Public preview graphics card')
             ->assertSee('Ready-built gaming PC')
+            ->assertSee('shop-product-filters')
+            ->assertSee('border: 1px solid rgba(23, 32, 51, .2)', false)
+            ->assertSee('data-bs-target="#shop-filter-modal"', false)
+            ->assertSee('id="shop-filter-modal"', false)
+            ->assertSee('id="shop-modal-search"', false)
+            ->assertSee(asset('assets/img/omg/repair-pc-components.jpg'), false)
+            ->assertSee(asset('assets/img/omg/ready-built-pc.jpg'), false)
+            ->assertSee('Representative stock photo for Public preview graphics card. Actual product appearance may vary.')
             ->assertSee('Get a custom PC quote')
             ->assertDontSee('Add to cart')
             ->assertDontSee('List view')
@@ -104,6 +112,7 @@ class ShopTest extends TestCase
             ->assertSee('Product information')
             ->assertSee('A graphics card for the preview catalogue.')
             ->assertSee('RM 650.00')
+            ->assertSee(asset('assets/img/omg/repair-pc-components.jpg'), false)
             ->assertDontSee('400.00')
             ->assertDontSee('PRIVATE-SKU-01')
             ->assertSee('Sign in to buy')
@@ -114,6 +123,7 @@ class ShopTest extends TestCase
             ->assertOk()
             ->assertSee('Ready-built gaming PC')
             ->assertSee('Ready-built PC')
+            ->assertSee(asset('assets/img/omg/ready-built-pc.jpg'), false)
             ->assertSee('RM 2,899.00')
             ->assertSee('Get a custom PC quote');
         $this->get(route('shop.public.products.show', $hiddenPart))->assertNotFound();
@@ -229,15 +239,33 @@ class ShopTest extends TestCase
             'reorder_level' => 1,
         ]);
 
-        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+        $builder = $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
             ->assertOk()
             ->assertSee('Custom PC builder')
             ->assertSee($cpu->name)
             ->assertSee('6.00%')
+            ->assertSee('name="custom_pc_build" value="1"', false)
+            ->assertSee('Select a motherboard to filter processors by socket')
+            ->assertSee('Section')
+            ->assertSee('CPU')
+            ->assertSee('GPU')
+            ->assertSee('RAM')
+            ->assertSee('Motherboard')
+            ->assertSee('Storage')
+            ->assertSee('Power supply')
+            ->assertSee('Case')
+            ->assertSee('Cooling')
+            ->assertSee('Operating system')
+            ->assertSee('Software / Microsoft')
+            ->assertSee('Add another component')
+            ->assertSee('No in-stock motherboard available')
             ->assertDontSee($outOfStockGpu->name)
             ->assertSee(route('billing.store'), false);
+        preg_match('/<tbody id="component-lines">(.*?)<\/tbody>/s', $builder->getContent(), $componentLines);
+        $this->assertSame(10, preg_match_all('/<tr class="component-line">/', $componentLines[1] ?? ''));
 
         $this->actingAs($staff)->post(route('billing.store'), [
+            'custom_pc_build' => 1,
             'type' => 'quotation',
             'customer_name' => 'Custom build customer',
             'customer_email' => 'custom-build@example.test',
@@ -258,6 +286,107 @@ class ShopTest extends TestCase
         $this->assertSame(265.0, (float) $quote->total);
         $this->assertSame($cpu->id, $quote->items()->firstOrFail()->inventory_part_id);
         $this->assertSame(2, $cpu->fresh()->stock_quantity);
+    }
+
+    public function test_custom_pc_builder_seeds_socket_specs_and_filters_cpu_options(): void
+    {
+        $this->seed(PcPartsSeeder::class);
+        $staff = $this->staffUser();
+
+        $am5Cpu = InventoryPart::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
+        $intelCpu = InventoryPart::query()->where('sku', 'DEMO-CPU-002')->firstOrFail();
+        $am5Board = InventoryPart::query()->where('sku', 'DEMO-MB-001')->firstOrFail();
+        $intelBoard = InventoryPart::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
+
+        $this->assertSame('AM5', $am5Cpu->specification('Socket'));
+        $this->assertSame('LGA1700', $intelCpu->specification('Socket'));
+        $this->assertSame('AM5', $am5Board->specification('Socket'));
+        $this->assertSame('LGA1700', $intelBoard->specification('Socket'));
+        $this->assertSame('AMD B650', $am5Board->specification('Chipset'));
+        $this->assertSame('6', $am5Cpu->specification('Cores'));
+        $this->assertSame('operating_system', InventoryPart::query()->where('sku', 'DEMO-OS-W11H-001')->firstOrFail()->type);
+        $this->assertSame('software', InventoryPart::query()->where('sku', 'DEMO-SW-M365-001')->firstOrFail()->type);
+        $usbExtension = InventoryPart::query()->where('sku', 'DEMO-USB-EXT-001')->firstOrFail();
+        $this->assertSame('peripheral', $usbExtension->type);
+        $this->assertSame('USB-A male to USB-A female', $usbExtension->specification('Connector'));
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee($am5Cpu->name)
+            ->assertSee($intelCpu->name)
+            ->assertSee($usbExtension->name)
+            ->assertSee('<optgroup label="Peripheral">', false)
+            ->assertSee('data-socket="AM5"', false)
+            ->assertSee('data-socket="LGA1700"', false)
+            ->assertSee('data-specifications=', false)
+            ->assertSee('motherboard manufacturer’s CPU support list');
+    }
+
+    public function test_custom_pc_quote_can_include_operating_system_and_microsoft_software(): void
+    {
+        $this->seed(PcPartsSeeder::class);
+        $staff = $this->staffUser();
+        $parts = InventoryPart::query()
+            ->whereIn('sku', ['DEMO-CPU-001', 'DEMO-MB-001', 'DEMO-OS-W11H-001', 'DEMO-SW-M365-001', 'DEMO-USB-EXT-001'])
+            ->get()
+            ->keyBy('sku');
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Software bundle customer',
+            'customer_email' => 'software-bundle@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 6,
+            'items' => $parts->map(fn (InventoryPart $part): array => [
+                'inventory_part_id' => $part->id,
+                'quantity' => 1,
+                'unit_price' => $part->selling_price,
+            ])->values()->all(),
+        ])->assertSessionHasNoErrors();
+
+        $quote = BillingDocument::query()->where('customer_email', 'software-bundle@example.test')->firstOrFail();
+        $this->assertSame(5, $quote->items()->count());
+        $this->assertDatabaseHas('billing_document_items', [
+            'billing_document_id' => $quote->id,
+            'description' => 'Microsoft Windows 11 Home license (demo estimate)',
+        ]);
+        $this->assertDatabaseHas('billing_document_items', [
+            'billing_document_id' => $quote->id,
+            'description' => 'Microsoft 365 Personal subscription (demo estimate)',
+        ]);
+        $this->assertDatabaseHas('billing_document_items', [
+            'billing_document_id' => $quote->id,
+            'inventory_part_id' => $parts['DEMO-USB-EXT-001']->id,
+            'description' => 'USB 3.0 extension cable (2 m)',
+        ]);
+    }
+
+    public function test_custom_pc_quotation_rejects_mismatched_cpu_and_motherboard_sockets(): void
+    {
+        $this->seed(PcPartsSeeder::class);
+        $staff = $this->staffUser();
+        $am5Cpu = InventoryPart::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
+        $intelBoard = InventoryPart::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'type' => 'quotation',
+            'customer_name' => 'Incompatible build customer',
+            'customer_email' => 'incompatible-build@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 6,
+            'items' => [
+                ['inventory_part_id' => $am5Cpu->id, 'quantity' => 1, 'unit_price' => 799],
+                ['inventory_part_id' => $intelBoard->id, 'quantity' => 1, 'unit_price' => 679],
+            ],
+        ])->assertSessionHasErrors([
+            'items.0.inventory_part_id',
+            'items.1.inventory_part_id',
+        ]);
+
+        $this->assertDatabaseMissing('billing_documents', [
+            'customer_email' => 'incompatible-build@example.test',
+        ]);
     }
 
     public function test_sign_in_to_buy_adds_the_product_to_the_customer_cart(): void
@@ -699,7 +828,7 @@ class ShopTest extends TestCase
         $this->assertNotNull($staff->fresh());
     }
 
-    public function test_pc_parts_seeder_lists_existing_sample_inventory_for_sale(): void
+    public function test_pc_parts_seeder_updates_existing_sample_inventory_without_resetting_stock(): void
     {
         $part = InventoryPart::query()->create([
             'sku' => 'DEMO-CPU-001',
@@ -713,9 +842,22 @@ class ShopTest extends TestCase
         ]);
 
         $this->seed(PcPartsSeeder::class);
+        $this->seed(PcPartsSeeder::class);
 
         $this->assertTrue($part->fresh()->is_for_sale);
         $this->assertSame(5, $part->fresh()->stock_quantity);
+        $this->assertSame('AM5', $part->fresh()->specification('Socket'));
+        $this->assertDatabaseHas('inventory_parts', [
+            'sku' => 'DEMO-CPU-002',
+            'name' => 'Intel Core i5-12400F processor',
+            'type' => 'cpu',
+        ]);
+        $this->assertDatabaseHas('inventory_parts', [
+            'sku' => 'DEMO-MB-002',
+            'name' => 'B760M LGA1700 motherboard (DDR5)',
+            'type' => 'motherboard',
+        ]);
+        $this->assertSame(1, InventoryPart::query()->where('sku', 'DEMO-CPU-002')->count());
     }
 
     public function test_staff_can_add_and_remove_part_quantity_from_the_product_list_modal(): void

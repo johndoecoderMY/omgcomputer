@@ -46,9 +46,25 @@ class PasswordResetTest extends TestCase
             $response = $this->get('/reset-password/'.$notification->token);
 
             $response->assertStatus(200);
+            $response->assertSee('Confirm new password');
 
             return true;
         });
+    }
+
+    public function test_password_reset_requires_matching_confirmation(): void
+    {
+        $user = User::factory()->create();
+        $token = Password::createToken($user);
+
+        $this->post(route('password.store'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'Reset-password-2026!',
+            'password_confirmation' => 'Different-password-2026!',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertFalse(Hash::check('Reset-password-2026!', $user->fresh()->password));
     }
 
     public function test_password_can_be_reset_with_valid_token(): void
@@ -64,6 +80,7 @@ class PasswordResetTest extends TestCase
                 'token' => $notification->token,
                 'email' => $user->email,
                 'password' => 'password',
+                'password_confirmation' => 'password',
             ]);
 
             $response
@@ -101,6 +118,7 @@ class PasswordResetTest extends TestCase
             'token' => $token,
             'email' => $user->email,
             'password' => 'Reset-password-2026!',
+            'password_confirmation' => 'Reset-password-2026!',
         ])->assertRedirect(route('login'));
 
         $this->assertTrue(Hash::check('Reset-password-2026!', $user->fresh()->password));

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -10,9 +11,9 @@ class ErrorPagesPreviewTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_non_customer_users_can_preview_error_pages_from_the_error_sidebar(): void
+    public function test_non_customer_users_can_preview_error_pages_without_sidebar_links(): void
     {
-        $this->seed(\Database\Seeders\PlannerRoleSeeder::class);
+        $this->seed(PlannerRoleSeeder::class);
         $admin = User::factory()->create();
         $admin->assignRole('admin');
         $this->actingAs($admin);
@@ -29,9 +30,8 @@ class ErrorPagesPreviewTest extends TestCase
 
         $this->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('id="errorPagesMenu"', false)
-            ->assertSee(route('error-pages.preview', '403'))
-            ->assertSee(route('error-pages.preview', '503'));
+            ->assertDontSee('Error pages')
+            ->assertDontSee('errorPagesMenu');
     }
 
     public function test_error_page_previews_require_authentication_and_only_allow_known_codes(): void

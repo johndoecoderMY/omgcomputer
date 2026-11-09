@@ -348,7 +348,7 @@ class ProjectDetailsExportTest extends TestCase
             ->assertSee('aria-label="Page actions"', false)
             ->assertSee('page-header-action-dropdown', false)
             ->assertSee('All projects')
-            ->assertSee('Task Gantt chart')
+            ->assertSee('Project roadmap')
             ->assertSee('Project technology stack')
             ->assertSee('PHP')
             ->assertSee('8.3')
@@ -429,7 +429,7 @@ class ProjectDetailsExportTest extends TestCase
         for ($y = 0; $y < imagesy($resource); $y++) {
             for ($x = 0; $x < imagesx($resource); $x++) {
                 $pixel = imagecolorat($resource, $x, $y);
-                if (($pixel >> 16 & 0xff) === 51 && ($pixel >> 8 & 0xff) === 65 && ($pixel & 0xff) === 85) {
+                if (($pixel >> 16 & 0xFF) === 51 && ($pixel >> 8 & 0xFF) === 65 && ($pixel & 0xFF) === 85) {
                     $darkArrowPixelCount++;
                 }
             }
@@ -570,6 +570,7 @@ class ProjectDetailsExportTest extends TestCase
         $this->assertStringContainsString('class="project-gantt-chart"', $pdfHtml);
         $this->assertStringContainsString('<td align="center">', $pdfHtml);
         $this->assertStringContainsString('<div class="gantt-section">', $pdfHtml);
+        $this->assertStringContainsString('<h2>Project roadmap</h2>', $pdfHtml);
         $this->assertStringContainsString('.project-gantt-chart { display: inline; }', $pdfHtml);
         $this->assertStringContainsString('.flow-chart-diagram { display: inline; margin-top: 8pt; }', $pdfHtml);
         $this->assertStringNotContainsString('page-break-before: always;', $pdfHtml);
@@ -622,7 +623,7 @@ class ProjectDetailsExportTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Task Gantt chart')
+            ->assertSee('Project roadmap')
             ->assertSee('Nov 1–Nov 5, 2026');
 
         $this->get(route('projects.tasks.create', $project))

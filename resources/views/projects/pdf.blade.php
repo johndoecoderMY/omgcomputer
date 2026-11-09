@@ -27,6 +27,98 @@
         <p><strong>Created:</strong> {{ $project->created_at?->format('F j, Y') ?? '—' }}</p>
     @endif
 
+    @if (in_array('planning', $sections, true))
+        <h2>Project planning brief</h2>
+        <p><strong>Status:</strong> {{ ucfirst(str_replace('_', ' ', $project->planning_status)) }}</p>
+        <p><strong>Target:</strong> {{ $project->start_date?->format('M j, Y') ?? 'Not set' }} – {{ $project->target_end_date?->format('M j, Y') ?? 'Not set' }}</p>
+        <p><strong>Budget:</strong> {{ $project->budget !== null ? 'RM '.number_format((float) $project->budget, 2) : 'Not set' }}</p>
+        @foreach ([
+            'Business background' => $project->business_background,
+            'User roles and responsibilities' => $project->user_roles,
+            'Objectives' => $project->objectives,
+            'Problem statement' => $project->problem_statement,
+            'Proposed solution' => $project->proposed_solution,
+            'In scope' => $project->scope_in,
+            'Out of scope' => $project->scope_out,
+        ] as $label => $content)
+            @if ($content)<p><strong>{{ $label }}:</strong><br>{{ $content }}</p>@endif
+        @endforeach
+
+        <h3>Requirements and acceptance criteria</h3>
+        @if ($project->requirements->isEmpty())
+            <p class="muted">No structured requirements have been recorded.</p>
+        @else
+            <table>
+                <thead><tr><th>ID / Type</th><th>Requirement / User story</th><th>Priority / Status</th><th>Acceptance criteria</th><th>Module / Parent</th></tr></thead>
+                <tbody>
+                    @foreach ($project->requirements as $requirement)
+                        <tr>
+                            <td>{{ $requirement->code ?: '—' }}<br>{{ \App\Models\ProjectRequirement::TYPES[$requirement->requirement_type] ?? $requirement->requirement_type }}</td>
+                            <td>{{ $requirement->requirement }}@if ($requirement->user_story)<br><span class="muted">{{ $requirement->user_story }}</span>@endif</td>
+                            <td>{{ \App\Models\ProjectRequirement::PRIORITIES[$requirement->priority] ?? $requirement->priority }}<br>{{ \App\Models\ProjectRequirement::STATUSES[$requirement->status] ?? $requirement->status }}</td>
+                            <td>{{ $requirement->acceptance_criteria ?: '—' }}</td>
+                            <td>{{ $requirement->module?->name ?: '—' }}<br>Parent: {{ $requirement->parent?->code ?: '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+
+        <h3>Modules and features</h3>
+        @forelse ($project->modules as $module)
+            <p><strong>{{ $module->name }}</strong>@if ($module->description) — {{ $module->description }}@endif</p>
+            @if ($module->features->isNotEmpty())
+                <table>
+                    <thead><tr><th>Feature</th><th>Priority</th><th>Status</th></tr></thead>
+                    <tbody>@foreach ($module->features as $feature)<tr><td>{{ $feature->name }}@if ($feature->description)<br>{{ $feature->description }}@endif</td><td>{{ \App\Models\ProjectRequirement::PRIORITIES[$feature->priority] ?? $feature->priority }}</td><td>{{ \App\Models\ProjectRequirement::STATUSES[$feature->status] ?? $feature->status }}</td></tr>@endforeach</tbody>
+                </table>
+            @endif
+        @empty
+            <p class="muted">No modules have been defined.</p>
+        @endforelse
+
+        <h3>Roadmap and milestones</h3>
+        @if ($project->milestones->isEmpty())
+            <p class="muted">No project milestones have been planned.</p>
+        @else
+            <table>
+                <thead><tr><th>Milestone</th><th>Dates</th><th>Status</th><th>Dependency</th><th>Deliverable</th></tr></thead>
+                <tbody>@foreach ($project->milestones as $milestone)
+                    <tr>
+                        <td>{{ $milestone->name }}@if ($milestone->description)<br>{{ $milestone->description }}@endif</td>
+                        <td>{{ $milestone->starts_on?->format('M j, Y') ?? '—' }} – {{ $milestone->due_on?->format('M j, Y') ?? '—' }}</td>
+                        <td>{{ \App\Models\ProjectMilestone::STATUSES[$milestone->status] ?? $milestone->status }}</td>
+                        <td>{{ $milestone->dependency?->name ?? '—' }}</td>
+                        <td>{{ $milestone->deliverable ?? '—' }}</td>
+                    </tr>
+                @endforeach</tbody>
+            </table>
+        @endif
+
+        <h3>Test cases and issues</h3>
+        @if ($project->qualityItems->isEmpty())
+            <p class="muted">No test cases or issues have been recorded.</p>
+        @else
+            <table>
+                <thead><tr><th>Type / Title</th><th>Status</th><th>Priority / Severity</th><th>Expected / Actual</th><th>Related requirement / Resolution</th></tr></thead>
+                <tbody>@foreach ($project->qualityItems as $item)
+                    <tr>
+                        <td>{{ \App\Models\ProjectQualityItem::KINDS[$item->kind] ?? $item->kind }}<br>{{ $item->title }}@if ($item->description)<br>{{ $item->description }}@endif</td>
+                        <td>{{ ucfirst(str_replace('_', ' ', $item->status)) }}</td>
+                        <td>
+                            {{ ucfirst($item->priority) }}
+                            @if ($item->severity)
+                                <br>{{ ucfirst($item->severity) }} severity
+                            @endif
+                        </td>
+                        <td><strong>Expected:</strong> {{ $item->expected_result ?: '—' }}<br><strong>Actual:</strong> {{ $item->actual_result ?: '—' }}</td>
+                        <td>{{ $item->requirement?->code ?? 'Unlinked' }}@if ($item->resolution)<br><strong>Resolution:</strong> {{ $item->resolution }}@endif</td>
+                    </tr>
+                @endforeach</tbody>
+            </table>
+        @endif
+    @endif
+
     @if (in_array('links', $sections, true))
         <h2>Project links</h2>
         @if ($project->links->isEmpty())
@@ -171,6 +263,7 @@
         @php
             $hasEarlierGanttSections = collect([
                 'overview',
+                'planning',
                 'requirements',
                 'customers',
                 'technology_stack',
@@ -182,7 +275,7 @@
             <pagebreak />
         @endif
         <div class="gantt-section">
-        <h2>Task Gantt chart</h2>
+        <h2>Project roadmap</h2>
         @php
             $ganttTasks = $project->tasks->flatMap(fn ($task) => collect([$task])->concat($task->subtasks))->values();
             $datedGanttTasks = $ganttTasks->filter(fn ($task) => $task->start_date || $task->due_date);
@@ -288,6 +381,7 @@
         @php
             $hasEarlierSections = collect([
                 'overview',
+                'planning',
                 'requirements',
                 'customers',
                 'technology_stack',

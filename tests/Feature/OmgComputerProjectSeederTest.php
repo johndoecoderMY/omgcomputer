@@ -12,6 +12,13 @@ class OmgComputerProjectSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_seeder_does_not_create_events(): void
+    {
+        $this->seed(OmgComputerProjectSeeder::class);
+
+        $this->assertDatabaseCount('events', 0);
+    }
+
     public function test_seeder_creates_one_omg_computer_project_when_run_repeatedly(): void
     {
         $this->actingAs(User::factory()->create());
@@ -27,7 +34,7 @@ class OmgComputerProjectSeederTest extends TestCase
         $this->assertDatabaseCount('project_requirements', 8);
         $this->assertDatabaseCount('project_technologies', 5);
         $this->assertDatabaseCount('project_estimate_items', 5);
-        $this->assertDatabaseCount('events', 4);
+        $this->assertDatabaseCount('events', 0);
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
             'requirements_notes' => 'Initial launch scope for OMG Computer. Confirm business registration, licensing, provider choices, pricing, and payment processing requirements before launch.',
@@ -47,12 +54,6 @@ class OmgComputerProjectSeederTest extends TestCase
             'quantity' => 12,
             'unit_price' => 180,
         ]);
-        $this->assertDatabaseHas('events', [
-            'project_id' => $project->id,
-            'title' => 'Choose e-commerce platform and payment gateway',
-            'event_type' => 'progress_review',
-        ]);
-
         $this->get(route('projects.index'))
             ->assertOk()
             ->assertSee('OMG Computer');
@@ -60,7 +61,6 @@ class OmgComputerProjectSeederTest extends TestCase
             ->assertOk()
             ->assertSee('Project requirements')
             ->assertSee('Laravel')
-            ->assertSee('Software and other estimates')
-            ->assertSee('Choose e-commerce platform and payment gateway');
+            ->assertSee('Software and other estimates');
     }
 }

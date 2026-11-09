@@ -84,6 +84,10 @@ class CompanyProfileTest extends TestCase
             ->assertSee('OMG Computer Sdn Bhd')
             ->assertSee('202601001234')
             ->assertSee('https://www.facebook.com/omgcomputer')
+            ->assertSee('https://www.instagram.com/omgcomputer/')
+            ->assertSee('aria-label="Facebook"', false)
+            ->assertSee('aria-label="Instagram"', false)
+            ->assertSee('rounded-circle')
             ->assertDontSee('PRIVATE-TIN-123')
             ->assertDontSee('PRIVATE-SST-123');
 

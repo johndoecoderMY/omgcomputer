@@ -15,6 +15,11 @@
             <a class="btn btn-outline-primary" href="{{ route('projects.index') }}">
                 <span class="bi bi-folder2-open me-2"></span>Projects
             </a>
+            @role('admin')
+                <a class="btn btn-outline-primary" href="{{ route('development.website-previews.manage') }}">
+                    <span class="bi bi-images me-2"></span>Website previews
+                </a>
+            @endrole
             <a class="btn btn-primary" href="{{ route('tasks.index') }}">
                 <span class="bi bi-list-check me-2"></span>Manage tasks
             </a>

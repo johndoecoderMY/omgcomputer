@@ -29,7 +29,17 @@
             </div>
             @stack('modal')
 
-
+            <div class="modal fade" id="project-ajax-modal" tabindex="-1" aria-labelledby="project-ajax-modal-title" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title fs-5" id="project-ajax-modal-title">Project workspace</h2>
+                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" data-project-ajax-modal-body></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
     @include('layouts.app.toasts')

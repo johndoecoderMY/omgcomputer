@@ -2,7 +2,7 @@
     $steps = old('steps', $flowChart->steps ?? []);
 @endphp
 
-<form method="POST" action="{{ $action }}" class="card p-2" data-flow-chart-category="{{ old('category', $flowChart->category ?? 'website') }}">
+<form method="POST" action="{{ $action }}" class="card p-2" data-flow-chart-form data-flow-chart-category="{{ old('category', $flowChart->category ?? 'website') }}">
     @csrf
     @if ($method !== 'POST')
         @method($method)
@@ -11,6 +11,7 @@
         <input type="hidden" name="project_id" value="{{ $projectId }}">
     @endif
     <div class="card-body">
+        <div class="alert d-none" role="status" aria-live="polite" data-flow-chart-save-feedback></div>
         @if ($errors->any())
             <div class="alert alert-danger" role="alert">
                 <p class="fw-semibold mb-1">Please correct the following:</p>
@@ -149,7 +150,7 @@
         <section class="mt-4 pt-4 border-top" aria-labelledby="flow-chart-preview-heading">
             <div class="mb-3">
                 <h2 class="h5 mb-1" id="flow-chart-preview-heading">Live preview</h2>
-                <p class="small text-body-secondary mb-0">Choose a side arrow on the source node, then choose a side arrow on the destination node.</p>
+                <p class="small text-body-secondary mb-0">Drag a node by its handle to arrange the layout. Choose a side arrow on the source node, then choose a side arrow on the destination node.</p>
             </div>
             <div class="flow-chart-viewport" data-flow-chart-preview tabindex="0" role="region" aria-label="Flow chart preview">
                 <div class="flow-chart-canvas">
@@ -182,6 +183,9 @@
 @push('scripts')
 <style>
 .flow-chart-preview-node{cursor:default}
+.flow-chart-preview-drag-handle{position:absolute;top:.35rem;right:.45rem;z-index:2;border:0;background:transparent;color:var(--falcon-gray-600);cursor:grab;padding:.2rem .35rem;touch-action:none}
+.flow-chart-preview-drag-handle:active{cursor:grabbing;color:var(--falcon-primary)}
+.flow-chart-preview-node.is-dragging{z-index:4;box-shadow:0 .5rem 1.25rem rgba(0,0,0,.2)}
 .flow-chart-preview-node.is-connection-target{cursor:pointer}
 .flow-chart-preview-node.is-connection-source{outline:2px dashed var(--falcon-primary);outline-offset:3px}
 .flow-chart-preview-port{position:absolute;z-index:3;display:grid;width:1.6rem;height:1.6rem;place-items:center;padding:0;border:1px solid var(--falcon-primary);border-radius:50%;background:var(--falcon-card-bg,var(--falcon-body-bg));color:var(--falcon-primary);font-size:.7rem}
@@ -206,9 +210,88 @@
         const previewArrowId = 'flow-chart-preview-arrow';
         const connectionStatus = document.querySelector('[data-flow-chart-connection-status]');
         const cancelConnectionButton = document.querySelector('[data-flow-chart-connection-cancel]');
+        const flowChartForm = document.querySelector('[data-flow-chart-form]');
+        const saveFeedback = flowChartForm.querySelector('[data-flow-chart-save-feedback]');
         let pendingConnection = null;
         const connectionSides = ['top', 'bottom', 'left', 'right'];
         const oppositeSide = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+
+        const showSaveFeedback = (message, isError = false, details = []) => {
+            saveFeedback.className = `alert ${isError ? 'alert-danger' : 'alert-success'}`;
+            saveFeedback.replaceChildren();
+            const summary = document.createElement('p');
+            summary.className = 'mb-0';
+            summary.textContent = message;
+            saveFeedback.append(summary);
+            if (details.length) {
+                const list = document.createElement('ul');
+                list.className = 'mb-0 mt-2';
+                details.forEach((detail) => {
+                    const item = document.createElement('li');
+                    item.textContent = detail;
+                    list.append(item);
+                });
+                saveFeedback.append(list);
+            }
+        };
+
+        flowChartForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submitButton = flowChartForm.querySelector('button[type="submit"]');
+            const originalLabel = submitButton.textContent.trim();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+            saveFeedback.classList.remove('d-none');
+            showSaveFeedback('Saving flow chart...');
+
+            try {
+                const response = await fetch(flowChartForm.action, {
+                    method: 'POST',
+                    body: new FormData(flowChartForm),
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    const errors = Object.values(result.errors || {}).flat();
+                    showSaveFeedback(result.message || 'The flow chart could not be saved.', true, errors);
+                    return;
+                }
+
+                if (result.flow_chart?.update_url) {
+                    flowChartForm.action = result.flow_chart.update_url;
+                    let methodInput = flowChartForm.querySelector('input[name="_method"]');
+                    if (!methodInput) {
+                        methodInput = document.createElement('input');
+                        methodInput.type = 'hidden';
+                        methodInput.name = '_method';
+                        flowChartForm.append(methodInput);
+                    }
+                    methodInput.value = 'PUT';
+                    window.history.replaceState({}, '', result.flow_chart.edit_url);
+                    const backLink = document.querySelector('[data-page-header] a[href]');
+                    if (backLink) {
+                        backLink.href = result.flow_chart.show_url;
+                        backLink.textContent = 'View flow chart';
+                    }
+                    const pageHeading = document.querySelector('h1');
+                    if (pageHeading) pageHeading.textContent = 'Edit flow chart';
+                    document.title = 'Edit Flow Chart';
+                    submitButton.textContent = 'Save changes';
+                }
+                showSaveFeedback(result.message || 'Flow chart saved.');
+            } catch (error) {
+                showSaveFeedback('Unable to save the flow chart. Check your connection and try again.', true);
+                console.error('Flow chart save failed:', error);
+            } finally {
+                submitButton.disabled = false;
+                if (submitButton.textContent.trim() === 'Saving...') {
+                    submitButton.textContent = originalLabel;
+                }
+            }
+        });
 
         const renderPreview = () => {
             const rows = [...container.querySelectorAll('.flow-step-row')];
@@ -233,13 +316,21 @@
                 if (pendingConnection?.sourceId === step.id) node.classList.add('is-connection-source');
                 if (pendingConnection && pendingConnection.sourceId !== step.id) node.classList.add('is-connection-target');
 
+                const dragHandle = document.createElement('button');
+                dragHandle.className = 'flow-chart-preview-drag-handle';
+                dragHandle.type = 'button';
+                dragHandle.dataset.previewDragHandle = '';
+                dragHandle.setAttribute('aria-label', `Drag to move ${step.label}`);
+                dragHandle.title = 'Drag to move node';
+                dragHandle.innerHTML = '<span class="bi bi-grip-horizontal" aria-hidden="true"></span>';
+
                 const kind = document.createElement('span');
                 kind.className = 'flow-chart-node-kind';
                 kind.textContent = step.kind === 'page' && !['website', 'website_structure', 'sitemap'].includes(categorySelect.value) ? 'step' : step.kind;
 
                 const label = document.createElement('strong');
                 label.textContent = step.label;
-                node.append(kind, label);
+                node.append(dragHandle, kind, label);
                 connectionSides.forEach((side) => {
                     const port = document.createElement('button');
                     port.className = `flow-chart-preview-port flow-chart-preview-port-${side}`;
@@ -307,8 +398,13 @@
             });
 
             const widestRow = Math.max(...[...rowsByLevel.values()].map((row) => row.length));
-            const width = Math.max(previewViewport.clientWidth - 2, widestRow * gapX + padding * 2);
-            const height = Math.max(220, (Math.max(...levels.values()) + 1) * gapY + 122);
+            const positionedSteps = steps.filter((step) => Number.isFinite(Number(step.positionX))
+                && Number.isFinite(Number(step.positionY))
+                && step.positionX !== undefined && step.positionY !== undefined);
+            const positionedWidth = Math.max(0, ...positionedSteps.map((step) => Number(step.positionX) + 220 + padding));
+            const positionedHeight = Math.max(0, ...positionedSteps.map((step) => Number(step.positionY) + 122 + padding));
+            const width = Math.max(previewViewport.clientWidth - 2, widestRow * gapX + padding * 2, positionedWidth);
+            const height = Math.max(220, (Math.max(...levels.values()) + 1) * gapY + 122, positionedHeight);
             previewCanvas.style.width = `${width}px`;
             previewCanvas.style.height = `${height}px`;
             previewSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -378,6 +474,78 @@
             };
         };
 
+        let drag = null;
+        previewCanvas.addEventListener('pointerdown', (event) => {
+            const handle = event.target instanceof Element
+                ? event.target.closest('[data-preview-drag-handle]')
+                : null;
+            if (!handle || (event.pointerType === 'mouse' && event.button !== 0)) return;
+            const node = handle.closest('[data-preview-node-id]');
+            if (!node) return;
+
+            event.preventDefault();
+            previewViewport.setPointerCapture(event.pointerId);
+            node.classList.add('is-dragging');
+            drag = {
+                pointerId: event.pointerId,
+                nodeId: node.dataset.previewNodeId,
+                startX: event.clientX,
+                startY: event.clientY,
+                left: node.offsetLeft,
+                top: node.offsetTop,
+            };
+        });
+
+        const saveNodePosition = (nodeId, x, y) => {
+            const row = [...container.querySelectorAll('.flow-step-row')]
+                .find((candidate) => candidate.dataset.stepId === nodeId);
+            if (!row) return;
+
+            let positionX = row.querySelector('.step-position-x');
+            if (!positionX) {
+                positionX = document.createElement('input');
+                positionX.className = 'step-position-x';
+                positionX.type = 'hidden';
+                row.append(positionX);
+            }
+            let positionY = row.querySelector('.step-position-y');
+            if (!positionY) {
+                positionY = document.createElement('input');
+                positionY.className = 'step-position-y';
+                positionY.type = 'hidden';
+                row.append(positionY);
+            }
+            const index = [...container.querySelectorAll('.flow-step-row')].indexOf(row);
+            positionX.name = `steps[${index}][x]`;
+            positionY.name = `steps[${index}][y]`;
+            positionX.value = x;
+            positionY.value = y;
+        };
+
+        previewViewport.addEventListener('pointermove', (event) => {
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            const scaleX = previewCanvas.offsetWidth / Math.max(1, previewCanvas.getBoundingClientRect().width);
+            const scaleY = previewCanvas.offsetHeight / Math.max(1, previewCanvas.getBoundingClientRect().height);
+            const left = Math.min(20000, Math.max(0, Math.round(drag.left + (event.clientX - drag.startX) * scaleX)));
+            const top = Math.min(20000, Math.max(0, Math.round(drag.top + (event.clientY - drag.startY) * scaleY)));
+            saveNodePosition(drag.nodeId, left, top);
+            renderPreview();
+            [...previewCanvas.querySelectorAll('[data-preview-node-id]')]
+                .find((node) => node.dataset.previewNodeId === drag.nodeId)
+                ?.classList.add('is-dragging');
+        });
+
+        const finishNodeDrag = (event) => {
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            const nodeId = drag.nodeId;
+            drag = null;
+            [...previewCanvas.querySelectorAll('[data-preview-node-id]')]
+                .find((node) => node.dataset.previewNodeId === nodeId)
+                ?.classList.remove('is-dragging');
+        };
+        previewViewport.addEventListener('pointerup', finishNodeDrag);
+        previewViewport.addEventListener('pointercancel', finishNodeDrag);
+
         const setPendingConnection = (nodeId, side) => {
             if (!pendingConnection) {
                 pendingConnection = { sourceId: nodeId, sourceSide: side };
@@ -439,6 +607,7 @@
         cancelConnectionButton.addEventListener('click', () => clearPendingConnection());
         previewCanvas.addEventListener('click', (event) => {
             const clickedElement = event.target instanceof Element ? event.target : null;
+            if (clickedElement?.closest('[data-preview-drag-handle]')) return;
             const port = clickedElement?.closest('[data-connection-side]');
             const node = port?.closest('[data-preview-node-id]')
                 || clickedElement?.closest('[data-preview-node-id]');

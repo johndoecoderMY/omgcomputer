@@ -17,18 +17,19 @@
     );
     $linkedCustomerCount = $linkedCustomers->count() + ($project->customerAccount && !$accountHasLinkedRecord ? 1 : 0);
 @endphp
-<div class="container-fluid py-3 project-show">
+<div class="container-fluid py-3 project-show" data-project-ajax-root>
     <x-page-header eyebrow="Project" :title="$project->name"
         :description="$project->description"
         :back-url="route('projects.index')" back-label="All projects">
         <x-slot:actions>
+            <a href="{{ route('projects.edit', $project) }}" data-project-ajax-modal><i class="bi bi-pencil bi-fw me-2"></i>Edit project</a>
             <button class="btn" type="button" data-bs-toggle="modal" data-bs-target="#project-export-modal">
                 <i class="bi bi-filetype-pdf bi-fw me-2"></i>Export PDF
             </button>
             <a href="{{ route('projects.calendar', $project) }}"><i class="bi bi-calendar3 bi-fw me-2"></i>Project calendar</a>
             <a href="#project-schedule"><i class="bi bi-calendar-plus bi-fw me-2"></i>Schedule event</a>
-            <a href="{{ route('projects.edit', $project) }}"><i class="bi bi-pencil bi-fw me-2"></i>Edit project</a>
-            <a href="{{ route('projects.tasks.create', $project) }}"><i class="bi bi-plus bi-fw me-2"></i>Add task</a>
+            <a href="{{ route('projects.planning', $project) }}"><i class="bi bi-diagram-3 bi-fw me-2"></i>Planning workspace</a>
+            <a href="{{ route('projects.tasks.create', $project) }}" data-project-ajax-modal><i class="bi bi-plus bi-fw me-2"></i>Add task</a>
             <a href="{{ route('customers.create', ['project_id' => $project->id]) }}"><i class="bi bi-person-plus bi-fw me-2"></i>Add customer</a>
         </x-slot:actions>
     </x-page-header>
@@ -43,10 +44,11 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p>Select the project information to include. Task details are excluded unless you select the Gantt chart.</p>
+                        <p>Select the project information to include. Task details are excluded unless you select the project roadmap.</p>
                         <div class="row g-2">
                             @foreach ([
                                 'overview' => 'Project overview',
+                                'planning' => 'Project brief, modules, roadmap, tests and issues',
                                 'links' => 'Project links',
                                 'photos' => 'Photos and references',
                                 'requirements' => 'Requirements checklist and notes',
@@ -54,7 +56,7 @@
                                 'technology_stack' => 'Technology stack and versions',
                                 'estimates' => 'Software and other estimates',
                                 'schedule' => 'Project event schedule',
-                                'gantt' => 'Task Gantt chart',
+                                'gantt' => 'Project roadmap',
                                 'flowcharts' => 'Flow charts and SOPs',
                             ] as $section => $label)
                                 <div class="col-sm-6">
@@ -190,8 +192,8 @@
                 <h2 class="h5 mb-0" id="project-requirements-heading">Project requirements</h2>
                 <p class="small text-body-secondary mb-0">Keep the project scope and requirements in one place.</p>
             </div>
-            <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.edit', $project) }}">
-                <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit requirements
+            <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.planning', $project) }}#planning-requirements-heading">
+            <i class="bi bi-pencil me-1" aria-hidden="true"></i>Manage requirements
             </a>
         </div>
         <div class="card-body">
@@ -288,7 +290,7 @@
             <form id="project-flow-chart-actions" method="POST" action="{{ route('projects.flowcharts.link', $project) }}">
                 @csrf
                 <div class="row g-2 align-items-end mb-4">
-                    <div class="col-12 col-lg-8">
+                    <div class="col-12 col-lg-9">
                         <label class="form-label" for="project-flow-chart-select">Find custom flow charts to link</label>
                         <select class="form-select js-project-search @error('flow_chart_ids') is-invalid @enderror"
                             id="project-flow-chart-select" name="flow_chart_ids[]" multiple>
@@ -303,7 +305,7 @@
                         @error('flow_chart_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         @error('flow_chart_ids.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12 col-lg-4">
+                    <div class="col-12 col-lg-3">
                         <button class="btn btn-sm btn-primary" type="submit">
                             <i class="bi bi-link me-1"></i>Link selected
                         </button>
@@ -312,7 +314,7 @@
             </form>
             <form method="POST" action="{{ route('projects.flowcharts.duplicate', $project) }}" class="row g-2 align-items-end mb-4">
                 @csrf
-                <div class="col-12 col-lg-8">
+                <div class="col-12 col-lg-9">
                     <label class="form-label" for="project-example-flow-chart-select">Find SOP examples to duplicate</label>
                     <select class="form-select js-project-search @error('flow_chart_ids') is-invalid @enderror"
                         id="project-example-flow-chart-select" name="flow_chart_ids[]" multiple>
@@ -327,7 +329,7 @@
                     @error('flow_chart_ids')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     @error('flow_chart_ids.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
-                <div class="col-12 col-lg-4">
+                <div class="col-12 col-lg-3">
                     <button class="btn btn-sm btn-outline-primary" type="submit">
                         <i class="bi bi-copy me-1"></i>Duplicate selected for project
                     </button>
@@ -419,7 +421,7 @@
         </div>
         <div class="card-body border-bottom">
             @if ($availableParts->isNotEmpty())
-                <form class="row g-3 align-items-end" method="POST" action="{{ route('projects.parts.store', $project) }}">
+                <form class="row g-3 align-items-start" method="POST" action="{{ route('projects.parts.store', $project) }}">
                     @csrf
                     <div class="col-12 col-lg-5">
                         <label class="form-label" for="project-part-search">Find a part</label>
@@ -464,7 +466,7 @@
                             value="{{ old('unit_price') }}" placeholder="0.00">
                         @error('unit_price')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    <div class="col-12 col-lg-8">
+                    <div class="col-12 col-lg-6">
                         <label class="form-label" for="project-part-url-sources">Source URLs <span class="text-body-secondary">(optional, up to 10)</span></label>
                         <div id="project-part-url-sources" class="d-grid gap-2">
                             @php
@@ -482,7 +484,7 @@
                             <i class="bi bi-plus me-1" aria-hidden="true"></i>Add another source
                         </button>
                     </div>
-                    <div class="col-12 col-lg-4">
+                    <div class="col-12 col-lg-4 d-flex justify-content-lg-end">
                         <button class="btn btn-primary w-100" type="submit"><i class="bi bi-plus me-1" aria-hidden="true"></i>Add recommendation</button>
                     </div>
                 </form>
@@ -688,14 +690,14 @@
     <div class="card project-panel mb-4" id="project-gantt">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h2 class="h5 mb-0">Task Gantt chart</h2>
+                <h2 class="h5 mb-0">Project roadmap</h2>
                 <p class="small text-body-secondary mb-0">Planned task start and due dates; tasks without dates are listed as unscheduled.</p>
             </div>
             <a class="btn btn-sm btn-outline-primary" href="{{ route('projects.tasks.create', $project) }}">Add scheduled task</a>
         </div>
         <div class="card-body">
             @if ($ganttTasks->isEmpty())
-                <p class="text-body-secondary mb-0">Add tasks to display the project Gantt chart.</p>
+                <p class="text-body-secondary mb-0">Add tasks to display the project roadmap.</p>
             @else
                 @if ($ganttStart && $ganttEnd)
                     <div class="d-flex justify-content-between small text-body-secondary mb-2">
@@ -814,7 +816,7 @@
         @else
             <div class="card-body text-center py-5">
                 <p class="text-body-secondary">No tasks in this project yet.</p>
-                <a class="btn btn-primary" href="{{ route('projects.tasks.create', $project) }}">Add the first task</a>
+                <a class="btn btn-primary" href="{{ route('projects.tasks.create', $project) }}" data-project-ajax-modal>Add the first task</a>
             </div>
         @endif
         <div class="card-footer bg-body d-flex justify-content-between align-items-center">
@@ -833,18 +835,20 @@
 @push('scripts')
     <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        const initializeProjectLightbox = () => {
             if (window.GLightbox) {
                 window.GLightbox({ selector: '.attachment-lightbox' });
             }
-        });
+        };
+        document.addEventListener('DOMContentLoaded', initializeProjectLightbox);
+        window.addEventListener('project:content-updated', initializeProjectLightbox);
     </script>
 @endpush
 
 @push('scripts')
 <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    const initializeProjectDetails = () => {
         const miniCalendarElement = document.getElementById('project-mini-calendar');
         if (miniCalendarElement && window.FullCalendar) {
             const projectCalendar = new FullCalendar.Calendar(miniCalendarElement, {
@@ -940,6 +944,8 @@
             source.addEventListener('change', updateExistingPartPrice);
             updateExistingPartPrice();
         });
-    });
+    };
+    document.addEventListener('DOMContentLoaded', initializeProjectDetails);
+    window.addEventListener('project:content-updated', initializeProjectDetails);
 </script>
 @endpush

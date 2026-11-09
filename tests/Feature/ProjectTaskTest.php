@@ -18,6 +18,9 @@ class ProjectTaskTest extends TestCase
     {
         $seeder = new BusinessPlanTaskSeeder;
         $seeder->run();
+        Task::query()
+            ->where('title', 'Prepare repair services, pricing, and suppliers')
+            ->update(['status' => 'in_progress']);
         $seeder->run();
 
         $project = Project::query()->where('name', 'OMG Computer')->firstOrFail();
@@ -26,29 +29,44 @@ class ProjectTaskTest extends TestCase
         $this->assertCount(16, $tasks);
         $this->assertCount(4, $tasks->whereNull('parent_task_id'));
         $this->assertCount(12, $tasks->whereNotNull('parent_task_id'));
-        $this->assertTrue($tasks->every(fn (Task $task): bool => $task->status === 'backlog'));
+        $this->assertSame('done', $tasks->firstWhere('title', 'Validate the repair shop location and requirements')->status);
+        $this->assertSame('in_progress', $tasks->firstWhere('title', 'Prepare repair services, pricing, and suppliers')->status);
         $this->assertDatabaseHas('tasks', [
             'project_id' => $project->id,
             'title' => 'Validate the repair shop location and requirements',
             'parent_task_id' => null,
+            'status' => 'done',
         ]);
-        foreach ([
-            'Register OMG Computer with SSM',
-            'Register OMG Computer on Meta for business pages and social media',
-            'Register the shop on an e-commerce platform',
-            'Register for a payment gateway',
-        ] as $title) {
-            $this->assertDatabaseHas('tasks', [
-                'project_id' => $project->id,
-                'title' => $title,
-            ]);
-        }
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'title' => 'Register OMG Computer on Meta for business pages and social media',
+            'status' => 'done',
+        ]);
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'title' => 'Register the shop on an e-commerce platform',
+            'status' => 'backlog',
+        ]);
+        $this->assertDatabaseHas('tasks', [
+            'project_id' => $project->id,
+            'title' => 'Register for a payment gateway',
+            'description' => 'Business plan implementation task. Selected payment gateway provider: Chips-In Asia.',
+            'status' => 'backlog',
+        ]);
+        $this->assertSame(5, $tasks->where('status', 'done')->count());
     }
 
     public function test_authenticated_user_can_create_a_task_and_manage_its_subtasks(): void
     {
         $this->actingAs($this->adminUser());
         $project = Project::create(['name' => 'Website refresh']);
+
+        $this->get(route('projects.tasks.create', $project))
+            ->assertOk()
+            ->assertSee('href="'.route('dashboard').'"', false)
+            ->assertSee('href="'.route('tasks.index').'"', false)
+            ->assertSee('Tasks')
+            ->assertDontSee('Projects / Website refresh');
 
         $this->post(route('projects.tasks.store', $project), [
             'title' => 'Build the website homepage',
@@ -98,6 +116,9 @@ class ProjectTaskTest extends TestCase
         $this->get(route('tasks.show', $parent))
             ->assertOk()
             ->assertSee('Subtasks')
+            ->assertSee('Mark as done')
+            ->assertSee('data-task-photo-preview', false)
+            ->assertSee('id="task-photo-caption"', false)
             ->assertSee('Mark Add the hero section as done')
             ->assertSee('Add the hero section');
 
@@ -139,6 +160,14 @@ class ProjectTaskTest extends TestCase
             ->assertSee('logoex2w.png')
             ->assertSee('html[data-bs-theme="dark"] .brand-logo-light', false)
             ->assertSee('aria-label="Task view"', false)
+            ->assertSee('task-filter-fab')
+            ->assertSee('task-view-fab')
+            ->assertSee('d-none d-lg-inline-flex')
+            ->assertSee('id="task-filters-modal"', false)
+            ->assertSee('id="task-view-modal"', false)
+            ->assertSee('data-task-filter-reset', false)
+            ->assertSee('data-bs-target="#task-filters-modal"', false)
+            ->assertSee('data-bs-target="#task-view-modal"', false)
             ->assertSee('data-task-view="list"', false)
             ->assertSee('data-task-view="kanban"', false)
             ->assertSee('data-task-kanban-view', false)
@@ -195,6 +224,24 @@ class ProjectTaskTest extends TestCase
             'id' => $task->id,
             'status' => 'in_progress',
         ]);
+    }
+
+    public function test_task_filters_and_view_switcher_are_available_as_responsive_modals(): void
+    {
+        $this->actingAs($this->adminUser())->get(route('tasks.index'))
+            ->assertOk()
+            ->assertSee('task-filter-fab')
+            ->assertSee('task-view-fab')
+            ->assertSee('d-none d-lg-inline-flex')
+            ->assertSee('id="task-filters-modal"', false)
+            ->assertSee('id="task-view-modal"', false)
+            ->assertSee('data-bs-target="#task-filters-modal"', false)
+            ->assertSee('data-bs-target="#task-view-modal"', false)
+            ->assertSee('data-task-filter-reset', false)
+            ->assertSee('data-task-view="list"', false)
+            ->assertSee('data-task-view="kanban"', false)
+            ->assertSee('data-datatable-filter', false)
+            ->assertSee('data-datatable-search', false);
     }
 
     public function test_kanban_status_changes_reload_the_task_list_without_resetting_its_page(): void

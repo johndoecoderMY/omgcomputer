@@ -37,6 +37,9 @@ class Task extends Model
         'priority',
         'start_date',
         'due_date',
+        'project_requirement_id',
+        'project_feature_id',
+        'project_milestone_id',
     ];
 
     protected static function booted(): void
@@ -80,6 +83,21 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function requirement(): BelongsTo
+    {
+        return $this->belongsTo(ProjectRequirement::class, 'project_requirement_id');
+    }
+
+    public function feature(): BelongsTo
+    {
+        return $this->belongsTo(ProjectFeature::class, 'project_feature_id');
+    }
+
+    public function milestone(): BelongsTo
+    {
+        return $this->belongsTo(ProjectMilestone::class, 'project_milestone_id');
     }
 
     public function creator(): BelongsTo

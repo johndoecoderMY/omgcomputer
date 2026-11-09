@@ -476,6 +476,7 @@ class ProjectController extends Controller
         $data = $this->validatedData($request);
         $customerIdentity = $this->requestedCustomerIdentity($data);
         $requirements = $data['requirements'] ?? [];
+        $shouldSyncRequirements = array_key_exists('requirements', $data);
         $shouldSyncAssignees = $request->user()->hasRole('admin')
             && (array_key_exists('assignees', $data) || $request->exists('assignees_present'));
         $assignees = $request->user()->hasRole('admin') ? ($data['assignees'] ?? []) : [];
@@ -483,11 +484,13 @@ class ProjectController extends Controller
 
         $assigneesChanged = false;
         $projectChanged = false;
-        DB::transaction(function () use ($project, $data, $customerIdentity, $requirements, $assignees, $shouldSyncAssignees, &$assigneesChanged, &$projectChanged): void {
+        DB::transaction(function () use ($project, $data, $customerIdentity, $requirements, $shouldSyncRequirements, $assignees, $shouldSyncAssignees, &$assigneesChanged, &$projectChanged): void {
             $project->update($data);
             $projectChanged = $project->wasChanged();
             $this->syncCustomer($project, $customerIdentity);
-            $this->syncRequirements($project, $requirements);
+            if ($shouldSyncRequirements) {
+                $this->syncRequirements($project, $requirements);
+            }
             if ($shouldSyncAssignees) {
                 $changes = $project->assignees()->sync($assignees);
                 $assigneesChanged = $changes['attached'] !== [] || $changes['detached'] !== [];
@@ -570,9 +573,16 @@ class ProjectController extends Controller
             ];
 
             if (isset($requirement['id'])) {
-                $project->requirements()->whereKey($requirement['id'])->update($values);
+                $existing = $project->requirements()->findOrFail($requirement['id']);
+                if ($values['is_completed']) {
+                    $values['status'] = 'done';
+                } elseif ($existing->status === 'done') {
+                    $values['status'] = 'planned';
+                }
+                $existing->update($values);
                 $keptIds[] = (int) $requirement['id'];
             } else {
+                $values['status'] = $values['is_completed'] ? 'done' : 'planned';
                 $keptIds[] = $project->requirements()->create($values)->id;
             }
         }

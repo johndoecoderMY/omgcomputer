@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureNotCustomer;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureWorkspacePermission;
+use App\Http\Middleware\SetToastContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withBroadcasting(__DIR__.'/../routes/channels.php', ['middleware' => ['web', 'auth']])
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            SetToastContext::class,
+        ]);
+
         $middleware->validateCsrfTokens(except: [
             'webhooks/meta/whatsapp',
             'webhooks/meta/data-deletion',

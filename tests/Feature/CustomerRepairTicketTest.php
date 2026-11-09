@@ -45,7 +45,7 @@ class CustomerRepairTicketTest extends TestCase
 
         $this->get(route('repairs.track.form'))
             ->assertOk()
-            ->assertSee('<title>Track a Repair - OMG Computer</title>', false)
+            ->assertSee('<title>Track a Repair | OMG Computer</title>', false)
             ->assertSee('name="ticket_number"', false)
             ->assertDontSee('name="email"', false);
 
@@ -169,6 +169,9 @@ class CustomerRepairTicketTest extends TestCase
             ->assertOk()
             ->assertSee('data-datatable', false)
             ->assertSee('ticket-filters-modal')
+            ->assertSee('ticket-filter-fab')
+            ->assertSee('d-none d-lg-inline-flex')
+            ->assertSee('data-bs-target="#ticket-filters-modal"', false)
             ->assertSee('Filter tickets');
         $this->getJson(route('tickets.datatable', [
             'status' => 'waiting_parts',

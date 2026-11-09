@@ -52,6 +52,7 @@ class BookingController extends Controller
             'selectedDate' => $selected,
             'services' => $services,
             'authenticatedBooking' => $authenticatedBooking,
+            'deviceDetailsServiceId' => 'basic-troubleshooting',
         ]);
     }
 
@@ -127,8 +128,8 @@ class BookingController extends Controller
                 'string',
                 Rule::exists('product_services', 'id')->where(fn ($query) => $query->where('is_active', true)),
             ],
-            'device_model' => ['nullable', 'string', 'max:255'],
-            'request_notes' => ['nullable', 'string', 'max:3000'],
+            'device_model' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:255'],
+            'request_notes' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:3000'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
         ]);
         $time = $request->validate([

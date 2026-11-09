@@ -14,7 +14,8 @@
         str_starts_with($routeName, 'tickets.') => null,
         str_starts_with($routeName, 'bookings.') => null,
         str_starts_with($routeName, 'booking-time-slots.') => null,
-        str_starts_with($routeName, 'projects.tasks.') && isset($project) && (string) $project->getKey() === '1' => 'OMG Computer',
+        str_starts_with($routeName, 'projects.tasks.') => 'Tasks',
+        str_starts_with($routeName, 'tasks.') => 'Tasks',
         str_starts_with($routeName, 'projects.') => $isCustomer ? null : 'Projects',
         str_starts_with($routeName, 'customers.'),
         str_starts_with($routeName, 'admin.users.customers') => 'Customers',
@@ -43,7 +44,6 @@
         str_starts_with($routeName, 'email.'),
         str_starts_with($routeName, 'notifications.'),
         str_starts_with($routeName, 'error-pages.'),
-        str_starts_with($routeName, 'tasks.'),
         $routeName === 'calendar' => 'System',
         default => null,
     };
@@ -75,18 +75,8 @@
             ['label' => 'Projects', 'url' => route('projects.index')],
             ['label' => 'Project calendar'],
         ],
-        str_starts_with($routeName, 'projects.tasks.') && $isCustomer => [
-            ['label' => 'My Projects', 'url' => route('projects.index')],
-            ['label' => isset($project) ? $project->name : 'Project'],
-            ['label' => 'Tasks'],
-        ],
-        str_starts_with($routeName, 'projects.tasks.') && isset($project) && (string) $project->getKey() === '1' => [
-            ['label' => 'OMG Computer'],
-            ['label' => 'Tasks', 'url' => route('projects.tasks.index', $project)],
-        ],
         str_starts_with($routeName, 'projects.tasks.') => [
-            ['label' => 'Projects', 'url' => route('projects.index')],
-            ['label' => isset($project) ? $project->name : 'Project', 'url' => isset($project) ? route('projects.show', $project) : route('projects.index')],
+            ['label' => 'Tasks', 'url' => route('tasks.index')],
         ],
         $routeName === 'calendar' => [
             ['label' => 'System'],
@@ -127,8 +117,7 @@
             ['label' => 'Overview'],
         ],
         str_starts_with($routeName, 'tasks.') => [
-            ['label' => 'System'],
-            ['label' => 'My Tasks', 'url' => route('tasks.index')],
+            ['label' => 'Tasks', 'url' => route('tasks.index')],
         ],
         str_starts_with($routeName, 'customer-messages.') => [
             ['label' => 'OMG Computer'],
@@ -293,7 +282,7 @@
     </ol>
 </nav>
 
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4" data-page-header>
     <div>
         @if ($eyebrow)<p class="text-primary fw-bold text-uppercase small mb-1">{{ $eyebrow }}</p>@endif
         <h1 class="h2 mb-1">{{ $title }}</h1>
@@ -322,6 +311,11 @@
             <a href="{{ $backUrl }}" class="btn btn-outline-primary">
                 <i class="bi bi-arrow-left me-2"></i>{{ $backLabel }}
             </a>
+        @endif
+        @if (isset($actionsEnd))
+            <div class="page-header-actions-end">
+                {{ $actionsEnd }}
+            </div>
         @endif
     </div>
 </div>

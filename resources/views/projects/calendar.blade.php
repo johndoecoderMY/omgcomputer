@@ -3,7 +3,7 @@
 @section('title', $selectedProject ? $selectedProject->name.' Calendar' : 'My Calendar')
 
 @section('content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header :eyebrow="$selectedProject ? 'Project schedule' : 'System calendar'" :title="$selectedProject ? $selectedProject->name.' calendar' : 'My Calendar'"
         :description="$selectedProject ? 'See all events scheduled for this project.' : 'See events across projects and general workspace events.'"
         :back-url="$selectedProject ? route('projects.show', $selectedProject) : route('dashboard')"
@@ -61,7 +61,7 @@
 </style>
 <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    const initializeProjectCalendar = () => {
         const calendarElement = document.getElementById('project-calendar');
         if (!calendarElement || !window.FullCalendar) return;
 
@@ -191,6 +191,8 @@
         });
 
         calendar.render();
-    });
+    };
+    document.addEventListener('DOMContentLoaded', initializeProjectCalendar);
+    window.addEventListener('project:content-updated', initializeProjectCalendar);
 </script>
 @endpush

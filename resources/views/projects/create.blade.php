@@ -3,7 +3,7 @@
 @section('title', 'Create Project')
 
 @section('content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header eyebrow="Workspace" title="Create project"
         :back-url="route('projects.index')" back-label="All projects" />
     @include('projects._form', [

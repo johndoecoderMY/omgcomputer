@@ -11,7 +11,7 @@
             <a class="btn btn-outline-primary" href="{{ route('development.flowcharts.edit', $flowChart) }}">
                 <i class="bi bi-pencil me-2"></i>Edit
             </a>
-            <form id="flow-chart-layout-form" method="POST" action="{{ route('development.flowcharts.layout', $flowChart) }}">
+            <form id="flow-chart-layout-form" method="POST" action="{{ route('development.flowcharts.layout', $flowChart) }}" data-flow-chart-ajax-form>
                 @csrf
                 @method('PATCH')
                 <div id="flow-chart-layout-inputs"></div>
@@ -29,6 +29,7 @@
     @if (session('success'))
         <div class="alert alert-success" role="status">{{ session('success') }}</div>
     @endif
+    <div class="alert d-none" role="status" aria-live="polite" data-flow-chart-action-feedback></div>
     @if ($errors->any())
         <div class="alert alert-danger" role="alert">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>
     @endif
@@ -83,7 +84,7 @@
                 @else
                     <p class="text-body-secondary">Creates one task per step in a single linked project. Existing tasks from these steps are kept and not duplicated.</p>
                     <form method="POST" action="{{ route('development.flowcharts.tasks.store', $flowChart) }}"
-                        class="d-flex flex-wrap align-items-end gap-2">
+                        class="d-flex flex-wrap align-items-end gap-2" data-flow-chart-ajax-form>
                         @csrf
                         <div>
                             <label class="form-label mb-1" for="flow-chart-task-project">Project</label>
@@ -97,9 +98,9 @@
                     </form>
                     @error('project_id')<div class="text-danger mt-2">{{ $message }}</div>@enderror
                 @endif
-                @if ($stepTasks->isNotEmpty())
+                <div data-flow-chart-task-results @if ($stepTasks->isEmpty()) hidden @endif>
                     <h3 class="h6 mt-4">Tasks created from this flow chart</h3>
-                    <ul class="mb-0">
+                    <ul class="mb-0" data-flow-chart-task-list>
                         @foreach ($stepTasks as $task)
                             <li>
                                 <a href="{{ route('tasks.show', $task) }}">{{ $task->title }}</a>
@@ -107,7 +108,7 @@
                             </li>
                         @endforeach
                     </ul>
-                @endif
+                </div>
             </div>
         </div>
     @endunless
@@ -139,7 +140,83 @@
         const nodes = [...canvas.querySelectorAll('.flow-chart-node-card')];
         const layoutForm = document.getElementById('flow-chart-layout-form');
         const layoutInputs = document.getElementById('flow-chart-layout-inputs');
+        const actionFeedback = document.querySelector('[data-flow-chart-action-feedback]');
         if (!nodes.length) return;
+
+        const showActionFeedback = (message, isError = false, details = []) => {
+            actionFeedback.className = `alert ${isError ? 'alert-danger' : 'alert-success'}`;
+            actionFeedback.replaceChildren();
+            const summary = document.createElement('p');
+            summary.className = 'mb-0';
+            summary.textContent = message;
+            actionFeedback.append(summary);
+            if (details.length) {
+                const list = document.createElement('ul');
+                list.className = 'mb-0 mt-2';
+                details.forEach((detail) => {
+                    const item = document.createElement('li');
+                    item.textContent = detail;
+                    list.append(item);
+                });
+                actionFeedback.append(list);
+            }
+        };
+
+        document.querySelectorAll('[data-flow-chart-ajax-form]').forEach((form) => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const button = form.querySelector('button[type="submit"]');
+                const originalButton = button.innerHTML;
+                button.disabled = true;
+                button.textContent = 'Saving...';
+                actionFeedback.classList.remove('d-none');
+                showActionFeedback('Saving changes...');
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                        showActionFeedback(
+                            result.message || 'The changes could not be saved.',
+                            true,
+                            Object.values(result.errors || {}).flat(),
+                        );
+                        return;
+                    }
+
+                    showActionFeedback(result.message || 'Changes saved.');
+                    if (result.tasks) {
+                        const taskResults = document.querySelector('[data-flow-chart-task-results]');
+                        const taskList = taskResults.querySelector('[data-flow-chart-task-list]');
+                        taskList.replaceChildren(...result.tasks.map((task) => {
+                            const item = document.createElement('li');
+                            const link = document.createElement('a');
+                            link.href = task.url;
+                            link.textContent = task.title;
+                            const project = document.createElement('span');
+                            project.className = 'text-body-secondary';
+                            project.textContent = ` — ${task.project}`;
+                            item.append(link, project);
+                            return item;
+                        }));
+                        taskResults.hidden = result.tasks.length === 0;
+                    }
+                } catch (error) {
+                    showActionFeedback('Unable to save these changes. Check your connection and try again.', true);
+                    console.error('Flow chart action failed:', error);
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = originalButton;
+                }
+            });
+        });
 
         const sideVector = (side) => ({
             top: { x: 0, y: -1 },

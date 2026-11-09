@@ -81,7 +81,14 @@ class ChipCollect
     {
         $secretKey = config('services.chip.secret_key');
         if (! is_string($secretKey) || $secretKey === '') {
-            throw new RuntimeException('CHIP is not configured. Set CHIP_SECRET_KEY and CHIP_BRAND_ID.');
+            $secretKey = config('services.chip.test_secret_key');
+        }
+        if (! is_string($secretKey) || $secretKey === '') {
+            $secretKey = env('CHIP_SECRET_KEY_TEST');
+        }
+
+        if (! is_string($secretKey) || $secretKey === '') {
+            throw new RuntimeException('CHIP is not configured. Set CHIP_SECRET_KEY or CHIP_SECRET_KEY_TEST and CHIP_BRAND_ID.');
         }
 
         return Http::acceptJson()

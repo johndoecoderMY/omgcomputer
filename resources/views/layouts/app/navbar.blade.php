@@ -82,6 +82,19 @@
                             <span class="notification-indicator-number" style="position: static; width: auto; height: auto; min-width: 1.5rem; padding: 0.15rem 0.45rem; color: var(--falcon-white); background: var(--falcon-primary); border-radius: 1rem; top: auto; right: auto;" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
                         </a>
                         <div class="dropdown-divider"></div>
+                    @else
+                        <a class="dropdown-item" href="{{ route('email.inbox') }}">
+                            <span class="bi bi-envelope me-2 text-body-secondary" aria-hidden="true"></span>Email inbox
+                        </a>
+                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
+                            <a class="dropdown-item" href="{{ route('calendar') }}">
+                                <span class="bi bi-calendar3 me-2 text-body-secondary" aria-hidden="true"></span>Calendar
+                            </a>
+                        @endif
+                        <a class="dropdown-item" href="{{ route('tasks.index') }}">
+                            <span class="bi bi-list-task me-2 text-body-secondary" aria-hidden="true"></span>Tasks
+                        </a>
+                        <div class="dropdown-divider"></div>
                     @endif
                     <a class="dropdown-item" href="{{ route('profile.edit') }}">
                         <span class="bi bi-person me-2 text-body-secondary" aria-hidden="true"></span>Profile and account

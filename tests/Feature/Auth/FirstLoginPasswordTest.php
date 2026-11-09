@@ -26,11 +26,14 @@ class FirstLoginPasswordTest extends TestCase
         ])->assertRedirect(route('password.first-login'));
 
         $this->get(route('projects.index'))->assertRedirect(route('password.first-login'));
-        $this->get(route('password.first-login'))->assertOk()->assertSee('Choose a new password');
+        $this->get(route('password.first-login'))->assertOk()
+            ->assertSee('Choose a new password')
+            ->assertSee('Confirm new password');
 
         $this->put(route('password.first-login.update'), [
             'current_password' => 'temporary-password',
             'password' => 'A-new-safe-password-2026',
+            'password_confirmation' => 'A-new-safe-password-2026',
         ])->assertRedirect(route('dashboard'));
 
         $this->assertFalse($user->fresh()->force_password_change);
@@ -48,8 +51,27 @@ class FirstLoginPasswordTest extends TestCase
             ->put(route('password.first-login.update'), [
                 'current_password' => 'wrong-current-password',
                 'password' => 'A-new-safe-password-2026',
+                'password_confirmation' => 'A-new-safe-password-2026',
             ])
             ->assertSessionHasErrors('current_password');
+
+        $this->assertTrue($user->fresh()->force_password_change);
+    }
+
+    public function test_new_password_requires_matching_confirmation(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'temporary-password',
+            'force_password_change' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('password.first-login.update'), [
+                'current_password' => 'temporary-password',
+                'password' => 'A-new-safe-password-2026',
+                'password_confirmation' => 'A-different-safe-password-2026',
+            ])
+            ->assertSessionHasErrors('password');
 
         $this->assertTrue($user->fresh()->force_password_change);
     }
@@ -88,6 +110,7 @@ class FirstLoginPasswordTest extends TestCase
         $this->actingAs($user)->put(route('password.first-login.update'), [
             'current_password' => 'temporary-password',
             'password' => 'A-new-safe-password-2026',
+            'password_confirmation' => 'A-new-safe-password-2026',
         ])->assertRedirect(route('dashboard'));
 
         $this->assertTrue(Hash::check('A-new-safe-password-2026', $user->fresh()->password));

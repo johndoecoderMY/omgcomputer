@@ -1,28 +1,28 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top py-1">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="{{ url('/') }}">
-            <img src="{{ asset('assets/img/omg/logoex2w.png') }}" alt=""   height="72" class="me-2">
-            {{-- <span class="fw-bold">OMG Computer</span> --}}
+            <img src="{{ asset('assets/img/omg/logoex2w.png') }}" alt="OMG Computer" height="48" class="me-2">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#guestNavbar" aria-controls="guestNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="guestNavbar">
             <ul class="navbar-nav ms-auto align-items-lg-center">
-                <li class="nav-item"><a class="nav-link" href="{{ auth()->check() && auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">Shop</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#services">Services</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#website-pricing">Packages</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#how-it-works">How it works</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#about">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#help">Help</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#faq">Q &amp; A</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/') }}#contact">Contact</a></li>
-                <li class="nav-item ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3 py-2 py-lg-1" href="{{ route('bookings.create') }}">Book a service</a></li>
+                <li class="nav-item my-2 my-lg-0 ms-lg-2">
+                    <a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ auth()->check() && auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">
+                        <span class="bi bi-shop me-1" aria-hidden="true"></span>Shop
+                    </a>
+                </li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#services">Services</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#website-pricing">Website</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#faq">Q&amp;A</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">Contact Us</a></li>
+                <li class="nav-item my-2 my-lg-0 ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">Book a service</a></li>
                 @auth
                     @if (auth()->user()->hasRole('customer'))
                         @php($cartItemCount = collect(session('shop_cart', []))->sum())
                     @endif
-                    <li class="nav-item dropdown ms-lg-3">
+                    <li class="nav-item dropdown my-2 my-lg-0 ms-lg-2">
                         <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-account-menu" type="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="bi bi-person-circle me-1" aria-hidden="true"></span>{{ auth()->user()->name }}
@@ -46,7 +46,7 @@
                         </ul>
                     </li>
                 @else
-                    <li class="nav-item ms-lg-3"><a class="btn btn-outline-light btn-sm rounded-pill px-3 py-2 py-lg-1" href="{{ route('login') }}">Sign in</a></li>
+                    <li class="nav-item my-2 mx-lg-0 ms-lg-2"><a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ route('login') }}">Sign in</a></li>
                 @endauth
             </ul>
         </div>

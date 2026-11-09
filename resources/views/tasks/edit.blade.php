@@ -3,7 +3,7 @@
 @section('title', 'Edit Task')
 
 @section('content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header :eyebrow="$project?->name ?? 'Tasks'" title="Edit task"
         :back-url="route('tasks.show', $parent ?? $task)" back-label="Back to task" />
 

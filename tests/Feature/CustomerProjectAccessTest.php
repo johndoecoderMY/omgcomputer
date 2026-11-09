@@ -198,7 +198,7 @@ class CustomerProjectAccessTest extends TestCase
             ->assertSee('Design software license')
             ->assertSee('RM 50.00')
             ->assertSee('Project specialist')
-            ->assertSee('Task Gantt chart')
+            ->assertSee('Project roadmap')
             ->assertSee('Build customer portal')
             ->assertSee('Review dashboard layout')
             ->assertDontSee('INTERNAL-SSD-001')

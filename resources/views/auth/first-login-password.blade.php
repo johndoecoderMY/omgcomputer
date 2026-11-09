@@ -39,6 +39,11 @@
                                 type="password" name="password" autocomplete="new-password" required>
                             @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="password_confirmation">Confirm new password</label>
+                            <input class="form-control" id="password_confirmation" type="password"
+                                name="password_confirmation" autocomplete="new-password" required>
+                        </div>
                         <button class="btn btn-primary w-100" type="submit">Update password and continue</button>
                     </form>
                 </div>

@@ -21,6 +21,20 @@ class BillingInventoryReportsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_billing_filters_are_available_from_desktop_button_and_mobile_floating_button(): void
+    {
+        $user = $this->adminUser();
+
+        $this->actingAs($user)->get(route('billing.index'))
+            ->assertOk()
+            ->assertSee('d-none d-lg-inline-flex')
+            ->assertSee('billing-filter-fab')
+            ->assertSee('data-bs-target="#billing-filters-modal"', false)
+            ->assertSee('id="billing-filters-modal"', false)
+            ->assertSee('name="type"', false)
+            ->assertSee('name="status"', false);
+    }
+
     public function test_new_billing_documents_use_the_configured_tax_rate(): void
     {
         config(['billing.tax_rate' => 6]);

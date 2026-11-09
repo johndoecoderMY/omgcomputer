@@ -6,6 +6,7 @@ use App\Models\FlowChart;
 use App\Support\DataTableQueryBuilder;
 use App\Support\SopTemplate;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -137,7 +138,7 @@ class FlowChartController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $projectId = $request->validate([
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
@@ -154,6 +155,19 @@ class FlowChartController extends Controller
             return $flowChart;
         });
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Flow chart created successfully.',
+                'flow_chart' => [
+                    'id' => $flowChart->id,
+                    'title' => $flowChart->title,
+                    'edit_url' => route('development.flowcharts.edit', $flowChart),
+                    'show_url' => route('development.flowcharts.show', $flowChart),
+                    'update_url' => route('development.flowcharts.update', $flowChart),
+                ],
+            ], 201);
+        }
+
         return redirect()
             ->route('development.flowcharts.show', $flowChart)
             ->with('success', 'Flow chart created successfully.');
@@ -168,7 +182,7 @@ class FlowChartController extends Controller
         ]);
     }
 
-    public function addStepsToTasks(Request $request, FlowChart $flowchart): RedirectResponse
+    public function addStepsToTasks(Request $request, FlowChart $flowchart): RedirectResponse|JsonResponse
     {
         abort_if($flowchart->is_example, 404);
 
@@ -205,14 +219,29 @@ class FlowChartController extends Controller
             }
         });
 
+        $message = $createdCount > 0
+            ? "{$createdCount} task(s) created from the flow chart steps."
+            : 'Tasks for this flow chart already exist in the selected project.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'created_count' => $createdCount,
+                'tasks' => $flowchart->tasks()->with('project')->orderBy('id')->get()
+                    ->map(fn ($task): array => [
+                        'title' => $task->title,
+                        'project' => $task->project->name,
+                        'url' => route('tasks.show', $task),
+                    ])->all(),
+            ]);
+        }
+
         return redirect()
             ->route('development.flowcharts.show', $flowchart)
-            ->with('success', $createdCount > 0
-                ? "{$createdCount} task(s) created from the flow chart steps."
-                : 'Tasks for this flow chart already exist in the selected project.');
+            ->with('success', $message);
     }
 
-    public function saveLayout(Request $request, FlowChart $flowchart): RedirectResponse
+    public function saveLayout(Request $request, FlowChart $flowchart): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'positions' => ['required', 'array', 'min:1', 'max:30'],
@@ -233,6 +262,10 @@ class FlowChartController extends Controller
 
         $flowchart->update(['steps' => $steps->all()]);
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Flow chart positions saved.']);
+        }
+
         return redirect()->route('development.flowcharts.show', $flowchart)
             ->with('success', 'Flow chart positions saved.');
     }
@@ -244,11 +277,22 @@ class FlowChartController extends Controller
         ]);
     }
 
-    public function update(Request $request, FlowChart $flowchart): RedirectResponse
+    public function update(Request $request, FlowChart $flowchart): RedirectResponse|JsonResponse
     {
         $data = $this->validatedData($request);
         abort_if($data['is_example'] && $flowchart->projects()->exists(), 422, 'Unlink this flow chart from its projects before marking it as an example.');
         $flowchart->update($data);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Flow chart updated successfully.',
+                'flow_chart' => [
+                    'id' => $flowchart->id,
+                    'title' => $flowchart->title,
+                    'show_url' => route('development.flowcharts.show', $flowchart),
+                ],
+            ]);
+        }
 
         return redirect()
             ->route('development.flowcharts.show', $flowchart)

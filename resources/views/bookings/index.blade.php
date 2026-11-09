@@ -3,6 +3,23 @@
 @section('title', 'Bookings')
 
 @section('content')
+<style>
+    .booking-filter-fab {
+        display: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .booking-filter-fab {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 1030;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 .5rem 1.25rem rgba(23, 32, 51, .28);
+        }
+    }
+</style>
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Support desk" title="{{ $customerView ? 'My bookings' : 'Bookings' }}">
       
@@ -19,7 +36,7 @@
     @endphp
     <div class="card p-2">
         <div class="d-flex justify-content-end mb-2">
-            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#booking-filters-modal">
+            <button class="booking-filter-toolbar-button btn btn-outline-primary d-none d-lg-inline-flex" type="button" data-bs-toggle="modal" data-bs-target="#booking-filters-modal">
                 <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
                 @if ($activeBookingFilters > 0)
                     <span class="badge text-bg-primary ms-1">{{ $activeBookingFilters }}</span>
@@ -43,6 +60,12 @@
         </table>
         </div>
     </div>
+    <button class="booking-filter-fab btn btn-primary rounded-pill px-4 py-3" type="button" data-bs-toggle="modal" data-bs-target="#booking-filters-modal">
+        <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
+        @if ($activeBookingFilters > 0)
+        <span class="badge text-bg-light text-primary ms-1">{{ $activeBookingFilters }}</span>
+        @endif
+    </button>
     <div class="modal fade" id="booking-filters-modal" tabindex="-1" aria-labelledby="booking-filters-title" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form class="modal-content" method="GET" action="{{ route('bookings.index') }}">

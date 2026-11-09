@@ -3,12 +3,12 @@
 @section('title', 'Projects')
 
 @section('content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header eyebrow="{{ $customerView ? 'My workspace' : 'Workspace' }}" title="{{ $customerView ? 'My projects' : 'Projects' }}"
         description="{{ $customerView ? 'Projects associated with your customer profile or repair tickets.' : 'Each project has its own progress, tasks, and subtasks.' }}">
         @unless ($customerView)
             <x-slot:actions>
-                <a class="btn btn-primary" href="{{ route('projects.create') }}">
+                <a class="btn btn-primary" href="{{ route('projects.create') }}" data-project-ajax-modal>
                     <i class="bi bi-plus me-2"></i>New project
                 </a>
             </x-slot:actions>

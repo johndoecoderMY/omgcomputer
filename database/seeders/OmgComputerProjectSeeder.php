@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Event;
 use App\Models\Project;
 use Illuminate\Database\Seeder;
 
@@ -90,39 +89,5 @@ class OmgComputerProjectSeeder extends Seeder
             );
         }
 
-        foreach ([
-            [
-                'title' => 'Review SSM registration and local licensing',
-                'days' => 3,
-                'description' => 'Confirm registration steps, required documents, and local licensing for the Kampar shop.',
-            ],
-            [
-                'title' => 'Choose e-commerce platform and payment gateway',
-                'days' => 7,
-                'description' => 'Compare platform features, subscription costs, supported payment methods, fees, and refund workflows.',
-            ],
-            [
-                'title' => 'Review OMG Computer launch requirements',
-                'days' => 14,
-                'description' => 'Review the business registration, Meta setup, storefront, customer workflow, and launch checklist.',
-            ],
-            [
-                'title' => 'Review launch budget and software estimates',
-                'days' => 21,
-                'description' => 'Replace planning estimates with confirmed quotes and approve the initial operating budget.',
-            ],
-        ] as $scheduleItem) {
-            $startsAt = now()->startOfDay()->addDays($scheduleItem['days'])->setTime(10, 0);
-            $project->events()->firstOrCreate(
-                ['title' => $scheduleItem['title']],
-                [
-                    'event_type' => 'progress_review',
-                    'starts_at' => $startsAt,
-                    'ends_at' => $startsAt->copy()->addHour(),
-                    'location' => 'OMG Computer, Kampar',
-                    'description' => $scheduleItem['description'],
-                ],
-            );
-        }
     }
 }

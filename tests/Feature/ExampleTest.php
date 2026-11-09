@@ -19,7 +19,7 @@ class ExampleTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200)
-            ->assertSee('<title>Computer Repair &amp; Support</title>', false)
+            ->assertSee('<title>Computer Repair, Website Design &amp; Development | OMG Computer</title>', false)
             ->assertSee('Sign in')
             ->assertSee('Straightforward website package estimates')
             ->assertSee('RM800–1,500')
@@ -32,7 +32,7 @@ class ExampleTest extends TestCase
             ->assertSee('href="'.route('login').'"', false)
             ->assertDontSee('Staff sign in')
             ->assertDontSee('Go to workspace')
-            ->assertDontSee('<title>Computer Repair &amp; Support - OMG Computer</title>', false);
+            ->assertDontSee('<title>Computer Repair, Website Design &amp; Development - OMG Computer</title>', false);
     }
 
     public function test_landing_page_shows_the_signed_in_users_workspace_menu(): void

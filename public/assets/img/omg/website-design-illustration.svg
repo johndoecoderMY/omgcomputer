@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" role="img" aria-labelledby="title desc">
+  <title id="title">Website design illustration</title>
+  <desc id="desc">A responsive business website displayed on desktop and mobile screens.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f0f5ff"/>
+      <stop offset="1" stop-color="#e4edff"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f34303"/>
+      <stop offset="1" stop-color="#ff9a54"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="520" rx="36" fill="url(#background)"/>
+  <circle cx="115" cy="106" r="52" fill="#ffb51b" opacity=".35"/>
+  <circle cx="705" cy="430" r="78" fill="#f34303" opacity=".1"/>
+  <rect x="94" y="82" width="510" height="344" rx="20" fill="#26334a"/>
+  <rect x="110" y="98" width="478" height="312" rx="12" fill="#fff"/>
+  <path d="M110 110a12 12 0 0 1 12-12h454a12 12 0 0 1 12 12v26H110z" fill="#e9eef5"/>
+  <circle cx="130" cy="119" r="5" fill="#f34303"/>
+  <circle cx="147" cy="119" r="5" fill="#ffb51b"/>
+  <circle cx="164" cy="119" r="5" fill="#79b99b"/>
+  <rect x="205" y="114" width="250" height="10" rx="5" fill="#c5cfdd"/>
+  <rect x="135" y="158" width="86" height="12" rx="6" fill="#26334a"/>
+  <rect x="451" y="159" width="42" height="8" rx="4" fill="#aebdce"/>
+  <rect x="504" y="159" width="48" height="8" rx="4" fill="#aebdce"/>
+  <rect x="135" y="190" width="430" height="132" rx="12" fill="url(#screen)"/>
+  <rect x="160" y="218" width="174" height="14" rx="7" fill="#fff" opacity=".94"/>
+  <rect x="160" y="244" width="225" height="9" rx="4.5" fill="#fff" opacity=".72"/>
+  <rect x="160" y="261" width="185" height="9" rx="4.5" fill="#fff" opacity=".72"/>
+  <rect x="160" y="283" width="91" height="24" rx="12" fill="#fff"/>
+  <rect x="135" y="340" width="124" height="12" rx="6" fill="#26334a"/>
+  <rect x="135" y="362" width="184" height="8" rx="4" fill="#c5cfdd"/>
+  <rect x="135" y="378" width="157" height="8" rx="4" fill="#d9e0e9"/>
+  <rect x="342" y="340" width="104" height="12" rx="6" fill="#26334a"/>
+  <rect x="342" y="362" width="197" height="8" rx="4" fill="#c5cfdd"/>
+  <rect x="342" y="378" width="164" height="8" rx="4" fill="#d9e0e9"/>
+  <path d="M297 426h104l17 30H280z" fill="#52647c"/>
+  <rect x="260" y="454" width="178" height="12" rx="6" fill="#26334a"/>
+  <rect x="547" y="244" width="150" height="244" rx="27" fill="#26334a"/>
+  <rect x="558" y="263" width="128" height="206" rx="18" fill="#fff"/>
+  <rect x="573" y="278" width="98" height="66" rx="9" fill="url(#screen)"/>
+  <rect x="573" y="358" width="73" height="9" rx="4.5" fill="#26334a"/>
+  <rect x="573" y="376" width="98" height="7" rx="3.5" fill="#c5cfdd"/>
+  <rect x="573" y="390" width="88" height="7" rx="3.5" fill="#d9e0e9"/>
+  <rect x="573" y="412" width="98" height="31" rx="8" fill="#f34303"/>
+  <circle cx="622" cy="478" r="4" fill="#aebdce"/>
+</svg>

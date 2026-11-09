@@ -16,6 +16,19 @@ class BookingTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_public_booking_lists_only_the_two_enabled_customer_services(): void
+    {
+        $this->get(route('bookings.create'))
+            ->assertOk()
+            ->assertSee('Computer/PC Troubleshooting')
+            ->assertSee('FYP Consultation')
+            ->assertDontSee('Laptop cleaning')
+            ->assertViewHas('services', fn ($services): bool => $services->pluck('id')->all() === [
+                'basic-troubleshooting',
+                'fyp-consultation',
+            ]);
+    }
+
     public function test_customer_can_book_a_slot_and_the_same_time_cannot_be_booked_twice(): void
     {
         $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
@@ -29,13 +42,18 @@ class BookingTest extends TestCase
             ->assertSee('Book an appointment')
             ->assertSee('guestNavbar', false)
             ->assertSee('Book a service')
-            ->assertSee('OMG Computer');
+            ->assertSee('OMG Computer')
+            ->assertSee('Computer/PC Troubleshooting')
+            ->assertSee('FYP Consultation')
+            ->assertDontSee('Laptop cleaning')
+            ->assertSee('id="device-details"', false)
+            ->assertSee('hidden', false);
 
         $data = [
             'customer_name' => 'Morgan Lee',
             'customer_email' => 'morgan@example.test',
             'customer_phone' => '+60112223333',
-            'service_id' => 'laptop-cleaning',
+            'service_id' => 'basic-troubleshooting',
             'device_model' => 'Dell XPS 13',
             'request_notes' => 'Fan is noisy.',
             'booking_date' => $dateString,
@@ -51,7 +69,7 @@ class BookingTest extends TestCase
         $this->get(route('bookings.confirmation', $booking->reference))
             ->assertOk()
             ->assertSee($booking->reference)
-            ->assertSee('Laptop cleaning')
+            ->assertSee('Computer/PC Troubleshooting')
             ->assertSee('guestNavbar', false)
             ->assertSee('Back to home');
 
@@ -130,6 +148,54 @@ class BookingTest extends TestCase
             'assigned_to' => $staff->id,
         ])->assertSessionHas('success', 'Booking updated.');
         $this->assertSame(1, RepairTicket::query()->count());
+    }
+
+    public function test_fyp_booking_does_not_store_computer_troubleshooting_details(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'FYP Customer',
+            'customer_email' => 'fyp@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'fyp-consultation',
+            'device_model' => 'This should be excluded',
+            'request_notes' => 'These details are only for PC troubleshooting.',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertSame('FYP Consultation', $booking->service_name);
+        $this->assertNull($booking->device_model);
+        $this->assertNull($booking->request_notes);
+    }
+
+    public function test_computer_troubleshooting_booking_saves_device_details(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'PC Customer',
+            'customer_email' => 'pc@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'device_model' => 'Dell XPS 13',
+            'request_notes' => 'The fan is noisy.',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertSame('Computer/PC Troubleshooting', $booking->service_name);
+        $this->assertSame('Dell XPS 13', $booking->device_model);
+        $this->assertSame('The fan is noisy.', $booking->request_notes);
     }
 
     public function test_staff_can_create_a_repair_ticket_from_a_booking(): void
@@ -261,6 +327,9 @@ class BookingTest extends TestCase
             'starts_to' => $date->format('Y-m-d\TH:i'),
         ]))->assertOk()
             ->assertSee('id="booking-filters-modal"', false)
+            ->assertSee('booking-filter-fab')
+            ->assertSee('d-none d-lg-inline-flex')
+            ->assertSee('data-bs-target="#booking-filters-modal"', false)
             ->assertSee('Filter bookings')
             ->assertSee('name="filter[service]"', false)
             ->assertSee('name="filter[customer_name]"', false)
@@ -391,7 +460,7 @@ class BookingTest extends TestCase
             'customer_name' => 'Impersonated Name',
             'customer_email' => 'someone-else@example.test',
             'customer_phone' => '+60112223333',
-            'service_id' => 'laptop-cleaning',
+            'service_id' => 'fyp-consultation',
             'booking_date' => $date->toDateString(),
             'start_time' => '11:00',
         ])->assertRedirect();

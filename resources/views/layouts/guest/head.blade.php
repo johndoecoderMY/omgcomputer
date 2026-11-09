@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
-    @if (request()->path() === '/')
-        <title>@yield('title', 'OMG Computer')</title>
-    @else
-        <title>@yield('title', 'OMG Computer') - OMG Computer</title>
-    @endif
+    @php
+        $pageTitle = html_entity_decode(trim($__env->yieldContent('title', 'OMG Computer')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $pageTitle = $pageTitle !== '' ? $pageTitle : 'OMG Computer';
+    @endphp
+    <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/favicons/apple-touch-icon.png') }}">

@@ -97,7 +97,7 @@ class EnsureWorkspacePermission
             return 'projects.calendar.manage';
         }
         if (str_starts_with($name, 'projects.')) {
-            if (in_array($name, ['projects.index', 'projects.datatable', 'projects.show', 'projects.calendar.events'], true)) {
+            if (in_array($name, ['projects.index', 'projects.datatable', 'projects.show', 'projects.planning', 'projects.calendar.events'], true)) {
                 return 'projects.view';
             }
             if ($name === 'projects.calendar') {

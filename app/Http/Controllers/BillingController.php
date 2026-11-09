@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
@@ -10,7 +11,9 @@ use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
+use App\Notifications\QuotationInAppNotification;
 use App\Services\InventoryStock;
+use App\Services\MailSettingsService;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,9 +23,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Mail\QuotationMail;
-use App\Notifications\QuotationInAppNotification;
-use App\Services\MailSettingsService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -267,6 +267,7 @@ class BillingController extends Controller
             'due_date' => ['nullable', 'date'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'custom_pc_build' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
             'items.*.product_id' => ['nullable', 'string', Rule::exists('product_services', 'id')],
@@ -291,6 +292,78 @@ class BillingController extends Controller
                     "items.{$index}.unit_price" => 'Enter a unit price for this line.',
                 ]);
             }
+        }
+
+        $inventoryPartIds = collect($data['items'])
+            ->pluck('inventory_part_id')
+            ->filter()
+            ->unique()
+            ->values();
+        $parts = InventoryPart::query()->whereIn('id', $inventoryPartIds)->get()->keyBy('id');
+
+        if (! empty($data['custom_pc_build'])) {
+            $allowedComponentTypes = [
+                'cpu',
+                'gpu',
+                'ram',
+                'motherboard',
+                'storage',
+                'power_supply',
+                'case',
+                'cooling',
+                'operating_system',
+                'software',
+                'peripheral',
+                'other',
+            ];
+
+            foreach ($data['items'] as $index => $item) {
+                if (empty($item['inventory_part_id'])) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.inventory_part_id" => 'Choose an in-stock PC component for every build line.',
+                    ]);
+                }
+
+                $part = $parts->get($item['inventory_part_id']);
+                if (! $part || $part->stock_quantity < 1 || ! in_array($part->type, $allowedComponentTypes, true)) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.inventory_part_id" => 'Choose an in-stock PC component for every build line.',
+                    ]);
+                }
+            }
+        }
+
+        $cpus = [];
+        $motherboards = [];
+        foreach ($data['items'] as $index => $item) {
+            $part = $parts->get($item['inventory_part_id'] ?? null);
+            if ($part?->type === 'cpu') {
+                $cpus[] = [$index, $part];
+            } elseif ($part?->type === 'motherboard') {
+                $motherboards[] = [$index, $part];
+            }
+        }
+
+        $compatibilityErrors = [];
+        foreach ($cpus as [$cpuIndex, $cpu]) {
+            foreach ($motherboards as [$motherboardIndex, $motherboard]) {
+                $cpuSocket = $cpu->specification('Socket');
+                $motherboardSocket = $motherboard->specification('Socket');
+                if (! $cpuSocket || ! $motherboardSocket) {
+                    $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = 'Add socket specifications to both the selected processor and motherboard before quoting this build.';
+
+                    continue;
+                }
+
+                if (strcasecmp(trim($cpuSocket), trim($motherboardSocket)) !== 0) {
+                    $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = "The selected {$cpuSocket} processor is not compatible with the {$motherboardSocket} motherboard.";
+                    $compatibilityErrors["items.{$motherboardIndex}.inventory_part_id"] = 'Choose a motherboard with a socket compatible with the selected processor.';
+                }
+            }
+        }
+
+        if ($compatibilityErrors !== []) {
+            throw ValidationException::withMessages($compatibilityErrors);
         }
 
         $type = $data['type'] === 'quote' ? 'quotation' : $data['type'];

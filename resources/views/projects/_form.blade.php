@@ -43,11 +43,12 @@
         @endrole
 
         <div class="mb-3">
-            <label class="form-label" for="requirements_notes">Requirements notes <span class="text-body-secondary">(optional)</span></label>
+            <label class="form-label" for="requirements_notes">Notes <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="requirements_notes" name="requirements_notes" rows="3" maxlength="5000">{{ old('requirements_notes', $project->requirements_notes) }}</textarea>
             @error('requirements_notes')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
 
+        @if ($method === 'POST')
         @php
             $requirements = old('requirements', $project->requirements->map(fn ($requirement) => [
                 'id' => $requirement->id,
@@ -85,6 +86,7 @@
                 <i class="bi bi-plus me-1" aria-hidden="true"></i>Add requirement
             </button>
         </fieldset>
+        @endif
 
         <div class="mb-3">
             <label class="form-label" for="customer_identity">Linked customer <span class="text-body-secondary">(optional)</span></label>
@@ -107,6 +109,7 @@
     </div>
 </form>
 
+@if ($method === 'POST')
 <template id="project-requirement-template">
     <div class="row g-2 align-items-center mb-2" data-requirement-row>
         <div class="col-auto">
@@ -143,3 +146,4 @@
         });
     })();
 </script>
+@endif

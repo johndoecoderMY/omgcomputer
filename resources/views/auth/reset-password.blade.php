@@ -28,6 +28,11 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
+            <div class="mb-4">
+                <label class="form-label" for="password_confirmation">Confirm new password</label>
+                <input class="form-control" id="password_confirmation" name="password_confirmation"
+                    type="password" required autocomplete="new-password">
+            </div>
 
             <button class="btn btn-primary w-100" type="submit">Reset password</button>
         </form>

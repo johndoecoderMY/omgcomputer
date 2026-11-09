@@ -3,6 +3,42 @@
 @section('title', 'Shop | OMG Computer')
 
 @section('content')
+<style>
+    .shop-product-filters {
+        position: sticky;
+        top: 4.5rem;
+        z-index: 1020;
+        background-color: var(--falcon-card-bg, #fff);
+        border: 1px solid rgba(23, 32, 51, .2) !important;
+        box-shadow: 0 .75rem 1.5rem rgba(23, 32, 51, .16) !important;
+    }
+
+    .shop-product-filters-customer {
+        top: 1rem;
+    }
+
+    .shop-filter-fab {
+        display: none;
+    }
+
+    @media (max-width: 767.98px) {
+        .shop-product-filters {
+            display: none;
+        }
+
+        .shop-filter-fab {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 1030;
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            box-shadow: 0 .5rem 1.25rem rgba(23, 32, 51, .28);
+        }
+
+    }
+</style>
 <section class="pt-7 pt-lg-8 pb-6">
     <div class="container">
         <div class="rounded-4 bg-primary-subtle p-4 p-lg-5 mb-4">
@@ -23,40 +59,29 @@
             @include('shop.public.products._custom-pc-quote')
         </div>
 
-        <form class="card border-0 shadow-sm mb-4" method="GET" action="{{ route('shop.public') }}">
-            <div class="card-body p-3 p-lg-4">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md">
-                        <label class="form-label small fw-semibold" for="shop-grid-search">Search products</label>
-                        <input class="form-control" id="shop-grid-search" name="search" type="search" value="{{ $filters['search'] }}" placeholder="Search by product name or description">
+        <form class="shop-product-filters card border-0 shadow-sm mb-4 {{ auth()->check() && auth()->user()->hasRole('customer') ? 'shop-product-filters-customer' : '' }}" method="GET" action="{{ route('shop.public') }}">
+            @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-grid'])
+        </form>
+
+        <button class="shop-filter-fab btn btn-primary rounded-pill px-4 py-3" type="button" data-bs-toggle="modal" data-bs-target="#shop-filter-modal">
+            <i class="bi bi-sliders" aria-hidden="true"></i>Filters
+            @if ($filters['search'] || $filters['type'] || $filters['sort'] !== 'name')
+                <span class="badge rounded-pill text-bg-light text-primary">Active</span>
+            @endif
+        </button>
+        <div class="shop-filter-modal modal fade" id="shop-filter-modal" tabindex="-1" aria-labelledby="shop-filter-modal-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="shop-filter-modal-title">Search and filter products</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small fw-semibold" for="shop-grid-type">Category</label>
-                        <select class="form-select" id="shop-grid-type" name="type">
-                            <option value="">All categories</option>
-                            @foreach ($types as $value => $label)
-                                <option value="{{ $value }}" @selected($filters['type'] === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label small fw-semibold" for="shop-grid-sort">Sort by</label>
-                        <select class="form-select" id="shop-grid-sort" name="sort">
-                            <option value="name" @selected($filters['sort'] === 'name')>Name</option>
-                            <option value="newest" @selected($filters['sort'] === 'newest')>Newest</option>
-                            <option value="price-low" @selected($filters['sort'] === 'price-low')>Price: low to high</option>
-                            <option value="price-high" @selected($filters['sort'] === 'price-high')>Price: high to low</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-auto d-flex gap-2">
-                        <button class="btn btn-primary flex-grow-1" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
-                        @if ($filters['search'] || $filters['type'] || $filters['sort'] !== 'name')
-                            <a class="btn btn-outline-secondary" href="{{ route('shop.public') }}">Clear</a>
-                        @endif
-                    </div>
+                    <form method="GET" action="{{ route('shop.public') }}">
+                        @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-modal'])
+                    </form>
                 </div>
             </div>
-        </form>
+        </div>
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h2 class="h5 text-1000 mb-0">Products <span class="text-body-secondary fw-normal">({{ number_format($productCount) }})</span></h2>
@@ -67,7 +92,7 @@
                 <div class="col-6 col-lg-4 col-xl-3">
                     <article class="card border-0 shadow-sm h-100 overflow-hidden">
                         <a class="d-flex align-items-center justify-content-center bg-body-tertiary text-primary text-decoration-none" href="{{ route('shop.public.products.show', $product) }}" aria-label="View {{ $product->name }}" style="aspect-ratio: 4 / 3">
-                            <i class="bi {{ $product->type === 'ready_built_pc' ? 'bi-pc-display-horizontal' : 'bi-box2' }} bi-3x" aria-hidden="true"></i>
+                            @include('shop.public.products._stock-image', ['product' => $product, 'class' => 'w-100 h-100 object-fit-cover'])
                         </a>
                         <div class="card-body p-3 p-lg-4 d-flex flex-column">
                             <p class="small text-primary fw-semibold mb-1">{{ $types[$product->type] ?? $product->type }}</p>

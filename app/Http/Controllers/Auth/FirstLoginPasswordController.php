@@ -29,7 +29,7 @@ class FirstLoginPasswordController extends Controller
 
         $data = $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'different:current_password'],
+            'password' => ['required', Password::defaults(), 'different:current_password', 'confirmed'],
         ]);
 
         try {

@@ -245,7 +245,7 @@
     @endphp
     <div class="card mb-4" aria-labelledby="customer-project-gantt-heading">
         <div class="card-header bg-body">
-            <h2 class="h5 mb-0" id="customer-project-gantt-heading">Task Gantt chart</h2>
+            <h2 class="h5 mb-0" id="customer-project-gantt-heading">Project roadmap</h2>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 table-bordered">

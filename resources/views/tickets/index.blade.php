@@ -3,6 +3,23 @@
 @section('title', 'Tickets')
 
 @section('content')
+<style>
+    .ticket-filter-fab {
+        display: none;
+    }
+
+    @media (max-width: 991.98px) {
+        .ticket-filter-fab {
+            position: fixed;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 1030;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 .5rem 1.25rem rgba(23, 32, 51, .28);
+        }
+    }
+</style>
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Support desk" title="Tickets">
         @unless (auth()->user()->hasRole('customer'))
@@ -20,7 +37,7 @@
 
     <div class="card p-2">
         <div class="d-flex justify-content-end mb-2">
-            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#ticket-filters-modal">
+            <button class="ticket-filter-toolbar-button btn btn-outline-primary d-none d-lg-inline-flex" type="button" data-bs-toggle="modal" data-bs-target="#ticket-filters-modal">
                 <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
                 @if (request()->filled('status') || request()->filled('assigned'))
                     <span class="badge text-bg-primary ms-1">{{ (int) request()->filled('status') + (int) request()->filled('assigned') }}</span>
@@ -51,6 +68,12 @@
             </table>
         </div>
     </div>
+    <button class="ticket-filter-fab btn btn-primary rounded-pill px-4 py-3" type="button" data-bs-toggle="modal" data-bs-target="#ticket-filters-modal">
+        <span class="bi bi-filter me-2" aria-hidden="true"></span>Filters
+        @if (request()->filled('status') || request()->filled('assigned'))
+            <span class="badge text-bg-light text-primary ms-1">{{ (int) request()->filled('status') + (int) request()->filled('assigned') }}</span>
+        @endif
+    </button>
     <div class="modal fade" id="ticket-filters-modal" tabindex="-1" aria-labelledby="ticket-filters-title" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <form class="modal-content" method="GET" action="{{ route('tickets.index') }}">

@@ -138,6 +138,7 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->actingAs($this->adminUser());
         $existingProject = Project::query()->create(['name' => 'Existing project']);
         $project = Project::query()->create(['name' => 'Student FYP']);
+        $requirement = $project->requirements()->create(['requirement' => 'Keep the legacy checklist item']);
         $previousCustomer = Customer::query()->create([
             'name' => 'Previous customer',
             'project_id' => $project->id,
@@ -150,15 +151,27 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->get(route('projects.edit', $project))
             ->assertOk()
             ->assertSee('Linked customer')
-            ->assertSee('No customer linked');
+            ->assertSee('No customer linked')
+            ->assertSee('Project name')
+            ->assertSee('Description')
+            ->assertSee('Assign people')
+            ->assertSee('Notes')
+            ->assertDontSee('Requirements checklist')
+            ->assertDontSee('name="requirements[0][requirement]"', false);
         $this->put(route('projects.update', $project), [
             'name' => $project->name,
             'description' => $project->description,
+            'requirements_notes' => 'Project-specific notes.',
             'customer_id' => $nextCustomer->id,
         ])->assertRedirect(route('projects.show', $project));
 
         $this->assertNull($previousCustomer->fresh()->project_id);
         $this->assertSame($project->id, $nextCustomer->fresh()->project_id);
+        $this->assertSame('Project-specific notes.', $project->fresh()->requirements_notes);
+        $this->assertDatabaseHas('project_requirements', [
+            'id' => $requirement->id,
+            'requirement' => 'Keep the legacy checklist item',
+        ]);
         $this->put(route('projects.update', $project), [
             'name' => $project->name,
             'description' => $project->description,

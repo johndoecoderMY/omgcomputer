@@ -54,7 +54,7 @@ return [
         ],
         [
             'id' => 'basic-troubleshooting',
-            'name' => 'Basic troubleshooting',
+            'name' => 'Computer/PC Troubleshooting',
             'category' => 'repair',
             'scope' => 'Initial diagnosis and recommended next steps',
             'audience' => 'All customers',
@@ -90,7 +90,7 @@ return [
         ],
         [
             'id' => 'fyp-consultation',
-            'name' => 'FYP consultation',
+            'name' => 'FYP Consultation',
             'category' => 'student',
             'scope' => 'Project scoping, milestone planning and technical direction',
             'audience' => 'Diploma and degree students',

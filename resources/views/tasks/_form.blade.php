@@ -37,6 +37,44 @@
             </div>
         @endif
 
+        @if ($project && !$parent)
+            <fieldset class="mb-3">
+                <legend class="form-label">Planning traceability <span class="text-body-secondary">(optional)</span></legend>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label" for="project_requirement_id">Requirement</label>
+                        <select class="form-select" id="project_requirement_id" name="project_requirement_id">
+                            <option value="">Not linked</option>
+                            @foreach ($planningRequirements as $requirement)
+                                <option value="{{ $requirement->id }}" @selected((string) old('project_requirement_id', $task->project_requirement_id) === (string) $requirement->id)>{{ $requirement->code }} · {{ $requirement->requirement }}</option>
+                            @endforeach
+                        </select>
+                        @error('project_requirement_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="project_feature_id">Feature</label>
+                        <select class="form-select" id="project_feature_id" name="project_feature_id">
+                            <option value="">Not linked</option>
+                            @foreach ($planningFeatures as $feature)
+                                <option value="{{ $feature->id }}" @selected((string) old('project_feature_id', $task->project_feature_id) === (string) $feature->id)>{{ $feature->module->name }} · {{ $feature->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('project_feature_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="project_milestone_id">Milestone</label>
+                        <select class="form-select" id="project_milestone_id" name="project_milestone_id">
+                            <option value="">Not linked</option>
+                            @foreach ($planningMilestones as $milestone)
+                                <option value="{{ $milestone->id }}" @selected((string) old('project_milestone_id', $task->project_milestone_id) === (string) $milestone->id)>{{ $milestone->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('project_milestone_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+            </fieldset>
+        @endif
+
         <div class="mb-3">
             <label class="form-label" for="title">Task name</label>
             <input class="form-control" id="title" name="title" value="{{ old('title', $task->title) }}"

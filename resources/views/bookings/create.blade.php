@@ -52,40 +52,44 @@
                                                     <h2 class="h4">Your details</h2>
                                                     <div class="mb-3">
                                                         <label class="form-label" for="booking-date">Appointment
-                                                            date</label>
+                                                            date <span class="text-danger" aria-hidden="true">*</span></label>
                                                         <input class="form-control" type="date" id="booking-date"
                                                             name="booking_date" value="{{ $initialDate }}"
                                                             min="{{ now()->toDateString() }}" readonly required>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label" for="booking-time">Appointment
-                                                            time</label>
+                                                            time <span class="text-danger" aria-hidden="true">*</span></label>
                                                         <input class="form-control" type="time" id="booking-time"
                                                             name="start_time" value="{{ old('start_time') }}" readonly
                                                             required>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="customer-name">Full name</label>
+                                                        <label class="form-label" for="customer-name">Full name <span
+                                                                class="text-danger" aria-hidden="true">*</span></label>
                                                         <input class="form-control" id="customer-name" name="customer_name"
                                                             value="{{ old('customer_name', $authenticatedBooking ? auth()->user()->name : '') }}"
                                                             required autocomplete="name" @readonly($authenticatedBooking)>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="customer-email">Email</label>
+                                                        <label class="form-label" for="customer-email">Email <span
+                                                                class="text-danger" aria-hidden="true">*</span></label>
                                                         <input class="form-control" id="customer-email" type="email"
                                                             name="customer_email"
                                                             value="{{ old('customer_email', $authenticatedBooking ? auth()->user()->email : '') }}"
                                                             required autocomplete="email" @readonly($authenticatedBooking)>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="customer-phone">Phone</label>
+                                                        <label class="form-label" for="customer-phone">Phone <span
+                                                                class="text-danger" aria-hidden="true">*</span></label>
                                                         <input class="form-control" id="customer-phone" type="tel"
                                                             name="customer_phone"
                                                             value="{{ old('customer_phone', $authenticatedBooking ? auth()->user()->phone : '') }}"
                                                             required autocomplete="tel">
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label" for="service-id">Service</label>
+                                                        <label class="form-label" for="service-id">Service <span
+                                                                class="text-danger" aria-hidden="true">*</span></label>
                                                         <select class="form-select" id="service-id" name="service_id"
                                                             required>
                                                             <option value="">Choose a service</option>
@@ -96,17 +100,20 @@
                                                             @endforeach
                                                         </select>
                                                     </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label" for="device-model">Device model</label>
-                                                        <input class="form-control" id="device-model" name="device_model"
-                                                            value="{{ old('device_model') }}" autocomplete="off">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label" for="request-notes">What do you need help
-                                                            with?</label>
-                                                        <textarea class="form-control" id="request-notes"
-                                                            name="request_notes"
-                                                            rows="4">{{ old('request_notes') }}</textarea>
+                                                    <div id="device-details"
+                                                        @if (old('service_id') !== $deviceDetailsServiceId) hidden @endif>
+                                                        <div class="mb-3">
+                                                            <label class="form-label" for="device-model">Device model</label>
+                                                            <input class="form-control" id="device-model" name="device_model"
+                                                                value="{{ old('device_model') }}" autocomplete="off">
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label" for="request-notes">What do you need help
+                                                                with?</label>
+                                                            <textarea class="form-control" id="request-notes"
+                                                                name="request_notes"
+                                                                rows="4">{{ old('request_notes') }}</textarea>
+                                                        </div>
                                                     </div>
                                                     <button class="btn btn-primary" type="submit">
                                                         Book a service
@@ -152,11 +159,26 @@
                     const calendarEl = document.getElementById("calendar");
                     const bookingDate = document.getElementById("booking-date");
                     const bookingTime = document.getElementById("booking-time");
+                    const serviceSelect = document.getElementById("service-id");
+                    const deviceDetails = document.getElementById("device-details");
+                    const deviceModel = document.getElementById("device-model");
+                    const requestNotes = document.getElementById("request-notes");
                     const availabilityMessage = document.getElementById("availability-message");
                     const availableTimes = document.getElementById("available-times");
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
                     const availabilityUrl = @json(route('bookings.availability'));
+                    const deviceDetailsServiceId = @json($deviceDetailsServiceId);
                     let availabilityRequest = 0;
+
+                    function updateDeviceDetails() {
+                        const showDeviceDetails = serviceSelect.value === deviceDetailsServiceId;
+                        deviceDetails.hidden = !showDeviceDetails;
+                        deviceModel.disabled = !showDeviceDetails;
+                        requestNotes.disabled = !showDeviceDetails;
+                    }
+
+                    serviceSelect.addEventListener("change", updateDeviceDetails);
+                    updateDeviceDetails();
 
                     function renderTimes(slots) {
                         availableTimes.replaceChildren();
