@@ -170,6 +170,7 @@ class AdminBackupTest extends TestCase
 
         $sql = $response->streamedContent();
         $this->assertStringContainsString('CREATE TABLE IF NOT EXISTS', $sql);
+        $this->assertMatchesRegularExpression('/CREATE TABLE IF NOT EXISTS.*?;\R\R/s', $sql);
         $this->assertStringContainsString('DELETE FROM "users";', $sql);
         $this->assertStringContainsString('INSERT INTO "users"', $sql);
         $this->assertStringContainsString("SQL Export O''Connor", $sql);

@@ -116,7 +116,8 @@ class DatabaseTableExportService
 
             if ($createTables) {
                 foreach ($tables as $table) {
-                    $this->writeSql($stream, $this->createTableStatement($table).PHP_EOL.PHP_EOL);
+                    $statement = rtrim($this->createTableStatement($table), " \t\n\r\0\x0B;");
+                    $this->writeSql($stream, $statement.';'.PHP_EOL.PHP_EOL);
                 }
             }
 
