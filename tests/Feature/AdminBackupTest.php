@@ -66,6 +66,8 @@ class AdminBackupTest extends TestCase
             ->assertSee('backup-test-app')
             ->assertSee('Storage available')
             ->assertSee('Export selected database tables')
+            ->assertSee('class="modal-dialog modal-xl modal-dialog-scrollable"', false)
+            ->assertSee('<form class="modal-content" method="POST" action="'.route('admin.backups.export-tables').'">', false)
             ->assertSee('name="tables[]"', false)
             ->assertSee('Select all tables')
             ->assertSee('Select account & settings tables')

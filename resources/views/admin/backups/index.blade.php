@@ -42,14 +42,13 @@
 
     <div class="modal fade" id="table-export-modal" tabindex="-1" aria-labelledby="table-export-modal-title" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
-                <form method="POST" action="{{ route('admin.backups.export-tables') }}">
-                    @csrf
-                    <div class="modal-header">
-                        <h2 class="modal-title fs-5" id="table-export-modal-title">Export database tables</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
+            <form class="modal-content" method="POST" action="{{ route('admin.backups.export-tables') }}">
+                @csrf
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="table-export-modal-title">Export database tables</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
                         @error('export')
                             <div class="alert alert-danger" role="alert">{{ $message }}</div>
                         @enderror
@@ -139,17 +138,16 @@
                                 </div>
                             </fieldset>
                         @endif
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                        @if ($databaseTables->isNotEmpty())
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>Download export
-                            </button>
-                        @endif
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                    @if ($databaseTables->isNotEmpty())
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>Download export
+                        </button>
+                    @endif
+                </div>
+            </form>
         </div>
     </div>
     @push('scripts')
