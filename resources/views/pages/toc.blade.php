@@ -6,22 +6,24 @@
     @include('pages.partials.hero', [
         'eyebrow' => 'Terms of service',
         'heading' => 'Terms & Conditions',
-        'description' => 'By using our services, you agree to the terms described below.',
+        'description' => 'Terms for using this website, requesting services, and placing online shop orders.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5">
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4">
                             <ol class="text-700 ps-3 mb-0">
-                                <li class="mb-4"><span class="fw-semibold text-1000">Service scope:</span> We provide repair, troubleshooting, diagnostics, and upgrade support for computer systems and related devices. Scope and pricing may vary based on the issue and requested work.</li>
-                                <li class="mb-4"><span class="fw-semibold text-1000">Customer information:</span> You agree to provide accurate information about the device, issue, and any relevant conditions that may affect diagnosis or repair.</li>
-                                <li class="mb-4"><span class="fw-semibold text-1000">Diagnosis and recommendations:</span> We may recommend a repair, component replacement, data backup, or other steps based on our assessment. Final approval is required before performing additional work.</li>
-                                <li class="mb-4"><span class="fw-semibold text-1000">Device ownership and risk:</span> While in our care, devices are handled responsibly, but we are not liable for pre-existing damage, data loss, or issues outside the scope of the agreed repair work unless caused by our direct negligence.</li>
-                                <li class="mb-4"><span class="fw-semibold text-1000">Payment:</span> Charges for services, parts, and labor are subject to prior agreement. Payment is expected upon completion unless otherwise arranged in writing.</li>
-                                <li class="mb-0"><span class="fw-semibold text-1000">Changes to terms:</span> These terms may be updated at any time. Continued use of our services after changes are published constitutes acceptance of the revised terms.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Services and bookings:</span> The website describes computer troubleshooting, repair, upgrades, ready-built computers, and website design services. A booking is a request and is not confirmed until our team confirms availability and the appointment. We will explain the proposed work and price; additional work requires your approval.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Device information and data:</span> Please provide accurate information about the device and issue. Back up important data before handing over a device where possible, and do not provide account passwords unless necessary and agreed for the specific work. We will handle devices with reasonable care; nothing here excludes responsibility that cannot legally be excluded.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Shop orders:</span> Product availability, prices, and descriptions are shown on the relevant product pages and checkout. Orders are subject to stock and order confirmation. A delivery address is optional at checkout, and delivery arrangements or charges may need to be confirmed separately before payment. Product warranties are those stated for the item or provided by its manufacturer, subject to applicable law.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Payments and refunds:</span> Online shop payments are processed through CHiP. Payment-provider terms also apply to that transaction. Our <a href="{{ route('refund-policy') }}">Refund Policy</a> explains how to raise a request; it does not limit statutory rights.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Website projects and previews:</span> Website previews are examples of design work. The scope, price, deliverables, and timeline for a commissioned website project will be agreed separately before work begins.</li>
+                                <li class="mb-3"><span class="fw-semibold text-1000">Privacy and third parties:</span> Our handling of personal information is described in the <a href="{{ route('privacy') }}">Privacy Policy</a>. Payment, courier, and external services may have their own terms and privacy policies.</li>
+                                <li class="mb-0"><span class="fw-semibold text-1000">Applicable rights and updates:</span> These terms are subject to applicable Malaysian law and do not remove consumer rights that cannot be excluded. We may update the website terms as our services change; the version posted on this page applies to future use, subject to applicable law.</li>
                             </ol>
                         </div>
                     </div>

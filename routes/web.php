@@ -269,6 +269,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
         Route::get('/products/grid', 'productsGrid')->name('products.grid');
         Route::get('/custom-pc-builder', 'customPcBuilder')->name('custom-pc-builder');
+        Route::get('/custom-pc-builder/components', 'customPcBuilderComponents')->name('custom-pc-builder.components');
+        Route::post('/custom-pc-builder/components/{part}/supplier', 'storeCustomPcBuilderSupplier')->name('custom-pc-builder.components.supplier');
         Route::get('/products/create', 'createProduct')->name('products.create');
         Route::post('/products', 'storeProduct')->name('products.store');
         Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');
@@ -398,6 +400,9 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/marketing/campaigns', 'storeCampaign')->name('marketing.store');
         Route::get('/export', 'export')->name('export');
     });
+    Route::get('/marketing/tiktok', [ReportsController::class, 'tiktok'])
+        ->middleware('not-customer')
+        ->name('marketing.tiktok');
     Route::prefix('reports/integrations')->name('reports.integrations.')->middleware('role:admin')->controller(IntegrationTestController::class)->group(function (): void {
         Route::get('/notifications', 'notifications')->name('notifications');
         Route::post('/notifications/send', 'sendTestNotification')->name('notifications.send');
@@ -410,6 +415,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/parcel-tracking', 'parcelTracking')->name('tracking');
         Route::post('/parcel-tracking', 'trackParcel')->name('tracking.lookup');
         Route::get('/chip', 'chip')->name('chip');
+        Route::post('/chip/mode', 'updateChipMode')->name('chip.mode');
         Route::post('/chip/check', 'checkChip')->name('chip.check');
     });
     Route::prefix('reports/integrations/whatsapp')->name('reports.integrations.whatsapp.')->middleware('role:admin')->controller(WhatsAppInboxController::class)->group(function (): void {

@@ -174,7 +174,6 @@
                         </a>
                     </li>
 
-
                     {{-- Bookings --}}
                     <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
@@ -330,7 +329,7 @@
 
 
 
-                    {{-- Parts & Inventory --}}
+                    {{-- Management --}}
                     <li class="nav-item">
 
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
@@ -339,6 +338,45 @@
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
+
+                        <a class="nav-link dropdown-indicator" href="#shopMenu" role="button" data-bs-toggle="collapse"
+                            aria-expanded="false" aria-controls="shopMenu">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
+                                <span class="nav-link-text ps-1">Shop</span>
+                            </div>
+                        </a>
+                        <ul class="nav collapse" id="shopMenu">
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.custom-pc-builder') }}"><span class="nav-link-text ps-1">Custom PC builder</span></a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.products.index') }}"><span class="nav-link-text ps-1">Products</span></a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.products.grid') }}"><span class="nav-link-text ps-1">Product grid</span></a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.orders.index') }}"><span class="nav-link-text ps-1">Orders</span></a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.orders.status-board') }}"><span class="nav-link-text ps-1">Order status board</span></a></li>
+                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.orders.customer-preview') }}"><span class="nav-link-text ps-1">Customer status preview</span></a></li>
+                        </ul>
+                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('products.view'))
+                            <a class="nav-link" href="{{ route('products.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-tags"></span></span>
+                                    <span class="nav-link-text ps-1">Products &amp; Services</span>
+                                </div>
+                            </a>
+                        @endif
+                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('inventory.view'))
+                            <a class="nav-link dropdown-indicator" href="#inventoryMenu" role="button" data-bs-toggle="collapse"
+                                aria-expanded="false" aria-controls="inventoryMenu">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-boxes"></span></span>
+                                    <span class="nav-link-text ps-1">Parts &amp; Inventory</span>
+                                </div>
+                            </a>
+                            <ul class="nav collapse" id="inventoryMenu">
+                                <li class="nav-item"><a class="nav-link" href="{{ route('inventory.index') }}"><span class="nav-link-text ps-1">Overview</span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ route('inventory.parts') }}"><span class="nav-link-text ps-1">Parts</span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ route('inventory.suppliers.index') }}"><span class="nav-link-text ps-1">Suppliers</span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ route('inventory.movements') }}"><span class="nav-link-text ps-1">Stock Movements</span></a></li>
+                            </ul>
+                        @endif
 
                         <a class="nav-link" href="{{ route('development.sops') }}">
                             <div class="d-flex align-items-center">
@@ -384,18 +422,6 @@
                                     </a>
                                 </li>
                             </ul>
-                            <a class="nav-link" href="{{ route('admin.backups.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-database"></span></span>
-                                    <span class="nav-link-text ps-1">Backups</span>
-                                </div>
-                            </a>
-                            <a class="nav-link" href="{{ route('admin.maintenance.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-tools"></span></span>
-                                    <span class="nav-link-text ps-1">System maintenance</span>
-                                </div>
-                            </a>
                             @else
                             <a class="nav-link" href="{{ route('admin.users.index') }}">
                                 <div class="d-flex align-items-center">
@@ -406,63 +432,6 @@
                             @endrole
                         @endif
 
-                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('products.view'))
-                            <a class="nav-link" href="{{ route('products.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-tags"></span></span>
-                                    <span class="nav-link-text ps-1">Products & Services</span>
-                                </div>
-                            </a>
-                        @endif
-
-                        <a class="nav-link dropdown-indicator" href="#shopMenu" role="button" data-bs-toggle="collapse"
-                            aria-expanded="false" aria-controls="shopMenu">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-shop"></span></span>
-                                <span class="nav-link-text ps-1">Shop</span>
-                            </div>
-                        </a>
-                        <ul class="nav collapse" id="shopMenu">
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.custom-pc-builder') }}">
-                                    <span class="nav-link-text ps-1">Custom PC builder</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.products.index') }}">
-                                    <span class="nav-link-text ps-1">Products</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.products.grid') }}">
-                                    <span class="nav-link-text ps-1">Product grid</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.orders.index') }}">
-                                    <span class="nav-link-text ps-1">Orders</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.orders.status-board') }}">
-                                    <span class="nav-link-text ps-1">Order status board</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{{ route('shop.orders.customer-preview') }}">
-                                    <span class="nav-link-text ps-1">Customer status preview</span>
-                                </a>
-                            </li>
-                        </ul>
-
-                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
-                            <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
-                                    <span class="nav-link-text ps-1">Flow Charts</span>
-                                </div>
-                            </a>
-                        @endif
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('drama_content.manage'))
                             <a class="nav-link" href="{{ route('drama-content.index') }}">
                                 <div class="d-flex align-items-center">
@@ -480,17 +449,22 @@
                                 </div>
                             </a>
                             <ul class="nav collapse" id="marketingMenu">
+                                @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ route('meta-content.index') }}">
+                                            <span class="nav-link-text ps-1">Content Planner</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="{{ route('marketing.tiktok') }}">
+                                            <span class="nav-link-text ps-1">TikTok</span>
+                                        </a>
+                                    </li>
+                                @endif
                                 @if (auth()->user()->hasRole('admin'))
                                     <li class="nav-item">
                                         <a class="nav-link" href="{{ route('meta-ads.index') }}">
                                             <span class="nav-link-text ps-1">Meta Ads</span>
-                                        </a>
-                                    </li>
-                                @endif
-                                @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="{{ route('meta-content.index') }}">
-                                            <span class="nav-link-text ps-1">Content</span>
                                         </a>
                                     </li>
                                 @endif
@@ -506,38 +480,6 @@
                             </ul>
                         @endif
 
-                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('inventory.view'))
-                            <a class="nav-link dropdown-indicator" href="#inventoryMenu" role="button" data-bs-toggle="collapse"
-                                aria-expanded="false" aria-controls="inventoryMenu">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-boxes"></span></span>
-                                    <span class="nav-link-text ps-1">Parts & Inventory</span>
-                                </div>
-                            </a>
-
-                            <ul class="nav collapse" id="inventoryMenu">
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('inventory.index') }}">
-                                        <span class="nav-link-text ps-1">Overview</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('inventory.parts') }}">
-                                        <span class="nav-link-text ps-1">Parts</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('inventory.suppliers.index') }}">
-                                        <span class="nav-link-text ps-1">Suppliers</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('inventory.movements') }}">
-                                        <span class="nav-link-text ps-1">Stock Movements</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        @endif
                     </li>
 
                     @role('admin')
@@ -682,7 +624,8 @@
                     </li>
                     @endrole
 
-                    {{-- System --}}
+                    {{-- System administration --}}
+                    @role('admin')
                     <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
                             <div class="col-auto navbar-vertical-label">System</div>
@@ -690,7 +633,29 @@
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
+                        <a class="nav-link" href="{{ route('admin.backups.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-database"></span></span>
+                                <span class="nav-link-text ps-1">Backups</span>
+                            </div>
+                        </a>
+                        <a class="nav-link" href="{{ route('admin.maintenance.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-tools"></span></span>
+                                <span class="nav-link-text ps-1">System maintenance</span>
+                            </div>
+                        </a>
+                    </li>
+                    @endrole
 
+                    {{-- Personal workspace --}}
+                    <li class="nav-item">
+                        <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                            <div class="col-auto navbar-vertical-label">ME</div>
+                            <div class="col ps-0">
+                                <hr class="mb-0 navbar-vertical-divider">
+                            </div>
+                        </div>
                         <a class="nav-link" href="{{ route('profile.edit') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-gear"></span></span>
@@ -719,6 +684,26 @@
                         </a>
 
                     </li>
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('meta-content.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-file-earmark-richtext"></span></span>
+                                    <span class="nav-link-text ps-1">Content</span>
+                                </div>
+                            </a>
+                        </li>
+                    @endif
+                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
+                                    <span class="nav-link-text ps-1">Flow Charts</span>
+                                </div>
+                            </a>
+                        </li>
+                    @endif
                 @endif
             </ul>
         </div>

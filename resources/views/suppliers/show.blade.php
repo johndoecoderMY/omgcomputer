@@ -13,10 +13,11 @@
         <dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ $supplier->email ?: '—' }}</dd>
         <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">{{ $supplier->phone ?: '—' }}</dd>
         <dt class="col-sm-3">Website</dt><dd class="col-sm-9">@if ($supplier->website)<a href="{{ $supplier->website }}" target="_blank" rel="noopener noreferrer">{{ $supplier->website }}</a>@else—@endif</dd>
+        <dt class="col-sm-3">Shopee shop</dt><dd class="col-sm-9">@if ($supplier->shopee_shop_url)<a href="{{ $supplier->shopee_shop_url }}" target="_blank" rel="noopener noreferrer">{{ $supplier->shopee_shop_url }}</a>@else—@endif</dd>
         <dt class="col-sm-3">Notes</dt><dd class="col-sm-9">{{ $supplier->notes ?: '—' }}</dd>
     </dl></div></div>
     <div class="card"><div class="card-header fw-semibold">Linked inventory parts ({{ $supplier->parts->count() }})</div>
-        <ul class="list-group list-group-flush">@forelse ($supplier->parts as $part)<li class="list-group-item d-flex justify-content-between"><span>{{ $part->name }}</span><a href="{{ route('inventory.parts.show', $part) }}">View part</a></li>@empty<li class="list-group-item text-body-secondary">No inventory parts linked to this supplier.</li>@endforelse</ul>
+        <ul class="list-group list-group-flush">@forelse ($supplier->parts as $part)<li class="list-group-item d-flex justify-content-between"><span>{{ $part->name }}<span class="d-block small text-body-secondary">Cost: RM {{ $part->pivot->cost_price !== null ? number_format((float) $part->pivot->cost_price, 2) : '—' }} · Unit price: RM {{ $part->pivot->unit_price !== null ? number_format((float) $part->pivot->unit_price, 2) : '—' }}</span>@if ($part->pivot->shopee_product_url)<span class="d-block small"><a href="{{ $part->pivot->shopee_product_url }}" target="_blank" rel="noopener noreferrer">Shopee product</a></span>@endif</span><a href="{{ route('inventory.parts.show', $part) }}">View part</a></li>@empty<li class="list-group-item text-body-secondary">No inventory parts linked to this supplier.</li>@endforelse</ul>
     </div>
 </div>
 @endsection

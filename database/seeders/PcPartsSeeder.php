@@ -67,5 +67,7 @@ class PcPartsSeeder extends Seeder
                 ],
             );
         }
+
+        $this->call(CsvPcPartsSeeder::class);
     }
 }

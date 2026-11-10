@@ -68,6 +68,7 @@ class DatabaseSeeder extends Seeder
     private function seedBaselineApplicationData(): void
     {
         $this->call([
+            CompanyProfileSeeder::class,
             DepartmentTeamSeeder::class,
             OmgComputerProjectSeeder::class,
             CustomerMessageTemplateSeeder::class,

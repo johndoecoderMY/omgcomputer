@@ -17,6 +17,7 @@ class PublishScheduledMetaContent extends Command
     {
         MetaContentPost::query()
             ->where('status', 'scheduled')
+            ->whereIn('platform', ['facebook', 'instagram'])
             ->whereNotNull('scheduled_at')
             ->where('scheduled_at', '<=', now())
             ->orderBy('scheduled_at')

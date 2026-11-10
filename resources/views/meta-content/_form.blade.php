@@ -10,10 +10,11 @@
             </div>
         @endif
         <div class="col-md-6">
-            <label class="form-label" for="meta-platform">Publish to</label>
+            <label class="form-label" for="meta-platform">Platform</label>
             <select class="form-select" id="meta-platform" name="platform" required>
                 <option value="facebook" @selected(old('platform', $post?->platform ?? 'facebook') === 'facebook')>Facebook Page</option>
                 <option value="instagram" @selected(old('platform', $post?->platform) === 'instagram')>Instagram professional account</option>
+                <option value="tiktok" @selected(old('platform', $post?->platform) === 'tiktok')>TikTok (planning only)</option>
             </select>
         </div>
         <div class="col-md-6">
@@ -46,6 +47,11 @@
                 value="{{ old('scheduled_at', $post?->scheduled_at?->format('Y-m-d\TH:i')) }}">
             @error('scheduled_at')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
         </div>
+        <div class="col-12 d-none" id="tiktok-planning-notice">
+            <div class="alert alert-info mb-0">
+                TikTok content will be saved in your planner but will not auto-publish yet. Direct publishing requires TikTok app approval and account authorization.
+            </div>
+        </div>
         <div class="col-12">
             <div class="alert alert-warning mb-0">
                 Meta must be able to access the media URL over the public internet. Uploading files to a local-only
@@ -57,7 +63,7 @@
         <a class="btn btn-outline-secondary" href="{{ route('meta-content.index') }}">Cancel</a>
         <div class="d-flex gap-2">
             @if (! $post)
-                <button class="btn btn-primary" type="submit" name="publish_now" value="1">Publish now</button>
+                <button class="btn btn-primary" id="meta-publish-now" type="submit" name="publish_now" value="1">Publish now</button>
             @endif
             <button class="btn btn-outline-primary" type="submit">{{ $submitLabel }}</button>
         </div>
@@ -67,12 +73,18 @@
     (() => {
         const platform = document.getElementById('meta-platform');
         const format = document.getElementById('meta-media-type');
+        const publishNow = document.getElementById('meta-publish-now');
+        const tiktokNotice = document.getElementById('tiktok-planning-notice');
         const updateFormats = () => {
             const textOption = format.querySelector('option[value="text"]');
             textOption.disabled = platform.value === 'instagram';
             if (platform.value === 'instagram' && format.value === 'text') {
                 format.value = 'image';
             }
+            if (publishNow) {
+                publishNow.classList.toggle('d-none', platform.value === 'tiktok');
+            }
+            tiktokNotice.classList.toggle('d-none', platform.value !== 'tiktok');
         };
         platform.addEventListener('change', updateFormats);
         updateFormats();

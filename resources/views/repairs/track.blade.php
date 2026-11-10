@@ -7,11 +7,6 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8 col-xl-7">
-                <div class="mb-4">
-                    <a class="text-decoration-none" href="{{ url('/') }}">
-                        <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>Back to OMG Computer
-                    </a>
-                </div>
                 <div class="card border-0 shadow p-2">
                     <div class="card-body p-4 p-md-5">
                         <div class="text-center mb-4">

@@ -42,6 +42,9 @@ class MetaContentTest extends TestCase
         $this->actingAs($admin)
             ->get(route('meta-content.create'))
             ->assertOk()
+            ->assertSee('TikTok (planning only)')
+            ->assertSee('tiktok-planning-notice', false)
+            ->assertSee('meta-publish-now', false)
             ->assertSee('Take photo for image posts')
             ->assertSee('Choose a file for images or MP4 reels.')
             ->assertSee('capture', false);
@@ -49,14 +52,15 @@ class MetaContentTest extends TestCase
 
     public function test_staff_can_save_and_schedule_meta_content_and_view_it_in_the_sidebar_section(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
         $this->actingAs($user);
 
         $this->get(route('meta-content.index'))
             ->assertOk()
-            ->assertSee('Meta Content')
+            ->assertSee('Content Planner')
             ->assertSee('Create content')
-            ->assertSee('Meta Content');
+            ->assertSee('TikTok')
+            ->assertSee('will not auto-publish');
         $this->post(route('meta-content.store'), [
             'platform' => 'facebook',
             'media_type' => 'text',
@@ -86,7 +90,7 @@ class MetaContentTest extends TestCase
 
     public function test_facebook_text_can_publish_and_meta_errors_are_saved_for_retry(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
         $this->actingAs($user);
         Http::fake([
             'https://graph.facebook.com/v25.0/page-123/feed' => Http::sequence()
@@ -118,7 +122,7 @@ class MetaContentTest extends TestCase
 
     public function test_instagram_image_publishes_media_container_then_publishes_container(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->staffUser());
         Http::fake([
             'https://graph.facebook.com/v25.0/instagram-456/media' => Http::response(['id' => 'container-1']),
             'https://graph.facebook.com/v25.0/instagram-456/media_publish' => Http::response(['id' => 'instagram-post-1']),
@@ -142,7 +146,7 @@ class MetaContentTest extends TestCase
 
     public function test_instagram_reels_wait_for_media_processing_before_publishing(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->staffUser());
         Http::fake([
             'https://graph.facebook.com/v25.0/instagram-456/media' => Http::response(['id' => 'reel-container']),
             'https://graph.facebook.com/v25.0/reel-container*' => Http::response(['status_code' => 'FINISHED']),
@@ -168,7 +172,7 @@ class MetaContentTest extends TestCase
 
     public function test_staff_can_edit_schedule_and_delete_unpublished_content(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->staffUser());
         $this->post(route('meta-content.store'), [
             'platform' => 'facebook',
             'media_type' => 'text',
@@ -210,9 +214,59 @@ class MetaContentTest extends TestCase
         $this->assertSame('page-123_post-due', $post->fresh()->meta_post_id);
     }
 
+    public function test_tiktok_content_can_be_planned_but_is_not_published_by_meta_scheduler(): void
+    {
+        $this->actingAs($this->staffUser());
+        $scheduledAt = now()->addDay()->format('Y-m-d H:i:s');
+
+        $this->post(route('meta-content.store'), [
+            'platform' => 'tiktok',
+            'media_type' => 'reel',
+            'caption' => 'Planned TikTok video',
+            'media' => UploadedFile::fake()->create('tiktok.mp4', 100, 'video/mp4'),
+            'scheduled_at' => $scheduledAt,
+        ])->assertRedirect(route('meta-content.index'))
+            ->assertSessionHas('success', 'TikTok content plan scheduled. It will not auto-publish until TikTok publishing is connected.');
+
+        $post = MetaContentPost::query()->where('platform', 'tiktok')->firstOrFail();
+        $this->assertSame('scheduled', $post->status);
+
+        $post->update(['scheduled_at' => now()->subMinute()]);
+        Http::fake();
+        $this->artisan('meta-content:publish-scheduled')->assertSuccessful();
+
+        $this->assertSame('scheduled', $post->fresh()->status);
+        $this->assertNull($post->fresh()->error_message);
+        Http::assertNothingSent();
+    }
+
+    public function test_tiktok_content_cannot_be_submitted_for_direct_publishing(): void
+    {
+        $this->actingAs($this->staffUser());
+
+        $this->post(route('meta-content.store'), [
+            'platform' => 'tiktok',
+            'media_type' => 'text',
+            'caption' => 'TikTok content idea',
+            'publish_now' => '1',
+        ])->assertSessionHasErrors('publish_now');
+
+        $post = MetaContentPost::query()->create([
+            'platform' => 'tiktok',
+            'media_type' => 'text',
+            'caption' => 'TikTok draft',
+            'status' => 'draft',
+        ]);
+        $this->post(route('meta-content.publish', $post))
+            ->assertRedirect(route('meta-content.index'))
+            ->assertSessionHas('meta_result.message', 'TikTok publishing is not connected yet. This content remains in your planner.');
+
+        $this->assertSame('draft', $post->fresh()->status);
+    }
+
     public function test_facebook_reels_use_meta_upload_session_and_publish_the_video(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs($this->staffUser());
         Http::fake([
             'https://graph.facebook.com/v25.0/page-123/video_reels' => Http::sequence()
                 ->push(['video_id' => 'reel-123', 'upload_url' => 'https://rupload.facebook.com/video-upload/v25.0/reel-123'])
@@ -236,7 +290,7 @@ class MetaContentTest extends TestCase
 
     public function test_instagram_text_posts_are_rejected_and_customers_cannot_manage_meta_content(): void
     {
-        $user = User::factory()->create();
+        $user = $this->staffUser();
         $this->actingAs($user)->post(route('meta-content.store'), [
             'platform' => 'instagram',
             'media_type' => 'text',
@@ -247,5 +301,14 @@ class MetaContentTest extends TestCase
         $customer = User::factory()->create();
         $customer->assignRole('customer');
         $this->actingAs($customer)->get(route('meta-content.index'))->assertForbidden();
+    }
+
+    private function staffUser(): User
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        return $staff;
     }
 }

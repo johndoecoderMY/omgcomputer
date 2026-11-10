@@ -6,6 +6,7 @@ use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
+use App\Services\ChipCollect;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\Project;
@@ -127,6 +128,7 @@ class BillingController extends Controller
                 'description' => $ticket ? 'Repair service: '.$ticket->issue_description : ($project ? 'Project: '.$project->name : ''),
                 'quantity' => 1,
                 'unit_price' => null,
+                'unit_cost' => null,
             ]],
             'type' => $type,
             'formAction' => route('billing.store'),
@@ -166,6 +168,7 @@ class BillingController extends Controller
                 'description' => $item->description,
                 'quantity' => $item->quantity,
                 'unit_price' => $item->unit_price,
+                'unit_cost' => $item->unit_cost,
             ])->all(),
             'type' => $document->type,
             'formAction' => route('billing.documents.update', $document),
@@ -274,6 +277,8 @@ class BillingController extends Controller
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.build_group' => ['nullable', 'string', 'max:20'],
         ]);
 
         foreach ($data['items'] as $index => $item) {
@@ -320,44 +325,58 @@ class BillingController extends Controller
             foreach ($data['items'] as $index => $item) {
                 if (empty($item['inventory_part_id'])) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.inventory_part_id" => 'Choose an in-stock PC component for every build line.',
+                        "items.{$index}.inventory_part_id" => 'Choose a PC component for every build line.',
                     ]);
                 }
 
                 $part = $parts->get($item['inventory_part_id']);
-                if (! $part || $part->stock_quantity < 1 || ! in_array($part->type, $allowedComponentTypes, true)) {
+                $catalogPart = $part?->catalog_currency === 'USD';
+                if (! $part || (! $catalogPart && $part->stock_quantity < 1) || ! in_array($part->type, $allowedComponentTypes, true)) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.inventory_part_id" => 'Choose an in-stock PC component for every build line.',
+                        "items.{$index}.inventory_part_id" => 'Choose a PC component for every build line.',
+                    ]);
+                }
+                if ($catalogPart && (float) $part->selling_price <= 0 && ! isset($item['unit_price'])) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.unit_price" => 'Enter an RM quote price for this catalog component.',
+                    ]);
+                }
+                if (! isset($item['unit_cost'])) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.unit_cost" => 'Enter our unit cost in RM for each custom PC component.',
                     ]);
                 }
             }
         }
 
-        $cpus = [];
-        $motherboards = [];
-        foreach ($data['items'] as $index => $item) {
-            $part = $parts->get($item['inventory_part_id'] ?? null);
-            if ($part?->type === 'cpu') {
-                $cpus[] = [$index, $part];
-            } elseif ($part?->type === 'motherboard') {
-                $motherboards[] = [$index, $part];
-            }
-        }
-
         $compatibilityErrors = [];
-        foreach ($cpus as [$cpuIndex, $cpu]) {
-            foreach ($motherboards as [$motherboardIndex, $motherboard]) {
-                $cpuSocket = $cpu->specification('Socket');
-                $motherboardSocket = $motherboard->specification('Socket');
-                if (! $cpuSocket || ! $motherboardSocket) {
-                    $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = 'Add socket specifications to both the selected processor and motherboard before quoting this build.';
-
-                    continue;
+        $buildGroups = collect($data['items'])->groupBy(fn (array $item): string => $item['build_group'] ?? '1');
+        foreach ($buildGroups as $groupItems) {
+            $cpus = [];
+            $motherboards = [];
+            foreach ($groupItems as $index => $item) {
+                $part = $parts->get($item['inventory_part_id'] ?? null);
+                if ($part?->type === 'cpu') {
+                    $cpus[] = [$index, $part];
+                } elseif ($part?->type === 'motherboard') {
+                    $motherboards[] = [$index, $part];
                 }
+            }
 
-                if (strcasecmp(trim($cpuSocket), trim($motherboardSocket)) !== 0) {
-                    $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = "The selected {$cpuSocket} processor is not compatible with the {$motherboardSocket} motherboard.";
-                    $compatibilityErrors["items.{$motherboardIndex}.inventory_part_id"] = 'Choose a motherboard with a socket compatible with the selected processor.';
+            foreach ($cpus as [$cpuIndex, $cpu]) {
+                foreach ($motherboards as [$motherboardIndex, $motherboard]) {
+                    $cpuSocket = $cpu->specification('Socket');
+                    $motherboardSocket = $motherboard->specification('Socket');
+                    if (! $cpuSocket || ! $motherboardSocket) {
+                        $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = 'Add socket specifications to both the selected processor and motherboard before quoting this build.';
+
+                        continue;
+                    }
+
+                    if (strcasecmp(trim($cpuSocket), trim($motherboardSocket)) !== 0) {
+                        $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = "The selected {$cpuSocket} processor is not compatible with the {$motherboardSocket} motherboard.";
+                        $compatibilityErrors["items.{$motherboardIndex}.inventory_part_id"] = 'Choose a motherboard with a socket compatible with the selected processor.';
+                    }
                 }
             }
         }
@@ -407,6 +426,7 @@ class BillingController extends Controller
                     'description' => $part?->name ?? $product['name'] ?? $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $price,
+                    'unit_cost' => $item['unit_cost'] ?? null,
                     'line_total' => $lineTotal,
                 ]);
             }
@@ -456,6 +476,7 @@ class BillingController extends Controller
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
 
         $this->validateLineItems($data['items']);
@@ -478,10 +499,11 @@ class BillingController extends Controller
                 'notes' => $data['notes'] ?? null,
                 ...($wasRejectedQuotation ? ['status' => 'draft'] : []),
             ]);
+            $existingUnitCosts = $locked->items()->pluck('unit_cost')->all();
             $locked->items()->delete();
 
             $subtotal = 0;
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] as $index => $item) {
                 $part = ! empty($item['inventory_part_id'])
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
@@ -496,6 +518,7 @@ class BillingController extends Controller
                     'description' => $part?->name ?? $product['name'] ?? $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $price,
+                    'unit_cost' => $item['unit_cost'] ?? $existingUnitCosts[$index] ?? null,
                     'line_total' => $lineTotal,
                 ]);
             }
@@ -516,7 +539,7 @@ class BillingController extends Controller
         );
     }
 
-    public function show(BillingDocument $document): View
+    public function show(BillingDocument $document, ChipCollect $chip): View
     {
         $this->authorizeCustomerDocument(request(), $document);
         $document->load([
@@ -537,7 +560,11 @@ class BillingController extends Controller
             $customerRecord ??= $projectCustomers->count() === 1 ? $projectCustomers->first() : null;
         }
 
-        return view('billing.show', compact('document', 'customerRecord'));
+        return view('billing.show', [
+            'document' => $document,
+            'customerRecord' => $customerRecord,
+            'chipEnabled' => $chip->isConfigured(),
+        ]);
     }
 
     private function authorizeCustomerDocument(Request $request, BillingDocument $document): void

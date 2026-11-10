@@ -149,6 +149,19 @@ class ReportsController extends Controller
         ]);
     }
 
+    public function tiktok(): View
+    {
+        $config = config('services.tiktok', []);
+
+        return view('marketing.tiktok', [
+            'setup' => [
+                'client_key' => filled($config['client_key'] ?? null),
+                'client_secret' => filled($config['client_secret'] ?? null),
+                'redirect_uri' => filled($config['redirect_uri'] ?? null),
+            ],
+        ]);
+    }
+
     public function storeCampaign(Request $request): RedirectResponse
     {
         $data = $request->validate([

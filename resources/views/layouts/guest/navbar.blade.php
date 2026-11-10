@@ -17,7 +17,7 @@
                 <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#website-pricing">Website</a></li>
                 <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#faq">Q&amp;A</a></li>
                 <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">Contact Us</a></li>
-                <li class="nav-item my-2 my-lg-0 ms-lg-2"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">Book a service</a></li>
+                <li class="nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">Book a service</a></li>
                 @auth
                     @if (auth()->user()->hasRole('customer'))
                         @php($cartItemCount = collect(session('shop_cart', []))->sum())

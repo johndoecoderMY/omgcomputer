@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\BillingDocument;
+use App\Models\ChipSetting;
 use App\Models\Customer;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
 use App\Models\ShopOrderItem;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Notifications\WorkspaceNotification;
 use App\Services\ChipCollect;
@@ -14,6 +16,7 @@ use Database\Seeders\PcPartsSeeder;
 use Database\Seeders\PlannerRoleSeeder;
 use Database\Seeders\ShopDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -242,7 +245,6 @@ class ShopTest extends TestCase
         $builder = $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
             ->assertOk()
             ->assertSee('Custom PC builder')
-            ->assertSee($cpu->name)
             ->assertSee('6.00%')
             ->assertSee('name="custom_pc_build" value="1"', false)
             ->assertSee('Select a motherboard to filter processors by socket')
@@ -257,12 +259,39 @@ class ShopTest extends TestCase
             ->assertSee('Cooling')
             ->assertSee('Operating system')
             ->assertSee('Software / Microsoft')
-            ->assertSee('Add another component')
-            ->assertSee('No in-stock motherboard available')
+            ->assertSee('Add another PC')
+            ->assertSee('Add component')
+            ->assertSee('Search parts')
+            ->assertSee('Shopee product URL')
+            ->assertSee('Shopee shop account URL')
+            ->assertSee('Supplier name')
+            ->assertSee('Contact person')
+            ->assertSee('Email')
+            ->assertSee('Phone')
+            ->assertSee('Website')
+            ->assertSee('Notes')
+            ->assertSee('Cost price (RM)')
+            ->assertSee('Unit price (RM)')
+            ->assertSee('Add another Shopee supplier')
+            ->assertSee('Min selling price (RM)')
+            ->assertSee('Max selling price (RM)')
+            ->assertDontSee('USD')
+            ->assertSee('Supplier source')
+            ->assertDontSee($cpu->name)
             ->assertDontSee($outOfStockGpu->name)
+            ->assertDontSee('type="submit" disabled', false)
             ->assertSee(route('billing.store'), false);
-        preg_match('/<tbody id="component-lines">(.*?)<\/tbody>/s', $builder->getContent(), $componentLines);
+        $pageContent = $builder->getContent();
+        $this->assertLessThan(
+            strpos($pageContent, 'const pickerModal'),
+            strpos($pageContent, 'vendors/bootstrap/bootstrap.min.js'),
+            'Bootstrap must load before the component picker script initializes.',
+        );
+        preg_match('/<tbody class="component-lines">(.*?)<\/tbody>/s', $pageContent, $componentLines);
         $this->assertSame(10, preg_match_all('/<tr class="component-line">/', $componentLines[1] ?? ''));
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', ['category' => 'gpu']))
+            ->assertOk()
+            ->assertJsonFragment(['name' => $outOfStockGpu->name]);
 
         $this->actingAs($staff)->post(route('billing.store'), [
             'custom_pc_build' => 1,
@@ -275,6 +304,7 @@ class ShopTest extends TestCase
             'items' => [[
                 'inventory_part_id' => $cpu->id,
                 'quantity' => 1,
+                'unit_cost' => 180,
                 'unit_price' => 250,
             ]],
         ])->assertSessionHasNoErrors();
@@ -285,6 +315,7 @@ class ShopTest extends TestCase
         $this->assertSame(6.0, (float) $quote->tax_rate);
         $this->assertSame(265.0, (float) $quote->total);
         $this->assertSame($cpu->id, $quote->items()->firstOrFail()->inventory_part_id);
+        $this->assertSame(180.0, (float) $quote->items()->firstOrFail()->unit_cost);
         $this->assertSame(2, $cpu->fresh()->stock_quantity);
     }
 
@@ -312,14 +343,256 @@ class ShopTest extends TestCase
 
         $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
             ->assertOk()
-            ->assertSee($am5Cpu->name)
-            ->assertSee($intelCpu->name)
-            ->assertSee($usbExtension->name)
-            ->assertSee('<optgroup label="Peripheral">', false)
-            ->assertSee('data-socket="AM5"', false)
-            ->assertSee('data-socket="LGA1700"', false)
-            ->assertSee('data-specifications=', false)
-            ->assertSee('motherboard manufacturer’s CPU support list');
+            ->assertSee('Search parts')
+            ->assertDontSee($am5Cpu->name);
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'search' => 'AMD Ryzen 5 7600',
+        ]))
+            ->assertOk()
+            ->assertJsonFragment(['name' => $am5Cpu->name, 'socket' => 'AM5'])
+            ->assertJsonMissing(['name' => $intelCpu->name, 'socket' => 'LGA1700']);
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'peripheral',
+            'search' => 'extension cable',
+        ]))->assertOk()->assertJsonFragment(['name' => $usbExtension->name]);
+    }
+
+    public function test_custom_pc_quote_can_include_multiple_compatible_pc_builds(): void
+    {
+        $this->seed(PcPartsSeeder::class);
+        $staff = $this->staffUser();
+        $parts = InventoryPart::query()
+            ->whereIn('sku', ['DEMO-CPU-001', 'DEMO-MB-001', 'DEMO-CPU-002', 'DEMO-MB-002'])
+            ->get()
+            ->keyBy('sku');
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Multiple PC build customer',
+            'customer_email' => 'multiple-pc-build@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [
+                ['inventory_part_id' => $parts['DEMO-CPU-001']->id, 'quantity' => 1, 'unit_cost' => 650, 'unit_price' => 799, 'build_group' => '1'],
+                ['inventory_part_id' => $parts['DEMO-MB-001']->id, 'quantity' => 1, 'unit_cost' => 580, 'unit_price' => 699, 'build_group' => '1'],
+                ['inventory_part_id' => $parts['DEMO-CPU-002']->id, 'quantity' => 1, 'unit_cost' => 520, 'unit_price' => 649, 'build_group' => '2'],
+                ['inventory_part_id' => $parts['DEMO-MB-002']->id, 'quantity' => 1, 'unit_cost' => 540, 'unit_price' => 679, 'build_group' => '2'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $quote = BillingDocument::query()->where('customer_email', 'multiple-pc-build@example.test')->firstOrFail();
+        $this->assertSame(2826.0, (float) $quote->total);
+        $this->assertSame(4, $quote->items()->count());
+        $this->assertSame(650.0, (float) $quote->items()->where('inventory_part_id', $parts['DEMO-CPU-001']->id)->firstOrFail()->unit_cost);
+    }
+
+    public function test_custom_pc_builder_catalog_search_filters_by_price_and_supplier(): void
+    {
+        $staff = $this->staffUser();
+        $supplier = Supplier::query()->create(['name' => 'Catalog source supplier']);
+        $catalogCpu = InventoryPart::query()->create([
+            'name' => 'Zero stock catalog CPU',
+            'sku' => 'CSV-CPU-TEST-1',
+            'type' => 'cpu',
+            'catalog_price' => 9999,
+            'catalog_currency' => 'USD',
+            'selling_price' => 451.50,
+            'supplier_id' => $supplier->id,
+        ]);
+        InventoryPart::query()->create([
+            'name' => 'Unlinked catalog CPU',
+            'sku' => 'CSV-CPU-TEST-2',
+            'type' => 'cpu',
+            'catalog_price' => 20,
+            'catalog_currency' => 'USD',
+            'selling_price' => 20,
+        ]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'price_min' => 400,
+            'price_max' => 500,
+            'supplier' => 'assigned',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment([
+                'id' => $catalogCpu->id,
+                'name' => $catalogCpu->name,
+                'stock_quantity' => 0,
+                'catalog_price' => 9999.0,
+                'catalog_currency' => 'USD',
+                'cost_price' => 0.0,
+                'supplier' => $supplier->name,
+            ]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'supplier' => 'unassigned',
+        ]))->assertOk()->assertJsonFragment(['name' => 'Unlinked catalog CPU']);
+    }
+
+    public function test_staff_can_add_supplier_from_custom_pc_builder_and_link_component(): void
+    {
+        $staff = $this->staffUser();
+        $existingSupplier = Supplier::query()->create(['name' => 'Existing builder supplier']);
+        $part = InventoryPart::query()->create([
+            'name' => 'Unlinked builder component',
+            'sku' => 'BUILDER-SUPPLIER-1',
+            'type' => 'cpu',
+            'supplier_id' => $existingSupplier->id,
+        ]);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'name' => 'Builder Shopee supplier',
+            'contact_name' => 'Alex Tan',
+            'email' => 'alex@example.test',
+            'phone' => '+60123456789',
+            'website' => 'https://supplier.example.test',
+            'shopee_product_url' => 'https://shopee.com.my/Item-i.123.456',
+            'shopee_shop_url' => 'https://shopee.com.my/shop/123456',
+            'notes' => 'Ships from Kuala Lumpur.',
+            'cost_price' => 120.50,
+            'unit_price' => 159.90,
+        ])->assertCreated()
+            ->assertJsonPath('supplier.name', 'Builder Shopee supplier')
+            ->assertJsonPath('supplier.shopee_shop_url', 'https://shopee.com.my/shop/123456')
+            ->assertJsonPath('supplier.cost_price', 120.5)
+            ->assertJsonPath('supplier.unit_price', 159.9)
+            ->assertJsonPath('part_id', $part->id)
+            ->assertJsonCount(2, 'supplier_ids');
+
+        $supplier = Supplier::query()->where('shopee_shop_url', 'https://shopee.com.my/shop/123456')->firstOrFail();
+        $this->assertSame('Alex Tan', $supplier->contact_name);
+        $this->assertSame('alex@example.test', $supplier->email);
+        $this->assertSame('+60123456789', $supplier->phone);
+        $this->assertSame('https://supplier.example.test', $supplier->website);
+        $this->assertSame('Ships from Kuala Lumpur.', $supplier->notes);
+        $this->assertSame($existingSupplier->id, $part->fresh()->supplier_id);
+        $this->assertSame(
+            'https://shopee.com.my/Item-i.123.456',
+            DB::table('inventory_part_supplier')
+                ->where('inventory_part_id', $part->id)
+                ->where('supplier_id', $supplier->id)
+                ->value('shopee_product_url'),
+        );
+        $this->assertSame(120.5, (float) DB::table('inventory_part_supplier')
+            ->where('inventory_part_id', $part->id)
+            ->where('supplier_id', $supplier->id)
+            ->value('cost_price'));
+        $this->assertSame(159.9, (float) DB::table('inventory_part_supplier')
+            ->where('inventory_part_id', $part->id)
+            ->where('supplier_id', $supplier->id)
+            ->value('unit_price'));
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'supplier' => $supplier->id,
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $part->name])
+            ->assertJsonFragment(['supplier_ids' => [$existingSupplier->id, $supplier->id]])
+            ->assertJsonFragment([
+                'name' => $supplier->name,
+                'cost_price' => 120.5,
+                'unit_price' => 159.9,
+            ]);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'name' => 'Another builder supplier',
+            'shopee_product_url' => 'https://shopee.com.my/Another-item-i.987.654',
+            'shopee_shop_url' => 'https://shopee.com.my/shop/987654',
+            'cost_price' => 200,
+            'unit_price' => 250,
+        ])->assertCreated()->assertJsonCount(3, 'supplier_ids');
+
+        $this->assertSame(3, $part->fresh()->suppliers()->count());
+    }
+
+    public function test_adding_supplier_from_builder_validates_supplier_details(): void
+    {
+        $staff = $this->staffUser();
+        $part = InventoryPart::query()->create([
+            'name' => 'Supplier validation component',
+            'type' => 'cpu',
+        ]);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'name' => 'Invalid product supplier',
+            'shopee_product_url' => 'https://example.com/product',
+            'shopee_shop_url' => 'https://shopee.com.my/shop/123456',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['shopee_product_url']);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'shopee_product_url' => 'https://shopee.com.my/product/123',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['shopee_shop_url']);
+
+        $this->assertNull($part->fresh()->supplier_id);
+        $this->assertDatabaseCount('suppliers', 0);
+    }
+
+    public function test_custom_pc_quote_can_use_zero_stock_catalog_part_with_manual_rm_price(): void
+    {
+        $staff = $this->staffUser();
+        $cpu = InventoryPart::query()->create([
+            'name' => 'Catalog quote CPU',
+            'sku' => 'CSV-CPU-QUOTE-1',
+            'type' => 'cpu',
+            'description' => 'Socket: AM5',
+            'catalog_price' => 451.50,
+            'catalog_currency' => 'USD',
+            'stock_quantity' => 0,
+        ]);
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Catalog part quote customer',
+            'customer_email' => 'catalog-part-quote@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'inventory_part_id' => $cpu->id,
+                'quantity' => 1,
+                'unit_cost' => 500,
+                'unit_price' => 900,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $quote = BillingDocument::query()->where('customer_email', 'catalog-part-quote@example.test')->firstOrFail();
+        $this->assertSame(900.0, (float) $quote->total);
+        $this->assertSame(500.0, (float) $quote->items()->firstOrFail()->unit_cost);
+        $this->assertSame(0, $cpu->fresh()->stock_quantity);
+
+        $this->from(route('shop.custom-pc-builder'))->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Missing unit cost customer',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'inventory_part_id' => $cpu->id,
+                'quantity' => 1,
+                'unit_price' => 900,
+            ]],
+        ])->assertRedirect(route('shop.custom-pc-builder'))
+            ->assertSessionHasErrors('items.0.unit_cost');
+
+        $this->from(route('shop.custom-pc-builder'))->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Missing manual price customer',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'inventory_part_id' => $cpu->id,
+                'quantity' => 1,
+                'unit_price' => '',
+            ]],
+        ])->assertRedirect(route('shop.custom-pc-builder'))
+            ->assertSessionHasErrors('items.0.unit_price');
     }
 
     public function test_custom_pc_quote_can_include_operating_system_and_microsoft_software(): void
@@ -341,6 +614,7 @@ class ShopTest extends TestCase
             'items' => $parts->map(fn (InventoryPart $part): array => [
                 'inventory_part_id' => $part->id,
                 'quantity' => 1,
+                'unit_cost' => $part->cost_price,
                 'unit_price' => $part->selling_price,
             ])->values()->all(),
         ])->assertSessionHasNoErrors();
@@ -548,6 +822,7 @@ class ShopTest extends TestCase
         $order = ShopOrder::query()->with('items')->firstOrFail();
         $this->assertSame('SHOP-'.now()->format('Y').'-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT), $order->order_number);
         $this->assertSame('pending', $order->payment_status);
+        $this->assertFalse($order->chip_test_mode);
         $this->assertSame(90.0, (float) $order->total);
         $this->assertSame(2, $order->items->firstOrFail()->quantity);
         $this->assertSame(2, $product->fresh()->stock_quantity);
@@ -590,6 +865,7 @@ class ShopTest extends TestCase
 
     public function test_chip_callback_marks_shop_order_paid_idempotently(): void
     {
+        ChipSetting::setTestMode(true);
         Notification::fake();
         $actor = $this->staffUser();
         $notifiedAdmin = User::factory()->create();
@@ -614,6 +890,7 @@ class ShopTest extends TestCase
             'payment_status' => 'pending',
             'stock_reserved' => true,
             'provider_purchase_id' => 'chip-shop-callback-1',
+            'chip_test_mode' => true,
             'subtotal' => 35,
             'total' => 35,
         ]);
@@ -627,12 +904,13 @@ class ShopTest extends TestCase
         ]);
         $body = json_encode(['id' => 'chip-shop-callback-1'], JSON_THROW_ON_ERROR);
         $this->mock(ChipCollect::class, function ($mock) use ($body): void {
-            $mock->shouldReceive('verifyCallback')->twice()->with($body, 'valid-signature')->andReturnTrue();
-            $mock->shouldReceive('purchase')->twice()->with('chip-shop-callback-1')->andReturn([
+            $mock->shouldReceive('verifyCallback')->twice()->with($body, 'valid-signature', true)->andReturnTrue();
+            $mock->shouldReceive('purchase')->twice()->with('chip-shop-callback-1', true)->andReturn([
                 'id' => 'chip-shop-callback-1',
                 'status' => 'paid',
             ]);
         });
+        ChipSetting::setTestMode(false);
         $callback = fn () => $this->call(
             'POST',
             route('webhooks.chip.shop', $order->uuid),

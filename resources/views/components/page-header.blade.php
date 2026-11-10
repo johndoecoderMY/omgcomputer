@@ -35,6 +35,7 @@
         str_starts_with($routeName, 'expenses.') => 'Operating costs',
         str_starts_with($routeName, 'billing.') => 'Billing & Payments',
         str_starts_with($routeName, 'reports.integrations.'),
+        str_starts_with($routeName, 'marketing.'),
         str_starts_with($routeName, 'marketplace-shops.'),
         $routeName === 'email.settings' => 'Integrations',
         str_starts_with($routeName, 'reports.') => 'Reports & Analytics',

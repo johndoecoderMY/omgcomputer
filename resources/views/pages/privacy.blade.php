@@ -6,34 +6,39 @@
     @include('pages.partials.hero', [
         'eyebrow' => 'Privacy',
         'heading' => 'Privacy Policy',
-        'description' => 'We respect your privacy and are committed to handling your information responsibly.',
+        'description' => 'How OMG Computer collects, uses, and protects information when you browse, contact us, book a service, or place an order.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="mb-4">
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Information we collect</h2>
-                                <p class="text-700 mb-0">We may collect information you provide when contacting us, booking a service, or requesting support. This may include your name, contact details, device information, and the nature of the issue you need help with.</p>
+                                <p class="text-700 mb-0">Depending on how you use the website, we may collect your name, email address, phone number, account and order details, delivery address, booking requests, messages, and information about your device or requested repair. We also receive information you choose to provide when asking about products, services, or a website project.</p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">How we use it</h2>
-                                <p class="text-700 mb-0">We use your information to communicate with you, assess your service needs, provide support, and improve the quality of our service. We do not sell personal information to third parties.</p>
+                                <p class="text-700 mb-0">We use this information to respond to enquiries, manage accounts and bookings, provide repair and other services, process orders and payments, arrange delivery, send service updates, protect the website, and meet applicable record-keeping obligations. We do not sell personal information.</p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Sharing information</h2>
-                                <p class="text-700 mb-0">We may share information with trusted service providers when necessary to provide support or complete a repair request. We only share what is needed and keep those relationships limited to the purpose of the service.</p>
+                                <p class="text-700 mb-0">Online shop checkout is handled through CHiP. We receive transaction and payment-status information needed to manage an order; payment processing is also subject to the provider’s terms and privacy practices. We may share relevant information with hosting, email, payment, courier, or other service providers only as needed to operate the website or fulfil a request. Social platforms you choose to connect with are governed by their own privacy policies.</p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
+                                <h2 class="h4 fw-bold text-1000">Website operation and retention</h2>
+                                <p class="text-700 mb-0">The website uses session and account data to provide features such as sign-in, bookings, and shopping carts. We keep information for as long as needed for the service, support, security, and applicable legal or accounting requirements, then delete or de-identify it where appropriate.</p>
+                            </div>
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Your choices</h2>
-                                <p class="text-700 mb-0">You may contact us at any time to request access to, correction of, or deletion of your personal information, subject to legal or operational requirements.</p>
+                                <p class="text-700 mb-0">You may contact us to request access to or correction of your personal information, or to ask for deletion. We may need to retain some records to complete a service, resolve a dispute, protect the website, or meet legal and accounting obligations. To disconnect Meta app data, see our <a href="{{ route('data-deletion.instructions') }}">data deletion instructions</a>.</p>
                             </div>
                             <div class="mb-0">
-                                <h2 class="h4 fw-bold text-1000">Updates</h2>
-                                <p class="text-700 mb-0">We may update this policy from time to time. Any changes will be reflected on this page with the updated date.</p>
+                                <h2 class="h4 fw-bold text-1000">Contact and updates</h2>
+                                <p class="text-700 mb-0">For a privacy question or request, contact us through the <a href="{{ url('/') }}#contact">website contact section</a>. We may update this policy when our services or practices change; the current version will be posted here.</p>
                             </div>
                         </div>
                     </div>

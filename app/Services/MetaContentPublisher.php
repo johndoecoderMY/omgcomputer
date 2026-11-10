@@ -13,6 +13,10 @@ class MetaContentPublisher
 {
     public function publish(MetaContentPost $post): string
     {
+        if ($post->platform === 'tiktok') {
+            throw new RuntimeException('TikTok publishing is not connected yet. Save this content in the planner until TikTok app approval and account authorization are complete.');
+        }
+
         $token = $post->platform === 'instagram'
             ? (config('services.meta.instagram_access_token') ?: config('services.meta.access_token'))
             : (config('services.meta.page_access_token') ?: config('services.meta.access_token'));

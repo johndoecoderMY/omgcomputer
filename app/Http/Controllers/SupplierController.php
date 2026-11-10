@@ -88,13 +88,19 @@ class SupplierController extends Controller
 
     private function validatedData(Request $request, ?Supplier $supplier = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('suppliers', 'name')->ignore($supplier?->id)],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'url:http,https', 'max:255'],
+            'shopee_shop_url' => ['nullable', 'url:http,https', 'max:2048'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
+        $data['shopee_shop_url_hash'] = filled($data['shopee_shop_url'] ?? null)
+            ? hash('sha256', rtrim($data['shopee_shop_url'], '/'))
+            : null;
+
+        return $data;
     }
 }

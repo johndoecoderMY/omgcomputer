@@ -64,18 +64,27 @@ return [
         'graph_api_version' => env('META_GRAPH_API_VERSION', 'v25.0'),
     ],
 
+    'tiktok' => [
+        'client_key' => env('TIKTOK_CLIENT_KEY'),
+        'client_secret' => env('TIKTOK_CLIENT_SECRET'),
+        'redirect_uri' => env('TIKTOK_REDIRECT_URI'),
+    ],
+
     'parcel_tracking' => [
         'api_key' => env('TRACK17_API_KEY'),
         'api_url' => env('TRACK17_API_URL', 'https://api.17track.net'),
     ],
 
     'chip' => [
-        'secret_key' => env('CHIP_SECRET_KEY') ?: env('CHIP_SECRET_KEY_TEST'),
+        'secret_key' => env('CHIP_SECRET_KEY'),
         'test_secret_key' => env('CHIP_SECRET_KEY_TEST'),
         'brand_id' => env('CHIP_BRAND_ID'),
+        'test_brand_id' => env('CHIP_BRAND_ID_TEST'),
+        'test_mode' => env('CHIP_TEST_MODE', false),
         'api_url' => env('CHIP_API_URL', 'https://gate.chip-in.asia/api/v1'),
         'currency' => env('CHIP_CURRENCY', 'MYR'),
-        'enabled' => filled(env('CHIP_SECRET_KEY') ?: env('CHIP_SECRET_KEY_TEST')) && filled(env('CHIP_BRAND_ID')),
+        'enabled' => (filled(env('CHIP_SECRET_KEY')) || filled(env('CHIP_SECRET_KEY_TEST')))
+            && (filled(env('CHIP_BRAND_ID')) || filled(env('CHIP_BRAND_ID_TEST'))),
     ],
 
     'marketplaces' => [

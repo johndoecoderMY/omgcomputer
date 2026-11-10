@@ -4,12 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryPart extends Model
 {
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::saved(function (InventoryPart $part): void {
+            if ($part->supplier_id !== null) {
+                $part->suppliers()->syncWithoutDetaching([$part->supplier_id]);
+            }
+        });
+    }
 
     public const TYPES = [
         'cpu' => 'CPU',
@@ -33,6 +43,8 @@ class InventoryPart extends Model
         'type',
         'supplier_id',
         'description',
+        'catalog_price',
+        'catalog_currency',
         'cost_price',
         'selling_price',
         'is_for_sale',
@@ -45,6 +57,7 @@ class InventoryPart extends Model
         return [
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
+            'catalog_price' => 'decimal:2',
             'is_for_sale' => 'boolean',
         ];
     }
@@ -57,6 +70,13 @@ class InventoryPart extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class)
+            ->withPivot('shopee_product_url', 'cost_price', 'unit_price')
+            ->withTimestamps();
     }
 
     public function specifications(): array

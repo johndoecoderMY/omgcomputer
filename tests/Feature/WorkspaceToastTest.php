@@ -105,6 +105,7 @@ class WorkspaceToastTest extends TestCase
             ->assertSee('navbar navbar-expand-lg navbar-dark bg-dark fixed-top py-1', false)
             ->assertSee('height="48"', false)
             ->assertSee('btn btn-outline-light btn-sm rounded-pill px-3 py-1', false)
+            ->assertSee('nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1"', false)
             ->assertSee(route('shop.public'), false)
             ->assertSee('#services', false)
             ->assertSee('website-design-illustration.svg')

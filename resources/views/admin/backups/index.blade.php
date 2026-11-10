@@ -30,7 +30,8 @@
             <h2 class="h5" id="selected-table-export-heading">Export selected database tables</h2>
             <p class="text-body-secondary">
                 Choose tables to export. The download is a ZIP of CSV data files plus a manifest listing each table's columns.
-                This is a data export, not a restorable database backup; use <strong>Run backup now</strong> for a full backup.
+                Use the data export to reinsert records into a database with a matching schema. For a full pre-migration restore,
+                use <strong>Run backup now</strong>.
             </p>
             <form method="POST" action="{{ route('admin.backups.export-tables') }}"
                 onsubmit="return confirm('Export the selected table data to a ZIP file?');">
@@ -46,12 +47,25 @@
                 @else
                     @php($selectedTables = old('tables', []))
                     @php($selectedTables = is_array($selectedTables) ? $selectedTables : [])
+                    @php($accountTables = ['users', 'password_reset_tokens', 'sessions', 'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions', 'teams', 'team_user', 'departments', 'profile_activities', 'notifications', 'email_server_settings', 'user_email_mailboxes'])
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="all">
+                            Select all tables
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="accounts">
+                            Select account &amp; settings tables
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="none">
+                            Clear selection
+                        </button>
+                    </div>
                     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 mb-3">
                         @foreach ($databaseTables as $table)
                             <div class="col">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="tables[]"
                                         id="export-table-{{ $loop->index }}" value="{{ $table }}"
+                                        data-account-export-table="{{ in_array($table, $accountTables, true) ? 'true' : 'false' }}"
                                         @checked(in_array($table, $selectedTables, true))>
                                     <label class="form-check-label" for="export-table-{{ $loop->index }}">
                                         {{ $table }}
@@ -67,11 +81,24 @@
             </form>
         </div>
     </section>
+    @push('scripts')
+        <script>
+            document.querySelectorAll('[data-select-export-tables]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const selection = button.dataset.selectExportTables;
+                    document.querySelectorAll('input[name="tables[]"]').forEach((checkbox) => {
+                        checkbox.checked = selection === 'all' ||
+                            (selection === 'accounts' && checkbox.dataset.accountExportTable === 'true');
+                    });
+                });
+            });
+        </script>
+    @endpush
 
     <div class="alert alert-info" role="status">
         <strong>Backup set:</strong> {{ $backupName }}
         <span class="ms-2">Scheduled daily at 2:00 AM when the Laravel scheduler is running.</span>
-        <div class="mt-2">Full archives include the configured database: user accounts, roles, permissions, role assignments, and direct permission assignments.</div>
+        <div class="mt-2">Full archives include the configured database and its tables, including user accounts, email settings, roles, permissions, and assignments.</div>
     </div>
 
     @forelse ($destinations as $destination)

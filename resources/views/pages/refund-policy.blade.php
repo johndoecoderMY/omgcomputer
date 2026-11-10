@@ -6,48 +6,43 @@
     @include('pages.partials.hero', [
         'eyebrow' => 'Returns & refunds',
         'heading' => 'Refund Policy',
-        'description' => 'Clear information about eligibility, refunds, cancellations, and how to request assistance.',
+        'description' => 'How to raise a concern about an order, repair, booking, or payment.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="alert alert-info border-0 mb-4">
-                                Refund requests are assessed individually based on the service performed, product condition, and any applicable warranty. Please retain your invoice, receipt, or order reference.
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="alert alert-info border-0 mb-3">
+                                This policy explains how to contact us; it does not limit rights or remedies available under applicable consumer-protection laws.
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Products and parts</h2>
-                                <p class="text-700 mb-2">A refund or replacement may be considered for a defective, damaged, or incorrectly supplied product. Requests should be made as soon as the issue is discovered and must include the original receipt.</p>
-                                <p class="text-700 mb-0">Products that have been used, modified, physically damaged, installed incorrectly, missing accessories, or returned outside the applicable warranty period may not be eligible for a refund.</p>
+                                <p class="text-700 mb-0">If an item is damaged, faulty, incorrect, or not as described, contact us promptly with your order number and supporting details. We will review the issue and explain the available next steps, taking into account the item, its stated warranty, and applicable law. Do not send an item back until return instructions are provided.</p>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Repair and service work</h2>
-                                <p class="text-700 mb-0">Diagnostic work, completed labour, replacement parts, software licences, and non-refundable third-party charges may be deducted where applicable. A refund will only be considered for verified work that remains incomplete or not as agreed, subject to any manufacturer or supplier warranty.</p>
+                                <p class="text-700 mb-0">If work is incomplete or differs from the agreed scope, contact us with your repair or quotation reference so we can review it. Any charges for work completed, parts ordered, or third-party costs will be explained and assessed against the agreement and applicable law.</p>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Cancellations and deposits</h2>
-                                <p class="text-700 mb-0">An appointment may be cancelled or rescheduled by contacting us before the scheduled time. Deposits and payments for ordered parts or work already performed are subject to confirmation before cancellation; custom orders and specially ordered parts may be non-refundable.</p>
+                                <p class="text-700 mb-0">A booking request is subject to confirmation by our team. If you need to cancel or reschedule, contact us as soon as possible. We will confirm any applicable charges or refund for payments already made, including costs for parts ordered specifically for the work, before proceeding where practicable.</p>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Refund processing</h2>
-                                <p class="text-700 mb-0">Approved refunds are normally returned to the original payment method. Processing time can vary depending on the payment provider and financial institution. We may request verification before processing a refund.</p>
-                            </div>
-
-                            <div class="mb-4">
-                                <h2 class="h4 fw-bold text-1000">Online card payments</h2>
-                                <p class="text-700 mb-0">Online payments may be refunded through the same CHIP checkout used for the original transaction, once an approved claim has been reviewed and authorised by our team.</p>
+                                <p class="text-700 mb-0">Where a refund is approved, we will confirm the amount and method. Online payments are processed through CHiP, and the time for a refund to appear may depend on the payment provider or bank.</p>
                             </div>
 
                             <div class="mb-0">
-                                <h2 class="h4 fw-bold text-1000">Request a refund</h2>
-                                <p class="text-700 mb-0">Please contact OMG Computer using the details on our website and provide your name, order or repair reference, purchase date, payment amount, and a description of the issue. Do not return an item until our team has provided instructions.</p>
+                                <h2 class="h4 fw-bold text-1000">Request help</h2>
+                                <p class="text-700 mb-0">Contact us through the <a href="{{ url('/') }}#contact">website contact section</a> and include your name, order or repair reference, purchase date, and a description of the issue.</p>
                             </div>
                         </div>
                     </div>

@@ -7,14 +7,15 @@
         'eyebrow' => 'Privacy',
         'heading' => 'Data Deletion Status',
         'description' => 'Status for your Meta data-deletion request.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5 text-center">
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4 text-center">
                             <span class="bi bi-check-circle-fill text-success display-5" aria-hidden="true"></span>
                             <h2 class="h4 fw-bold text-1000 mt-3">Deletion request completed</h2>
                             <p class="text-700 mb-2">

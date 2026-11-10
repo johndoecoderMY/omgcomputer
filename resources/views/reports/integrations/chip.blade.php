@@ -16,6 +16,12 @@
                     <h2 class="h5 mb-0 text-primary">Connection configuration</h2>
                 </div>
                 <div class="card-body">
+                    <div class="mb-3">
+                        <span class="fw-semibold">Active mode:</span>
+                        <span class="badge {{ $testMode ? 'text-bg-warning' : 'text-bg-success' }}">
+                            {{ $testMode ? 'TEST' : 'LIVE' }}
+                        </span>
+                    </div>
                     <dl class="row mb-0">
                         <dt class="col-5">API URL</dt>
                         <dd class="col-7 text-break"><code>{{ $apiUrl }}</code></dd>
@@ -28,12 +34,43 @@
                     </dl>
                 </div>
                 <div class="card-footer bg-body small text-body-secondary">
-                    Credentials are read from the server environment and are never displayed here.
+                    Credentials are read from the server environment and are never displayed here. The selected mode controls new checkouts; existing purchases keep their original mode.
                 </div>
             </div>
         </div>
 
         <div class="col-12 col-xl-7">
+            <div class="card h-100 p-2">
+                <div class="card-header bg-body">
+                    <h2 class="h5 mb-0 text-primary">Checkout mode</h2>
+                </div>
+                <form method="POST" action="{{ route('reports.integrations.chip.mode') }}">
+                    @csrf
+                    <div class="card-body">
+                        @if (session('chip_mode_saved'))
+                            <div class="alert alert-success" role="status">CHIP checkout mode updated.</div>
+                        @endif
+                        <div class="form-check">
+                            <input type="hidden" name="test_mode" value="0">
+                            <input class="form-check-input" type="checkbox" name="test_mode" id="chip-test-mode" value="1"
+                                @checked($testMode)>
+                            <label class="form-check-label" for="chip-test-mode">Use CHIP test mode</label>
+                        </div>
+                        <p class="form-text mb-0">
+                            Test mode uses <code>CHIP_SECRET_KEY_TEST</code> and <code>CHIP_BRAND_ID_TEST</code>.
+                            Live mode uses <code>CHIP_SECRET_KEY</code> and <code>CHIP_BRAND_ID</code>.
+                            If no test brand ID is set, test mode uses the shared <code>CHIP_BRAND_ID</code>.
+                        </p>
+                        @error('test_mode')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="card-footer bg-body">
+                        <button class="btn btn-primary" type="submit">Save checkout mode</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-12">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body">
                     <h2 class="h5 mb-0 text-primary">Test API connection</h2>

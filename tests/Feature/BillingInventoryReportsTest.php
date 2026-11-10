@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BillingDocument;
 use App\Models\BillingPaymentAttempt;
+use App\Models\ChipSetting;
 use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
@@ -199,10 +200,12 @@ class BillingInventoryReportsTest extends TestCase
         $attempt = BillingPaymentAttempt::query()->firstOrFail();
         $this->assertSame('pending', $attempt->status);
         $this->assertSame('chip-purchase-123', $attempt->provider_purchase_id);
+        $this->assertFalse($attempt->chip_test_mode);
         $this->assertSame(125.50, (float) $attempt->amount);
         $this->assertSame(0.0, (float) $document->fresh()->paid_amount);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
             && $request['purchase']['currency'] === 'MYR'
+            && $request['brand_id'] === 'test-brand'
             && $request['purchase']['products'][0]['price'] === 12550
             && str_starts_with($request['reference'], $document->number.'-')
             && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
@@ -337,6 +340,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void
     {
+        ChipSetting::setTestMode(true);
         $project = Project::query()->create(['name' => 'Callback project']);
         $document = $this->createIssuedInvoice($project, 40);
         $attempt = BillingPaymentAttempt::query()->create([
@@ -344,16 +348,18 @@ class BillingInventoryReportsTest extends TestCase
             'billing_document_id' => $document->id,
             'amount' => 40,
             'provider_purchase_id' => 'chip-purchase-456',
+            'chip_test_mode' => true,
             'status' => 'pending',
         ]);
         $body = json_encode(['id' => 'chip-purchase-456'], JSON_THROW_ON_ERROR);
         $this->mock(ChipCollect::class, function ($mock) use ($body): void {
-            $mock->shouldReceive('verifyCallback')->twice()->with($body, 'valid-signature')->andReturnTrue();
-            $mock->shouldReceive('purchase')->twice()->with('chip-purchase-456')->andReturn([
+            $mock->shouldReceive('verifyCallback')->twice()->with($body, 'valid-signature', true)->andReturnTrue();
+            $mock->shouldReceive('purchase')->twice()->with('chip-purchase-456', true)->andReturn([
                 'id' => 'chip-purchase-456',
                 'status' => 'paid',
             ]);
         });
+        ChipSetting::setTestMode(false);
 
         $callback = fn () => $this->call(
             'POST',

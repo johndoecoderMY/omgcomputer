@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\IntegrationTestMail;
 use App\Models\BillingDocument;
+use App\Models\ChipSetting;
 use App\Notifications\IntegrationTestNotification;
 use App\Services\ChipCollect;
 use App\Services\CpanelEmailProvisioner;
@@ -236,21 +237,37 @@ class IntegrationTestController extends Controller
 
     public function chip(): View
     {
+        $chip = app(ChipCollect::class);
+        $testMode = $chip->isTestMode();
+
         return view('reports.integrations.chip', [
-            'chipConfigured' => (bool) config('services.chip.enabled'),
+            'chipConfigured' => $chip->isConfigured(),
+            'testMode' => $testMode,
             'apiUrl' => config('services.chip.api_url'),
-            'brandIdConfigured' => filled(config('services.chip.brand_id')),
-            'secretKeyConfigured' => filled(config('services.chip.secret_key')),
+            'brandIdConfigured' => filled($chip->brandId()),
+            'secretKeyConfigured' => $testMode
+                ? filled(config('services.chip.test_secret_key'))
+                : filled(config('services.chip.secret_key')),
             'currency' => config('services.chip.currency', 'MYR'),
         ]);
     }
 
+    public function updateChipMode(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'test_mode' => ['required', 'boolean'],
+        ]);
+        ChipSetting::setTestMode((bool) $data['test_mode']);
+
+        return redirect()->route('reports.integrations.chip')->with('chip_mode_saved', true);
+    }
+
     public function checkChip(ChipCollect $chip): RedirectResponse
     {
-        if (! config('services.chip.enabled')) {
+        if (! $chip->isConfigured()) {
             return back()->with('chip_result', [
                 'success' => false,
-                'message' => 'Configure CHIP_SECRET_KEY and CHIP_BRAND_ID in the server environment, then clear cached configuration.',
+                'message' => 'Configure the secret key and brand ID for the selected mode in the server environment.',
             ]);
         }
 
@@ -261,7 +278,7 @@ class IntegrationTestController extends Controller
 
             return back()->with('chip_result', [
                 'success' => false,
-                'message' => 'CHIP could not be reached or the configured credentials were rejected. Check CHIP_SECRET_KEY, CHIP_BRAND_ID, CHIP_API_URL, and the server network connection.',
+                'message' => 'CHIP could not be reached or the credentials for the selected mode were rejected. Check the matching CHIP secret key and brand ID, CHIP_API_URL, and the server network connection.',
             ]);
         }
 

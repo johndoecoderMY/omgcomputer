@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Meta Content')
+@section('title', 'Content Planner')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Marketing" title="Meta Content"
-        description="Prepare and publish posts for your Facebook Page and Instagram professional account.">
+    <x-page-header eyebrow="Marketing" title="Content Planner"
+        description="Plan, schedule, and manage content for TikTok, Facebook, and Instagram.">
         <x-slot:actions>
             <a class="btn btn-primary" href="{{ route('meta-content.create') }}">
                 <i class="bi bi-plus me-2" aria-hidden="true"></i>Create content
@@ -21,6 +21,11 @@
             {{ $result['message'] }}
         </div>
     @endif
+
+    <div class="alert alert-info">
+        TikTok posts can be planned and scheduled here, but will not auto-publish until TikTok Content Posting API access is approved and connected.
+        <a href="{{ route('marketing.tiktok') }}" class="alert-link">Review TikTok setup</a>.
+    </div>
 
     @unless ($configured['page_access_token'] && $configured['page_id'])
         <div class="alert alert-warning">Facebook Page publishing needs <code>META_PAGE_ID</code> and a page token in <code>META_PAGE_ACCESS_TOKEN</code> (or <code>META_ACCESS_TOKEN</code>).</div>
@@ -55,13 +60,26 @@
                                     <div class="small text-danger">{{ $post->error_message }}</div>
                                 @endif
                             </td>
-                            <td>{{ $post->platform === 'facebook' ? 'Facebook Page' : 'Instagram' }}</td>
+                            <td>{{ match ($post->platform) {
+                                'facebook' => 'Facebook Page',
+                                'instagram' => 'Instagram',
+                                'tiktok' => 'TikTok',
+                                default => ucfirst($post->platform),
+                            } }}</td>
                             <td>{{ ucfirst($post->media_type) }}</td>
                             <td><x-status-badge :status="$post->status" /></td>
-                            <td>{{ $post->published_at?->format('M j, Y g:i A') ?? $post->scheduled_at?->format('M j, Y g:i A') ?? '—' }}</td>
+                            <td>
+                                @if ($post->platform === 'tiktok' && $post->scheduled_at)
+                                    Planned for {{ $post->scheduled_at->format('M j, Y g:i A') }}
+                                @else
+                                    {{ $post->published_at?->format('M j, Y g:i A') ?? $post->scheduled_at?->format('M j, Y g:i A') ?? '—' }}
+                                @endif
+                            </td>
                             <td>{{ $post->meta_post_id ?: '—' }}</td>
                             <td class="text-nowrap">
-                                @if (in_array($post->status, ['draft', 'failed'], true))
+                                @if ($post->platform === 'tiktok' && in_array($post->status, ['draft', 'scheduled', 'failed'], true))
+                                    <span class="small text-body-secondary">TikTok publishing is not connected</span>
+                                @elseif (in_array($post->status, ['draft', 'failed'], true))
                                     <form class="d-inline" method="POST" action="{{ route('meta-content.publish', $post) }}">
                                         @csrf
                                         <button class="btn btn-sm btn-outline-primary" type="submit">Publish now</button>
@@ -79,7 +97,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center text-body-secondary py-5">No Meta content yet. Create a draft, schedule a post, or publish now.</td></tr>
+                        <tr><td colspan="7" class="text-center text-body-secondary py-5">No planned content yet. Create a draft, schedule a post, or publish to Facebook or Instagram.</td></tr>
                     @endforelse
                 </tbody>
             </table>

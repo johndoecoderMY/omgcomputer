@@ -17,6 +17,54 @@ class AdminAccessAndProjectManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_sidebar_prioritizes_shop_inventory_and_places_content_and_flow_charts_last(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('admin.access.index'))->assertOk();
+        $sidebar = substr(
+            $response->getContent(),
+            strpos($response->getContent(), 'id="navbarVerticalNav"'),
+        );
+
+        $managePosition = strpos($sidebar, 'navbar-vertical-label">Manage');
+        $shopPosition = strpos($sidebar, 'href="#shopMenu"');
+        $productsPosition = strpos($sidebar, route('products.index'));
+        $inventoryPosition = strpos($sidebar, 'href="#inventoryMenu"');
+        $bookingsPosition = strpos($sidebar, 'href="#bookingsMenu"');
+        $sopsPosition = strpos($sidebar, route('development.sops'));
+        $marketingPosition = strpos($sidebar, 'href="#marketingMenu"');
+        $plannerPosition = strpos($sidebar, route('meta-content.index'));
+        $contentPosition = strrpos($sidebar, route('meta-content.index'));
+        $flowChartsPosition = strpos($sidebar, route('development.flowcharts.index'));
+
+        $this->assertIsInt($managePosition);
+        $this->assertNotFalse($shopPosition, 'The Shop menu should be present in the staff sidebar.');
+        $this->assertIsInt($productsPosition);
+        $this->assertIsInt($inventoryPosition);
+        $this->assertIsInt($bookingsPosition);
+        $this->assertIsInt($sopsPosition);
+        $this->assertIsInt($marketingPosition);
+        $this->assertIsInt($plannerPosition);
+        $this->assertIsInt($contentPosition);
+        $this->assertIsInt($flowChartsPosition);
+        $this->assertTrue($bookingsPosition < $managePosition);
+        $this->assertTrue($managePosition < $shopPosition);
+        $this->assertTrue($shopPosition < $productsPosition);
+        $this->assertTrue($productsPosition < $inventoryPosition);
+        $this->assertTrue($inventoryPosition < $sopsPosition);
+        $this->assertTrue($marketingPosition < $plannerPosition);
+        $this->assertTrue($plannerPosition < $contentPosition);
+        $this->assertTrue($contentPosition < $flowChartsPosition);
+        $this->assertStringContainsString('Content Planner', substr($sidebar, $marketingPosition, $contentPosition - $marketingPosition));
+        $this->assertSame(0, substr_count(substr($sidebar, $flowChartsPosition), '<a class="nav-link"'));
+        $this->assertStringContainsString('navbar-vertical-label">ME', $sidebar);
+        $this->assertStringContainsString(route('admin.backups.index'), $sidebar);
+        $this->assertStringContainsString(route('admin.maintenance.index'), $sidebar);
+    }
+
     public function test_roles_stay_limited_to_the_three_built_in_roles_and_permissions_remain_editable(): void
     {
         $member = User::factory()->create();

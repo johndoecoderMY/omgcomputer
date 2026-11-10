@@ -26,6 +26,7 @@ class IntegrationTestPagesTest extends TestCase
             'services.chip.brand_id' => 'brand-123',
             'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
             'services.chip.currency' => 'MYR',
+            'services.chip.test_mode' => false,
             'services.chip.enabled' => true,
         ]);
         $publicKey = "-----BEGIN PUBLIC KEY-----\n".
@@ -56,11 +57,60 @@ class IntegrationTestPagesTest extends TestCase
             ->assertDontSee('private-chip-secret');
     }
 
+    public function test_admin_can_switch_chip_test_mode_and_test_uses_the_selected_credentials(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        config([
+            'services.chip.secret_key' => 'live-secret',
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.brand_id' => 'live-brand',
+            'services.chip.test_brand_id' => 'test-brand',
+            'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
+            'services.chip.test_mode' => false,
+        ]);
+        $publicKey = "-----BEGIN PUBLIC KEY-----\n".
+            "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPF3VE4+gT75ApxadwRf\n".
+            "bw4gGIx2d4xw9bK4SIi9kGvbRv1piftAl/cbqvjm5fE99q0UulHjU0MCQgLDvj5L\n".
+            "kSzspKhzIs3wkbu4/i+MBj78GMv4Qa453dTiVcZG5A0F1988gQPei8s0do281iXT\n".
+            "tW/o43CQXHKPnG7iIi47QCT7JoTI8iX8VJizMtfAowIGNWh803UuYbti4dRyic/C\n".
+            "grBkzuwHBbvtpcp8ncVQ6wKUkUn5ZbXBbrhBNmbXgDzQgsb4HErymjqYcd2ySyVD\n".
+            "1jNA1MMnJZhbDqrBRhYjsbUtJTrSpPlHD2XezGVKVQKzJVPemAbSS3/40zkaRAaD\n".
+            "EQIDAQAB\n-----END PUBLIC KEY-----";
+        Http::fake([
+            'https://gate.chip-in.asia/api/v1/public_key/' => Http::response(json_encode($publicKey), 200, ['Content-Type' => 'application/json']),
+        ]);
+
+        $this->actingAs($admin)->get(route('reports.integrations.chip'))
+            ->assertOk()
+            ->assertSee('LIVE')
+            ->assertSee('Use CHIP test mode');
+        $this->actingAs($admin)->post(route('reports.integrations.chip.mode'), ['test_mode' => '1'])
+            ->assertRedirect(route('reports.integrations.chip'));
+        $this->assertDatabaseHas('chip_settings', ['id' => 'primary', 'test_mode' => true]);
+        $this->assertSame('test-brand', app(\App\Services\ChipCollect::class)->brandId());
+
+        $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
+            ->assertRedirect(route('reports.integrations.chip'));
+        Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
+            && str_contains($request->header('Authorization')[0] ?? '', 'test-secret'));
+
+        $this->actingAs($admin)->post(route('reports.integrations.chip.mode'), ['test_mode' => '0'])
+            ->assertRedirect(route('reports.integrations.chip'));
+        $this->assertSame('live-brand', app(\App\Services\ChipCollect::class)->brandId());
+        $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
+            ->assertRedirect(route('reports.integrations.chip'));
+        Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
+            && str_contains($request->header('Authorization')[0] ?? '', 'live-secret'));
+    }
+
     public function test_chip_uses_test_secret_when_primary_key_is_empty(): void
     {
         config([
             'services.chip.secret_key' => null,
             'services.chip.test_secret_key' => 'test-chip-secret',
+            'services.chip.test_mode' => true,
         ]);
 
         $publicKey = "-----BEGIN PUBLIC KEY-----\n".
@@ -92,6 +142,7 @@ class IntegrationTestPagesTest extends TestCase
 
         $this->actingAs($member)->get(route('reports.integrations.chip'))->assertForbidden();
         $this->actingAs($member)->post(route('reports.integrations.chip.check'))->assertForbidden();
+        $this->actingAs($member)->post(route('reports.integrations.chip.mode'), ['test_mode' => '1'])->assertForbidden();
     }
 
     use RefreshDatabase;

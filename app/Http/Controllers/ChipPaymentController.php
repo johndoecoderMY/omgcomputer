@@ -18,7 +18,7 @@ class ChipPaymentController extends Controller
     {
         $this->authorizeCustomerDocument($request, $document);
         abort_unless(
-            config('services.chip.enabled')
+            $chip->isConfigured()
             && $document->type === 'invoice'
             && in_array($document->status, ['issued', 'partial', 'part_paid'], true)
             && $document->balance > 0,
@@ -29,11 +29,13 @@ class ChipPaymentController extends Controller
             ? $document->customer_email
             : $request->user()->email;
 
+        $testMode = $chip->isTestMode();
         $attempt = BillingPaymentAttempt::query()->create([
             'uuid' => (string) Str::uuid(),
             'billing_document_id' => $document->id,
             'user_id' => $request->user()->id,
             'amount' => $document->balance,
+            'chip_test_mode' => $testMode,
             'status' => 'pending',
         ]);
 
@@ -48,12 +50,12 @@ class ChipPaymentController extends Controller
                         'quantity' => 1,
                     ]],
                 ],
-                'brand_id' => config('services.chip.brand_id'),
+                'brand_id' => $chip->brandId($testMode),
                 'reference' => $document->number.'-'.$attempt->uuid,
                 'success_redirect' => route('billing.chip.return', $attempt->uuid),
                 'failure_redirect' => route('billing.chip.return', $attempt->uuid),
                 'success_callback' => route('webhooks.chip.collect', $attempt->uuid),
-            ]);
+            ], $testMode);
         } catch (Throwable $exception) {
             $attempt->update(['status' => 'failed']);
             throw $exception;
@@ -84,7 +86,11 @@ class ChipPaymentController extends Controller
 
     public function callback(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): Response
     {
-        abort_unless($chip->verifyCallback($request->getContent(), $request->header('X-Signature')), 401);
+        abort_unless($chip->verifyCallback(
+            $request->getContent(),
+            $request->header('X-Signature'),
+            $attempt->chip_test_mode,
+        ), 401);
 
         $payload = $request->json()->all();
         $purchaseId = $payload['id'] ?? null;
@@ -95,7 +101,7 @@ class ChipPaymentController extends Controller
             404,
         );
 
-        $purchase = $chip->purchase($attempt->provider_purchase_id);
+        $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
         abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
         abort_unless(($purchase['status'] ?? null) === 'paid', 409, 'CHIP has not confirmed this purchase as paid.');
         $this->recordVerifiedPayment($attempt);
@@ -114,7 +120,7 @@ class ChipPaymentController extends Controller
         }
 
         if ($attempt->provider_purchase_id) {
-            $purchase = $chip->purchase($attempt->provider_purchase_id);
+            $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
             abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
             if (($purchase['status'] ?? null) === 'paid') {
                 $this->recordVerifiedPayment($attempt);

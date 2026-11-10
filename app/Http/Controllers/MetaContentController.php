@@ -61,7 +61,7 @@ class MetaContentController extends Controller
         }
 
         return redirect()->route('meta-content.index')
-            ->with('success', $post->status === 'scheduled' ? 'Meta content scheduled.' : 'Meta content saved as a draft.');
+            ->with('success', $this->savedMessage($post));
     }
 
     public function edit(MetaContentPost $metaContentPost): View
@@ -92,12 +92,19 @@ class MetaContentController extends Controller
             'error_message' => null,
         ]);
 
-        return redirect()->route('meta-content.index')->with('success', 'Meta content updated.');
+        return redirect()->route('meta-content.index')->with('success', $this->savedMessage($metaContentPost));
     }
 
     public function publish(MetaContentPost $metaContentPost, MetaContentPublisher $publisher): RedirectResponse
     {
         abort_if(! in_array($metaContentPost->status, ['draft', 'failed'], true), 404);
+        if ($metaContentPost->platform === 'tiktok') {
+            return redirect()->route('meta-content.index')
+                ->with('meta_result', [
+                    'success' => false,
+                    'message' => 'TikTok publishing is not connected yet. This content remains in your planner.',
+                ]);
+        }
 
         return $this->publishPost($metaContentPost, $publisher);
     }
@@ -141,10 +148,21 @@ class MetaContentController extends Controller
         return redirect()->route('meta-content.index')->with('success', 'Content published to Meta.');
     }
 
+    private function savedMessage(MetaContentPost $post): string
+    {
+        if ($post->platform === 'tiktok') {
+            return $post->status === 'scheduled'
+                ? 'TikTok content plan scheduled. It will not auto-publish until TikTok publishing is connected.'
+                : 'TikTok content plan saved as a draft.';
+        }
+
+        return $post->status === 'scheduled' ? 'Meta content scheduled.' : 'Meta content saved as a draft.';
+    }
+
     private function validatedData(Request $request, ?MetaContentPost $post = null): array
     {
         $data = $request->validate([
-            'platform' => ['required', Rule::in(['facebook', 'instagram'])],
+            'platform' => ['required', Rule::in(['facebook', 'instagram', 'tiktok'])],
             'media_type' => ['required', Rule::in(['text', 'image', 'reel'])],
             'caption' => ['nullable', 'string', 'max:63206'],
             'media' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,video/mp4', 'max:102400'],
@@ -188,6 +206,9 @@ class MetaContentController extends Controller
         }
         if (isset($data['scheduled_at'], $data['publish_now'])) {
             throw ValidationException::withMessages(['scheduled_at' => 'Choose either publish now or schedule this content.']);
+        }
+        if ($data['platform'] === 'tiktok' && isset($data['publish_now'])) {
+            throw ValidationException::withMessages(['publish_now' => 'TikTok publishing is not connected yet. Save this as a draft or planned post instead.']);
         }
 
         return $data;

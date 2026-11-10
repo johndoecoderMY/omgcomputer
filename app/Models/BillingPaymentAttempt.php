@@ -14,6 +14,7 @@ class BillingPaymentAttempt extends Model
         'provider_purchase_id',
         'amount',
         'checkout_url',
+        'chip_test_mode',
         'status',
         'paid_at',
     ];
@@ -22,6 +23,7 @@ class BillingPaymentAttempt extends Model
     {
         return [
             'amount' => 'decimal:2',
+            'chip_test_mode' => 'boolean',
             'paid_at' => 'datetime',
         ];
     }

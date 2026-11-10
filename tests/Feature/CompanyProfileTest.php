@@ -6,12 +6,41 @@ use App\Models\BillingDocument;
 use App\Models\CompanyProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Database\Seeders\CompanyProfileSeeder;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class CompanyProfileTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_company_profile_seeder_creates_primary_profile_and_preserves_saved_settings(): void
+    {
+        $this->seed(CompanyProfileSeeder::class);
+        $this->assertDatabaseHas('company_profiles', [
+            'id' => 'primary',
+            'legal_name' => 'OMG Computer',
+            'ssm_registration_number' => '202603286108',
+            'address' => "2237 Jalan Seksyen 2/7\nTaman Bandar Barat",
+            'phone' => '0104224350',
+            'email' => 'support@omgcomputer.my',
+            'website_url' => 'https://omgcomputer.my',
+        ]);
+
+        CompanyProfile::query()->whereKey('primary')->update([
+            'legal_name' => 'OMG Computer Sdn Bhd',
+            'phone' => '+60312345678',
+        ]);
+
+        $this->seed(CompanyProfileSeeder::class);
+
+        $this->assertDatabaseCount('company_profiles', 1);
+        $this->assertDatabaseHas('company_profiles', [
+            'id' => 'primary',
+            'legal_name' => 'OMG Computer Sdn Bhd',
+            'phone' => '+60312345678',
+        ]);
+    }
 
     public function test_admin_can_manage_company_registration_tax_and_facebook_details(): void
     {

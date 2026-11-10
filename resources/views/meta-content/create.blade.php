@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Create Meta Content')
+@section('title', 'Plan Content')
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Marketing" title="Create Meta Content"
-        description="Compose a Facebook Page post or Instagram image/reel post."
-        :back-url="route('meta-content.index')" back-label="Meta content" />
+    <x-page-header eyebrow="Marketing" title="Plan Content"
+        description="Draft a post for TikTok, Facebook, or Instagram and choose when it should go out."
+        :back-url="route('meta-content.index')" back-label="Content Planner" />
     @include('meta-content._form', [
         'post' => null,
         'action' => route('meta-content.store'),

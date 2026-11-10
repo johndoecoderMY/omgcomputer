@@ -142,8 +142,8 @@
                     </div>
                 </div>
                 <div class="card-footer bg-body d-flex justify-content-between align-items-center">
-                            <span class="small text-body-secondary">Campaign analytics below remain manually maintained. Create social posts in the Meta Content manager.</span>
-                            <a class="btn btn-sm btn-outline-primary" href="{{ route('meta-content.index') }}">Manage Meta content</a>
+                    <span class="small text-body-secondary">Campaign analytics below remain manually maintained. Plan and schedule social content for Facebook, Instagram, and TikTok.</span>
+                    <a class="btn btn-sm btn-outline-primary" href="{{ route('meta-content.index') }}">Open Content Planner</a>
                 </div>
             </div>
         </div>

@@ -6,47 +6,43 @@
     @include('pages.partials.hero', [
         'eyebrow' => 'Shipping & delivery',
         'heading' => 'Shipping Policy',
-        'description' => 'Information about order delivery, collection, shipping fees, and tracking.',
+        'description' => 'How online shop orders are processed, delivered, or collected.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="alert alert-info border-0 mb-4">
-                                Delivery availability, charges, and estimated times depend on the delivery location, product, carrier, and stock status. Confirmation details are provided with each order.
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="alert alert-info border-0 mb-3">
+                                The current online checkout collects an optional delivery address and shows the product subtotal. It does not calculate a delivery charge; contact us to confirm delivery arrangements and any applicable charge before completing payment if these are not already agreed.
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Order processing</h2>
-                                <p class="text-700 mb-0">Orders are normally processed after payment has been confirmed. Stock availability and component compatibility will be checked before dispatch. If an item is unavailable, payment is delayed, or additional information is needed, our team may contact you before confirming the delivery schedule.</p>
+                                <p class="text-700 mb-0">Orders are processed after payment is confirmed. Availability, order details, and any delivery arrangements are checked before fulfilment. If an item is unavailable or we need more information, we will contact you about the order.</p>
                             </div>
 
-                            <div class="mb-4">
-                                <h2 class="h4 fw-bold text-1000">Delivery areas</h2>
-                                <p class="text-700 mb-0">We can arrange delivery within Malaysia, subject to courier coverage and the size, weight, and handling requirements of the goods. International delivery is available only when separately confirmed by our team.</p>
+                            <div class="mb-3">
+                                <h2 class="h4 fw-bold text-1000">Delivery arrangements</h2>
+                                <p class="text-700 mb-0">Delivery method, destination coverage, charges, and estimated timing are confirmed for each order. Courier availability may depend on the destination and the size or handling requirements of the goods. Do not assume international delivery is available unless we confirm it.</p>
                             </div>
 
-                            <div class="mb-4">
-                                <h2 class="h4 fw-bold text-1000">Delivery time and charges</h2>
-                                <p class="text-700 mb-0">Estimated delivery times begin after the order is processed and shipped. Actual delivery time depends on the courier and destination, and may be affected by public holidays, weather, customs, or other circumstances outside our control. Shipping fees are shown or confirmed before payment.</p>
-                            </div>
-
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Order tracking</h2>
-                                <p class="text-700 mb-0">Where a courier is used, a tracking reference may be sent after dispatch. Tracking information should appear on the courier's system after the shipment has been collected or processed.</p>
+                                <p class="text-700 mb-0">When a courier shipment is arranged, we will provide a tracking reference when available. Carrier tracking may take time to update after collection.</p>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Collection</h2>
-                                <p class="text-700 mb-0">Customers may arrange collection when collection has been offered for their order. Please wait for confirmation that the order is ready before travelling. Bring proof of identity and your order reference.</p>
+                                <p class="text-700 mb-0">Collection is available only when agreed for the order. Please wait for confirmation that your order is ready before travelling and bring your order reference.</p>
                             </div>
 
                             <div class="mb-0">
-                                <h2 class="h4 fw-bold text-1000">Damaged or missing deliveries</h2>
-                                <p class="text-700 mb-0">Please check the package before accepting it and report visible damage, an incorrect item, or missing goods promptly with your order reference and supporting photographs. Claims should be reported as soon as reasonably possible so that the courier or supplier can investigate.</p>
+                                <h2 class="h4 fw-bold text-1000">Damaged, incorrect, or missing items</h2>
+                                <p class="text-700 mb-0">Contact us promptly with your order reference, details, and photographs if an order arrives damaged, incorrect, or incomplete so we can investigate with the carrier or supplier. This request to report promptly does not remove any rights you have under applicable law.</p>
                             </div>
                         </div>
                     </div>

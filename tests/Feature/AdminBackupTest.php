@@ -67,8 +67,12 @@ class AdminBackupTest extends TestCase
             ->assertSee('Storage available')
             ->assertSee('Export selected database tables')
             ->assertSee('name="tables[]"', false)
+            ->assertSee('Select all tables')
+            ->assertSee('Select account & settings tables')
             ->assertSee('users')
-            ->assertSee('user accounts, roles, permissions, role assignments, and direct permission assignments')
+            ->assertSee('email_server_settings')
+            ->assertSee('user_email_mailboxes')
+            ->assertSee('user accounts, email settings, roles, permissions, and assignments')
             ->assertSee('No backup archives found on this disk.')
             ->assertSee('Age: unavailable until a backup archive exists.')
             ->assertSee('Run backup now');
@@ -144,6 +148,47 @@ class AdminBackupTest extends TestCase
         $this->assertStringContainsString('Table Export Test', $csv);
         $this->assertIsString($manifest);
         $this->assertSame(['users'], array_keys(json_decode($manifest, true, flags: JSON_THROW_ON_ERROR)['tables']));
+    }
+
+    public function test_planner_administrator_can_export_all_database_tables_including_account_and_email_data(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['name' => 'All Tables Export Test']);
+        $admin->assignRole('admin');
+        $tableNames = collect(Schema::getTables())->pluck('name')->all();
+
+        $response = $this->actingAs($admin)->post(route('admin.backups.export-tables'), [
+            'tables' => $tableNames,
+        ]);
+        $response->assertOk()->assertHeader('content-type', 'application/zip');
+
+        $archivePath = tempnam(sys_get_temp_dir(), 'all-tables-export-test-');
+        $this->assertNotFalse($archivePath);
+        file_put_contents($archivePath, $response->streamedContent());
+
+        $zip = new \ZipArchive;
+        $this->assertSame(true, $zip->open($archivePath));
+        $manifest = $zip->getFromName('manifest.json');
+        foreach ([
+            'users',
+            'roles',
+            'permissions',
+            'model_has_roles',
+            'model_has_permissions',
+            'role_has_permissions',
+            'email_server_settings',
+            'user_email_mailboxes',
+        ] as $table) {
+            $this->assertNotFalse($zip->locateName("tables/{$table}.csv"));
+        }
+        $usersCsv = $zip->getFromName('tables/users.csv');
+        $zip->close();
+        unlink($archivePath);
+
+        $this->assertIsString($manifest);
+        $this->assertSame($tableNames, array_keys(json_decode($manifest, true, flags: JSON_THROW_ON_ERROR)['tables']));
+        $this->assertIsString($usersCsv);
+        $this->assertStringContainsString('All Tables Export Test', $usersCsv);
     }
 
     public function test_selected_database_export_rejects_unknown_tables(): void

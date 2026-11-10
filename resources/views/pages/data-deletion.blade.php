@@ -7,15 +7,16 @@
         'eyebrow' => 'Privacy',
         'heading' => 'Data Deletion Instructions',
         'description' => 'How to disconnect Facebook data and request deletion of information associated with this app.',
+        'compact' => true,
     ])
 
-    <section class="pb-8">
+    <section class="pb-3 pb-lg-4">
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-9">
-                    <div class="card border-0 shadow-sm p-2">
-                        <div class="card-body p-4 p-lg-5">
-                            <div class="mb-4">
+                    <div class="card border-0 shadow-sm p-1">
+                        <div class="card-body p-3 p-lg-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Remove the app from Facebook</h2>
                                 <p class="text-700 mb-0">
                                     In Facebook, open <strong>Settings &amp; privacy → Settings → Business integrations</strong>
@@ -23,7 +24,7 @@
                                     <strong>Remove</strong>. This revokes the app’s Facebook authorization.
                                 </p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Meta callback URL</h2>
                                 <p class="text-700 mb-0">
                                     Enter this URL in the Meta app’s data-deletion callback settings:
@@ -32,7 +33,7 @@
                                     the matching Page and ad-account connections.
                                 </p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Request deletion from OMG Computer</h2>
                                 <p class="text-700 mb-0">
                                     Use the app’s data-deletion request on Facebook, or contact us using the email or
@@ -42,7 +43,7 @@
                                     associated with that Facebook account.
                                 </p>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">What is deleted</h2>
                                 <p class="text-700 mb-0">
                                     When Facebook submits a verified deletion callback, this app deletes the associated

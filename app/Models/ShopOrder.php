@@ -30,6 +30,7 @@ class ShopOrder extends Model
         'stock_reserved',
         'provider_purchase_id',
         'checkout_url',
+        'chip_test_mode',
         'tracking_number',
         'subtotal',
         'total',
@@ -45,6 +46,7 @@ class ShopOrder extends Model
             'total' => 'decimal:2',
             'paid_at' => 'datetime',
             'stock_reserved' => 'boolean',
+            'chip_test_mode' => 'boolean',
         ];
     }
 

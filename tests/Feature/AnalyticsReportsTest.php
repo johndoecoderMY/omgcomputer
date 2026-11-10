@@ -93,6 +93,27 @@ class AnalyticsReportsTest extends TestCase
         $this->assertSame(1, MarketingCampaign::query()->count());
     }
 
+    public function test_tiktok_marketing_section_shows_setup_presence_without_exposing_secrets(): void
+    {
+        $user = $this->adminUser();
+        config([
+            'services.tiktok.client_key' => 'test-tiktok-client-key',
+            'services.tiktok.client_secret' => 'test-tiktok-client-secret',
+            'services.tiktok.redirect_uri' => 'https://example.test/tiktok/callback',
+        ]);
+
+        $this->actingAs($user)->get(route('marketing.tiktok'))
+            ->assertOk()
+            ->assertSee('TikTok')
+            ->assertSee('video.publish')
+            ->assertSee('TIKTOK_CLIENT_KEY')
+            ->assertSee('Configured')
+            ->assertSee('Not available')
+            ->assertDontSee('test-tiktok-client-key')
+            ->assertDontSee('test-tiktok-client-secret')
+            ->assertSee(route('marketing.tiktok'), false);
+    }
+
     public function test_parcel_tracking_readiness_displays_presence_without_exposing_credentials(): void
     {
         config([

@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
+use App\Models\Supplier;
 use App\Models\User;
 use App\Services\ChipCollect;
 use App\Services\InventoryStock;
@@ -98,33 +99,199 @@ class ShopController extends Controller
 
     public function customPcBuilder(): View
     {
-        $componentTypes = [
-            'cpu',
-            'gpu',
-            'ram',
-            'motherboard',
-            'storage',
-            'power_supply',
-            'case',
-            'cooling',
-            'operating_system',
-            'software',
-        ];
+        $componentTypes = array_slice($this->customPcBuilderComponentTypes(), 0, 10);
         $additionalComponentTypes = ['peripheral', 'other'];
-        $builderComponentTypes = [...$componentTypes, ...$additionalComponentTypes];
+        $selectedPartIds = collect(session()->getOldInput('items', []))
+            ->filter(fn (mixed $item): bool => is_array($item))
+            ->pluck('inventory_part_id')
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->unique()
+            ->values();
 
         return view('shop.custom-pc-builder', [
             'components' => InventoryPart::query()
-                ->whereIn('type', $builderComponentTypes)
-                ->where('stock_quantity', '>', 0)
-                ->orderBy('type')
-                ->orderBy('name')
+                ->with(['supplier:id,name', 'suppliers:id,name'])
+                ->whereIn('id', $selectedPartIds)
                 ->get()
                 ->groupBy('type'),
             'componentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($componentTypes)),
             'additionalComponentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($additionalComponentTypes)),
+            'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name']),
+            'componentSearchUrl' => route('shop.custom-pc-builder.components'),
             'taxRate' => config('billing.tax_rate', 6),
         ]);
+    }
+
+    public function customPcBuilderComponents(Request $request): JsonResponse
+    {
+        $supplierFilters = [
+            'all',
+            'assigned',
+            'unassigned',
+            ...Supplier::query()->pluck('id')->map(fn (int $id): string => (string) $id)->all(),
+        ];
+        $filters = $request->validate([
+            'category' => ['nullable', Rule::in($this->customPcBuilderComponentTypes())],
+            'search' => ['nullable', 'string', 'max:100'],
+            'price_min' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
+            'price_max' => ['nullable', 'numeric', 'min:0', 'max:999999999', 'gte:price_min'],
+            'supplier' => ['nullable', Rule::in($supplierFilters)],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $query = InventoryPart::query()
+            ->with(['supplier:id,name', 'suppliers:id,name'])
+            ->whereIn('type', $this->customPcBuilderComponentTypes())
+            ->when($filters['category'] ?? null, fn (Builder $parts, string $type) => $parts->where('type', $type))
+            ->when($filters['search'] ?? null, function (Builder $parts, string $search): void {
+                $parts->where(function (Builder $query) use ($search): void {
+                    $query->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('sku', 'like', '%'.$search.'%');
+                });
+            })
+            ->when(isset($filters['price_min']), fn (Builder $parts) => $parts->where('selling_price', '>=', $filters['price_min']))
+            ->when(isset($filters['price_max']), fn (Builder $parts) => $parts->where('selling_price', '<=', $filters['price_max']));
+
+        $supplierFilter = $filters['supplier'] ?? 'all';
+        if ($supplierFilter === 'assigned') {
+            $query->where(function (Builder $parts): void {
+                $parts->whereHas('suppliers')->orWhereHas('supplier');
+            });
+        } elseif ($supplierFilter === 'unassigned') {
+            $query->whereDoesntHave('suppliers')
+                ->whereDoesntHave('supplier');
+        } elseif ($supplierFilter !== 'all') {
+            $supplierId = (int) $supplierFilter;
+            $query->where(function (Builder $parts) use ($supplierId): void {
+                $parts->whereHas('suppliers', fn (Builder $suppliers) => $suppliers->whereKey($supplierId))
+                    ->orWhere('supplier_id', $supplierId);
+            });
+        }
+
+        $parts = $query
+            ->orderBy('name')
+            ->paginate(25)
+            ->through(function (InventoryPart $part): array {
+                $suppliers = $part->suppliers;
+                if ($part->supplier && ! $suppliers->contains('id', $part->supplier->id)) {
+                    $suppliers->push($part->supplier);
+                }
+                $suppliers = $suppliers->sortBy('name')->values();
+
+                return [
+                    'id' => $part->id,
+                    'name' => $part->name,
+                    'sku' => $part->sku,
+                    'type' => $part->type,
+                    'stock_quantity' => $part->stock_quantity,
+                    'cost_price' => (float) $part->cost_price,
+                    'selling_price' => (float) $part->selling_price,
+                    'catalog_price' => $part->catalog_price === null ? null : (float) $part->catalog_price,
+                    'catalog_currency' => $part->catalog_currency,
+                    'supplier' => $suppliers->pluck('name')->implode(', ') ?: null,
+                    'supplier_id' => $part->supplier_id,
+                    'supplier_ids' => $suppliers->pluck('id')->values(),
+                    'supplier_offers' => $suppliers->map(fn (Supplier $supplier): array => [
+                        'id' => $supplier->id,
+                        'name' => $supplier->name,
+                        'shop_url' => $supplier->shopee_shop_url,
+                        'product_url' => $supplier->pivot?->shopee_product_url,
+                        'cost_price' => $supplier->pivot?->cost_price === null ? null : (float) $supplier->pivot->cost_price,
+                        'unit_price' => $supplier->pivot?->unit_price === null ? null : (float) $supplier->pivot->unit_price,
+                    ])->values(),
+                    'socket' => $part->specification('Socket'),
+                    'specifications' => $part->specifications(),
+                ];
+            });
+
+        return response()->json([
+            'data' => $parts->items(),
+            'meta' => [
+                'current_page' => $parts->currentPage(),
+                'last_page' => $parts->lastPage(),
+                'total' => $parts->total(),
+            ],
+        ]);
+    }
+
+    public function storeCustomPcBuilderSupplier(Request $request, InventoryPart $part): JsonResponse
+    {
+        abort_unless(in_array($part->type, $this->customPcBuilderComponentTypes(), true), 404);
+
+        $shopData = $request->validate([
+            'shopee_shop_url' => ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || ! $this->isShopeeUrl($value)) {
+                    $fail('The shop account URL must be a Shopee link.');
+                }
+            }],
+        ]);
+        $shopUrl = rtrim($shopData['shopee_shop_url'], '/');
+        $shopUrlHash = hash('sha256', $shopUrl);
+        $existingSupplier = Supplier::query()->where('shopee_shop_url_hash', $shopUrlHash)->first();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255', Rule::unique('suppliers', 'name')->ignore($existingSupplier?->id)],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'website' => ['nullable', 'url:http,https', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'shopee_product_url' => ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || ! $this->isShopeeUrl($value)) {
+                    $fail('The product URL must be a Shopee link.');
+                }
+            }],
+            'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+
+        $supplier = $existingSupplier ?? new Supplier;
+        $supplier->fill([
+            'name' => $data['name'],
+            'shopee_shop_url' => $shopUrl,
+            'shopee_shop_url_hash' => $shopUrlHash,
+        ]);
+        foreach (['contact_name', 'email', 'phone', 'website', 'notes'] as $field) {
+            if (filled($data[$field] ?? null)) {
+                $supplier->{$field} = $data[$field];
+            }
+        }
+        $supplier->save();
+
+        $part->suppliers()->syncWithoutDetaching([
+            $supplier->id => [
+                'shopee_product_url' => $data['shopee_product_url'],
+                'cost_price' => $data['cost_price'],
+                'unit_price' => $data['unit_price'],
+            ],
+        ]);
+        $suppliers = $part->suppliers()->get(['suppliers.id', 'suppliers.name']);
+        if ($part->supplier && ! $suppliers->contains('id', $part->supplier->id)) {
+            $suppliers->push($part->supplier);
+        }
+        $suppliers = $suppliers->sortBy('name')->values();
+
+        return response()->json([
+            'supplier' => [
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'shopee_shop_url' => $supplier->shopee_shop_url,
+                'cost_price' => (float) $data['cost_price'],
+                'unit_price' => (float) $data['unit_price'],
+            ],
+            'part_id' => $part->id,
+            'supplier_ids' => $suppliers->pluck('id')->values(),
+            'suppliers' => $suppliers->pluck('name')->implode(', '),
+        ], 201);
+    }
+
+    private function isShopeeUrl(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host)
+            && (strcasecmp($host, 'shope.ee') === 0
+                || preg_match('/(^|\.)shopee\.(com(\.[a-z]{2})?|[a-z]{2,3})$/i', $host) === 1);
     }
 
     public function productsDatatable(Request $request)
@@ -391,7 +558,7 @@ class ShopController extends Controller
         return redirect()->route('shop.cart')->with('success', 'Product removed from cart.');
     }
 
-    public function checkout(Request $request): View|RedirectResponse
+    public function checkout(Request $request, ChipCollect $chip): View|RedirectResponse
     {
         $cart = $this->cartProducts($request);
         if ($cart->isEmpty()) {
@@ -404,13 +571,13 @@ class ShopController extends Controller
             'cart' => $cart,
             'subtotal' => $cart->sum(fn (array $row): float => $row['price'] * $row['quantity']),
             'customer' => $this->customerForUser($user),
-            'chipEnabled' => (bool) config('services.chip.enabled'),
+            'chipEnabled' => $chip->isConfigured(),
         ]);
     }
 
     public function placeOrder(Request $request, ChipCollect $chip, WorkspaceNotifier $notifier): RedirectResponse
     {
-        abort_unless(config('services.chip.enabled'), 503, 'CHiP checkout is not configured. Set the CHiP credentials before placing shop orders.');
+        abort_unless($chip->isConfigured(), 503, 'CHiP checkout is not configured for the selected mode. Set its secret key and brand ID.');
         $data = $request->validate([
             'customer_address' => ['nullable', 'string', 'max:3000'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -425,9 +592,10 @@ class ShopController extends Controller
             throw ValidationException::withMessages(['customer' => 'Your account needs a valid email address for CHiP checkout.']);
         }
         $customer = $this->resolveCustomerForUser($user);
+        $testMode = $chip->isTestMode();
 
         $subtotal = round($cart->sum(fn (array $row): float => $row['price'] * $row['quantity']), 2);
-        $order = DB::transaction(function () use ($cart, $customer, $data, $subtotal, $request, $user): ShopOrder {
+        $order = DB::transaction(function () use ($cart, $customer, $data, $subtotal, $request, $user, $testMode): ShopOrder {
             $order = ShopOrder::query()->create([
                 'uuid' => (string) Str::uuid(),
                 'order_number' => 'TEMP-'.Str::upper(Str::random(12)),
@@ -440,6 +608,7 @@ class ShopController extends Controller
                 'subtotal' => $subtotal,
                 'total' => $subtotal,
                 'currency' => config('services.chip.currency', 'MYR'),
+                'chip_test_mode' => $testMode,
                 'notes' => $data['notes'] ?? null,
             ]);
             $order->update([
@@ -488,12 +657,12 @@ class ShopController extends Controller
                         'quantity' => $item->quantity,
                     ])->all(),
                 ],
-                'brand_id' => config('services.chip.brand_id'),
+                'brand_id' => $chip->brandId($testMode),
                 'reference' => $order->order_number.'-'.$order->uuid,
                 'success_redirect' => route('shop.chip.return', $order->uuid),
                 'failure_redirect' => route('shop.chip.return', $order->uuid),
                 'success_callback' => route('webhooks.chip.shop', $order->uuid),
-            ]);
+            ], $testMode);
         } catch (Throwable $exception) {
             $this->releaseOrderStock($order);
             $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
@@ -751,7 +920,11 @@ class ShopController extends Controller
     public function chipCallback(string $uuid, Request $request, ChipCollect $chip, WorkspaceNotifier $notifier): Response
     {
         $order = ShopOrder::query()->where('uuid', $uuid)->firstOrFail();
-        abort_unless($chip->verifyCallback($request->getContent(), $request->header('X-Signature')), 401);
+        abort_unless($chip->verifyCallback(
+            $request->getContent(),
+            $request->header('X-Signature'),
+            $order->chip_test_mode,
+        ), 401);
         $purchaseId = $request->json('id');
         abort_unless(
             is_string($purchaseId)
@@ -759,7 +932,7 @@ class ShopController extends Controller
             && hash_equals($order->provider_purchase_id, $purchaseId),
             404,
         );
-        $purchase = $chip->purchase($order->provider_purchase_id);
+        $purchase = $chip->purchase($order->provider_purchase_id, $order->chip_test_mode);
         abort_unless(($purchase['id'] ?? null) === $order->provider_purchase_id, 502, 'CHiP returned a different purchase.');
         abort_unless(($purchase['status'] ?? null) === 'paid', 409, 'CHiP has not confirmed this purchase as paid.');
         $this->markOrderPaid($order, $notifier);
@@ -775,7 +948,7 @@ class ShopController extends Controller
             abort_unless($order->user_id === $user->id, 404);
         }
         if ($order->payment_status !== 'paid' && $order->provider_purchase_id) {
-            $purchase = $chip->purchase($order->provider_purchase_id);
+            $purchase = $chip->purchase($order->provider_purchase_id, $order->chip_test_mode);
             abort_unless(($purchase['id'] ?? null) === $order->provider_purchase_id, 502, 'CHiP returned a different purchase.');
             if (($purchase['status'] ?? null) === 'paid') {
                 $this->markOrderPaid($order, $notifier);
@@ -933,5 +1106,26 @@ class ShopController extends Controller
             'stock_quantity' => [$product ? 'nullable' : 'required', 'integer', 'min:0', 'max:10000000'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:10000000'],
         ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function customPcBuilderComponentTypes(): array
+    {
+        return [
+            'cpu',
+            'gpu',
+            'ram',
+            'motherboard',
+            'storage',
+            'power_supply',
+            'case',
+            'cooling',
+            'operating_system',
+            'software',
+            'peripheral',
+            'other',
+        ];
     }
 }

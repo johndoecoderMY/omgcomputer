@@ -5,7 +5,14 @@
 @section('content')
     @php
         $initialDate = old('booking_date', $selectedDate->toDateString());
+        $bookingHelpWhatsappUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I am not sure which service to book. Can you help me choose?');
     @endphp
+    <style>
+        .booking-help-section { background: #0b1727; }
+        .booking-help-section .booking-help-kicker { color: #ff4b0b; }
+        .booking-help-section .booking-help-copy { color: #a9bdd5; }
+        .booking-help-section .booking-help-card { background: #111f30; }
+    </style>
     @if ($authenticatedBooking)
         <div class="container-fluid py-3">
             <x-page-header eyebrow="Bookings" title="Book a service"
@@ -14,7 +21,7 @@
             <div class="row justify-content-center">
                 <div class="col-12">
     @else
-                    <section class="py-8">
+                    <section class="pt-1 pb-8">
                         <div class="container">
                             <div class="row justify-content-center">
                                 <div class="col-lg-10">
@@ -33,7 +40,7 @@
                                     </div>
                                 @endif
 
-                                <form method="POST"
+                                <form id="booking-form" method="POST"
                                     action="{{ $authenticatedBooking ? route('bookings.account-store') : route('bookings.store') }}">
                                     @csrf
                                     <div class="row g-4">
@@ -115,9 +122,11 @@
                                                                 rows="4">{{ old('request_notes') }}</textarea>
                                                         </div>
                                                     </div>
-                                                    <button class="btn btn-primary" type="submit">
-                                                        Book a service
-                                                    </button>
+                                                    <div class="d-flex justify-content-end">
+                                                        <button class="btn btn-primary" type="submit">
+                                                            Book a service
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -150,6 +159,34 @@
                         </div>
                         </section>
                     @endif
+    <section class="booking-help-section py-5 mt-5" id="booking-help">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <span class="booking-help-kicker fw-bold text-uppercase fs-10">Not sure what to pick?</span>
+                    <h2 class="h2 fw-bold text-white mt-2 mb-3">We’ll help you find the right service.</h2>
+                    <p class="booking-help-copy lead mb-0">Tell us what is happening and what device needs attention. We’ll help you decide what to book and figure out the next step.</p>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card booking-help-card border-0 shadow-lg">
+                        <div class="card-body p-4">
+                            <span class="bi bi-headset text-primary fs-2 mb-3" aria-hidden="true"></span>
+                            <h3 class="h3 fw-bold text-white">Just contact us</h3>
+                            <p class="booking-help-copy mb-3">Tell us what you need and we’ll help you figure out the next step.</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a class="btn btn-outline-primary rounded-pill px-4" href="mailto:support@omgcomputer.my">
+                                    <span class="bi bi-envelope me-2" aria-hidden="true"></span>Email us
+                                </a>
+                                <a class="btn btn-success rounded-pill px-4" href="{{ $bookingHelpWhatsappUrl }}" target="_blank" rel="noopener noreferrer">
+                                    <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 @endsection
 
         @push('scripts')

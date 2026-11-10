@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ChipSetting;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -9,9 +10,31 @@ use RuntimeException;
 
 class ChipCollect
 {
-    public function testConnection(): void
+    public function isTestMode(): bool
     {
-        $key = $this->request()
+        return ChipSetting::testMode();
+    }
+
+    public function isConfigured(?bool $testMode = null): bool
+    {
+        $testMode ??= $this->isTestMode();
+
+        return filled($this->secretKey($testMode)) && filled($this->brandId($testMode));
+    }
+
+    public function brandId(?bool $testMode = null): ?string
+    {
+        $testMode ??= $this->isTestMode();
+        $brandId = $testMode
+            ? (config('services.chip.test_brand_id') ?: config('services.chip.brand_id'))
+            : config('services.chip.brand_id');
+
+        return is_string($brandId) && $brandId !== '' ? $brandId : null;
+    }
+
+    public function testConnection(?bool $testMode = null): void
+    {
+        $key = $this->request($testMode)
             ->get($this->endpoint('/public_key/'))
             ->throw()
             ->json();
@@ -21,9 +44,9 @@ class ChipCollect
         }
     }
 
-    public function createPurchase(array $payload): array
+    public function createPurchase(array $payload, ?bool $testMode = null): array
     {
-        $response = $this->request()
+        $response = $this->request($testMode)
             ->post($this->endpoint('/purchases/'), $payload)
             ->throw()
             ->json();
@@ -34,9 +57,9 @@ class ChipCollect
         return $response;
     }
 
-    public function purchase(string $purchaseId): array
+    public function purchase(string $purchaseId, ?bool $testMode = null): array
     {
-        $response = $this->request()
+        $response = $this->request($testMode)
             ->get($this->endpoint('/purchases/'.rawurlencode($purchaseId).'/'))
             ->throw()
             ->json();
@@ -47,7 +70,7 @@ class ChipCollect
         return $response;
     }
 
-    public function verifyCallback(string $rawBody, ?string $signature): bool
+    public function verifyCallback(string $rawBody, ?string $signature, ?bool $testMode = null): bool
     {
         if (! is_string($signature) || $signature === '') {
             return false;
@@ -59,10 +82,10 @@ class ChipCollect
         }
 
         $publicKey = Cache::remember(
-            'chip-collect-public-key-'.sha1((string) config('services.chip.api_url')),
+            'chip-collect-public-key-'.sha1((string) config('services.chip.api_url').':'.(int) ($testMode ?? $this->isTestMode())),
             now()->addHours(12),
-            function (): string {
-                $response = $this->request()->get($this->endpoint('/public_key/'))->throw();
+            function () use ($testMode): string {
+                $response = $this->request($testMode)->get($this->endpoint('/public_key/'))->throw();
                 $key = $response->json();
                 if (! is_string($key) || openssl_pkey_get_public($key) === false) {
                     throw new RuntimeException('CHIP returned an invalid callback public key.');
@@ -77,18 +100,14 @@ class ChipCollect
         return $result === 1;
     }
 
-    private function request(): PendingRequest
+    private function request(?bool $testMode = null): PendingRequest
     {
-        $secretKey = config('services.chip.secret_key');
-        if (! is_string($secretKey) || $secretKey === '') {
-            $secretKey = config('services.chip.test_secret_key');
-        }
-        if (! is_string($secretKey) || $secretKey === '') {
-            $secretKey = env('CHIP_SECRET_KEY_TEST');
-        }
+        $testMode ??= $this->isTestMode();
+        $secretKey = $this->secretKey($testMode);
 
         if (! is_string($secretKey) || $secretKey === '') {
-            throw new RuntimeException('CHIP is not configured. Set CHIP_SECRET_KEY or CHIP_SECRET_KEY_TEST and CHIP_BRAND_ID.');
+            $mode = $testMode ? 'test' : 'live';
+            throw new RuntimeException("CHIP {$mode} mode is not configured. Set the matching CHIP secret key and brand ID.");
         }
 
         return Http::acceptJson()
@@ -96,6 +115,13 @@ class ChipCollect
             ->withToken($secretKey)
             ->connectTimeout(10)
             ->timeout(30);
+    }
+
+    private function secretKey(bool $testMode): mixed
+    {
+        return $testMode
+            ? config('services.chip.test_secret_key')
+            : config('services.chip.secret_key');
     }
 
     private function endpoint(string $path): string

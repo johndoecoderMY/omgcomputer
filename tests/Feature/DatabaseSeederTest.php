@@ -50,6 +50,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertGreaterThan(0, $counts['customers']);
         $this->assertGreaterThan(0, $counts['inventory_parts']);
         $this->assertGreaterThan(0, InventoryPart::query()->where('type', 'ready_built_pc')->count());
+        $this->assertSame(66778, InventoryPart::query()->where('sku', 'like', 'CSV-%')->count());
+        $cpuFromCsv = InventoryPart::query()->where('sku', 'CSV-CPU-000001')->firstOrFail();
+        $this->assertSame('AMD Ryzen 7 9800X3D', $cpuFromCsv->name);
+        $this->assertSame('cpu', $cpuFromCsv->type);
+        $this->assertSame(451.5, (float) $cpuFromCsv->catalog_price);
+        $this->assertSame('USD', $cpuFromCsv->catalog_currency);
+        $this->assertStringContainsString('Price (USD): 451.5', $cpuFromCsv->description);
+        $this->assertFalse($cpuFromCsv->is_for_sale);
+        $this->assertSame(0, $cpuFromCsv->stock_quantity);
         $this->assertDatabaseHas('inventory_parts', [
             'sku' => 'DEMO-PC-OFFICE-001',
             'type' => 'ready_built_pc',
