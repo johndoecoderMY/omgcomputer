@@ -26,61 +26,132 @@
     @endif
 
     <section class="card mb-4" aria-labelledby="selected-table-export-heading">
-        <div class="card-body">
-            <h2 class="h5" id="selected-table-export-heading">Export selected database tables</h2>
-            <p class="text-body-secondary">
-                Choose tables to export. The download is a ZIP of CSV data files plus a manifest listing each table's columns.
-                Use the data export to reinsert records into a database with a matching schema. For a full pre-migration restore,
-                use <strong>Run backup now</strong>.
-            </p>
-            <form method="POST" action="{{ route('admin.backups.export-tables') }}"
-                onsubmit="return confirm('Export the selected table data to a ZIP file?');">
-                @csrf
-                @error('tables')
-                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
-                @enderror
-                @error('tables.*')
-                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
-                @enderror
-                @if ($databaseTables->isEmpty())
-                    <div class="alert alert-warning mb-0" role="alert">No database tables are available to export.</div>
-                @else
-                    @php($selectedTables = old('tables', []))
-                    @php($selectedTables = is_array($selectedTables) ? $selectedTables : [])
-                    @php($accountTables = ['users', 'password_reset_tokens', 'sessions', 'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions', 'teams', 'team_user', 'departments', 'profile_activities', 'notifications', 'email_server_settings', 'user_email_mailboxes'])
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="all">
-                            Select all tables
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="accounts">
-                            Select account &amp; settings tables
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="none">
-                            Clear selection
-                        </button>
-                    </div>
-                    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2 mb-3">
-                        @foreach ($databaseTables as $table)
-                            <div class="col">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="tables[]"
-                                        id="export-table-{{ $loop->index }}" value="{{ $table }}"
-                                        data-account-export-table="{{ in_array($table, $accountTables, true) ? 'true' : 'false' }}"
-                                        @checked(in_array($table, $selectedTables, true))>
-                                    <label class="form-check-label" for="export-table-{{ $loop->index }}">
-                                        {{ $table }}
-                                    </label>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                    <button class="btn btn-outline-primary" type="submit">
-                        <i class="bi bi-file-earmark-zip me-2" aria-hidden="true"></i>Export selected tables
-                    </button>
-                @endif
-            </form>
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h2 class="h5 mb-1" id="selected-table-export-heading">Export selected database tables</h2>
+                <p class="text-body-secondary mb-0">
+                    Choose tables, file format, and SQL import options. For a full pre-migration restore, use
+                    <strong>Run backup now</strong>.
+                </p>
+            </div>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#table-export-modal">
+                <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>Export tables
+            </button>
         </div>
     </section>
+
+    <div class="modal fade" id="table-export-modal" tabindex="-1" aria-labelledby="table-export-modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('admin.backups.export-tables') }}">
+                    @csrf
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="table-export-modal-title">Export database tables</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @error('export')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
+                        @error('tables')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
+                        @error('tables.*')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
+                        @error('format')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
+
+                        @if ($databaseTables->isEmpty())
+                            <div class="alert alert-warning mb-0" role="alert">No database tables are available to export.</div>
+                        @else
+                            @php($selectedTables = old('tables', []))
+                            @php($selectedTables = is_array($selectedTables) ? $selectedTables : [])
+                            @php($accountTables = ['users', 'password_reset_tokens', 'sessions', 'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions', 'teams', 'team_user', 'departments', 'profile_activities', 'notifications', 'email_server_settings', 'user_email_mailboxes'])
+
+                            <fieldset class="mb-4">
+                                <legend class="form-label fw-semibold">Export format</legend>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="format" id="table-export-format-csv"
+                                            value="csv" @checked(old('format', 'csv') === 'csv')>
+                                        <label class="form-check-label" for="table-export-format-csv">CSV files in a ZIP</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="format" id="table-export-format-sql"
+                                            value="sql" @checked(old('format') === 'sql')>
+                                        <label class="form-check-label" for="table-export-format-sql">SQL INSERT statements</label>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <fieldset class="border rounded p-3 mb-4" data-sql-export-options>
+                                <legend class="float-none w-auto px-2 fs-6 fw-semibold">SQL import options</legend>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="create_tables" value="1"
+                                        id="table-export-create-tables" @checked(old('create_tables'))>
+                                    <label class="form-check-label" for="table-export-create-tables">
+                                        Include <code>CREATE TABLE IF NOT EXISTS</code> statements
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="empty_tables_first" value="1"
+                                        id="table-export-empty-tables" @checked(old('empty_tables_first'))>
+                                    <label class="form-check-label" for="table-export-empty-tables">
+                                        Delete existing rows from selected tables before inserting exported rows
+                                    </label>
+                                </div>
+                                <p class="small text-body-secondary mt-2 mb-0">
+                                    These options add statements to the downloaded file only; they do not change this database.
+                                    Review the SQL before importing. DELETE statements may interact with foreign-key cascades.
+                                    CREATE TABLE export is supported for MySQL, MariaDB, and SQLite.
+                                </p>
+                            </fieldset>
+
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="all">
+                                    Select all tables
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="accounts">
+                                    Select account &amp; settings tables
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="none">
+                                    Clear selection
+                                </button>
+                            </div>
+                            <fieldset>
+                                <legend class="form-label fw-semibold">Tables to export</legend>
+                                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-2">
+                                    @foreach ($databaseTables as $table)
+                                        <div class="col">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="tables[]"
+                                                    id="export-table-{{ $loop->index }}" value="{{ $table }}"
+                                                    data-account-export-table="{{ in_array($table, $accountTables, true) ? 'true' : 'false' }}"
+                                                    @checked(in_array($table, $selectedTables, true))>
+                                                <label class="form-check-label" for="export-table-{{ $loop->index }}">
+                                                    {{ $table }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </fieldset>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        @if ($databaseTables->isNotEmpty())
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>Download export
+                            </button>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
     @push('scripts')
         <script>
             document.querySelectorAll('[data-select-export-tables]').forEach((button) => {
@@ -92,6 +163,22 @@
                     });
                 });
             });
+
+            const sqlExportOptions = document.querySelector('[data-sql-export-options]');
+            if (sqlExportOptions) {
+                const updateSqlExportOptions = () => {
+                    const sqlSelected = document.querySelector('#table-export-format-sql').checked;
+                    sqlExportOptions.hidden = !sqlSelected;
+                };
+                document.querySelectorAll('input[name="format"]').forEach((radio) => {
+                    radio.addEventListener('change', updateSqlExportOptions);
+                });
+                updateSqlExportOptions();
+            }
+
+            @if ($errors->any())
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('table-export-modal')).show();
+            @endif
         </script>
     @endpush
 

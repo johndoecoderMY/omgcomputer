@@ -150,6 +150,47 @@ class AdminBackupTest extends TestCase
         $this->assertSame(['users'], array_keys(json_decode($manifest, true, flags: JSON_THROW_ON_ERROR)['tables']));
     }
 
+    public function test_planner_administrator_can_export_tables_as_configurable_sql(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['name' => "SQL Export O'Connor"]);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('admin.backups.export-tables'), [
+            'tables' => ['users'],
+            'format' => 'sql',
+            'create_tables' => '1',
+            'empty_tables_first' => '1',
+        ]);
+        $response->assertOk()
+            ->assertHeader('content-type', 'text/plain; charset=UTF-8')
+            ->assertHeader('content-disposition', 'attachment; filename=database-tables-'.now()->format('Y-m-d-His').'.sql');
+
+        $sql = $response->streamedContent();
+        $this->assertStringContainsString('CREATE TABLE IF NOT EXISTS', $sql);
+        $this->assertStringContainsString('DELETE FROM "users";', $sql);
+        $this->assertStringContainsString('INSERT INTO "users"', $sql);
+        $this->assertStringContainsString("SQL Export O''Connor", $sql);
+    }
+
+    public function test_sql_export_can_contain_inserts_without_create_or_delete_statements(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['name' => 'Insert Only Export']);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('admin.backups.export-tables'), [
+            'tables' => ['users'],
+            'format' => 'sql',
+        ]);
+        $response->assertOk()->assertHeader('content-type', 'text/plain; charset=UTF-8');
+
+        $sql = $response->streamedContent();
+        $this->assertStringContainsString('INSERT INTO "users"', $sql);
+        $this->assertStringNotContainsString('CREATE TABLE', $sql);
+        $this->assertStringNotContainsString('DELETE FROM', $sql);
+    }
+
     public function test_planner_administrator_can_export_all_database_tables_including_account_and_email_data(): void
     {
         $this->seed(PlannerRoleSeeder::class);

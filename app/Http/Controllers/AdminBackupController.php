@@ -71,18 +71,53 @@ class AdminBackupController extends Controller
         $validated = $request->validate([
             'tables' => ['required', 'array', 'min:1'],
             'tables.*' => ['required', 'string', 'distinct', Rule::in($tableNames)],
+            'format' => ['nullable', Rule::in(['csv', 'sql'])],
+            'create_tables' => ['sometimes', 'boolean'],
+            'empty_tables_first' => ['sometimes', 'boolean'],
         ]);
+        $format = $validated['format'] ?? 'csv';
 
         try {
+            if ($format === 'sql') {
+                $sqlPath = $exporter->createSqlFile(
+                    $validated['tables'],
+                    (bool) ($validated['create_tables'] ?? false),
+                    (bool) ($validated['empty_tables_first'] ?? false),
+                );
+                $filename = 'database-tables-'.now()->format('Y-m-d-His').'.sql';
+
+                return response()->streamDownload(function () use ($sqlPath): void {
+                    try {
+                        $stream = fopen($sqlPath, 'rb');
+                        if ($stream === false) {
+                            throw new \RuntimeException('The generated SQL export could not be opened.');
+                        }
+
+                        fpassthru($stream);
+                        fclose($stream);
+                    } finally {
+                        if (is_file($sqlPath)) {
+                            unlink($sqlPath);
+                        }
+                    }
+                }, $filename, [
+                    'Content-Type' => 'text/plain; charset=UTF-8',
+                ]);
+            }
+
             $archivePath = $exporter->createArchive($validated['tables']);
         } catch (Throwable $exception) {
             Log::error('Selected database table export failed.', [
                 'tables' => $validated['tables'],
+                'format' => $format,
                 'exception' => $exception->getMessage(),
             ]);
 
             return redirect()->route('admin.backups.index')
-                ->with('error', 'The selected table export could not be completed. Check the application logs and try again.');
+                ->withErrors([
+                    'export' => 'The selected table export could not be completed. Check the application logs and try again.',
+                ])
+                ->withInput();
         }
 
         $filename = 'database-tables-'.now()->format('Y-m-d-His').'.zip';

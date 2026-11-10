@@ -43,6 +43,9 @@ class MetaContentTest extends TestCase
             ->get(route('meta-content.create'))
             ->assertOk()
             ->assertSee('TikTok (planning only)')
+            ->assertSee('name="platforms[]" multiple', false)
+            ->assertSee('1080 × 1350 px')
+            ->assertSee('1080 × 1920 px')
             ->assertSee('tiktok-planning-notice', false)
             ->assertSee('meta-publish-now', false)
             ->assertSee('Take photo for image posts')
@@ -86,6 +89,79 @@ class MetaContentTest extends TestCase
             Storage::disk('public')->exists($scheduled->media_path),
             json_encode(Storage::disk('public')->allFiles()),
         );
+    }
+
+    public function test_staff_can_schedule_one_content_item_for_multiple_platforms(): void
+    {
+        $this->actingAs($this->staffUser());
+        $scheduledAt = now()->addDay()->format('Y-m-d H:i:s');
+
+        $this->post(route('meta-content.store'), [
+            'platforms' => ['facebook', 'instagram', 'tiktok'],
+            'media_type' => 'reel',
+            'caption' => 'Shared cross-platform video',
+            'media' => UploadedFile::fake()->create('cross-platform.mp4', 100, 'video/mp4'),
+            'scheduled_at' => $scheduledAt,
+        ])->assertRedirect(route('meta-content.index'))
+            ->assertSessionHas('success', 'Content scheduled for the selected platforms. TikTok content will not auto-publish until TikTok publishing is connected.');
+
+        $posts = MetaContentPost::query()->orderBy('platform')->get();
+        $this->assertSame(['facebook', 'instagram', 'tiktok'], $posts->pluck('platform')->all());
+        $this->assertSame(['scheduled'], $posts->pluck('status')->unique()->all());
+        $this->assertCount(3, $posts->pluck('media_path')->unique());
+        foreach ($posts as $post) {
+            $this->assertSame('Shared cross-platform video', $post->caption);
+            $this->assertTrue(Storage::disk('public')->exists($post->media_path));
+        }
+    }
+
+    public function test_content_can_publish_now_to_multiple_meta_platforms(): void
+    {
+        $this->actingAs($this->staffUser());
+        Http::fake([
+            'https://graph.facebook.com/v25.0/page-123/photos' => Http::response(['id' => 'facebook-post-1']),
+            'https://graph.facebook.com/v25.0/instagram-456/media' => Http::response(['id' => 'instagram-container-1']),
+            'https://graph.facebook.com/v25.0/instagram-456/media_publish' => Http::response(['id' => 'instagram-post-1']),
+        ]);
+
+        $this->post(route('meta-content.store'), [
+            'platforms' => ['facebook', 'instagram'],
+            'media_type' => 'image',
+            'caption' => 'Shared Meta image',
+            'media' => UploadedFile::fake()->image('post.jpg', 400, 400),
+            'publish_now' => '1',
+        ])->assertRedirect(route('meta-content.index'))
+            ->assertSessionHas('success', 'Content published to all selected platforms.');
+
+        $this->assertDatabaseHas('meta_content_posts', [
+            'platform' => 'facebook',
+            'status' => 'published',
+            'meta_post_id' => 'facebook-post-1',
+        ]);
+        $this->assertDatabaseHas('meta_content_posts', [
+            'platform' => 'instagram',
+            'status' => 'published',
+            'meta_post_id' => 'instagram-post-1',
+        ]);
+    }
+
+    public function test_multi_platform_selection_rejects_tiktok_publish_now_and_duplicate_platforms(): void
+    {
+        $this->actingAs($this->staffUser());
+
+        $this->from(route('meta-content.create'))->post(route('meta-content.store'), [
+            'platforms' => ['facebook', 'tiktok'],
+            'media_type' => 'image',
+            'caption' => 'Cross-platform post',
+            'media' => UploadedFile::fake()->image('post.jpg'),
+            'publish_now' => '1',
+        ])->assertSessionHasErrors('publish_now');
+
+        $this->from(route('meta-content.create'))->post(route('meta-content.store'), [
+            'platforms' => ['facebook', 'facebook'],
+            'media_type' => 'text',
+            'caption' => 'Duplicate platform',
+        ])->assertSessionHasErrors('platforms.1');
     }
 
     public function test_facebook_text_can_publish_and_meta_errors_are_saved_for_retry(): void

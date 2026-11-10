@@ -390,6 +390,14 @@
                                 <span class="nav-link-text ps-1">Copywriting</span>
                             </div>
                         </a>
+                        @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
+                            <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
+                                    <span class="nav-link-text ps-1">Flow Charts</span>
+                                </div>
+                            </a>
+                        @endif
 
                         @if (auth()->user()->hasRole('admin') || auth()->user()->can('users.view'))
                             @role('admin')
@@ -684,26 +692,6 @@
                         </a>
 
                     </li>
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('meta-content.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-file-earmark-richtext"></span></span>
-                                    <span class="nav-link-text ps-1">Content</span>
-                                </div>
-                            </a>
-                        </li>
-                    @endif
-                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('flowcharts.view'))
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ route('development.flowcharts.index') }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="nav-link-icon"><span class="bi bi-diagram-3"></span></span>
-                                    <span class="nav-link-text ps-1">Flow Charts</span>
-                                </div>
-                            </a>
-                        </li>
-                    @endif
                 @endif
             </ul>
         </div>

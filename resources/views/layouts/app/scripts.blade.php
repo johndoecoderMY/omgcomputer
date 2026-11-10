@@ -49,8 +49,8 @@
         };
 
         window.initializeProjectAjaxControls = (container = document) => {
-            window.jQuery(container).find('select.js-project-search, select.js-user-search')
-                .addBack('select.js-project-search, select.js-user-search').each(function () {
+            window.jQuery(container).find('select.js-project-search, select.js-user-search, select.js-platform-search')
+                .addBack('select.js-project-search, select.js-user-search, select.js-platform-search').each(function () {
                     const select = window.jQuery(this);
                     if (select.hasClass('select2-hidden-accessible')) {
                         return;

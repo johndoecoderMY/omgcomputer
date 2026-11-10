@@ -45,23 +45,46 @@ class MetaContentController extends Controller
     public function store(Request $request, MetaContentPublisher $publisher): RedirectResponse
     {
         $data = $this->validatedData($request);
-        $mediaPath = ($data['media'] ?? null)?->store('meta-content', 'public');
-        $post = MetaContentPost::query()->create([
-            'created_by' => $request->user()->id,
-            'platform' => $data['platform'],
-            'media_type' => $data['media_type'],
-            'caption' => $data['caption'] ?? null,
-            'media_path' => $mediaPath,
-            'scheduled_at' => $data['scheduled_at'] ?? null,
-            'status' => isset($data['publish_now']) ? 'draft' : (isset($data['scheduled_at']) ? 'scheduled' : 'draft'),
-        ]);
+        $platforms = $data['platforms'];
+        $posts = [];
+
+        foreach ($platforms as $platform) {
+            $mediaPath = ($data['media'] ?? null)?->store('meta-content/'.$platform, 'public');
+            $posts[] = MetaContentPost::query()->create([
+                'created_by' => $request->user()->id,
+                'platform' => $platform,
+                'media_type' => $data['media_type'],
+                'caption' => $data['caption'] ?? null,
+                'media_path' => $mediaPath,
+                'scheduled_at' => $data['scheduled_at'] ?? null,
+                'status' => isset($data['publish_now']) ? 'draft' : (isset($data['scheduled_at']) ? 'scheduled' : 'draft'),
+            ]);
+        }
 
         if (isset($data['publish_now'])) {
-            return $this->publishPost($post, $publisher);
+            $failures = [];
+            foreach ($posts as $post) {
+                $error = $this->publishSavedPost($post, $publisher);
+                if ($error !== null) {
+                    $failures[] = $post->platform.': '.$error;
+                }
+            }
+
+            if ($failures !== []) {
+                return redirect()->route('meta-content.index')->with('meta_result', [
+                    'success' => false,
+                    'message' => 'Some selected posts could not be published: '.implode(' ', $failures),
+                ]);
+            }
+
+            return redirect()->route('meta-content.index')
+                ->with('success', count($posts) === 1
+                    ? 'Content published to Meta.'
+                    : 'Content published to all selected platforms.');
         }
 
         return redirect()->route('meta-content.index')
-            ->with('success', $this->savedMessage($post));
+            ->with('success', $this->savedMessageForPlatforms($posts));
     }
 
     public function edit(MetaContentPost $metaContentPost): View
@@ -122,6 +145,19 @@ class MetaContentController extends Controller
 
     private function publishPost(MetaContentPost $post, MetaContentPublisher $publisher): RedirectResponse
     {
+        $error = $this->publishSavedPost($post, $publisher);
+        if ($error !== null) {
+            return redirect()->route('meta-content.index')->with('meta_result', [
+                'success' => false,
+                'message' => $error,
+            ]);
+        }
+
+        return redirect()->route('meta-content.index')->with('success', 'Content published to Meta.');
+    }
+
+    private function publishSavedPost(MetaContentPost $post, MetaContentPublisher $publisher): ?string
+    {
         try {
             $metaId = $publisher->publish($post);
         } catch (RuntimeException $exception) {
@@ -131,10 +167,7 @@ class MetaContentController extends Controller
                 'scheduled_at' => null,
             ]);
 
-            return redirect()->route('meta-content.index')->with('meta_result', [
-                'success' => false,
-                'message' => $exception->getMessage(),
-            ]);
+            return $exception->getMessage();
         }
 
         $post->update([
@@ -145,7 +178,25 @@ class MetaContentController extends Controller
             'scheduled_at' => null,
         ]);
 
-        return redirect()->route('meta-content.index')->with('success', 'Content published to Meta.');
+        return null;
+    }
+
+    /**
+     * @param  list<MetaContentPost>  $posts
+     */
+    private function savedMessageForPlatforms(array $posts): string
+    {
+        if (count($posts) === 1) {
+            return $this->savedMessage($posts[0]);
+        }
+
+        $scheduled = $posts[0]->status === 'scheduled';
+        $message = $scheduled ? 'Content scheduled for the selected platforms.' : 'Content saved for the selected platforms.';
+        if (collect($posts)->contains(fn (MetaContentPost $post): bool => $post->platform === 'tiktok')) {
+            $message .= ' TikTok content will not auto-publish until TikTok publishing is connected.';
+        }
+
+        return $message;
     }
 
     private function savedMessage(MetaContentPost $post): string
@@ -162,13 +213,20 @@ class MetaContentController extends Controller
     private function validatedData(Request $request, ?MetaContentPost $post = null): array
     {
         $data = $request->validate([
-            'platform' => ['required', Rule::in(['facebook', 'instagram', 'tiktok'])],
+            ...($post
+                ? ['platform' => ['required', Rule::in(['facebook', 'instagram', 'tiktok'])]]
+                : [
+                    'platform' => ['required_without:platforms', Rule::in(['facebook', 'instagram', 'tiktok'])],
+                    'platforms' => ['required_without:platform', 'array', 'min:1'],
+                    'platforms.*' => ['required', 'string', 'distinct', Rule::in(['facebook', 'instagram', 'tiktok'])],
+                ]),
             'media_type' => ['required', Rule::in(['text', 'image', 'reel'])],
             'caption' => ['nullable', 'string', 'max:63206'],
             'media' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/webp,video/mp4', 'max:102400'],
             'scheduled_at' => ['nullable', 'date', 'after:now'],
             'publish_now' => ['sometimes', 'accepted'],
         ]);
+        $platforms = $post ? [$data['platform']] : ($data['platforms'] ?? [$data['platform']]);
         $existingMediaExists = filled($post?->media_path)
             && Storage::disk('public')->exists($post->media_path);
         $existingMime = $existingMediaExists
@@ -176,10 +234,10 @@ class MetaContentController extends Controller
             : null;
         $mediaMime = isset($data['media']) ? $data['media']->getMimeType() : $existingMime;
         $hasExistingMedia = $existingMediaExists && ! isset($data['media']);
-        if ($data['platform'] === 'instagram' && $data['media_type'] === 'text') {
+        if (in_array('instagram', $platforms, true) && $data['media_type'] === 'text') {
             throw ValidationException::withMessages(['media_type' => 'Instagram posts require an image or reel.']);
         }
-        if ($data['platform'] === 'instagram' && mb_strlen($data['caption'] ?? '') > 2200) {
+        if (in_array('instagram', $platforms, true) && mb_strlen($data['caption'] ?? '') > 2200) {
             throw ValidationException::withMessages(['caption' => 'Instagram captions cannot exceed 2,200 characters.']);
         }
         if ($data['media_type'] === 'reel' && (! isset($data['media']) && ! $hasExistingMedia)) {
@@ -196,7 +254,7 @@ class MetaContentController extends Controller
             && $mediaMime !== 'video/mp4') {
             throw ValidationException::withMessages(['media' => 'Reels must be MP4 videos.']);
         }
-        if ($data['platform'] === 'instagram' && $data['media_type'] === 'image'
+        if (in_array('instagram', $platforms, true) && $data['media_type'] === 'image'
             && $mediaMime !== null && $mediaMime !== 'image/jpeg') {
             throw ValidationException::withMessages(['media' => 'Instagram image posts require a JPEG image.']);
         }
@@ -207,9 +265,11 @@ class MetaContentController extends Controller
         if (isset($data['scheduled_at'], $data['publish_now'])) {
             throw ValidationException::withMessages(['scheduled_at' => 'Choose either publish now or schedule this content.']);
         }
-        if ($data['platform'] === 'tiktok' && isset($data['publish_now'])) {
+        if (in_array('tiktok', $platforms, true) && isset($data['publish_now'])) {
             throw ValidationException::withMessages(['publish_now' => 'TikTok publishing is not connected yet. Save this as a draft or planned post instead.']);
         }
+
+        $data['platforms'] = $platforms;
 
         return $data;
     }
