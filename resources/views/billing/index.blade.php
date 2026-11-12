@@ -25,12 +25,11 @@
         @role('admin')
             <x-slot name="actions">
                 <a class="btn btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation']) }}"><span class="bi bi-file-text me-2"></span>New quotation</a>
-                <a class="btn btn-primary" href="{{ route('billing.create') }}"><span class="bi bi-plus me-2"></span>New invoice</a>
             </x-slot>
         @endrole
     </x-page-header>
 
-    <div class="alert alert-info"><strong>Quotation:</strong> proposed work and estimated price; it does not deduct inventory. <strong>Invoice:</strong> issued sale; linked stock is deducted and payments can be recorded.</div>
+    <div class="alert alert-info"><strong>Quotation first:</strong> send the quotation and wait for customer acceptance before converting it to an invoice. Invoices require full payment; partial payments are not currently supported.</div>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
     @php($activeBillingFilters = (int) request()->filled('type') + (int) request()->filled('status'))

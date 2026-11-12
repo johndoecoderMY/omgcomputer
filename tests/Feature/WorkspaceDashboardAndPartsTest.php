@@ -9,6 +9,7 @@ use App\Models\InventoryPart;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Database\Seeders\SoftwareStructureSopSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -176,6 +177,49 @@ class WorkspaceDashboardAndPartsTest extends TestCase
             'project_id' => $project->id,
             'inventory_part_id' => $part->id,
         ]);
+
+        $item = $project->estimateItems()->firstOrFail();
+        $this->delete(route('projects.estimate-items.destroy', [$project, $item]))
+            ->assertRedirect(route('projects.show', $project));
+        $this->assertDatabaseMissing('project_estimate_items', ['id' => $item->id]);
+    }
+
+    public function test_custom_project_hardware_does_not_require_or_change_inventory(): void
+    {
+        $user = User::factory()->create();
+        $this->seed(PlannerRoleSeeder::class);
+        $user->assignRole('admin');
+        $project = Project::query()->create(['name' => 'Custom hardware project']);
+
+        $this->actingAs($user)->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Add a custom part')
+            ->assertSee('does not create an inventory item or change stock');
+
+        $this->post(route('projects.estimate-items.store', $project), [
+            'category' => 'hardware',
+            'description' => 'Replacement laptop battery',
+            'quantity' => 2,
+            'unit_price' => 35.50,
+        ])->assertRedirect(route('projects.show', $project));
+
+        $this->assertDatabaseHas('project_estimate_items', [
+            'project_id' => $project->id,
+            'category' => 'hardware',
+            'description' => 'Replacement laptop battery',
+            'quantity' => 2,
+            'unit_price' => 35.50,
+        ]);
+        $this->assertDatabaseCount('inventory_parts', 0);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Replacement laptop battery')
+            ->assertSee('Custom project part')
+            ->assertSee('RM 71.00')
+            ->assertSee('Software &amp; other project costs', false)
+            ->assertSee('RM 71.00')
+            ->assertSee('Estimated total');
 
         $item = $project->estimateItems()->firstOrFail();
         $this->delete(route('projects.estimate-items.destroy', [$project, $item]))

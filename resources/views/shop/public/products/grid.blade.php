@@ -1,6 +1,7 @@
 @extends(auth()->check() && auth()->user()->hasRole('customer') ? 'layouts.app' : 'layouts.guest')
 
 @section('title', 'Shop | OMG Computer')
+@section('meta_description', 'Browse computer parts, accessories, and ready-built PCs at the OMG Computer shop. Check product availability and contact us for details.')
 
 @section('content')
 <style>

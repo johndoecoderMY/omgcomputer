@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Illustrated homeware product display</title>
+  <rect width="1200" height="800" fill="#f0eee6"/>
+  <circle cx="973" cy="151" r="186" fill="#e5ddcd"/>
+  <path d="M0 604h1200v196H0z" fill="#ded8ca"/>
+  <rect x="92" y="144" width="1016" height="471" rx="26" fill="#faf9f5"/>
+  <rect x="155" y="516" width="891" height="31" rx="15" fill="#c6bdad"/>
+  <rect x="207" y="547" width="24" height="66" fill="#b6ad9e"/><rect x="970" y="547" width="24" height="66" fill="#b6ad9e"/>
+  <ellipse cx="616" cy="534" rx="214" ry="34" fill="#cbc3b5"/>
+  <path d="M402 360q0-34 34-34h361q35 0 35 34v158H402z" fill="#c56f50"/>
+  <path d="M452 390h329v116H452z" fill="#db9273"/>
+  <path d="M486 374q0-108 127-108t127 108" fill="none" stroke="#704c3f" stroke-width="25"/>
+  <circle cx="616" cy="429" r="44" fill="#f0c987"/>
+  <path d="M594 429h44m-22-22v44" stroke="#9e684e" stroke-width="8" stroke-linecap="round"/>
+  <rect x="251" y="392" width="98" height="122" rx="17" fill="#587c70"/>
+  <path d="M268 392q0-57 32-57t32 57" fill="none" stroke="#587c70" stroke-width="15"/>
+  <path d="M285 368q17-28 31 0" fill="none" stroke="#8eb09d" stroke-width="7"/>
+  <rect x="904" y="412" width="72" height="102" rx="14" fill="#d8b27a"/>
+  <path d="M921 411q17-38 38 0" fill="none" stroke="#d8b27a" stroke-width="12"/>
+  <g fill="#8a9b70"><path d="M180 268q-4-70 46-81 17 64-46 81z"/><path d="M213 293q31-56 79-32-22 54-79 32z"/></g>
+  <path d="M210 310q9-57 39-82" fill="none" stroke="#718261" stroke-width="8"/>
+</svg>

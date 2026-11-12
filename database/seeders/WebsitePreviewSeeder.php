@@ -11,28 +11,7 @@ class WebsitePreviewSeeder extends Seeder
 {
     public function run(): void
     {
-        $concepts = [
-            [
-                'title' => 'Demo concept: Cafe website',
-                'filename' => 'cafe-website-concept.jpg',
-                'description' => 'Illustrative cafe website concept using Unsplash stock photography. This is a sample design, not a client project.',
-                'sort_order' => 1,
-            ],
-            [
-                'title' => 'Demo concept: Business services website',
-                'filename' => 'business-website-concept.jpg',
-                'description' => 'Illustrative business services website concept using Unsplash stock photography. This is a sample design, not a client project.',
-                'sort_order' => 2,
-            ],
-            [
-                'title' => 'Demo concept: Online store',
-                'filename' => 'store-website-concept.jpg',
-                'description' => 'Illustrative online store website concept using Unsplash stock photography. This is a sample design, not a client project.',
-                'sort_order' => 3,
-            ],
-        ];
-
-        foreach ($concepts as $concept) {
+        foreach (config('website-preview-concepts') as $slug => $concept) {
             $sourcePath = public_path('assets/img/website-preview-concepts/'.$concept['filename']);
             if (! is_file($sourcePath)) {
                 throw new RuntimeException("Website preview concept image is missing: {$sourcePath}");
@@ -48,17 +27,39 @@ class WebsitePreviewSeeder extends Seeder
                 throw new RuntimeException("Website preview concept image could not be stored: {$imagePath}");
             }
 
-            WebsitePreview::query()->updateOrCreate(
-                ['title' => $concept['title']],
-                [
-                    'category' => 'Concept demo',
-                    'description' => $concept['description'],
-                    'preview_url' => null,
-                    'image_path' => $imagePath,
-                    'is_published' => true,
-                    'sort_order' => $concept['sort_order'],
-                ],
-            );
+            $galleryPaths = [];
+            foreach ($concept['gallery'] as $galleryFilename) {
+                $gallerySourcePath = public_path('assets/img/website-preview-concepts/'.$galleryFilename);
+                if (! is_file($gallerySourcePath)) {
+                    throw new RuntimeException("Website preview gallery image is missing: {$gallerySourcePath}");
+                }
+
+                $galleryImage = file_get_contents($gallerySourcePath);
+                if ($galleryImage === false) {
+                    throw new RuntimeException("Website preview gallery image could not be read: {$gallerySourcePath}");
+                }
+
+                $galleryPath = 'website-previews/demo/'.$galleryFilename;
+                if (! Storage::disk('public')->put($galleryPath, $galleryImage)) {
+                    throw new RuntimeException("Website preview gallery image could not be stored: {$galleryPath}");
+                }
+                $galleryPaths[] = $galleryPath;
+            }
+
+            $preview = WebsitePreview::query()->where('title', $concept['title'])->first()
+                ?? WebsitePreview::query()->where('title', $concept['legacy_title'])->first()
+                ?? new WebsitePreview;
+
+            $preview->fill([
+                'title' => $concept['title'],
+                'category' => 'Concept demo',
+                'description' => $concept['description'],
+                'preview_url' => route('website-previews.concepts.show', $slug),
+                'image_path' => $imagePath,
+                'gallery_images' => $galleryPaths,
+                'is_published' => true,
+                'sort_order' => $concept['sort_order'],
+            ])->save();
         }
     }
 }

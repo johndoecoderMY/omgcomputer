@@ -62,7 +62,7 @@
         <div class="col-12 col-xxl-7">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex justify-content-between align-items-center">
-                    <div><h2 class="h5 mb-1 text-primary">Invoices in period</h2><p class="small text-body-secondary mb-0">{{ $invoices->count() }} invoice(s)</p></div>
+                    <div><h2 class="h5 mb-1 text-primary">Invoices in period</h2><p class="small text-body-secondary mb-0">{{ number_format($invoices->total()) }} invoice(s)</p></div>
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.index', ['type' => 'invoice']) }}">All invoices</a>
                 </div>
                 <div class="table-responsive">
@@ -83,6 +83,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="card-body">{{ $invoices->links() }}</div>
             </div>
         </div>
         <div class="col-12 col-xxl-5">

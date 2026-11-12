@@ -6,12 +6,15 @@ use Tests\TestCase;
 
 class PublicContactTest extends TestCase
 {
-    public function test_robots_txt_allows_only_the_welcome_page(): void
+    public function test_robots_txt_allows_public_pages_and_points_to_the_sitemap(): void
     {
         $robots = file_get_contents(public_path('robots.txt'));
 
         $this->assertIsString($robots);
-        $this->assertStringContainsString("User-agent: *\nDisallow: /\nAllow: /$\n", str_replace("\r\n", "\n", $robots));
+        $this->assertStringContainsString("User-agent: *\nAllow: /\n", str_replace("\r\n", "\n", $robots));
+        $this->assertStringNotContainsString("Disallow: /\n", str_replace("\r\n", "\n", $robots));
+        $this->assertStringContainsString('Disallow: /admin/', $robots);
+        $this->assertStringContainsString('Sitemap: https://omgcomputer.my/sitemap.xml', $robots);
     }
 
     public function test_public_contact_section_shows_configured_email_as_a_mailto_link(): void
@@ -21,6 +24,9 @@ class PublicContactTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('<title>Computer Repair, Website Design &amp; Development | OMG Computer</title>', false)
+            ->assertSee('<meta name="description" content="Computer repair, upgrades, custom PCs, and website design in Malaysia.', false)
+            ->assertSee('<link rel="canonical" href="'.url('/').'">', false)
+            ->assertSee('<meta property="og:type" content="website">', false)
             ->assertSee('support@omgcomputer.my')
             ->assertSee('mailto:support@omgcomputer.my', false)
             ->assertSee('Message us on WhatsApp')

@@ -12,6 +12,7 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
@@ -40,7 +41,7 @@ class ReportsController extends Controller
     {
         [$from, $to] = $this->period($request);
         $documents = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]);
-        $invoices = (clone $documents)->with('payments')->latest('issue_date')->get();
+        $invoices = (clone $documents)->latest('issue_date')->paginate(50)->withQueryString();
         $topItems = BillingDocumentItem::query()
             ->selectRaw('billing_document_items.description, SUM(billing_document_items.quantity) as units, SUM(billing_document_items.line_total) as revenue')
             ->whereHas('document', fn ($query) => $query->where('type', 'invoice')
@@ -50,13 +51,21 @@ class ReportsController extends Controller
             ->orderByDesc('revenue')
             ->limit(10)
             ->get();
-        $salesTrend = $invoices
-            ->groupBy(fn (BillingDocument $invoice): string => $invoice->issue_date->format('Y-m'))
-            ->sortKeys()
-            ->map(fn ($monthlyInvoices, string $month): array => [
-                'month' => Carbon::createFromFormat('Y-m', $month)->format('M Y'),
-                'revenue' => round((float) $monthlyInvoices->sum('total'), 2),
-                'collected' => round((float) $monthlyInvoices->sum('paid_amount'), 2),
+        $monthExpression = match (DB::connection()->getDriverName()) {
+            'mysql', 'mariadb' => "DATE_FORMAT(issue_date, '%Y-%m')",
+            'pgsql' => "TO_CHAR(issue_date, 'YYYY-MM')",
+            'sqlsrv' => "FORMAT(issue_date, 'yyyy-MM')",
+            default => "strftime('%Y-%m', issue_date)",
+        };
+        $salesTrend = (clone $documents)
+            ->selectRaw("{$monthExpression} as month, SUM(total) as revenue, SUM(paid_amount) as collected")
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->map(fn ($row): array => [
+                'month' => Carbon::createFromFormat('Y-m', $row->month)->format('M Y'),
+                'revenue' => round((float) $row->revenue, 2),
+                'collected' => round((float) $row->collected, 2),
             ])->values();
 
         return view('reports.sales', [
@@ -73,22 +82,34 @@ class ReportsController extends Controller
 
     public function inventory(): View
     {
-        $parts = InventoryPart::query()->withCount('movements')->orderByRaw('stock_quantity <= reorder_level DESC')->orderBy('name')->get();
-        $lowStockCount = $parts->filter(fn ($part) => $part->stock_quantity <= $part->reorder_level)->count();
+        $parts = InventoryPart::query()
+            ->withCount('movements')
+            ->orderByRaw('stock_quantity <= reorder_level DESC')
+            ->orderBy('name')
+            ->paginate(50)
+            ->withQueryString();
+        $partCount = InventoryPart::query()->count();
+        $lowStockCount = InventoryPart::query()->whereColumn('stock_quantity', '<=', 'reorder_level')->count();
+        $healthyStockCount = max(0, $partCount - $lowStockCount);
 
         return view('reports.inventory', [
             'parts' => $parts,
+            'partCount' => $partCount,
             'lowStockCount' => $lowStockCount,
-            'stockValue' => $parts->sum(fn ($part) => (float) $part->cost_price * $part->stock_quantity),
+            'stockValue' => (float) InventoryPart::query()->sum(DB::raw('cost_price * stock_quantity')),
             'recentMovements' => InventoryMovement::query()->with('part')->latest()->limit(12)->get(),
-            'stockChart' => $parts->sortBy('stock_quantity')->take(10)->map(fn ($part): array => [
-                'name' => $part->name,
-                'quantity' => (int) $part->stock_quantity,
-                'reorder' => (int) $part->reorder_level,
-            ])->values(),
+            'stockChart' => InventoryPart::query()
+                ->orderBy('stock_quantity')
+                ->limit(10)
+                ->get(['name', 'stock_quantity', 'reorder_level'])
+                ->map(fn (InventoryPart $part): array => [
+                    'name' => $part->name,
+                    'quantity' => (int) $part->stock_quantity,
+                    'reorder' => (int) $part->reorder_level,
+                ])->values(),
             'stockHealthChart' => [
                 ['name' => 'At or below reorder', 'value' => $lowStockCount],
-                ['name' => 'Healthy stock', 'value' => max(0, $parts->count() - $lowStockCount)],
+                ['name' => 'Healthy stock', 'value' => $healthyStockCount],
             ],
         ]);
     }
@@ -101,23 +122,48 @@ class ReportsController extends Controller
             ->withCount(['assignedTasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')])
             ->withCount(['assignedTasks as active_tasks_count' => fn ($query) => $query->where('status', 'in_progress')])
             ->orderBy('name')
-            ->get();
+            ->paginate(50)
+            ->withQueryString();
+        $assignedTasks = DB::table('user_assignments')
+            ->where('assignable_type', Task::class);
+        $completedTasks = DB::table('user_assignments')
+            ->join('tasks', 'tasks.id', '=', 'user_assignments.assignable_id')
+            ->where('user_assignments.assignable_type', Task::class)
+            ->where('tasks.status', 'done');
 
         return view('reports.teams', [
             'users' => $users,
+            'memberCount' => User::query()->count(),
+            'assignedTaskCount' => (clone $assignedTasks)->count(),
+            'completedTaskCount' => (clone $completedTasks)->count(),
             'unassignedTasks' => Task::query()->whereDoesntHave('assignees')->count(),
-            'teamChart' => $users->sortByDesc('assigned_tasks_count')->take(8)->map(fn (User $user): array => [
-                'name' => $user->name,
-                'assigned' => (int) $user->assigned_tasks_count,
-                'completed' => (int) $user->completed_tasks_count,
-                'active' => (int) $user->active_tasks_count,
-            ])->values(),
+            'teamChart' => User::query()
+                ->select(['users.id', 'users.name'])
+                ->withCount('assignedTasks')
+                ->withCount(['assignedTasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done')])
+                ->withCount(['assignedTasks as active_tasks_count' => fn ($query) => $query->where('status', 'in_progress')])
+                ->orderByDesc('assigned_tasks_count')
+                ->limit(8)
+                ->get()
+                ->map(fn (User $user): array => [
+                    'name' => $user->name,
+                    'assigned' => (int) $user->assigned_tasks_count,
+                    'completed' => (int) $user->completed_tasks_count,
+                    'active' => (int) $user->active_tasks_count,
+                ])->values(),
         ]);
     }
 
     public function marketing(): View
     {
-        $campaigns = MarketingCampaign::query()->orderByDesc('starts_on')->orderByDesc('created_at')->get();
+        $campaigns = MarketingCampaign::query()
+            ->orderByDesc('starts_on')
+            ->orderByDesc('created_at')
+            ->paginate(50)
+            ->withQueryString();
+        $campaignTotals = MarketingCampaign::query()
+            ->selectRaw('SUM(spend) as spend, SUM(attributed_revenue) as revenue, SUM(leads) as leads, SUM(conversions) as conversions')
+            ->first();
         $metaConfig = config('services.meta', []);
         $whatsAppSetup = [
             'app_id' => filled($metaConfig['app_id'] ?? null),
@@ -136,10 +182,10 @@ class ReportsController extends Controller
 
         return view('reports.marketing', [
             'campaigns' => $campaigns,
-            'spend' => $campaigns->sum('spend'),
-            'revenue' => $campaigns->sum('attributed_revenue'),
-            'leads' => $campaigns->sum('leads'),
-            'conversions' => $campaigns->sum('conversions'),
+            'spend' => (float) $campaignTotals->spend,
+            'revenue' => (float) $campaignTotals->revenue,
+            'leads' => (int) $campaignTotals->leads,
+            'conversions' => (int) $campaignTotals->conversions,
             'whatsAppSetup' => $whatsAppSetup,
             'marketingSetup' => $marketingSetup,
             'whatsAppTemplateCount' => CustomerMessageTemplate::query()
@@ -187,7 +233,7 @@ class ReportsController extends Controller
         [$from, $to] = $this->period($request);
         $invoices = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()])
             ->orderBy('issue_date')
-            ->get();
+            ->cursor();
 
         return response()->streamDownload(function () use ($invoices): void {
             $output = fopen('php://output', 'w');

@@ -15,6 +15,7 @@ use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -184,14 +185,23 @@ class ProjectController extends Controller
                 || $project->assignees->contains('id', $request->user()->id),
             'canManageBilling' => $request->user()->can('billing.manage'),
             'billingDocuments' => $billingDocuments,
-            'availableParts' => InventoryPart::query()->with('supplier')->orderBy('name')->get(),
+            'hasInventoryParts' => InventoryPart::query()->exists(),
+            'selectedInventoryPart' => old('inventory_part_id')
+                ? InventoryPart::query()
+                    ->select(['id', 'name', 'sku', 'cost_price', 'selling_price', 'stock_quantity'])
+                    ->find(old('inventory_part_id'))
+                : null,
             'partsEstimateTotal' => $project->inventoryParts->sum(
                 fn (InventoryPart $part): float => $part->pivot->quantity
                     * (float) ($part->pivot->unit_price ?? $part->selling_price),
             ),
-            'otherEstimateTotal' => $project->estimateItems->sum(
-                fn ($item): float => $item->line_total,
-            ),
+            'customHardwareParts' => $project->estimateItems->where('category', 'hardware'),
+            'customHardwareTotal' => $project->estimateItems
+                ->where('category', 'hardware')
+                ->sum(fn (ProjectEstimateItem $item): float => $item->line_total),
+            'otherEstimateTotal' => $project->estimateItems
+                ->where('category', '!=', 'hardware')
+                ->sum(fn (ProjectEstimateItem $item): float => $item->line_total),
             'availableFlowCharts' => FlowChart::query()
                 ->where('is_example', false)
                 ->whereDoesntHave('projects', fn (Builder $query) => $query->where('projects.id', $project->id))
@@ -202,6 +212,33 @@ class ProjectController extends Controller
                 ->orderBy('title')
                 ->get(['id', 'title', 'category', 'subject_name']),
         ]);
+    }
+
+    public function searchInventoryParts(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:100'],
+        ]);
+        $term = trim($data['q']);
+        $likeTerm = '%'.$term.'%';
+
+        $parts = InventoryPart::query()
+            ->select(['id', 'name', 'sku', 'cost_price', 'selling_price', 'stock_quantity'])
+            ->where(function (Builder $query) use ($likeTerm): void {
+                $query->where('name', 'like', $likeTerm)
+                    ->orWhere('sku', 'like', $likeTerm);
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->map(fn (InventoryPart $part): array => [
+                'id' => $part->id,
+                'text' => $part->name.($part->sku ? ' · '.$part->sku : '').' · stock '.$part->stock_quantity,
+                'selling_price' => $part->selling_price,
+                'cost_price' => $part->cost_price,
+            ]);
+
+        return response()->json(['results' => $parts]);
     }
 
     private function projectBillingDocuments(Project $project, ?string $customerEmail = null)
@@ -297,7 +334,7 @@ class ProjectController extends Controller
     public function storeEstimateItem(Request $request, Project $project): RedirectResponse
     {
         $data = $request->validate([
-            'category' => ['required', Rule::in(['software', 'labor', 'other'])],
+            'category' => ['required', Rule::in(['hardware', 'software', 'labor', 'other'])],
             'description' => ['required', 'string', 'max:255'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],

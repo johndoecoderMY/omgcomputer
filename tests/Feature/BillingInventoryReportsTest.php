@@ -36,6 +36,127 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee('name="status"', false);
     }
 
+    public function test_payment_receipts_are_listed_and_only_visible_to_the_invoice_customer(): void
+    {
+        $this->get(route('billing.receipts.index'))->assertRedirect(route('login'));
+
+        $admin = $this->adminUser();
+        $customer = User::factory()->create(['email' => 'receipt-customer@example.test']);
+        $customer->assignRole('customer');
+        $otherCustomer = User::factory()->create(['email' => 'other-customer@example.test']);
+        $otherCustomer->assignRole('customer');
+
+        $document = BillingDocument::query()->create([
+            'number' => 'INV-RECEIPT-001',
+            'type' => 'invoice',
+            'status' => 'paid',
+            'customer_name' => 'Receipt customer',
+            'customer_email' => $customer->email,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => 80,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'total' => 80,
+            'paid_amount' => 80,
+        ]);
+        $payment = $document->payments()->create([
+            'user_id' => $admin->id,
+            'amount' => 80,
+            'method' => 'cash',
+            'reference' => 'COUNTER-001',
+            'paid_at' => now(),
+        ]);
+        $otherDocument = BillingDocument::query()->create([
+            'number' => 'INV-RECEIPT-002',
+            'type' => 'invoice',
+            'status' => 'paid',
+            'customer_name' => 'Other customer',
+            'customer_email' => $otherCustomer->email,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => 40,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'total' => 40,
+            'paid_amount' => 40,
+        ]);
+        $otherPayment = $otherDocument->payments()->create([
+            'user_id' => $admin->id,
+            'amount' => 40,
+            'method' => 'bank_transfer',
+            'reference' => 'BANK-002',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('billing.receipts.index'))
+            ->assertOk()
+            ->assertSee('Payment receipts')
+            ->assertSee($payment->receipt_number)
+            ->assertSee('Receipt customer')
+            ->assertSee(route('billing.receipts.pdf', $payment), false);
+        $this->actingAs($admin)
+            ->get(route('billing.receipts.pdf', $payment))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($customer)
+            ->get(route('billing.receipts.index'))
+            ->assertOk()
+            ->assertSee($payment->receipt_number)
+            ->assertDontSee($otherPayment->receipt_number)
+            ->assertDontSee('Other customer');
+        $this->actingAs($customer)
+            ->get(route('billing.receipts.pdf', $payment))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($otherCustomer)
+            ->get(route('billing.receipts.pdf', $payment))
+            ->assertNotFound();
+    }
+
+    public function test_project_inventory_search_returns_a_limited_result_set(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Inventory search project']);
+
+        $firstPart = null;
+        foreach (range(1, 25) as $index) {
+            $part = $this->createPart($admin, 3);
+            $part->update(['name' => 'Searchable part '.str_pad((string) $index, 2, '0', STR_PAD_LEFT)]);
+            $firstPart ??= $part;
+        }
+
+        $this->actingAs($admin)
+            ->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee(route('projects.parts.search', $project), false)
+            ->assertSee('Type at least 2 characters to search inventory')
+            ->assertDontSee('Searchable part 25');
+
+        $this->actingAs($admin)
+            ->get(route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]))
+            ->assertOk()
+            ->assertSee(route('billing.parts.search'), false)
+            ->assertDontSee('Searchable part 25');
+
+        $this->actingAs($admin)
+            ->get(route('billing.create', ['type' => 'invoice', 'project_id' => $project->id]))
+            ->assertRedirect(route('billing.create', ['project_id' => $project->id, 'type' => 'quotation']));
+
+        $this->actingAs($admin)
+            ->getJson(route('projects.parts.search', $project).'?q=Searchable')
+            ->assertOk()
+            ->assertJsonCount(20, 'results')
+            ->assertJsonPath('results.0.text', 'Searchable part 01 · '.$firstPart->sku.' · stock 3')
+            ->assertJsonStructure(['results' => [['id', 'text', 'selling_price', 'cost_price']]]);
+
+        $this->actingAs($admin)
+            ->getJson(route('billing.parts.search').'?q=Searchable')
+            ->assertOk()
+            ->assertJsonCount(20, 'results')
+            ->assertJsonStructure(['results' => [['id', 'text', 'name', 'price']]]);
+    }
+
     public function test_new_billing_documents_use_the_configured_tax_rate(): void
     {
         config(['billing.tax_rate' => 6]);
@@ -43,10 +164,13 @@ class BillingInventoryReportsTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('billing.create', ['type' => 'invoice']))
+            ->assertRedirect(route('billing.create', ['type' => 'quotation']));
+        $this->actingAs($user)
+            ->get(route('billing.create', ['type' => 'quotation']))
             ->assertOk()
             ->assertSee('value="6.00"', false);
 
-        $data = $this->documentData('invoice', null, 1);
+        $data = $this->documentData('quotation', null, 1);
         $data['tax_rate'] = config('billing.tax_rate');
         $this->actingAs($user)->post(route('billing.store'), $data);
 
@@ -61,9 +185,13 @@ class BillingInventoryReportsTest extends TestCase
         $user = $this->adminUser();
         $part = $this->createPart($user, 5);
 
-        $response = $this->actingAs($user)->post(route('billing.store'), $this->documentData('invoice', $part, 2));
-
+        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', $part, 2));
         $document = BillingDocument::query()->firstOrFail();
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
+        $response = $this->actingAs($user)->post(route('billing.documents.convert', $document));
+        $document->refresh();
+
         $response->assertRedirect(route('billing.documents.show', $document));
         $this->assertSame(3, $part->fresh()->stock_quantity);
         $this->assertDatabaseHas('inventory_movements', [
@@ -71,7 +199,7 @@ class BillingInventoryReportsTest extends TestCase
             'type' => 'used',
             'quantity_change' => -2,
             'quantity_after' => 3,
-            'reference' => $document->document_number,
+            'reference' => $document->number,
         ]);
         $this->assertSame(20.0, (float) $document->total);
         $this->actingAs($user)->get(route('billing.index'))
@@ -93,14 +221,19 @@ class BillingInventoryReportsTest extends TestCase
     {
         $user = $this->adminUser();
         $part = $this->createPart($user, 1);
+        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', $part, 2));
+        $document = BillingDocument::query()->firstOrFail();
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
 
         $response = $this->actingAs($user)
-            ->from(route('billing.create', ['type' => 'invoice']))
-            ->post(route('billing.store'), $this->documentData('invoice', $part, 2));
+            ->from(route('billing.documents.show', $document))
+            ->post(route('billing.documents.convert', $document));
 
-        $response->assertRedirect(route('billing.create', ['type' => 'invoice']))
+        $response->assertRedirect(route('billing.documents.show', $document))
             ->assertSessionHasErrors('quantity');
-        $this->assertDatabaseCount('billing_documents', 0);
+        $this->assertSame('quotation', $document->fresh()->type);
+        $this->assertSame('accepted', $document->fresh()->status);
         $this->assertSame(1, $part->fresh()->stock_quantity);
         $this->assertDatabaseCount('inventory_movements', 0);
     }
@@ -142,7 +275,8 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(3, $part->fresh()->stock_quantity);
         $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
-            ->assertSee('Record payment');
+            ->assertSee('Record full payment')
+            ->assertSee('Partial payments are not currently supported.');
 
         $paymentData = [
             'amount' => 10,
@@ -150,15 +284,47 @@ class BillingInventoryReportsTest extends TestCase
             'received_at' => now()->toDateString(),
         ];
         $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
-            ->assertRedirect(route('billing.documents.show', $quote));
-        $this->assertSame('partial', $quote->fresh()->status);
-        $this->assertSame(10.0, $quote->fresh()->balance_due);
+            ->assertSessionHasErrors('amount');
+        $this->assertSame('issued', $quote->fresh()->status);
+        $this->assertSame(20.0, $quote->fresh()->balance_due);
 
-        $paymentData['amount'] = 10;
-        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData);
+        $paymentData['amount'] = 20;
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
+            ->assertRedirect(route('billing.documents.show', $quote));
         $this->assertSame('paid', $quote->fresh()->status);
         $this->assertSame(0.0, $quote->fresh()->balance_due);
         $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
+        $payment = $quote->payments()->firstOrFail();
+        $this->actingAs($user)->get(route('billing.documents.show', $quote))
+            ->assertOk()
+            ->assertSee($payment->receipt_number)
+            ->assertSee(route('billing.receipts.pdf', $payment), false);
+        $this->actingAs($user)->get(route('billing.receipts.index'))
+            ->assertOk()
+            ->assertSee($payment->receipt_number);
+    }
+
+    public function test_staff_can_record_external_acceptance_of_draft_quotation_without_sending_it(): void
+    {
+        $staff = $this->adminUser();
+        $this->actingAs($staff)->post(route('billing.store'), $this->documentData('quotation', null, 1));
+        $quotation = BillingDocument::query()->firstOrFail();
+
+        $this->actingAs($staff)->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('Sending this quotation through the website is optional.')
+            ->assertSee('Record customer accepted');
+
+        $this->actingAs($staff)->post(route('billing.documents.quotation-status', $quotation), [
+            'status' => 'accepted',
+        ])->assertRedirect(route('billing.documents.show', $quotation))
+            ->assertSessionHas('success', 'Customer acceptance recorded. You can now convert this quotation to an invoice.');
+
+        $this->assertSame('accepted', $quotation->fresh()->status);
+        $this->actingAs($staff)->post(route('billing.documents.convert', $quotation))
+            ->assertRedirect(route('billing.documents.show', $quotation));
+        $this->assertSame('invoice', $quotation->fresh()->type);
+        $this->assertSame('issued', $quotation->fresh()->status);
     }
 
     public function test_customer_can_start_chip_checkout_for_their_invoice(): void
@@ -413,16 +579,22 @@ class BillingInventoryReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Project billing and quotations')
             ->assertSee('Create quotation')
-            ->assertSee('Create invoice')
-            ->assertSee('Take photo');
+            ->assertDontSee('Create invoice');
 
-        foreach (['quotation', 'invoice'] as $type) {
-            $this->get(route('billing.create', ['type' => $type, 'project_id' => $project->id]))
-                ->assertOk()
-                ->assertSee('Website redesign')
-                ->assertSee('Project customer');
-            $this->post(route('billing.store'), [
-                'type' => $type,
+        $this->get(route('billing.create', ['type' => 'invoice', 'project_id' => $project->id]))
+            ->assertRedirect(route('billing.create', ['project_id' => $project->id, 'type' => 'quotation']));
+        $this->get(route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]))
+            ->assertOk()
+            ->assertSee('Website redesign')
+            ->assertSee('Project customer')
+            ->assertSee('Project scope and terms')
+            ->assertSee('name="included_revision_rounds"', false)
+            ->assertSee('name="project_due_date"', false)
+            ->assertSee('name="payment_terms"', false);
+
+        foreach (range(1, 2) as $quoteNumber) {
+            $documentData = [
+                'type' => 'quotation',
                 'project_id' => $project->id,
                 'customer_name' => 'Project customer',
                 'customer_email' => 'project-customer@example.test',
@@ -433,12 +605,29 @@ class BillingInventoryReportsTest extends TestCase
                     'quantity' => 1,
                     'unit_price' => 250,
                 ]],
-            ])->assertRedirect();
+                'project_scope' => 'Five responsive pages with a contact form.',
+                'included_revision_rounds' => 3,
+                'project_due_date' => now()->addMonth()->toDateString(),
+                'payment_terms' => 'Full payment before work begins.',
+            ];
+            $this->post(route('billing.store'), $documentData)->assertRedirect();
         }
-        $quotation = BillingDocument::query()->where('type', 'quotation')->firstOrFail();
+        $quotation = BillingDocument::query()->where('type', 'quotation')->orderBy('id')->firstOrFail();
+        $acceptedQuote = BillingDocument::query()->where('type', 'quotation')->orderByDesc('id')->firstOrFail();
+        $this->actingAs($admin)->post(route('billing.documents.quotation-status', $acceptedQuote), ['status' => 'sent']);
+        $this->actingAs($admin)->post(route('billing.documents.quotation-status', $acceptedQuote), ['status' => 'accepted']);
+        $this->actingAs($admin)->post(route('billing.documents.convert', $acceptedQuote));
+        $this->actingAs($admin)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'sent']);
+        $this->assertSame('Five responsive pages with a contact form.', $quotation->project_scope);
+        $this->assertSame(3, $quotation->included_revision_rounds);
+        $this->assertSame('Full payment before work begins.', $quotation->payment_terms);
         $this->actingAs($admin)->get(route('billing.documents.show', $quotation))
             ->assertOk()
-            ->assertSee('href="'.route('customers.show', Customer::query()->where('email', 'project-customer@example.test')->firstOrFail()).'"', false);
+            ->assertSee('href="'.route('customers.show', Customer::query()->where('email', 'project-customer@example.test')->firstOrFail()).'"', false)
+            ->assertSee('Five responsive pages with a contact form.')
+            ->assertSee('Up to 3 revision rounds are included.')
+            ->assertSee('Full payment before work begins.')
+            ->assertSee('Hosting, domain registration, third-party services, and ongoing maintenance are excluded');
 
         $customer = User::factory()->create(['email' => 'PROJECT-CUSTOMER@example.test']);
         $customer->assignRole('customer');
@@ -464,6 +653,96 @@ class BillingInventoryReportsTest extends TestCase
         foreach ($documents as $document) {
             $this->actingAs($otherCustomer)->get(route('billing.documents.show', $document))->assertNotFound();
         }
+    }
+
+    public function test_project_quotation_terms_are_saved_and_included_in_customer_view_and_pdf(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Website quotation terms']);
+
+        $this->actingAs($admin)
+            ->get(route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]))
+            ->assertOk()
+            ->assertSee('Project scope and terms')
+            ->assertSee('Revision rounds included (maximum 3)')
+            ->assertSee('Target completion date')
+            ->assertSee('Payment schedule');
+
+        $this->post(route('billing.store'), [
+            'type' => 'quotation',
+            'project_id' => $project->id,
+            'customer_name' => 'Website customer',
+            'customer_email' => 'website-customer@example.test',
+            'issue_date' => now()->toDateString(),
+            'project_scope' => 'Five responsive pages and a contact form.',
+            'included_revision_rounds' => 3,
+            'project_due_date' => now()->addMonth()->toDateString(),
+            'payment_terms' => '40% deposit and the balance before launch.',
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Website design and development',
+                'quantity' => 1,
+                'unit_price' => 2500,
+            ]],
+        ])->assertRedirect();
+
+        $quotation = BillingDocument::query()->where('type', 'quotation')->firstOrFail();
+        $this->actingAs($admin)
+            ->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('Five responsive pages and a contact form.')
+            ->assertSee('Up to 3 revision rounds are included.')
+            ->assertSee('40% deposit and the balance before launch.')
+            ->assertSee('Hosting, domain registration, third-party services, and ongoing maintenance are excluded');
+
+        $this->get(route('billing.documents.pdf', $quotation))->assertOk();
+
+        $this->put(route('billing.documents.update', $quotation), [
+            'type' => 'quotation',
+            'customer_name' => 'Website customer',
+            'customer_email' => 'website-customer@example.test',
+            'issue_date' => now()->toDateString(),
+            'project_scope' => 'Five responsive pages, a contact form, and basic SEO.',
+            'included_revision_rounds' => 2,
+            'project_due_date' => now()->addMonths(2)->toDateString(),
+            'payment_terms' => '50% deposit and 50% before launch.',
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Website design and development',
+                'quantity' => 1,
+                'unit_price' => 2500,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $quotation->refresh();
+        $this->assertSame(2, $quotation->included_revision_rounds);
+        $this->assertSame('Five responsive pages, a contact form, and basic SEO.', $quotation->project_scope);
+        $this->assertSame('50% deposit and 50% before launch.', $quotation->payment_terms);
+    }
+
+    public function test_project_quotation_rejects_more_than_three_revision_rounds(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Revision limit project']);
+
+        $this->actingAs($admin)->from(route('billing.create', [
+            'type' => 'quotation',
+            'project_id' => $project->id,
+        ]))->post(route('billing.store'), [
+            'type' => 'quotation',
+            'project_id' => $project->id,
+            'customer_name' => 'Project customer',
+            'issue_date' => now()->toDateString(),
+            'included_revision_rounds' => 4,
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Website project',
+                'quantity' => 1,
+                'unit_price' => 100,
+            ]],
+        ])->assertSessionHasErrors('included_revision_rounds');
+
+        $this->assertDatabaseCount('billing_documents', 0);
     }
 
     public function test_project_billing_form_can_choose_which_linked_customer_receives_the_quotation(): void
@@ -522,8 +801,13 @@ class BillingInventoryReportsTest extends TestCase
 
         $data['type'] = 'invoice';
         $this->actingAs($user)->post(route('billing.store'), $data)
-            ->assertRedirect();
-        $invoice = BillingDocument::query()->where('type', 'invoice')->firstOrFail();
+            ->assertSessionHasErrors('type');
+        $this->assertSame(1, BillingDocument::query()->count());
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'sent']);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'accepted']);
+        $this->actingAs($user)->post(route('billing.documents.convert', $quotation));
+        $invoice = $quotation->fresh();
+        $this->assertSame('invoice', $invoice->type);
         $this->assertSame('issued', $invoice->status);
         $this->assertSame(60.0, (float) $invoice->total);
         $this->assertDatabaseCount('inventory_movements', 0);
@@ -605,10 +889,14 @@ class BillingInventoryReportsTest extends TestCase
     public function test_invoice_pdf_and_date_filtered_reports_are_available(): void
     {
         $user = $this->adminUser();
-        $data = $this->documentData('invoice', null, 1);
+        $data = $this->documentData('quotation', null, 1);
         $data['customer_name'] = '=HYPERLINK("https://example.test","open")';
         $this->actingAs($user)->post(route('billing.store'), $data);
         $document = BillingDocument::query()->firstOrFail();
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
+        $this->actingAs($user)->post(route('billing.documents.convert', $document));
+        $document->refresh();
         $period = [
             'from' => now()->startOfMonth()->toDateString(),
             'to' => now()->endOfMonth()->toDateString(),

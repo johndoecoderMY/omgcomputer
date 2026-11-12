@@ -12,6 +12,7 @@ class WebsitePreview extends Model
         'description',
         'preview_url',
         'image_path',
+        'gallery_images',
         'is_published',
         'sort_order',
     ];
@@ -20,6 +21,7 @@ class WebsitePreview extends Model
     {
         return [
             'is_published' => 'boolean',
+            'gallery_images' => 'array',
         ];
     }
 }

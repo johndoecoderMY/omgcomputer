@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Illustrated fresh pastries from a cafe</title>
+  <rect width="1200" height="800" fill="#f3e8d8"/>
+  <path d="M0 126h1200v23H0zm0 538h1200v23H0z" fill="#d9c5ad"/>
+  <rect x="95" y="185" width="1010" height="429" rx="26" fill="#fffaf2"/>
+  <ellipse cx="600" cy="600" rx="379" ry="41" fill="#c8aa89" opacity=".3"/>
+  <ellipse cx="603" cy="522" rx="333" ry="105" fill="#f1dfc5"/>
+  <ellipse cx="603" cy="502" rx="306" ry="84" fill="#fffdf8"/>
+  <g>
+    <path d="M338 480c11-89 70-151 148-151 82 0 137 67 146 151-38 49-93 72-148 72s-111-23-146-72z" fill="#c47d3e"/>
+    <path d="M380 474c9-55 46-97 105-107m-61 151c15-59 52-113 96-143m-14 175c21-50 50-83 80-105" fill="none" stroke="#f3c276" stroke-width="20" stroke-linecap="round"/>
+    <path d="M635 466c12-71 65-121 128-121 74 0 122 58 128 121-31 45-80 65-128 65-47 0-97-20-128-65z" fill="#e2aa5e"/>
+    <path d="M681 463c10-42 38-75 82-87m-35 142c16-49 49-87 83-103m-2 111c16-33 37-54 59-66" fill="none" stroke="#f8d494" stroke-width="15" stroke-linecap="round"/>
+    <circle cx="510" cy="393" r="9" fill="#6a412d"/><circle cx="535" cy="415" r="8" fill="#6a412d"/><circle cx="491" cy="435" r="7" fill="#6a412d"/>
+  </g>
+  <g fill="#71916a">
+    <path d="M830 294q-15-59 37-76 21 51-37 76zm30 14q20-57 77-42-10 57-77 42z"/>
+    <path d="M270 338q-15-59 37-76 21 51-37 76zm30 14q20-57 77-42-10 57-77 42z"/>
+  </g>
+  <g fill="#c68e56">
+    <circle cx="304" cy="511" r="7"/><circle cx="324" cy="526" r="7"/><circle cx="890" cy="522" r="7"/><circle cx="867" cy="538" r="7"/>
+  </g>
+</svg>

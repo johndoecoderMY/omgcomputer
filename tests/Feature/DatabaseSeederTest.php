@@ -6,6 +6,7 @@ use App\Models\BillingDocument;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\CustomerMessageTemplate;
+use App\Models\CustomPcComponent;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\MarketingCampaign;
@@ -14,6 +15,7 @@ use App\Models\ShopOrder;
 use App\Models\Supplier;
 use App\Models\Task;
 use App\Models\User;
+use App\Models\WebsitePreview;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -27,10 +29,23 @@ class DatabaseSeederTest extends TestCase
         config(['auth.seed_admin_password' => 'SeedAdmin!Test-Password-2026']);
         $this->seed();
 
+        $this->assertSame(10, WebsitePreview::query()->count());
+        $websitePreviewsPage = $this->get(route('website-previews.index'))
+            ->assertOk();
+        foreach (config('website-demos') as $demo) {
+            $websitePreviewsPage->assertSee($demo['title']);
+        }
+        foreach (config('website-preview-concepts') as $concept) {
+            $this->assertDatabaseMissing('website_previews', ['title' => $concept['title']]);
+            $this->assertDatabaseMissing('website_previews', ['title' => $concept['legacy_title']]);
+            $websitePreviewsPage->assertDontSee($concept['title']);
+        }
+
         $counts = [
             'users' => User::query()->count(),
             'customers' => Customer::query()->count(),
             'inventory_parts' => InventoryPart::query()->count(),
+            'custom_pc_components' => CustomPcComponent::query()->count(),
             'suppliers' => Supplier::query()->count(),
             'repair_tickets' => RepairTicket::query()->count(),
             'billing_documents' => BillingDocument::query()->count(),
@@ -50,15 +65,15 @@ class DatabaseSeederTest extends TestCase
         $this->assertGreaterThan(0, $counts['customers']);
         $this->assertGreaterThan(0, $counts['inventory_parts']);
         $this->assertGreaterThan(0, InventoryPart::query()->where('type', 'ready_built_pc')->count());
-        $this->assertSame(66778, InventoryPart::query()->where('sku', 'like', 'CSV-%')->count());
-        $cpuFromCsv = InventoryPart::query()->where('sku', 'CSV-CPU-000001')->firstOrFail();
+        $this->assertSame(66778, CustomPcComponent::query()->where('sku', 'like', 'CSV-%')->count());
+        $this->assertSame(0, InventoryPart::query()->where('sku', 'like', 'CSV-%')->count());
+        $cpuFromCsv = CustomPcComponent::query()->where('sku', 'CSV-CPU-000001')->firstOrFail();
         $this->assertSame('AMD Ryzen 7 9800X3D', $cpuFromCsv->name);
         $this->assertSame('cpu', $cpuFromCsv->type);
         $this->assertSame(451.5, (float) $cpuFromCsv->catalog_price);
         $this->assertSame('USD', $cpuFromCsv->catalog_currency);
         $this->assertStringContainsString('Price (USD): 451.5', $cpuFromCsv->description);
-        $this->assertFalse($cpuFromCsv->is_for_sale);
-        $this->assertSame(0, $cpuFromCsv->stock_quantity);
+        $this->assertSame(0, InventoryPart::query()->where('sku', $cpuFromCsv->sku)->count());
         $this->assertDatabaseHas('inventory_parts', [
             'sku' => 'DEMO-PC-OFFICE-001',
             'type' => 'ready_built_pc',
@@ -82,9 +97,8 @@ class DatabaseSeederTest extends TestCase
         ]);
         $seededPartTypes = InventoryPart::query()->distinct()->pluck('type')->all();
         sort($seededPartTypes);
-        $expectedPartTypes = array_keys(InventoryPart::TYPES);
-        sort($expectedPartTypes);
-        $this->assertSame($expectedPartTypes, $seededPartTypes);
+        $this->assertContains('ready_built_pc', $seededPartTypes);
+        $this->assertNotContains('cpu', $seededPartTypes);
         $this->assertSame(0, $counts['repair_tickets']);
         $this->assertSame(0, $counts['billing_documents']);
         $this->assertGreaterThan(0, $counts['marketing_campaigns']);
@@ -111,6 +125,7 @@ class DatabaseSeederTest extends TestCase
             'users' => User::query()->count(),
             'customers' => Customer::query()->count(),
             'inventory_parts' => InventoryPart::query()->count(),
+            'custom_pc_components' => CustomPcComponent::query()->count(),
             'suppliers' => Supplier::query()->count(),
             'repair_tickets' => RepairTicket::query()->count(),
             'billing_documents' => BillingDocument::query()->count(),

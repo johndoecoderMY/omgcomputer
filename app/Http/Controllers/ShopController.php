@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomPcComponent;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
@@ -103,14 +104,14 @@ class ShopController extends Controller
         $additionalComponentTypes = ['peripheral', 'other'];
         $selectedPartIds = collect(session()->getOldInput('items', []))
             ->filter(fn (mixed $item): bool => is_array($item))
-            ->pluck('inventory_part_id')
+            ->pluck('custom_pc_component_id')
             ->filter(fn (mixed $id): bool => is_numeric($id))
             ->unique()
             ->values();
 
         return view('shop.custom-pc-builder', [
-            'components' => InventoryPart::query()
-                ->with(['supplier:id,name', 'suppliers:id,name'])
+            'components' => CustomPcComponent::query()
+                ->with('suppliers:id,name')
                 ->whereIn('id', $selectedPartIds)
                 ->get()
                 ->groupBy('type'),
@@ -118,7 +119,22 @@ class ShopController extends Controller
             'additionalComponentTypes' => array_intersect_key(InventoryPart::TYPES, array_flip($additionalComponentTypes)),
             'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name']),
             'componentSearchUrl' => route('shop.custom-pc-builder.components'),
+            'componentStoreUrl' => route('shop.custom-pc-builder.components.store'),
             'taxRate' => config('billing.tax_rate', 6),
+        ]);
+    }
+
+    public function customPcBuilderParts(): View
+    {
+        return view('shop.custom-pc-builder-parts', [
+            'componentTypes' => array_intersect_key(
+                InventoryPart::TYPES,
+                array_flip($this->customPcBuilderComponentTypes()),
+            ),
+            'componentSearchUrl' => route('shop.custom-pc-builder.components'),
+            'componentStoreUrl' => route('shop.custom-pc-builder.components.store'),
+            'componentUpdateUrl' => route('shop.custom-pc-builder.components.update', ['part' => '__PART__']),
+            'componentDeleteUrl' => route('shop.custom-pc-builder.components.destroy', ['part' => '__PART__']),
         ]);
     }
 
@@ -139,8 +155,8 @@ class ShopController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = InventoryPart::query()
-            ->with(['supplier:id,name', 'suppliers:id,name'])
+        $query = CustomPcComponent::query()
+            ->with('suppliers:id,name')
             ->whereIn('type', $this->customPcBuilderComponentTypes())
             ->when($filters['category'] ?? null, fn (Builder $parts, string $type) => $parts->where('type', $type))
             ->when($filters['search'] ?? null, function (Builder $parts, string $search): void {
@@ -154,28 +170,19 @@ class ShopController extends Controller
 
         $supplierFilter = $filters['supplier'] ?? 'all';
         if ($supplierFilter === 'assigned') {
-            $query->where(function (Builder $parts): void {
-                $parts->whereHas('suppliers')->orWhereHas('supplier');
-            });
+            $query->whereHas('suppliers');
         } elseif ($supplierFilter === 'unassigned') {
-            $query->whereDoesntHave('suppliers')
-                ->whereDoesntHave('supplier');
+            $query->whereDoesntHave('suppliers');
         } elseif ($supplierFilter !== 'all') {
             $supplierId = (int) $supplierFilter;
-            $query->where(function (Builder $parts) use ($supplierId): void {
-                $parts->whereHas('suppliers', fn (Builder $suppliers) => $suppliers->whereKey($supplierId))
-                    ->orWhere('supplier_id', $supplierId);
-            });
+            $query->whereHas('suppliers', fn (Builder $suppliers) => $suppliers->whereKey($supplierId));
         }
 
         $parts = $query
             ->orderBy('name')
             ->paginate(25)
-            ->through(function (InventoryPart $part): array {
+            ->through(function (CustomPcComponent $part): array {
                 $suppliers = $part->suppliers;
-                if ($part->supplier && ! $suppliers->contains('id', $part->supplier->id)) {
-                    $suppliers->push($part->supplier);
-                }
                 $suppliers = $suppliers->sortBy('name')->values();
 
                 return [
@@ -183,13 +190,13 @@ class ShopController extends Controller
                     'name' => $part->name,
                     'sku' => $part->sku,
                     'type' => $part->type,
-                    'stock_quantity' => $part->stock_quantity,
+                    'description' => $part->description,
+                    'stock_quantity' => null,
                     'cost_price' => (float) $part->cost_price,
                     'selling_price' => (float) $part->selling_price,
                     'catalog_price' => $part->catalog_price === null ? null : (float) $part->catalog_price,
                     'catalog_currency' => $part->catalog_currency,
                     'supplier' => $suppliers->pluck('name')->implode(', ') ?: null,
-                    'supplier_id' => $part->supplier_id,
                     'supplier_ids' => $suppliers->pluck('id')->values(),
                     'supplier_offers' => $suppliers->map(fn (Supplier $supplier): array => [
                         'id' => $supplier->id,
@@ -214,7 +221,82 @@ class ShopController extends Controller
         ]);
     }
 
-    public function storeCustomPcBuilderSupplier(Request $request, InventoryPart $part): JsonResponse
+    public function storeCustomPcBuilderComponent(Request $request): JsonResponse
+    {
+        $componentTypes = $this->customPcBuilderComponentTypes();
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sku' => ['nullable', 'string', 'max:100', 'unique:custom_pc_components,sku'],
+            'type' => ['required', Rule::in($componentTypes)],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+        $part = CustomPcComponent::query()->create($data);
+
+        return response()->json([
+            'id' => $part->id,
+            'name' => $part->name,
+            'sku' => $part->sku,
+            'type' => $part->type,
+            'description' => $part->description,
+            'stock_quantity' => null,
+            'cost_price' => (float) $part->cost_price,
+            'selling_price' => (float) $part->selling_price,
+            'catalog_price' => null,
+            'catalog_currency' => null,
+            'supplier' => null,
+            'supplier_ids' => [],
+            'supplier_offers' => [],
+            'socket' => $part->specification('Socket'),
+            'specifications' => $part->specifications(),
+        ], 201);
+    }
+
+    public function updateCustomPcBuilderComponent(Request $request, CustomPcComponent $part): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sku' => ['nullable', 'string', 'max:100', Rule::unique('custom_pc_components', 'sku')->ignore($part->id)],
+            'type' => ['required', Rule::in($this->customPcBuilderComponentTypes())],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+        ]);
+        $part->update($data);
+        $part->load('suppliers:id,name');
+
+        return response()->json([
+            'message' => 'Builder catalogue part updated.',
+            'part' => [
+                'id' => $part->id,
+                'name' => $part->name,
+                'sku' => $part->sku,
+                'type' => $part->type,
+                'description' => $part->description,
+                'cost_price' => (float) $part->cost_price,
+                'selling_price' => (float) $part->selling_price,
+                'supplier' => $part->suppliers->pluck('name')->implode(', '),
+                'socket' => $part->specification('Socket'),
+                'specifications' => $part->specifications(),
+            ],
+        ]);
+    }
+
+    public function destroyCustomPcBuilderComponent(CustomPcComponent $part): JsonResponse
+    {
+        if ($part->billingItems()->exists()) {
+            return response()->json([
+                'message' => 'This part is used by a quotation or invoice and cannot be deleted.',
+            ], 422);
+        }
+
+        $part->delete();
+
+        return response()->json(['message' => 'Builder catalogue part deleted.']);
+    }
+
+    public function storeCustomPcBuilderSupplier(Request $request, CustomPcComponent $part): JsonResponse
     {
         abort_unless(in_array($part->type, $this->customPcBuilderComponentTypes(), true), 404);
 
@@ -266,9 +348,6 @@ class ShopController extends Controller
             ],
         ]);
         $suppliers = $part->suppliers()->get(['suppliers.id', 'suppliers.name']);
-        if ($part->supplier && ! $suppliers->contains('id', $part->supplier->id)) {
-            $suppliers->push($part->supplier);
-        }
         $suppliers = $suppliers->sortBy('name')->values();
 
         return response()->json([

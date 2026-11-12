@@ -196,8 +196,16 @@
                     @if ($part->description)<p class="small mt-2 mb-0">{{ $part->description }}</p>@endif
                 </article>
             @empty
-                <p class="list-group-item text-body-secondary mb-0">No parts or hardware have been recommended.</p>
+                @if ($project->estimateItems->where('category', 'hardware')->isEmpty())
+                    <p class="list-group-item text-body-secondary mb-0">No parts or hardware have been recommended.</p>
+                @endif
             @endforelse
+            @foreach ($project->estimateItems->where('category', 'hardware') as $item)
+                <article class="list-group-item">
+                    <h3 class="h6 mb-1">{{ $item->description }}</h3>
+                    <p class="small text-body-secondary mb-0">{{ $item->quantity }} {{ \Illuminate\Support\Str::plural('unit', $item->quantity) }} recommended · custom project part</p>
+                </article>
+            @endforeach
         </div>
     </div>
 
@@ -206,7 +214,7 @@
             <h2 class="h5 mb-0" id="customer-project-costs-heading">Software &amp; other project costs</h2>
         </div>
         <div class="list-group list-group-flush">
-            @forelse ($project->estimateItems as $item)
+            @forelse ($project->estimateItems->where('category', '!=', 'hardware') as $item)
                 <article class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div>
                         <span class="badge text-bg-light border">{{ ucfirst($item->category) }}</span>

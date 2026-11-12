@@ -215,6 +215,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="card-body">{{ $campaigns->links() }}</div>
     </div>
 </div>
 @endsection

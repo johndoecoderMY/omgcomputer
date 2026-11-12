@@ -25,4 +25,11 @@ class Supplier extends Model
             ->withPivot('shopee_product_url', 'cost_price', 'unit_price')
             ->withTimestamps();
     }
+
+    public function customPcComponents(): BelongsToMany
+    {
+        return $this->belongsToMany(CustomPcComponent::class)
+            ->withPivot('shopee_product_url', 'cost_price', 'unit_price')
+            ->withTimestamps();
+    }
 }

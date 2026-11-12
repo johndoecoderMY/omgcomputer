@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
+use App\Models\BillingPayment;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
+use App\Models\CustomPcComponent;
 use App\Services\ChipCollect;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
@@ -18,6 +20,7 @@ use App\Services\MailSettingsService;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -38,6 +42,22 @@ class BillingController extends Controller
     public function index(Request $request): View
     {
         return view($request->user()->hasRole('customer') ? 'billing.customer-index' : 'billing.index');
+    }
+
+    public function receipts(Request $request): View
+    {
+        $payments = BillingPayment::query()
+            ->with(['document', 'user'])
+            ->whereHas('document', function (Builder $documents) use ($request): void {
+                $documents->where('type', 'invoice');
+                if ($request->user()->hasRole('customer')) {
+                    $this->applyCustomerDocumentVisibility($documents, $request->user());
+                }
+            })
+            ->latest('paid_at')
+            ->paginate(25);
+
+        return view('billing.receipts', compact('payments'));
     }
 
     public function datatable(Request $request)
@@ -86,9 +106,15 @@ class BillingController extends Controller
             ->toJson();
     }
 
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
-        $type = in_array($request->input('type'), ['quotation', 'quote'], true) ? 'quotation' : 'invoice';
+        if ($request->input('type') === 'invoice') {
+            return redirect()
+                ->route('billing.create', array_merge($request->only(['project_id', 'repair_ticket_id']), ['type' => 'quotation']))
+                ->with('info', 'Send a quotation and wait for customer acceptance before creating an invoice.');
+        }
+
+        $type = 'quotation';
         $ticket = $request->filled('repair_ticket_id')
             ? RepairTicket::query()->with('customer')->findOrFail($request->integer('repair_ticket_id'))
             : null;
@@ -102,16 +128,26 @@ class BillingController extends Controller
             ->first(fn (array $recipient): bool => strtolower(trim($recipient['email'])) === strtolower(trim((string) $customer?->email)))['key']
             ?? $projectRecipients->first()['key']
             ?? '';
+        $lines = [[
+            'inventory_part_id' => null,
+            'custom_pc_component_id' => null,
+            'product_id' => null,
+            'description' => $ticket ? 'Repair service: '.$ticket->issue_description : ($project ? 'Project: '.$project->name : ''),
+            'quantity' => 1,
+            'unit_price' => null,
+            'unit_cost' => null,
+        ]];
+        $customerRecipients = $this->customerRecipients();
 
         return view('billing.create', [
-            'parts' => InventoryPart::query()->orderBy('name')->get(),
+            'parts' => $this->selectedInventoryParts(collect($request->old('items', $lines))->pluck('inventory_part_id')),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $ticket,
             'project' => $project,
             'projectRecipients' => $projectRecipients,
             'selectedRecipientKey' => $selectedRecipientKey,
-            'customerRecipients' => $this->customerRecipients(),
-            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey($customer),
+            'customerRecipients' => $customerRecipients,
+            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey($customer, null, $customerRecipients),
             'document' => new BillingDocument([
                 'type' => $type,
                 'customer_name' => $customer?->name,
@@ -120,16 +156,10 @@ class BillingController extends Controller
                 'customer_address' => $customer?->address,
                 'issue_date' => now()->toDateString(),
                 'tax_rate' => config('billing.tax_rate', 6),
+                'included_revision_rounds' => 3,
                 'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticket->issue_description}" : null,
             ]),
-            'lines' => [[
-                'inventory_part_id' => null,
-                'product_id' => null,
-                'description' => $ticket ? 'Repair service: '.$ticket->issue_description : ($project ? 'Project: '.$project->name : ''),
-                'quantity' => 1,
-                'unit_price' => null,
-                'unit_cost' => null,
-            ]],
+            'lines' => $lines,
             'type' => $type,
             'formAction' => route('billing.store'),
             'editing' => false,
@@ -139,8 +169,8 @@ class BillingController extends Controller
     public function edit(BillingDocument $document): View
     {
         abort_unless(
-            $document->status === 'draft'
-                || ($document->type === 'quotation' && $document->status === 'rejected'),
+            $document->type === 'quotation'
+                && ($document->status === 'draft' || $document->status === 'rejected'),
             404,
         );
         $document->load('items');
@@ -151,19 +181,21 @@ class BillingController extends Controller
         $selectedRecipientKey = $projectRecipients
             ->first(fn (array $recipient): bool => strtolower(trim($recipient['email'])) === strtolower(trim((string) $document->customer_email)))['key']
             ?? '';
+        $customerRecipients = $this->customerRecipients();
 
         return view('billing.create', [
-            'parts' => InventoryPart::query()->orderBy('name')->get(),
+            'parts' => $this->selectedInventoryParts($document->items->pluck('inventory_part_id')),
             'products' => ProductService::query()->orderBy('name')->get(),
             'ticket' => $document->repairTicket,
             'project' => $document->project,
             'projectRecipients' => $projectRecipients,
             'selectedRecipientKey' => $selectedRecipientKey,
-            'customerRecipients' => $this->customerRecipients(),
-            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey(null, $document->customer_email),
+            'customerRecipients' => $customerRecipients,
+            'selectedCustomerRecipientKey' => $this->selectedCustomerRecipientKey(null, $document->customer_email, $customerRecipients),
             'document' => $document,
             'lines' => $document->items->map(fn ($item) => [
                 'inventory_part_id' => $item->inventory_part_id,
+                'custom_pc_component_id' => $item->custom_pc_component_id,
                 'product_id' => null,
                 'description' => $item->description,
                 'quantity' => $item->quantity,
@@ -174,6 +206,41 @@ class BillingController extends Controller
             'formAction' => route('billing.documents.update', $document),
             'editing' => true,
         ]);
+    }
+
+    public function searchInventoryParts(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => ['required', 'string', 'min:2', 'max:100'],
+        ]);
+        $likeTerm = '%'.trim($data['q']).'%';
+
+        $parts = InventoryPart::query()
+            ->select(['id', 'name', 'sku', 'selling_price', 'stock_quantity'])
+            ->where(function (Builder $query) use ($likeTerm): void {
+                $query->where('name', 'like', $likeTerm)
+                    ->orWhere('sku', 'like', $likeTerm);
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->map(fn (InventoryPart $part): array => [
+                'id' => 'part:'.$part->id,
+                'text' => $part->name.($part->sku ? ' · '.$part->sku : '').' ('.$part->stock_quantity.' available)',
+                'name' => $part->name,
+                'price' => $part->selling_price,
+            ]);
+
+        return response()->json(['results' => $parts]);
+    }
+
+    private function selectedInventoryParts(Collection $partIds): Collection
+    {
+        return InventoryPart::query()
+            ->select(['id', 'name', 'selling_price', 'stock_quantity'])
+            ->whereIn('id', $partIds->filter()->unique()->take(50))
+            ->get()
+            ->keyBy('id');
     }
 
     private function customerRecipients(): array
@@ -205,14 +272,14 @@ class BillingController extends Controller
         return $records->concat($accounts)->values()->all();
     }
 
-    private function selectedCustomerRecipientKey(?Customer $customer, ?string $email = null): string
+    private function selectedCustomerRecipientKey(?Customer $customer, ?string $email = null, ?array $recipients = null): string
     {
         $recipientEmail = strtolower(trim($customer?->email ?? $email ?? ''));
         if ($recipientEmail === '') {
             return '';
         }
 
-        foreach ($this->customerRecipients() as $recipient) {
+        foreach ($recipients ?? $this->customerRecipients() as $recipient) {
             if (strtolower(trim((string) $recipient['email'])) === strtolower(trim($recipientEmail))) {
                 return $recipient['key'];
             }
@@ -255,10 +322,16 @@ class BillingController extends Controller
             ->values();
     }
 
-    public function store(Request $request, InventoryStock $stock): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
+        if ($request->input('type') === 'invoice') {
+            throw ValidationException::withMessages([
+                'type' => 'Create and send a quotation first. An invoice can be issued only after the customer accepts it.',
+            ]);
+        }
+
         $data = $request->validate([
-            'type' => ['required', 'in:invoice,quotation,quote'],
+            'type' => ['required', 'in:quotation,quote'],
             'repair_ticket_id' => ['nullable', 'integer', 'exists:repair_tickets,id'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'customer_name' => ['required', 'string', 'max:255'],
@@ -268,11 +341,16 @@ class BillingController extends Controller
             'issue_date' => ['nullable', 'date'],
             'issued_at' => ['nullable', 'date'],
             'due_date' => ['nullable', 'date'],
+            'project_scope' => ['nullable', 'string', 'max:5000'],
+            'included_revision_rounds' => ['nullable', 'integer', 'min:0', 'max:3'],
+            'project_due_date' => ['nullable', 'date'],
+            'payment_terms' => ['nullable', 'string', 'max:5000'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'custom_pc_build' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
+            'items.*.custom_pc_component_id' => ['nullable', 'integer', 'exists:custom_pc_components,id'],
             'items.*.product_id' => ['nullable', 'string', Rule::exists('product_services', 'id')],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
@@ -287,12 +365,17 @@ class BillingController extends Controller
                     "items.{$index}.product_id" => 'Choose either an inventory item or a service, not both.',
                 ]);
             }
-            if (empty($item['inventory_part_id']) && empty($item['product_id']) && empty($item['description'])) {
+            if (! empty($item['custom_pc_component_id']) && (! empty($item['inventory_part_id']) || ! empty($item['product_id']))) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.custom_pc_component_id" => 'Choose either a builder component, an inventory item, or a service.',
+                ]);
+            }
+            if (empty($item['inventory_part_id']) && empty($item['custom_pc_component_id']) && empty($item['product_id']) && empty($item['description'])) {
                 throw ValidationException::withMessages([
                     "items.{$index}.description" => 'Enter a description or select an inventory item.',
                 ]);
             }
-            if (empty($item['inventory_part_id']) && empty($item['product_id']) && ! isset($item['unit_price'])) {
+            if (empty($item['inventory_part_id']) && empty($item['custom_pc_component_id']) && empty($item['product_id']) && ! isset($item['unit_price'])) {
                 throw ValidationException::withMessages([
                     "items.{$index}.unit_price" => 'Enter a unit price for this line.',
                 ]);
@@ -305,6 +388,10 @@ class BillingController extends Controller
             ->unique()
             ->values();
         $parts = InventoryPart::query()->whereIn('id', $inventoryPartIds)->get()->keyBy('id');
+        $components = CustomPcComponent::query()
+            ->whereIn('id', collect($data['items'])->pluck('custom_pc_component_id')->filter()->unique())
+            ->get()
+            ->keyBy('id');
 
         if (! empty($data['custom_pc_build'])) {
             $allowedComponentTypes = [
@@ -323,17 +410,18 @@ class BillingController extends Controller
             ];
 
             foreach ($data['items'] as $index => $item) {
-                if (empty($item['inventory_part_id'])) {
+                if (empty($item['inventory_part_id']) && empty($item['custom_pc_component_id'])) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.inventory_part_id" => 'Choose a PC component for every build line.',
+                        "items.{$index}.custom_pc_component_id" => 'Choose a PC component for every build line.',
                     ]);
                 }
 
-                $part = $parts->get($item['inventory_part_id']);
-                $catalogPart = $part?->catalog_currency === 'USD';
+                $part = $components->get($item['custom_pc_component_id'] ?? null)
+                    ?? $parts->get($item['inventory_part_id'] ?? null);
+                $catalogPart = $part instanceof CustomPcComponent || $part?->catalog_currency === 'USD';
                 if (! $part || (! $catalogPart && $part->stock_quantity < 1) || ! in_array($part->type, $allowedComponentTypes, true)) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.inventory_part_id" => 'Choose a PC component for every build line.',
+                        "items.{$index}.custom_pc_component_id" => 'Choose a PC component for every build line.',
                     ]);
                 }
                 if ($catalogPart && (float) $part->selling_price <= 0 && ! isset($item['unit_price'])) {
@@ -355,7 +443,8 @@ class BillingController extends Controller
             $cpus = [];
             $motherboards = [];
             foreach ($groupItems as $index => $item) {
-                $part = $parts->get($item['inventory_part_id'] ?? null);
+                $part = $components->get($item['custom_pc_component_id'] ?? null)
+                    ?? $parts->get($item['inventory_part_id'] ?? null);
                 if ($part?->type === 'cpu') {
                     $cpus[] = [$index, $part];
                 } elseif ($part?->type === 'motherboard') {
@@ -365,17 +454,23 @@ class BillingController extends Controller
 
             foreach ($cpus as [$cpuIndex, $cpu]) {
                 foreach ($motherboards as [$motherboardIndex, $motherboard]) {
+                    $cpuIdField = empty($data['items'][$cpuIndex]['custom_pc_component_id'])
+                        ? 'inventory_part_id'
+                        : 'custom_pc_component_id';
+                    $motherboardIdField = empty($data['items'][$motherboardIndex]['custom_pc_component_id'])
+                        ? 'inventory_part_id'
+                        : 'custom_pc_component_id';
                     $cpuSocket = $cpu->specification('Socket');
                     $motherboardSocket = $motherboard->specification('Socket');
                     if (! $cpuSocket || ! $motherboardSocket) {
-                        $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = 'Add socket specifications to both the selected processor and motherboard before quoting this build.';
+                        $compatibilityErrors["items.{$cpuIndex}.{$cpuIdField}"] = 'Add socket specifications to both the selected processor and motherboard before quoting this build.';
 
                         continue;
                     }
 
                     if (strcasecmp(trim($cpuSocket), trim($motherboardSocket)) !== 0) {
-                        $compatibilityErrors["items.{$cpuIndex}.inventory_part_id"] = "The selected {$cpuSocket} processor is not compatible with the {$motherboardSocket} motherboard.";
-                        $compatibilityErrors["items.{$motherboardIndex}.inventory_part_id"] = 'Choose a motherboard with a socket compatible with the selected processor.';
+                        $compatibilityErrors["items.{$cpuIndex}.{$cpuIdField}"] = "The selected {$cpuSocket} processor is not compatible with the {$motherboardSocket} motherboard.";
+                        $compatibilityErrors["items.{$motherboardIndex}.{$motherboardIdField}"] = 'Choose a motherboard with a socket compatible with the selected processor.';
                     }
                 }
             }
@@ -387,11 +482,15 @@ class BillingController extends Controller
 
         $type = $data['type'] === 'quote' ? 'quotation' : $data['type'];
         $issueDate = $data['issue_date'] ?? $data['issued_at'] ?? now()->toDateString();
+        $isProjectQuotation = $type === 'quotation' && ! empty($data['project_id']);
         if (! empty($data['due_date']) && $data['due_date'] < $issueDate) {
             throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the issue date.']);
         }
+        if ($isProjectQuotation && ! empty($data['project_due_date']) && $data['project_due_date'] < $issueDate) {
+            throw ValidationException::withMessages(['project_due_date' => 'The project target date must be on or after the quotation issue date.']);
+        }
 
-        $document = DB::transaction(function () use ($data, $request, $type, $issueDate, $stock): BillingDocument {
+        $document = DB::transaction(function () use ($data, $request, $type, $issueDate, $isProjectQuotation): BillingDocument {
             $document = BillingDocument::create([
                 'number' => 'TEMP-'.Str::upper(Str::random(12)),
                 'type' => $type,
@@ -405,6 +504,10 @@ class BillingController extends Controller
                 'customer_address' => $data['customer_address'] ?? null,
                 'issue_date' => $issueDate,
                 'due_date' => $data['due_date'] ?? null,
+                'project_scope' => $isProjectQuotation ? ($data['project_scope'] ?? null) : null,
+                'included_revision_rounds' => $isProjectQuotation ? ($data['included_revision_rounds'] ?? 3) : 3,
+                'project_due_date' => $isProjectQuotation ? ($data['project_due_date'] ?? null) : null,
+                'payment_terms' => $isProjectQuotation ? ($data['payment_terms'] ?? null) : null,
                 'tax_rate' => $data['tax_rate'],
                 'notes' => $data['notes'] ?? null,
             ]);
@@ -414,16 +517,20 @@ class BillingController extends Controller
                 $part = ! empty($item['inventory_part_id'])
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
+                $component = ! empty($item['custom_pc_component_id'])
+                    ? CustomPcComponent::query()->findOrFail($item['custom_pc_component_id'])
+                    : null;
                 $product = ! empty($item['product_id'])
                     ? ProductService::withTrashed()->findOrFail($item['product_id'])
                     : null;
-                $price = round((float) ($item['unit_price'] ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
+                $price = round((float) ($item['unit_price'] ?? $component?->selling_price ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);
                 $subtotal += $lineTotal;
 
                 $document->items()->create([
                     'inventory_part_id' => $part?->id,
-                    'description' => $part?->name ?? $product['name'] ?? $item['description'],
+                    'custom_pc_component_id' => $component?->id,
+                    'description' => $component?->name ?? $part?->name ?? $product['name'] ?? $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $price,
                     'unit_cost' => $item['unit_cost'] ?? null,
@@ -440,19 +547,10 @@ class BillingController extends Controller
                 'total' => round($subtotal + $taxAmount, 2),
             ]);
 
-            if ($type === 'invoice') {
-                foreach ($document->items as $item) {
-                    if ($item->inventory_part_id) {
-                        $stock->useForSale($item->part, $request->user(), $item->quantity, $document->number);
-                    }
-                }
-                $document->update(['status' => 'issued']);
-            }
-
             return $document;
         });
 
-        return redirect()->route('billing.documents.show', $document)->with('success', $type === 'invoice' ? 'Invoice issued.' : 'Quotation saved as a draft.');
+        return redirect()->route('billing.documents.show', $document)->with('success', 'Quotation saved as a draft.');
     }
 
     public function update(Request $request, BillingDocument $document): RedirectResponse
@@ -468,10 +566,15 @@ class BillingController extends Controller
             'customer_address' => ['nullable', 'string', 'max:2000'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['nullable', 'date'],
+            'project_scope' => ['nullable', 'string', 'max:5000'],
+            'included_revision_rounds' => ['nullable', 'integer', 'min:0', 'max:3'],
+            'project_due_date' => ['nullable', 'date'],
+            'payment_terms' => ['nullable', 'string', 'max:5000'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
+            'items.*.custom_pc_component_id' => ['nullable', 'integer', 'exists:custom_pc_components,id'],
             'items.*.product_id' => ['nullable', 'string', Rule::exists('product_services', 'id')],
             'items.*.description' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
@@ -482,6 +585,9 @@ class BillingController extends Controller
         $this->validateLineItems($data['items']);
         if (! empty($data['due_date']) && $data['due_date'] < $data['issue_date']) {
             throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the issue date.']);
+        }
+        if ($document->type === 'quotation' && $document->project_id && ! empty($data['project_due_date']) && $data['project_due_date'] < $data['issue_date']) {
+            throw ValidationException::withMessages(['project_due_date' => 'The project target date must be on or after the quotation issue date.']);
         }
 
         DB::transaction(function () use ($document, $data, $canEdit): void {
@@ -495,6 +601,10 @@ class BillingController extends Controller
                 'customer_address' => $data['customer_address'] ?? null,
                 'issue_date' => $data['issue_date'],
                 'due_date' => $data['due_date'] ?? null,
+                'project_scope' => $locked->type === 'quotation' && $locked->project_id ? ($data['project_scope'] ?? null) : null,
+                'included_revision_rounds' => $locked->type === 'quotation' && $locked->project_id ? ($data['included_revision_rounds'] ?? 3) : 3,
+                'project_due_date' => $locked->type === 'quotation' && $locked->project_id ? ($data['project_due_date'] ?? null) : null,
+                'payment_terms' => $locked->type === 'quotation' && $locked->project_id ? ($data['payment_terms'] ?? null) : null,
                 'tax_rate' => $data['tax_rate'],
                 'notes' => $data['notes'] ?? null,
                 ...($wasRejectedQuotation ? ['status' => 'draft'] : []),
@@ -507,15 +617,19 @@ class BillingController extends Controller
                 $part = ! empty($item['inventory_part_id'])
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
+                $component = ! empty($item['custom_pc_component_id'])
+                    ? CustomPcComponent::query()->findOrFail($item['custom_pc_component_id'])
+                    : null;
                 $product = ! empty($item['product_id'])
                     ? ProductService::withTrashed()->findOrFail($item['product_id'])
                     : null;
-                $price = round((float) ($item['unit_price'] ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
+                $price = round((float) ($item['unit_price'] ?? $component?->selling_price ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);
                 $subtotal += $lineTotal;
                 $locked->items()->create([
                     'inventory_part_id' => $part?->id,
-                    'description' => $part?->name ?? $product['name'] ?? $item['description'],
+                    'custom_pc_component_id' => $component?->id,
+                    'description' => $component?->name ?? $part?->name ?? $product['name'] ?? $item['description'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $price,
                     'unit_cost' => $item['unit_cost'] ?? $existingUnitCosts[$index] ?? null,
@@ -583,12 +697,17 @@ class BillingController extends Controller
 
     private function customerDocumentsQuery(User $user): Builder
     {
+        return $this->applyCustomerDocumentVisibility(BillingDocument::query(), $user);
+    }
+
+    private function applyCustomerDocumentVisibility(Builder $query, User $user): Builder
+    {
         $email = strtolower(trim($user->email));
         if ($email === '') {
-            return BillingDocument::query()->whereRaw('1 = 0');
+            return $query->whereRaw('1 = 0');
         }
 
-        return BillingDocument::query()
+        return $query
             ->whereIn('type', ['invoice', 'quotation'])
             ->where('status', '!=', 'draft')
             ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$email])
@@ -607,20 +726,13 @@ class BillingController extends Controller
     {
         DB::transaction(function () use ($document, $request, $stock): void {
             $document = BillingDocument::query()->with('items')->lockForUpdate()->findOrFail($document->id);
-            abort_if(
-                $document->type === 'quotation'
-                    ? $document->status !== 'accepted'
-                    : $document->status !== 'draft',
+            abort_unless(
+                $document->type === 'quotation' && $document->status === 'accepted',
                 422,
-                $document->type === 'quotation'
-                    ? 'Only accepted quotations can be converted to invoices.'
-                    : 'Only draft invoices can be issued.',
+                'Only accepted quotations can be converted to invoices.',
             );
-
-            if ($document->type === 'quotation') {
-                $document->type = 'invoice';
-                $document->number = str_replace('QUO-', 'INV-', $document->number);
-            }
+            $document->type = 'invoice';
+            $document->number = str_replace('QUO-', 'INV-', $document->number);
 
             foreach ($document->items as $item) {
                 if ($item->inventory_part_id) {
@@ -649,26 +761,22 @@ class BillingController extends Controller
             'delivery' => ['nullable', Rule::in(['in_app', 'whatsapp'])],
         ]);
 
-        DB::transaction(function () use ($document, $data): void {
+        DB::transaction(function () use ($document, $data, $user): void {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
             abort_unless($locked->type === 'quotation', 404);
             abort_if($locked->status === 'void', 422, 'Voided quotations cannot be changed.');
-            abort_if(
-                $locked->status === 'draft' && $data['status'] !== 'sent',
-                422,
-                'Draft quotations must be marked as sent before changing their status.',
-            );
+            if ($user->hasRole('customer')) {
+                abort_unless($locked->status === 'sent', 422, 'Only sent quotations can be accepted or rejected by the customer.');
+            } elseif ($locked->status === 'draft' && $data['status'] === 'rejected') {
+                abort(422, 'A draft quotation cannot be rejected before it is sent.');
+            } elseif ($locked->status === 'rejected' && $data['status'] === 'accepted') {
+                abort(422, 'Rejected quotations must be sent again or revised before they can be accepted.');
+            }
             abort_if(
                 $locked->status === 'accepted' && $data['status'] !== 'accepted',
                 422,
                 'Accepted quotations can only be converted into invoices.',
             );
-            abort_if(
-                $locked->status === 'rejected' && $data['status'] === 'accepted',
-                422,
-                'Rejected quotations must be sent again before they can be accepted.',
-            );
-
             $locked->update(['status' => $data['status']]);
         });
 
@@ -686,7 +794,9 @@ class BillingController extends Controller
             ->route('billing.documents.show', $document)
             ->with('success', $data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app'
                 ? 'Quotation marked as sent and added to the customer panel.'
-                : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.'));
+                : ($data['status'] === 'accepted' && ! $user->hasRole('customer')
+                    ? 'Customer acceptance recorded. You can now convert this quotation to an invoice.'
+                    : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.')));
     }
 
     public function respondToQuotationFromEmail(Request $request, BillingDocument $document, string $status): View
@@ -768,8 +878,8 @@ class BillingController extends Controller
             abort_if($locked->type !== 'invoice' || ! in_array($locked->status, ['issued', 'partial', 'part_paid'], true), 422, 'This invoice cannot accept a payment.');
             $amount = round((float) $data['amount'], 2);
             $balance = round((float) $locked->total - (float) $locked->paid_amount, 2);
-            if ($amount > $balance) {
-                throw ValidationException::withMessages(['amount' => 'Payment cannot exceed the outstanding balance.']);
+            if (abs($amount - $balance) >= 0.01) {
+                throw ValidationException::withMessages(['amount' => 'Partial payments are not supported. Record the full outstanding balance.']);
             }
 
             $locked->payments()->create([
@@ -819,6 +929,32 @@ class BillingController extends Controller
             ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
     }
 
+    public function receiptPdf(Request $request, BillingPayment $payment)
+    {
+        $document = BillingDocument::withoutGlobalScope('customer-recipient')
+            ->findOrFail($payment->billing_document_id);
+        abort_unless($document->type === 'invoice', 404);
+        $this->authorizeCustomerDocument($request, $document);
+        $payment->setRelation('document', $document);
+        $payment->load('user');
+
+        $companyProfile = CompanyProfile::current();
+        $tempDirectory = storage_path('app/mpdf-tmp');
+        File::ensureDirectoryExists($tempDirectory);
+        $logoPath = public_path('assets/img/omg/logoex2.png');
+        $logoData = is_file($logoPath) ? base64_encode((string) file_get_contents($logoPath)) : null;
+        $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
+        $mpdf->WriteHTML(view('billing.receipt-pdf', compact(
+            'payment',
+            'companyProfile',
+            'logoData',
+        ))->render());
+
+        return response($mpdf->Output(strtolower($payment->receipt_number).'.pdf', 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="'.strtolower($payment->receipt_number).'.pdf"');
+    }
+
     private function renderPdf(BillingDocument $document): string
     {
         $tempDirectory = storage_path('app/mpdf-tmp');
@@ -840,12 +976,18 @@ class BillingController extends Controller
                     "items.{$index}.product_id" => 'Choose either an inventory item or a service, not both.',
                 ]);
             }
-            if (empty($item['inventory_part_id']) && empty($item['product_id']) && empty($item['description'])) {
+            if (! empty($item['custom_pc_component_id']) && (! empty($item['inventory_part_id']) || ! empty($item['product_id']))) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.custom_pc_component_id" => 'Choose either a builder component, an inventory item, or a service.',
+                ]);
+            }
+            if (empty($item['inventory_part_id']) && empty($item['custom_pc_component_id']) && empty($item['product_id']) && empty($item['description'])) {
                 throw ValidationException::withMessages([
                     "items.{$index}.description" => 'Enter a description or select an inventory item.',
                 ]);
             }
-            if (empty($item['inventory_part_id']) && empty($item['product_id']) && ! isset($item['unit_price'])) {
+
+            if (empty($item['inventory_part_id']) && empty($item['custom_pc_component_id']) && empty($item['product_id']) && ! isset($item['unit_price'])) {
                 throw ValidationException::withMessages([
                     "items.{$index}.unit_price" => 'Enter a unit price for this line.',
                 ]);

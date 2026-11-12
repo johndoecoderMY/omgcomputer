@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CustomerMessageTemplate;
+use App\Models\BillingDocument;
 use App\Models\InventoryPart;
 use App\Models\MarketingCampaign;
 use App\Models\Project;
@@ -154,6 +155,75 @@ class AnalyticsReportsTest extends TestCase
             ->assertSee('1 active WhatsApp message template')
             ->assertSee('Configured')
             ->assertDontSee('test-meta-secret');
+    }
+
+    public function test_report_tables_are_bounded_and_totals_cover_all_records(): void
+    {
+        $admin = $this->adminUser();
+
+        foreach (range(1, 51) as $index) {
+            InventoryPart::query()->create([
+                'name' => 'Report part '.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'cost_price' => 2,
+                'selling_price' => 4,
+                'stock_quantity' => 1,
+                'reorder_level' => 2,
+            ]);
+            MarketingCampaign::query()->create([
+                'name' => 'Report campaign '.str_pad((string) $index, 2, '0', STR_PAD_LEFT),
+                'channel' => 'social',
+                'status' => 'completed',
+                'spend' => 1,
+                'impressions' => 10,
+                'clicks' => 2,
+                'leads' => 1,
+                'conversions' => 1,
+                'attributed_revenue' => 2,
+            ]);
+            BillingDocument::query()->create([
+                'number' => 'RPT-'.str_pad((string) $index, 4, '0', STR_PAD_LEFT),
+                'type' => 'invoice',
+                'status' => 'issued',
+                'user_id' => $admin->id,
+                'customer_name' => 'Report customer',
+                'issue_date' => today()->startOfMonth()->addDays(4)->toDateString(),
+                'subtotal' => 10,
+                'tax_rate' => 0,
+                'tax_amount' => 0,
+                'total' => 10,
+                'paid_amount' => 0,
+            ]);
+        }
+        User::factory()->count(51)->create();
+
+        $period = [
+            'from' => today()->startOfMonth()->toDateString(),
+            'to' => today()->endOfMonth()->toDateString(),
+        ];
+        $this->actingAs($admin)->get(route('reports.sales', $period))
+            ->assertOk()
+            ->assertSee('Issued invoices')
+            ->assertSee('page=2', false)
+            ->assertSee('RM 510.00');
+        $this->actingAs($admin)->get(route('reports.inventory'))
+            ->assertOk()
+            ->assertSee('51 tracked item(s)')
+            ->assertSee('page=2', false)
+            ->assertSee('RM 102.00')
+            ->assertDontSee('Report part 51');
+        $this->actingAs($admin)->get(route('reports.teams'))
+            ->assertOk()
+            ->assertSee('page=2', false)
+            ->assertSee('Team performance');
+        $this->actingAs($admin)->get(route('reports.marketing'))
+            ->assertOk()
+            ->assertSee('RM 51.00')
+            ->assertSee('RM 102.00')
+            ->assertSee('page=2', false)
+            ->assertDontSee('Report campaign 51');
+        $this->actingAs($admin)->get(route('reports.index'))
+            ->assertOk()
+            ->assertSee('Delivery API readiness');
     }
 
     public function test_products_page_shows_business_plan_offers_and_filters_by_category(): void

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Juniper & Grain, your neighborhood coffee and brunch spot.">
+  <title>Juniper &amp; Grain — Coffee, slow mornings</title>
+  <style>
+    :root{--ink:#283329;--cream:#f6f2e9;--sage:#d9dfcf;--rust:#a65635;--muted:#72776e}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);font:16px/1.55 Arial,sans-serif}
+    a{color:inherit}.nav{position:absolute;z-index:2;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:24px 7%;color:white}
+    .brand{font-family:Georgia,serif;font-size:21px;font-weight:bold;letter-spacing:.02em;text-decoration:none}.navlinks{display:flex;gap:26px}
+    .navlinks a{text-decoration:none;font-size:13px;font-weight:bold}.navlinks a:hover{text-decoration:underline}
+    .hero{min-height:680px;display:grid;place-items:center;text-align:center;padding:120px 24px 80px;color:#fff;background:linear-gradient(90deg,#152119b5,#15211948),url('assets/img/headers/header-cafe.jpg') center/cover}
+    .hero-inner{max-width:740px}.tag{font-size:12px;text-transform:uppercase;letter-spacing:.2em}.hero h1{font:normal clamp(48px,8vw,92px)/.98 Georgia,serif;letter-spacing:-.045em;margin:22px 0}.hero p{font-size:18px;color:#f5f2e9}
+    .button{display:inline-block;border:1px solid currentColor;padding:13px 22px;text-decoration:none;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.1em;margin-top:20px}
+    .button:hover{background:#fff;color:var(--ink)}section{padding:90px 7%}.intro{text-align:center;background:var(--cream)}.intro h2,.menu h2,.visit h2{font:normal clamp(36px,5vw,56px)/1.1 Georgia,serif;margin:12px 0}
+    .intro p{max-width:650px;margin:18px auto;color:var(--muted);font-size:17px}.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:42px}
+    .gallery img{width:100%;height:220px;object-fit:cover;border-radius:3px}.menu{background:#fff}.menuhead{text-align:center;margin-bottom:40px}
+    .menu-grid{max-width:970px;margin:auto;display:grid;grid-template-columns:1fr 1fr;gap:50px}
+    .menu-group h3{font:normal 24px Georgia,serif;border-bottom:1px solid #d8d9d2;padding-bottom:12px}
+    .item{display:flex;justify-content:space-between;gap:16px;margin:20px 0}.item strong{display:block}.item small{color:var(--muted)}
+    .visit{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;background:var(--sage)}
+    .visit img{width:100%;max-height:420px;object-fit:cover}.visit p{color:#525b50}
+    footer{background:var(--ink);color:#e8e8df;padding:28px 7%;display:flex;justify-content:space-between;gap:20px;font-size:13px}
+    @media(max-width:700px){.nav{padding:20px 6%}.navlinks{gap:12px}.navlinks a{font-size:11px}.gallery{grid-template-columns:1fr 1fr}.gallery img{height:170px}.menu-grid,.visit{grid-template-columns:1fr;gap:24px}.visit{padding:65px 7%}.hero{min-height:600px}footer{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <nav class="nav"><a class="brand" href="#home">Juniper &amp; Grain</a><div class="navlinks"><a href="#story">OUR STORY</a><a href="#menu">MENU</a><a href="#visit">FIND US</a></div></nav>
+  <header class="hero" id="home"><div class="hero-inner"><div class="tag">Coffee · Brunch · Good company</div><h1>Make room<br>for slow mornings.</h1><p>A neighborhood café for thoughtfully made coffee, fresh plates, and one more story at the table.</p><a class="button" href="#menu">Explore our menu</a></div></header>
+  <main>
+    <section class="intro" id="story"><div class="tag">A little about us</div><h2>Good things take time.</h2><p>We believe the best days begin with a proper cup and no rush. Our kitchen works with local growers and our baristas make every cup with care.</p><div class="gallery"><img src="assets/img/cafe-01.jpg" alt="Freshly brewed coffee"><img src="assets/img/cafe-02.jpg" alt="A relaxed café table"><img src="assets/img/cafe-03.jpg" alt="Coffee and pastry"><img src="assets/img/cafe-04.jpg" alt="The café interior"></div></section>
+    <section class="menu" id="menu"><div class="menuhead"><div class="tag">Made fresh, every day</div><h2>A few favorites</h2></div><div class="menu-grid">
+      <div class="menu-group"><h3>From the bar</h3><div class="item"><div><strong>Flat white</strong><small>Double espresso, silky steamed milk</small></div><b>$4.50</b></div><div class="item"><div><strong>Honey oat latte</strong><small>House honey, oat milk, a little cinnamon</small></div><b>$5.50</b></div><div class="item"><div><strong>Cold brew</strong><small>Slow-steeped for 18 hours</small></div><b>$4.75</b></div></div>
+      <div class="menu-group"><h3>From the kitchen</h3><div class="item"><div><strong>Garden toast</strong><small>Whipped ricotta, greens, sourdough</small></div><b>$12</b></div><div class="item"><div><strong>Sunday pancakes</strong><small>Seasonal fruit, cultured butter</small></div><b>$14</b></div><div class="item"><div><strong>Market bowl</strong><small>Grains, roasted veg, lemon tahini</small></div><b>$15</b></div></div>
+    </div></section>
+    <section class="visit" id="visit"><div><div class="tag">Come on in</div><h2>Your seat is waiting.</h2><p>18 Willow Lane, Portland<br>Monday–Friday · 7am–4pm<br>Weekends · 8am–3pm</p><a class="button" href="mailto:support@omgcomputer.my">Say hello</a></div><img src="assets/img/cafe-08.jpg" alt="A sunlit corner of the café"></section>
+  </main>
+  <footer><span>Juniper &amp; Grain</span><span>Made for good mornings · © 2025</span><a href="index.html">All demos</a></footer>
+</body>
+</html>

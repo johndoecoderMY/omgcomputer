@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BillingDocumentItem extends Model
 {
     protected $fillable = [
-        'billing_document_id', 'inventory_part_id', 'description', 'quantity', 'unit_price', 'unit_cost', 'line_total',
+        'billing_document_id', 'inventory_part_id', 'custom_pc_component_id', 'description', 'quantity', 'unit_price', 'unit_cost', 'line_total',
     ];
 
     protected function casts(): array
@@ -28,5 +28,10 @@ class BillingDocumentItem extends Model
     public function part(): BelongsTo
     {
         return $this->belongsTo(InventoryPart::class, 'inventory_part_id');
+    }
+
+    public function customPcComponent(): BelongsTo
+    {
+        return $this->belongsTo(CustomPcComponent::class);
     }
 }

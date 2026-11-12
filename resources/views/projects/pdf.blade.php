@@ -211,7 +211,7 @@
     @endif
 
     @if (in_array('estimates', $sections, true))
-        <h2>Software and other estimates</h2>
+        <h2>Project estimates</h2>
         @if ($project->estimateItems->isEmpty())
             <p class="muted">No estimate items have been recorded.</p>
         @else
@@ -222,7 +222,7 @@
                 <tbody>
                     @foreach ($project->estimateItems as $item)
                         <tr>
-                            <td>{{ ucfirst($item->category) }}</td>
+                            <td>{{ $item->category === 'hardware' ? 'Custom hardware' : ucfirst($item->category) }}</td>
                             <td>{{ $item->description }}</td>
                             <td>{{ $item->quantity }}</td>
                             <td>RM {{ number_format((float) $item->unit_price, 2) }}</td>

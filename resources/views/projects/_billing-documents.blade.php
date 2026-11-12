@@ -2,15 +2,12 @@
     <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h2 class="h5 mb-0" id="project-billing-heading">Project billing and quotations</h2>
-            <p class="small text-body-secondary mb-0">Invoices and quotations linked to this project. Quotations can be marked sent, accepted, or rejected from their detail page.</p>
+            <p class="small text-body-secondary mb-0">Send a quotation and wait for customer acceptance before converting it to an invoice.</p>
         </div>
         @if ($canManageBilling)
             <div class="d-flex flex-wrap gap-2">
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]) }}">
                     <i class="bi bi-file-text me-1" aria-hidden="true"></i>Create quotation
-                </a>
-                <a class="btn btn-sm btn-primary" href="{{ route('billing.create', ['type' => 'invoice', 'project_id' => $project->id]) }}">
-                    <i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Create invoice
                 </a>
             </div>
         @endif

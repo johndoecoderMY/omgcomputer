@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class BillingPayment extends Model
 {
@@ -22,5 +23,19 @@ class BillingPayment extends Model
     public function document(): BelongsTo
     {
         return $this->belongsTo(BillingDocument::class, 'billing_document_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    protected function receiptNumber(): Attribute
+    {
+        return Attribute::get(fn (): string => sprintf(
+            'RCT-%s-%06d',
+            $this->paid_at->format('Y'),
+            $this->id,
+        ));
     }
 }

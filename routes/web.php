@@ -43,18 +43,58 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WhatsAppInboxController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\WebsitePreviewController;
+use App\Models\InventoryPart;
+use App\Models\WebsitePreview;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
 Route::get('/website-previews', [WebsitePreviewController::class, 'index'])->name('website-previews.index');
+Route::get('/website-previews/concepts/{concept}', [WebsitePreviewController::class, 'concept'])
+    ->whereIn('concept', ['landing-page', 'dashboard', 'pos-catalogue'])
+    ->name('website-previews.concepts.show');
 Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
     ->name('repairs.track.form');
 Route::post('/track-repair', [RepairTicketController::class, 'track'])
     ->middleware('throttle:5,1')
     ->name('repairs.track');
-// Route::get('/sitemap.xml', fn () => response()
-//     ->view('sitemap', [], 200, ['Content-Type' => 'application/xml; charset=UTF-8']))
-//     ->name('sitemap');
+Route::get('/sitemap.xml', function () {
+    $urls = collect([
+        ['loc' => url('/')],
+        ['loc' => route('shop.public')],
+        ['loc' => route('website-previews.index')],
+        ['loc' => route('privacy')],
+        ['loc' => route('refund-policy')],
+        ['loc' => route('shipping-policy')],
+        ['loc' => route('terms')],
+    ]);
+
+    $concepts = config('website-preview-concepts', []);
+    $publishedConceptTitles = WebsitePreview::query()
+        ->whereIn('title', collect($concepts)->pluck('title'))
+        ->where('is_published', true)
+        ->pluck('title')
+        ->all();
+
+    foreach ($concepts as $slug => $concept) {
+        if (in_array($concept['title'], $publishedConceptTitles, true)) {
+            $urls->push(['loc' => route('website-previews.concepts.show', $slug)]);
+        }
+    }
+
+    InventoryPart::query()
+        ->where('is_for_sale', true)
+        ->where('stock_quantity', '>', 0)
+        ->orderBy('id')
+        ->get(['id', 'updated_at'])
+        ->each(fn (InventoryPart $product) => $urls->push([
+            'loc' => route('shop.public.products.show', $product),
+            'lastmod' => $product->updated_at,
+        ]));
+
+    return response()->view('sitemap', ['urls' => $urls], 200, [
+        'Content-Type' => 'application/xml; charset=UTF-8',
+    ]);
+})->name('sitemap');
 Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
@@ -116,6 +156,9 @@ Route::redirect('/shop/preview/products', '/shop')->name('shop.legacy-preview.li
 Route::redirect('/shop/preview/products/{product}', '/shop')->name('shop.legacy-preview.product');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
+    Route::view('/self-test', 'self-test.index')
+        ->middleware('role:admin')
+        ->name('self-test.index');
     Route::view('/customer/contact', 'customer.contact')->name('customer.contact');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
@@ -269,7 +312,11 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
         Route::get('/products/grid', 'productsGrid')->name('products.grid');
         Route::get('/custom-pc-builder', 'customPcBuilder')->name('custom-pc-builder');
+        Route::get('/custom-pc-builder/parts', 'customPcBuilderParts')->name('custom-pc-builder.parts');
         Route::get('/custom-pc-builder/components', 'customPcBuilderComponents')->name('custom-pc-builder.components');
+        Route::post('/custom-pc-builder/components', 'storeCustomPcBuilderComponent')->name('custom-pc-builder.components.store');
+        Route::put('/custom-pc-builder/components/{part}', 'updateCustomPcBuilderComponent')->name('custom-pc-builder.components.update');
+        Route::delete('/custom-pc-builder/components/{part}', 'destroyCustomPcBuilderComponent')->name('custom-pc-builder.components.destroy');
         Route::post('/custom-pc-builder/components/{part}/supplier', 'storeCustomPcBuilderSupplier')->name('custom-pc-builder.components.supplier');
         Route::get('/products/create', 'createProduct')->name('products.create');
         Route::post('/products', 'storeProduct')->name('products.store');
@@ -313,6 +360,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'index')->name('index');
         Route::get('/datatable', 'datatable')->name('datatable');
         Route::get('/create', 'create')->name('create');
+        Route::get('/inventory-parts/search', 'searchInventoryParts')->middleware('not-customer')->name('parts.search');
         Route::post('/', 'store')->name('store');
         Route::post('/{document}/chip-checkout', [ChipPaymentController::class, 'checkout'])->name('chip.checkout');
         Route::get('/chip-return/{attempt:uuid}', [ChipPaymentController::class, 'return'])->name('chip.return');
@@ -320,6 +368,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::put('/{document}', 'update')->name('documents.update');
         Route::post('/{document}/quotation-status', 'updateQuotationStatus')->name('documents.quotation-status');
         Route::post('/{document}/send', 'sendQuotation')->name('documents.send');
+        Route::get('/receipts', 'receipts')->name('receipts.index');
+        Route::get('/receipts/{payment}/pdf', 'receiptPdf')->name('receipts.pdf');
         Route::get('/{document}', 'show')->name('documents.show');
         Route::post('/{document}/issue', 'issue')->name('documents.convert');
         Route::post('/{document}/payments', 'storePayment')->name('documents.payments.store');
@@ -499,6 +549,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
             Route::put('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'update'])->name('technology-stack.update');
             Route::delete('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'destroy'])->name('technology-stack.destroy');
             Route::get('/{project}/flowcharts/datatable', [ProjectController::class, 'flowChartsDatatable'])->name('flowcharts.datatable');
+            Route::get('/{project}/inventory-parts/search', [ProjectController::class, 'searchInventoryParts'])->name('parts.search');
             Route::post('/{project}/flowcharts/link', [ProjectController::class, 'linkFlowCharts'])->name('flowcharts.link');
             Route::post('/{project}/flowcharts/duplicate', [ProjectController::class, 'duplicateFlowCharts'])->name('flowcharts.duplicate');
             Route::delete('/{project}/flowcharts/{flowChart}', [ProjectController::class, 'destroyFlowChart'])->name('flowcharts.destroy');

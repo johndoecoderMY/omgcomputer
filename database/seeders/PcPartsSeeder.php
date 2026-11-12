@@ -2,8 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\InventoryMovement;
-use App\Models\InventoryPart;
+use App\Models\CustomPcComponent;
 use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 
@@ -42,7 +41,9 @@ class PcPartsSeeder extends Seeder
 
         foreach ($parts as $partData) {
             $description = $partData['description'] ?? 'Sample seeded PC component. Update details and stock to match your actual inventory.';
-            $part = InventoryPart::query()->firstOrCreate(
+            $supplierId = $partData['supplier_id'];
+            unset($partData['stock_quantity'], $partData['reorder_level'], $partData['is_for_sale'], $partData['supplier_id']);
+            $part = CustomPcComponent::query()->updateOrCreate(
                 ['sku' => $partData['sku']],
                 [
                     ...$partData,
@@ -53,19 +54,8 @@ class PcPartsSeeder extends Seeder
                 'name' => $partData['name'],
                 'type' => $partData['type'],
                 'description' => $description,
-                'is_for_sale' => true,
             ]);
-
-            InventoryMovement::query()->firstOrCreate(
-                ['reference' => 'SEED-OPENING-'.$part->sku],
-                [
-                    'inventory_part_id' => $part->id,
-                    'type' => 'received',
-                    'quantity_change' => $part->stock_quantity,
-                    'quantity_after' => $part->stock_quantity,
-                    'note' => 'Sample opening stock from the PC parts seeder.',
-                ],
-            );
+            $part->suppliers()->syncWithoutDetaching([$supplierId]);
         }
 
         $this->call(CsvPcPartsSeeder::class);

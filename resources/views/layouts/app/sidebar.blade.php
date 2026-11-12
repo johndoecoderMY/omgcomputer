@@ -130,6 +130,14 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('billing.receipts.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-receipt"></span></span>
+                                <span class="nav-link-text ps-1">Payment receipts</span>
+                            </div>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
                             <div class="col-auto navbar-vertical-label">Account &amp; support</div>
                             <div class="col ps-0">
@@ -173,6 +181,16 @@
                             </div>
                         </a>
                     </li>
+                    @role('admin')
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('self-test.index') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-check2-square"></span></span>
+                                    <span class="nav-link-text ps-1">My self-test checklist</span>
+                                </div>
+                            </a>
+                        </li>
+                    @endrole
 
                     {{-- Bookings --}}
                     <li class="nav-item">
@@ -252,8 +270,8 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" href="{{ route('billing.index', ['status' => 'partial']) }}">
-                                        <span class="nav-link-text ps-1">Part-paid invoices</span>
+                                    <a class="nav-link" href="{{ route('billing.receipts.index') }}">
+                                        <span class="nav-link-text ps-1">Payment receipts</span>
                                     </a>
                                 </li>
                             </ul>

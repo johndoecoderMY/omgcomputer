@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daybook — Office dashboard</title>
+  <style>
+    :root{--ink:#252d32;--muted:#849098;--line:#e8ecef;--blue:#5679d5;--pale:#f5f7fb;--green:#2d956d}
+    *{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:var(--ink);font:14px/1.45 Arial,sans-serif}
+    button{font:inherit;cursor:pointer}.layout{min-height:100vh;display:grid;grid-template-columns:225px minmax(0,1fr)}
+    aside{background:#fff;border-right:1px solid var(--line);padding:25px 16px}.brand{font-size:20px;font-weight:bold;padding:0 12px 32px;letter-spacing:-.04em}.brand span{color:var(--blue)}
+    .section-label{font-size:10px;color:#a0a9af;font-weight:bold;letter-spacing:.14em;padding:12px;text-transform:uppercase}.nav{padding:12px;border-radius:8px;margin:3px 0;color:#68747b}.nav.active{color:var(--blue);background:#eff3fd;font-weight:bold}
+    main{padding:30px 36px;max-width:1450px;width:100%;margin:auto}.header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:26px}.header h1{margin:0;font-size:26px}.header p{margin:5px 0 0;color:var(--muted)}.profile{display:flex;align-items:center;gap:10px}.avatar{width:39px;height:39px;border-radius:50%;background:#e5eafa;display:grid;place-items:center;color:#4563af;font-weight:bold}
+    .date{color:#707c83;background:white;padding:10px 13px;border:1px solid var(--line);border-radius:8px}
+    .welcome{background:linear-gradient(110deg,#5b7cd2,#7894df);color:white;border-radius:14px;padding:25px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:22px}.welcome h2{font-size:20px;margin:0}.welcome p{margin:5px 0 0;color:#e3e9fa}.clock{font-variant-numeric:tabular-nums;font-size:14px;color:#f4f6ff}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}.card,.panel{background:white;border:1px solid var(--line);border-radius:12px;padding:18px}.stat-label{color:var(--muted);font-size:12px}.stat-value{font-size:25px;font-weight:bold;margin:8px 0 3px}.stat-note{font-size:11px;color:var(--green)}
+    .columns{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:18px}.panel{padding:20px;margin-bottom:18px}.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.panel-head h2{font-size:16px;margin:0}.panel-head a{color:var(--blue);font-size:12px;text-decoration:none}
+    .attendance{display:flex;align-items:center;justify-content:space-between;gap:20px;border-radius:10px;background:var(--pale);padding:17px}.attendance strong{display:block}.attendance p{margin:5px 0 0;color:var(--muted);font-size:12px}.punch{border:0;background:var(--green);color:white;border-radius:7px;padding:11px 16px;font-weight:bold;white-space:nowrap}.punch.out{background:#d26755}
+    .people{width:100%;border-collapse:collapse}.people th{text-align:left;color:#98a1a7;font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:11px 6px;border-bottom:1px solid var(--line)}.people td{padding:13px 6px;border-bottom:1px solid #f0f2f3;font-size:12px}.person{display:flex;align-items:center;gap:8px}.mini{width:28px;height:28px;border-radius:50%;background:#eef1f7;display:grid;place-items:center;font-size:10px;color:#596989;font-weight:bold}.status{border-radius:20px;background:#e8f5ee;color:#38855f;padding:5px 8px;font-size:10px}.status.late{background:#fff3e4;color:#ae7527}
+    .updates{list-style:none;padding:0;margin:0}.updates li{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #f0f2f3}.dot{width:8px;height:8px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0}.updates strong{font-size:12px}.updates p{margin:4px 0 0;color:var(--muted);font-size:11px}
+    .task{display:flex;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid #f0f2f3}.task input{accent-color:var(--blue)}.task.done span{text-decoration:line-through;color:#a2aaaf}
+    @media(max-width:900px){.layout{grid-template-columns:72px 1fr}aside{padding:22px 10px}.brand{font-size:0;text-align:center;padding:0 0 30px}.brand:first-letter{font-size:20px}.nav{font-size:0;text-align:center}.section-label{font-size:0;padding:8px}.stats{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:650px){.layout{display:block}aside{display:none}main{padding:22px 15px}.header{align-items:flex-start}.date{display:none}.welcome{align-items:flex-start;flex-direction:column}.columns{grid-template-columns:1fr}.people th:nth-child(3),.people td:nth-child(3){display:none}.stats{gap:9px}.card{padding:14px}.stat-value{font-size:21px}.attendance{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside><div class="brand">day<span>book</span></div><div class="section-label">Workspace</div><div class="nav active">▦ &nbsp; Overview</div><div class="nav">◷ &nbsp; Attendance</div><div class="nav">♙ &nbsp; Team</div><div class="nav">▤ &nbsp; Leave requests</div><div class="section-label">Manage</div><div class="nav">▧ &nbsp; Projects</div><div class="nav">⚙ &nbsp; Settings</div></aside>
+    <main>
+      <header class="header"><div><h1>Good morning, Alex 👋</h1><p>Here’s what’s happening with your office today.</p></div><div class="profile"><span class="date" id="date"></span><span class="avatar">AC</span></div></header>
+      <section class="welcome"><div><h2>Your workday, at a glance</h2><p>Keep your team in sync and your day moving forward.</p></div><span class="clock" id="clock"></span></section>
+      <section class="stats" aria-label="Office statistics">
+        <div class="card"><div class="stat-label">Present today</div><div class="stat-value">18 <span style="font-size:13px;font-weight:normal;color:#89939a">/ 22</span></div><div class="stat-note">↑ 2 more than yesterday</div></div>
+        <div class="card"><div class="stat-label">On time</div><div class="stat-value">16</div><div class="stat-note">89% of checked-in team</div></div>
+        <div class="card"><div class="stat-label">On leave</div><div class="stat-value">2</div><div class="stat-note" style="color:#ad792c">1 request to review</div></div>
+        <div class="card"><div class="stat-label">Open tasks</div><div class="stat-value" id="taskCount">3</div><div class="stat-note">Across 4 projects</div></div>
+      </section>
+      <div class="columns">
+        <section>
+          <div class="panel"><div class="panel-head"><h2>My attendance</h2><a href="#team">View history →</a></div><div class="attendance"><div><strong id="attendanceTitle">You’re not checked in</strong><p id="attendanceSub">Record your start time for today.</p></div><button class="punch" id="punch">Check in</button></div></div>
+          <div class="panel" id="team"><div class="panel-head"><h2>Team attendance</h2><a href="#team">See all →</a></div><table class="people"><thead><tr><th>Team member</th><th>Status</th><th>Check-in</th></tr></thead><tbody><tr><td><div class="person"><span class="mini">JM</span>Jordan Miller</div></td><td><span class="status">Present</span></td><td>08:54 AM</td></tr><tr><td><div class="person"><span class="mini">SK</span>Sam Kim</div></td><td><span class="status">Present</span></td><td>09:02 AM</td></tr><tr><td><div class="person"><span class="mini">RP</span>Riley Park</div></td><td><span class="status late">Running late</span></td><td>—</td></tr><tr><td><div class="person"><span class="mini">TB</span>Taylor Brooks</div></td><td><span class="status">Present</span></td><td>08:47 AM</td></tr></tbody></table></div>
+        </section>
+        <section>
+          <div class="panel"><div class="panel-head"><h2>Office updates</h2><a href="#updates">All updates →</a></div><ul class="updates" id="updates"><li><span class="dot"></span><div><strong>Team sync at 10:30 AM</strong><p>Meeting room Cedar · Product team</p></div></li><li><span class="dot" style="background:#e7a255"></span><div><strong>New leave request</strong><p>Jordan Miller · Friday, Oct 17</p></div></li><li><span class="dot" style="background:#6ea78e"></span><div><strong>Office lunch this Friday</strong><p>Share your choice by Thursday</p></div></li></ul></div>
+          <div class="panel"><div class="panel-head"><h2>My tasks</h2><a href="#tasks">Open list →</a></div><div id="tasks"><label class="task"><input type="checkbox"><span>Review weekly attendance report</span></label><label class="task"><input type="checkbox"><span>Share project status with team</span></label><label class="task"><input type="checkbox"><span>Approve pending leave request</span></label></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script>
+    const dateNode=document.getElementById('date'),clockNode=document.getElementById('clock');
+    function updateClock(){const now=new Date();dateNode.textContent=new Intl.DateTimeFormat('en',{weekday:'short',month:'short',day:'numeric',year:'numeric'}).format(now);clockNode.textContent=new Intl.DateTimeFormat('en',{hour:'numeric',minute:'2-digit',second:'2-digit'}).format(now);}
+    updateClock();window.setInterval(updateClock,1000);
+    let checkedIn=false;const punch=document.getElementById('punch');
+    punch.addEventListener('click',()=>{checkedIn=!checkedIn;const time=new Intl.DateTimeFormat('en',{hour:'2-digit',minute:'2-digit'}).format(new Date());document.getElementById('attendanceTitle').textContent=checkedIn?'You’re checked in':'You’ve checked out';document.getElementById('attendanceSub').textContent=checkedIn?'Started at '+time+' · Have a great day!':'Finished at '+time+' · See you next time.';punch.textContent=checkedIn?'Check out':'Check in';punch.classList.toggle('out',checkedIn);});
+    document.getElementById('tasks').addEventListener('change',()=>{const checks=[...document.querySelectorAll('#tasks input')];checks.forEach(c=>c.closest('.task').classList.toggle('done',c.checked));document.getElementById('taskCount').textContent=checks.filter(c=>!c.checked).length;});
+  </script>
+</body>
+</html>

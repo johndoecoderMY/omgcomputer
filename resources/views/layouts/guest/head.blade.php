@@ -8,8 +8,28 @@
     @php
         $pageTitle = html_entity_decode(trim($__env->yieldContent('title', 'OMG Computer')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $pageTitle = $pageTitle !== '' ? $pageTitle : 'OMG Computer';
+        $metaDescription = trim($__env->yieldContent(
+            'meta_description',
+            'OMG Computer provides computer repair, upgrades, custom PCs, and website design for home and business customers.',
+        ));
+        $canonicalUrl = trim($__env->yieldContent('canonical_url', url()->current()));
+        $socialImage = trim($__env->yieldContent('og_image', asset('assets/img/omg/hero-technician.jpg')));
+        $socialImageAlt = trim($__env->yieldContent('og_image_alt', 'OMG Computer providing computer repair and technology support.'));
     @endphp
     <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta name="robots" content="@yield('meta_robots', 'index,follow')">
+    <link rel="canonical" href="{{ $canonicalUrl }}">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:title" content="@yield('og_title', $pageTitle)">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $canonicalUrl }}">
+    <meta property="og:image" content="{{ $socialImage }}">
+    <meta property="og:image:alt" content="{{ $socialImageAlt }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('og_title', $pageTitle)">
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ $socialImage }}">
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/favicons/apple-touch-icon.png') }}">

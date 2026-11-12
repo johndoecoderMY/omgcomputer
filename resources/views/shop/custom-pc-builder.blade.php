@@ -51,7 +51,7 @@
                                 @foreach ($componentTypes as $type => $label)
                                     @php($sectionLines = $previousComponents->get($type, collect())->values())
                                     @if ($sectionLines->isEmpty())
-                                        @php($sectionLines = collect([['inventory_part_id' => '', 'quantity' => 1, 'unit_price' => '']]))
+                                        @php($sectionLines = collect([['custom_pc_component_id' => '', 'quantity' => 1, 'unit_price' => '']]))
                                     @endif
                                     @foreach ($sectionLines as $line)
                                         <tr class="component-line">
@@ -62,12 +62,12 @@
                                                 <input class="component-build-group" type="hidden" value="{{ $buildIndex }}">
                                             </td>
                                             <td>
-                                                @php($selectedComponent = $components->get($type, collect())->firstWhere('id', (int) ($line['inventory_part_id'] ?? 0)))
-                                                @php($selectedComponentSupplier = $selectedComponent ? $selectedComponent->suppliers->pluck('name')->merge($selectedComponent->supplier ? [$selectedComponent->supplier->name] : [])->unique()->implode(', ') : '')
+                                                @php($selectedComponent = $components->get($type, collect())->firstWhere('id', (int) ($line['custom_pc_component_id'] ?? 0)))
+                                                @php($selectedComponentSupplier = $selectedComponent ? $selectedComponent->suppliers->pluck('name')->unique()->implode(', ') : '')
                                                 <select class="form-select component-select d-none" aria-label="Choose {{ $label }}">
                                                     <option value="">Choose {{ strtolower($label) }}</option>
                                                     @if ($selectedComponent)
-                                                        <option value="{{ $selectedComponent->id }}" data-price="{{ $selectedComponent->selling_price }}" data-cost="{{ $selectedComponent->cost_price }}" data-type="{{ $selectedComponent->type }}" data-socket="{{ $selectedComponent->specification('Socket') }}" data-specifications="{{ json_encode($selectedComponent->specifications(), JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) }}" data-selection-label="{{ $selectedComponent->name }} · {{ $selectedComponent->stock_quantity }} in stock · RM {{ number_format((float) $selectedComponent->selling_price, 2) }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}" selected>
+                                                            <option value="{{ $selectedComponent->id }}" data-price="{{ $selectedComponent->selling_price }}" data-cost="{{ $selectedComponent->cost_price }}" data-type="{{ $selectedComponent->type }}" data-socket="{{ $selectedComponent->specification('Socket') }}" data-specifications="{{ json_encode($selectedComponent->specifications(), JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) }}" data-selection-label="{{ $selectedComponent->name }} · Builder catalogue · RM {{ number_format((float) $selectedComponent->selling_price, 2) }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}" selected>
                                                             {{ $selectedComponent->name }}
                                                         </option>
                                                     @endif
@@ -76,7 +76,7 @@
                                                 <div class="component-selection small text-body-secondary mt-2" aria-live="polite">
                                                     @if ($selectedComponent)
                                                         {{ $selectedComponent->name }}
-                                                        · {{ $selectedComponent->stock_quantity }} in stock
+                                                        · Builder catalogue (not inventory stock)
                                                         · RM {{ number_format((float) $selectedComponent->selling_price, 2) }}
                                                         · {{ $selectedComponentSupplier ?: 'No supplier linked' }}
                                                     @else
@@ -154,10 +154,20 @@
             </div>
         </div>
     </form>
+    <div class="card mt-4">
+        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h2 class="h5 mb-1">Builder parts catalogue</h2>
+                <p class="small text-body-secondary mb-0">Manage catalogue parts separately from tracked inventory.</p>
+            </div>
+            <a class="btn btn-outline-primary" href="{{ route('shop.custom-pc-builder.parts') }}">Manage builder parts</a>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="component-picker" tabindex="-1" aria-labelledby="component-picker-title" aria-hidden="true"
     data-search-url="{{ $componentSearchUrl }}"
+    data-component-store-url="{{ $componentStoreUrl }}"
     data-supplier-url="{{ route('shop.custom-pc-builder.components.supplier', ['part' => '__PART__']) }}">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -210,6 +220,45 @@
                     <span class="small text-body-secondary" id="component-search-page"></span>
                     <button class="btn btn-sm btn-outline-secondary" id="component-search-next" type="button">Next</button>
                 </div>
+                <details class="border rounded p-3 mt-4">
+                    <summary class="fw-semibold">Add a part to the builder catalogue</summary>
+                    <form id="component-create-form" class="row g-3 mt-1">
+                        @csrf
+                        <div class="col-md-6">
+                            <label class="form-label" for="new-component-name">Part name</label>
+                            <input class="form-control" id="new-component-name" name="name" maxlength="255" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="new-component-sku">SKU (optional)</label>
+                            <input class="form-control" id="new-component-sku" name="sku" maxlength="100">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label" for="new-component-type">Category</label>
+                            <select class="form-select" id="new-component-type" name="type" required>
+                                @foreach (array_merge($componentTypes, $additionalComponentTypes) as $type => $label)
+                                    <option value="{{ $type }}">{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="new-component-description">Specifications / notes</label>
+                            <textarea class="form-control" id="new-component-description" name="description" rows="2" maxlength="5000" placeholder="Include compatibility details such as Socket: AM5"></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="new-component-cost">Our estimated cost (RM)</label>
+                            <input class="form-control" id="new-component-cost" name="cost_price" type="number" min="0" max="99999999" step="0.01" value="0" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="new-component-price">Customer price (RM)</label>
+                            <input class="form-control" id="new-component-price" name="selling_price" type="number" min="0" max="99999999" step="0.01" value="0" required>
+                        </div>
+                        <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div id="component-create-status" class="small" role="status" aria-live="polite"></div>
+                            <button class="btn btn-primary" type="submit">Add to builder catalogue</button>
+                        </div>
+                    </form>
+                    <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Add supplier and Shopee product details after saving the part.</p>
+                </details>
                 <section id="component-supplier-form-panel" class="border rounded p-3 mt-4 d-none" aria-labelledby="component-supplier-form-title">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h3 class="h6 mb-0" id="component-supplier-form-title">Add Shopee supplier for <span id="component-supplier-part-name"></span></h3>
@@ -441,7 +490,7 @@
         const setNames = () => {
             setBuildLabels();
             allRows().forEach((row, index) => {
-                row.querySelector('.component-select').name = `items[${index}][inventory_part_id]`;
+                row.querySelector('.component-select').name = `items[${index}][custom_pc_component_id]`;
                 row.querySelector('.component-quantity').name = `items[${index}][quantity]`;
                 row.querySelector('.component-cost').name = `items[${index}][unit_cost]`;
                 row.querySelector('.component-price').name = `items[${index}][unit_price]`;
@@ -479,7 +528,7 @@
                 }
                 if (requestNumber !== searchRequest) return;
 
-                searchStatus.textContent = `${result.meta.total.toLocaleString()} parts found. Prices and price filters are shown in RM.`;
+                searchStatus.textContent = `${result.meta.total.toLocaleString()} builder catalogue parts found. Prices and price filters are shown in RM.`;
                 lastPage = result.meta.last_page;
                 pageStatus.textContent = `Page ${result.meta.current_page} of ${lastPage}`;
                 document.getElementById('component-search-previous').disabled = result.meta.current_page <= 1;
@@ -508,7 +557,7 @@
                     description.textContent = [
                         categoryLabels[part.type] || part.type,
                         part.sku || 'No SKU',
-                        `${part.stock_quantity} in stock`,
+                        'Builder catalogue · not tracked as inventory',
                         sellingPrice,
                         costPrice,
                         part.supplier || 'No supplier linked',
@@ -534,7 +583,7 @@
                     const addSupplier = document.createElement('button');
                     addSupplier.type = 'button';
                     addSupplier.className = 'btn btn-sm btn-outline-secondary';
-                    addSupplier.textContent = part.supplier ? 'Add another Shopee supplier' : 'Add Shopee supplier';
+                            addSupplier.textContent = part.supplier ? 'Add another Shopee supplier' : 'Add Shopee supplier';
                     addSupplier.addEventListener('click', () => {
                         supplierPart = part;
                         document.getElementById('component-supplier-part-name').textContent = part.name;
@@ -621,7 +670,7 @@
             }
         });
 
-        const selectPart = (part) => {
+        const selectPart = (part, closePicker = true) => {
             const select = activeRow.querySelector('.component-select');
             let option = [...select.options].find((candidate) => candidate.value === String(part.id));
             if (!option) {
@@ -635,7 +684,7 @@
             option.dataset.specifications = JSON.stringify(part.specifications || {});
             option.dataset.selectionLabel = [
                 part.name,
-                `${part.stock_quantity} in stock`,
+            'Builder catalogue (not inventory stock)',
                 `RM ${Number(part.selling_price).toFixed(2)}`,
                 part.supplier || 'No supplier linked',
             ].join(' · ');
@@ -650,8 +699,56 @@
             syncComponentSections();
             updateCompatibility();
             updateEstimate();
-            pickerModal.hide();
+            if (closePicker) pickerModal.hide();
         };
+
+        document.getElementById('component-create-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const createForm = event.currentTarget;
+            const submitButton = createForm.querySelector('button[type="submit"]');
+            const status = document.getElementById('component-create-status');
+            submitButton.disabled = true;
+            status.textContent = 'Saving builder catalogue part…';
+            status.className = 'small text-body-secondary';
+
+            try {
+                const response = await fetch(picker.dataset.componentStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': createForm.querySelector('input[name="_token"]').value,
+                    },
+                    body: new FormData(createForm),
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    const validationMessage = Object.values(result.errors || {}).flat()[0];
+                    throw new Error(validationMessage || result.message || 'The part could not be added.');
+                }
+
+                status.textContent = `${result.name} was added to the builder catalogue. Add a supplier below if needed.`;
+                status.className = 'small text-success';
+                createForm.reset();
+                createForm.querySelector('input[name="_token"]').value =
+                    document.querySelector('meta[name="csrf-token"]')?.content || createForm.querySelector('input[name="_token"]').value;
+                selectPart(result, false);
+                supplierPart = result;
+                document.getElementById('component-supplier-part-name').textContent = result.name;
+                supplierStatus.textContent = '';
+                supplierStatus.className = 'small';
+                supplierPanel.classList.remove('d-none');
+                document.getElementById('component-search-form').classList.add('d-none');
+                searchStatus.classList.add('d-none');
+                searchResults.classList.add('d-none');
+                document.querySelector('#component-picker .d-flex.justify-content-between.align-items-center.mt-3').classList.add('d-none');
+                await searchParts();
+            } catch (error) {
+                status.textContent = error.message || 'The part could not be added. Try again.';
+                status.className = 'small text-danger';
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
 
         builds.addEventListener('click', (event) => {
             const button = event.target.closest('.choose-component');

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BillingDocument;
 use App\Models\ChipSetting;
 use App\Models\Customer;
+use App\Models\CustomPcComponent;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
 use App\Models\ShopOrderItem;
@@ -25,6 +26,35 @@ use Tests\TestCase;
 class ShopTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_self_test_checklist_is_admin_only_and_covers_priority_journeys(): void
+    {
+        $this->get(route('self-test.index'))->assertRedirect(route('login'));
+
+        $this->seed(PlannerRoleSeeder::class);
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $this->actingAs($member)->get(route('self-test.index'))->assertForbidden();
+
+        $this->actingAs($this->staffUser())
+            ->get(route('self-test.index'))
+            ->assertOk()
+            ->assertSee('Website self-test checklist')
+            ->assertSee('Shop — browse, order, and fulfil')
+            ->assertSee('Bookings — customer request to staff follow-up')
+            ->assertSee('Repair tickets — intake, updates, and customer view')
+            ->assertSee('Billing — quotations, invoices, payments, and receipts')
+            ->assertSee('E-Invoice — MyInvois submission')
+            ->assertSee('Submission test — blocked')
+            ->assertSee('Projects — scope, approval, and payment')
+            ->assertSee('Tasks — assignment, status, and access')
+            ->assertSee('Email — inbox, sending, and settings')
+            ->assertSee('Customer records and accounts')
+            ->assertSee('Custom PC builds — catalogue to invoice')
+            ->assertSee('Face-to-face / counter sale')
+            ->assertSee('Online / customer approval')
+            ->assertSee('localStorage');
+    }
 
     public function test_shop_management_is_hidden_from_customers_and_cart_is_customer_only(): void
     {
@@ -112,6 +142,8 @@ class ShopTest extends TestCase
             ->assertDontSee('Public preview graphics card');
         $this->get(route('shop.public.products.show', $availablePart))
             ->assertOk()
+            ->assertSee('<meta name="description" content="A graphics card for the preview catalogue.">', false)
+            ->assertSee('<link rel="canonical" href="'.route('shop.public.products.show', $availablePart).'">', false)
             ->assertSee('Product information')
             ->assertSee('A graphics card for the preview catalogue.')
             ->assertSee('RM 650.00')
@@ -137,6 +169,9 @@ class ShopTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
+            ->assertSee('<meta name="description" content="Computer repair, upgrades, custom PCs, and website design in Malaysia.', false)
+            ->assertSee('<meta property="og:image" content="'.asset('assets/img/omg/hero-technician.jpg').'">', false)
+            ->assertSee('<meta name="twitter:card" content="summary_large_image">', false)
             ->assertSee(route('shop.public'), false);
 
         $this->get(route('shop.legacy-preview.list'))->assertRedirect(route('shop.public'));
@@ -219,7 +254,7 @@ class ShopTest extends TestCase
             ->assertSee('Get a custom PC quote');
     }
 
-    public function test_staff_can_build_a_custom_pc_draft_quotation_from_in_stock_components(): void
+    public function test_inventory_parts_stay_out_of_builder_and_catalog_parts_can_be_quoted(): void
     {
         config(['billing.tax_rate' => 6]);
         $staff = $this->staffUser();
@@ -240,6 +275,13 @@ class ShopTest extends TestCase
             'cost_price' => 450,
             'stock_quantity' => 0,
             'reorder_level' => 1,
+        ]);
+        $builderCpu = CustomPcComponent::query()->create([
+            'name' => 'Builder catalogue CPU',
+            'sku' => 'BUILDER-CATALOG-CPU-01',
+            'type' => 'cpu',
+            'selling_price' => 250,
+            'cost_price' => 180,
         ]);
 
         $builder = $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
@@ -275,6 +317,8 @@ class ShopTest extends TestCase
             ->assertSee('Add another Shopee supplier')
             ->assertSee('Min selling price (RM)')
             ->assertSee('Max selling price (RM)')
+            ->assertSee('Manage builder parts')
+            ->assertDontSee('id="builder-part-form"', false)
             ->assertDontSee('USD')
             ->assertSee('Supplier source')
             ->assertDontSee($cpu->name)
@@ -291,7 +335,7 @@ class ShopTest extends TestCase
         $this->assertSame(10, preg_match_all('/<tr class="component-line">/', $componentLines[1] ?? ''));
         $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', ['category' => 'gpu']))
             ->assertOk()
-            ->assertJsonFragment(['name' => $outOfStockGpu->name]);
+            ->assertJsonMissing(['name' => $outOfStockGpu->name]);
 
         $this->actingAs($staff)->post(route('billing.store'), [
             'custom_pc_build' => 1,
@@ -302,7 +346,7 @@ class ShopTest extends TestCase
             'tax_rate' => 6,
             'notes' => 'Custom PC build',
             'items' => [[
-                'inventory_part_id' => $cpu->id,
+                'custom_pc_component_id' => $builderCpu->id,
                 'quantity' => 1,
                 'unit_cost' => 180,
                 'unit_price' => 250,
@@ -314,7 +358,8 @@ class ShopTest extends TestCase
         $this->assertSame('draft', $quote->status);
         $this->assertSame(6.0, (float) $quote->tax_rate);
         $this->assertSame(265.0, (float) $quote->total);
-        $this->assertSame($cpu->id, $quote->items()->firstOrFail()->inventory_part_id);
+        $this->assertSame($builderCpu->id, $quote->items()->firstOrFail()->custom_pc_component_id);
+        $this->assertNull($quote->items()->firstOrFail()->inventory_part_id);
         $this->assertSame(180.0, (float) $quote->items()->firstOrFail()->unit_cost);
         $this->assertSame(2, $cpu->fresh()->stock_quantity);
     }
@@ -324,10 +369,10 @@ class ShopTest extends TestCase
         $this->seed(PcPartsSeeder::class);
         $staff = $this->staffUser();
 
-        $am5Cpu = InventoryPart::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
-        $intelCpu = InventoryPart::query()->where('sku', 'DEMO-CPU-002')->firstOrFail();
-        $am5Board = InventoryPart::query()->where('sku', 'DEMO-MB-001')->firstOrFail();
-        $intelBoard = InventoryPart::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
+        $am5Cpu = CustomPcComponent::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
+        $intelCpu = CustomPcComponent::query()->where('sku', 'DEMO-CPU-002')->firstOrFail();
+        $am5Board = CustomPcComponent::query()->where('sku', 'DEMO-MB-001')->firstOrFail();
+        $intelBoard = CustomPcComponent::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
 
         $this->assertSame('AM5', $am5Cpu->specification('Socket'));
         $this->assertSame('LGA1700', $intelCpu->specification('Socket'));
@@ -335,9 +380,9 @@ class ShopTest extends TestCase
         $this->assertSame('LGA1700', $intelBoard->specification('Socket'));
         $this->assertSame('AMD B650', $am5Board->specification('Chipset'));
         $this->assertSame('6', $am5Cpu->specification('Cores'));
-        $this->assertSame('operating_system', InventoryPart::query()->where('sku', 'DEMO-OS-W11H-001')->firstOrFail()->type);
-        $this->assertSame('software', InventoryPart::query()->where('sku', 'DEMO-SW-M365-001')->firstOrFail()->type);
-        $usbExtension = InventoryPart::query()->where('sku', 'DEMO-USB-EXT-001')->firstOrFail();
+        $this->assertSame('operating_system', CustomPcComponent::query()->where('sku', 'DEMO-OS-W11H-001')->firstOrFail()->type);
+        $this->assertSame('software', CustomPcComponent::query()->where('sku', 'DEMO-SW-M365-001')->firstOrFail()->type);
+        $usbExtension = CustomPcComponent::query()->where('sku', 'DEMO-USB-EXT-001')->firstOrFail();
         $this->assertSame('peripheral', $usbExtension->type);
         $this->assertSame('USB-A male to USB-A female', $usbExtension->specification('Connector'));
 
@@ -362,7 +407,7 @@ class ShopTest extends TestCase
     {
         $this->seed(PcPartsSeeder::class);
         $staff = $this->staffUser();
-        $parts = InventoryPart::query()
+        $parts = CustomPcComponent::query()
             ->whereIn('sku', ['DEMO-CPU-001', 'DEMO-MB-001', 'DEMO-CPU-002', 'DEMO-MB-002'])
             ->get()
             ->keyBy('sku');
@@ -375,33 +420,32 @@ class ShopTest extends TestCase
             'issue_date' => now()->toDateString(),
             'tax_rate' => 0,
             'items' => [
-                ['inventory_part_id' => $parts['DEMO-CPU-001']->id, 'quantity' => 1, 'unit_cost' => 650, 'unit_price' => 799, 'build_group' => '1'],
-                ['inventory_part_id' => $parts['DEMO-MB-001']->id, 'quantity' => 1, 'unit_cost' => 580, 'unit_price' => 699, 'build_group' => '1'],
-                ['inventory_part_id' => $parts['DEMO-CPU-002']->id, 'quantity' => 1, 'unit_cost' => 520, 'unit_price' => 649, 'build_group' => '2'],
-                ['inventory_part_id' => $parts['DEMO-MB-002']->id, 'quantity' => 1, 'unit_cost' => 540, 'unit_price' => 679, 'build_group' => '2'],
+                ['custom_pc_component_id' => $parts['DEMO-CPU-001']->id, 'quantity' => 1, 'unit_cost' => 650, 'unit_price' => 799, 'build_group' => '1'],
+                ['custom_pc_component_id' => $parts['DEMO-MB-001']->id, 'quantity' => 1, 'unit_cost' => 580, 'unit_price' => 699, 'build_group' => '1'],
+                ['custom_pc_component_id' => $parts['DEMO-CPU-002']->id, 'quantity' => 1, 'unit_cost' => 520, 'unit_price' => 649, 'build_group' => '2'],
+                ['custom_pc_component_id' => $parts['DEMO-MB-002']->id, 'quantity' => 1, 'unit_cost' => 540, 'unit_price' => 679, 'build_group' => '2'],
             ],
         ])->assertSessionHasNoErrors();
 
         $quote = BillingDocument::query()->where('customer_email', 'multiple-pc-build@example.test')->firstOrFail();
         $this->assertSame(2826.0, (float) $quote->total);
         $this->assertSame(4, $quote->items()->count());
-        $this->assertSame(650.0, (float) $quote->items()->where('inventory_part_id', $parts['DEMO-CPU-001']->id)->firstOrFail()->unit_cost);
+        $this->assertSame(650.0, (float) $quote->items()->where('custom_pc_component_id', $parts['DEMO-CPU-001']->id)->firstOrFail()->unit_cost);
     }
 
     public function test_custom_pc_builder_catalog_search_filters_by_price_and_supplier(): void
     {
         $staff = $this->staffUser();
         $supplier = Supplier::query()->create(['name' => 'Catalog source supplier']);
-        $catalogCpu = InventoryPart::query()->create([
+        $catalogCpu = CustomPcComponent::query()->create([
             'name' => 'Zero stock catalog CPU',
             'sku' => 'CSV-CPU-TEST-1',
             'type' => 'cpu',
             'catalog_price' => 9999,
             'catalog_currency' => 'USD',
             'selling_price' => 451.50,
-            'supplier_id' => $supplier->id,
         ]);
-        InventoryPart::query()->create([
+        CustomPcComponent::query()->create([
             'name' => 'Unlinked catalog CPU',
             'sku' => 'CSV-CPU-TEST-2',
             'type' => 'cpu',
@@ -409,6 +453,7 @@ class ShopTest extends TestCase
             'catalog_currency' => 'USD',
             'selling_price' => 20,
         ]);
+        $catalogCpu->suppliers()->attach($supplier->id);
 
         $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
             'category' => 'cpu',
@@ -420,7 +465,7 @@ class ShopTest extends TestCase
             ->assertJsonFragment([
                 'id' => $catalogCpu->id,
                 'name' => $catalogCpu->name,
-                'stock_quantity' => 0,
+                'stock_quantity' => null,
                 'catalog_price' => 9999.0,
                 'catalog_currency' => 'USD',
                 'cost_price' => 0.0,
@@ -437,12 +482,12 @@ class ShopTest extends TestCase
     {
         $staff = $this->staffUser();
         $existingSupplier = Supplier::query()->create(['name' => 'Existing builder supplier']);
-        $part = InventoryPart::query()->create([
+        $part = CustomPcComponent::query()->create([
             'name' => 'Unlinked builder component',
             'sku' => 'BUILDER-SUPPLIER-1',
             'type' => 'cpu',
-            'supplier_id' => $existingSupplier->id,
         ]);
+        $part->suppliers()->attach($existingSupplier->id);
 
         $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
             'name' => 'Builder Shopee supplier',
@@ -469,20 +514,20 @@ class ShopTest extends TestCase
         $this->assertSame('+60123456789', $supplier->phone);
         $this->assertSame('https://supplier.example.test', $supplier->website);
         $this->assertSame('Ships from Kuala Lumpur.', $supplier->notes);
-        $this->assertSame($existingSupplier->id, $part->fresh()->supplier_id);
+        $this->assertTrue($part->fresh()->suppliers->contains('id', $existingSupplier->id));
         $this->assertSame(
             'https://shopee.com.my/Item-i.123.456',
-            DB::table('inventory_part_supplier')
-                ->where('inventory_part_id', $part->id)
+            DB::table('custom_pc_component_supplier')
+                ->where('custom_pc_component_id', $part->id)
                 ->where('supplier_id', $supplier->id)
                 ->value('shopee_product_url'),
         );
-        $this->assertSame(120.5, (float) DB::table('inventory_part_supplier')
-            ->where('inventory_part_id', $part->id)
+        $this->assertSame(120.5, (float) DB::table('custom_pc_component_supplier')
+            ->where('custom_pc_component_id', $part->id)
             ->where('supplier_id', $supplier->id)
             ->value('cost_price'));
-        $this->assertSame(159.9, (float) DB::table('inventory_part_supplier')
-            ->where('inventory_part_id', $part->id)
+        $this->assertSame(159.9, (float) DB::table('custom_pc_component_supplier')
+            ->where('custom_pc_component_id', $part->id)
             ->where('supplier_id', $supplier->id)
             ->value('unit_price'));
         $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
@@ -512,7 +557,7 @@ class ShopTest extends TestCase
     public function test_adding_supplier_from_builder_validates_supplier_details(): void
     {
         $staff = $this->staffUser();
-        $part = InventoryPart::query()->create([
+        $part = CustomPcComponent::query()->create([
             'name' => 'Supplier validation component',
             'type' => 'cpu',
         ]);
@@ -529,21 +574,121 @@ class ShopTest extends TestCase
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['shopee_shop_url']);
 
-        $this->assertNull($part->fresh()->supplier_id);
+        $this->assertCount(0, $part->fresh()->suppliers);
         $this->assertDatabaseCount('suppliers', 0);
+    }
+
+    public function test_builder_component_creation_does_not_create_inventory_stock(): void
+    {
+        $staff = $this->staffUser();
+
+        $response = $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.store'), [
+            'name' => 'New builder-only GPU',
+            'sku' => 'BUILDER-ONLY-GPU-1',
+            'type' => 'gpu',
+            'description' => 'Memory: 16 GB',
+            'cost_price' => 1200,
+            'selling_price' => 1500,
+        ])->assertCreated()
+            ->assertJsonPath('name', 'New builder-only GPU')
+            ->assertJsonPath('stock_quantity', null)
+            ->assertJsonPath('specifications.Memory', '16 GB');
+
+        $this->assertDatabaseHas('custom_pc_components', [
+            'id' => $response->json('id'),
+            'sku' => 'BUILDER-ONLY-GPU-1',
+            'name' => 'New builder-only GPU',
+            'type' => 'gpu',
+        ]);
+        $this->assertDatabaseMissing('inventory_parts', ['sku' => 'BUILDER-ONLY-GPU-1']);
+    }
+
+    public function test_builder_catalog_parts_can_be_edited_and_deleted_without_removing_quoted_parts(): void
+    {
+        $staff = $this->staffUser();
+        $part = CustomPcComponent::query()->create([
+            'name' => 'Editable builder part',
+            'sku' => 'BUILDER-EDIT-1',
+            'type' => 'gpu',
+            'description' => 'Memory: 8 GB',
+            'cost_price' => 100,
+            'selling_price' => 150,
+        ]);
+
+        $this->actingAs($staff)->putJson(route('shop.custom-pc-builder.components.update', $part), [
+            'name' => 'Updated builder part',
+            'sku' => 'BUILDER-EDIT-1',
+            'type' => 'gpu',
+            'description' => 'Memory: 12 GB',
+            'cost_price' => 200,
+            'selling_price' => 275,
+        ])->assertOk()
+            ->assertJsonPath('part.name', 'Updated builder part')
+            ->assertJsonPath('part.selling_price', 275);
+
+        $this->assertDatabaseHas('custom_pc_components', [
+            'id' => $part->id,
+            'name' => 'Updated builder part',
+            'description' => 'Memory: 12 GB',
+            'cost_price' => 200,
+            'selling_price' => 275,
+        ]);
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'custom_pc_build' => 1,
+            'type' => 'quotation',
+            'customer_name' => 'Builder catalogue history customer',
+            'customer_email' => 'builder-catalog-history@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'custom_pc_component_id' => $part->id,
+                'quantity' => 1,
+                'unit_cost' => 200,
+                'unit_price' => 275,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($staff)->deleteJson(route('shop.custom-pc-builder.components.destroy', $part))
+            ->assertUnprocessable()
+            ->assertJsonFragment(['message' => 'This part is used by a quotation or invoice and cannot be deleted.']);
+
+        $unusedPart = CustomPcComponent::query()->create([
+            'name' => 'Unused builder part',
+            'type' => 'gpu',
+        ]);
+        $this->actingAs($staff)->deleteJson(route('shop.custom-pc-builder.components.destroy', $unusedPart))
+            ->assertOk();
+        $this->assertDatabaseMissing('custom_pc_components', ['id' => $unusedPart->id]);
+    }
+
+    public function test_builder_parts_crud_has_its_own_page_linked_from_the_builder(): void
+    {
+        $staff = $this->staffUser();
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee(route('shop.custom-pc-builder.parts'), false)
+            ->assertSee('Manage builder parts');
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder.parts'))
+            ->assertOk()
+            ->assertSee('Manage builder parts')
+            ->assertSee('Add builder part')
+            ->assertSee('Search name or SKU')
+            ->assertSee('Part name')
+            ->assertSee(route('shop.custom-pc-builder'), false);
     }
 
     public function test_custom_pc_quote_can_use_zero_stock_catalog_part_with_manual_rm_price(): void
     {
         $staff = $this->staffUser();
-        $cpu = InventoryPart::query()->create([
+        $cpu = CustomPcComponent::query()->create([
             'name' => 'Catalog quote CPU',
             'sku' => 'CSV-CPU-QUOTE-1',
             'type' => 'cpu',
             'description' => 'Socket: AM5',
             'catalog_price' => 451.50,
             'catalog_currency' => 'USD',
-            'stock_quantity' => 0,
         ]);
 
         $this->actingAs($staff)->post(route('billing.store'), [
@@ -554,7 +699,7 @@ class ShopTest extends TestCase
             'issue_date' => now()->toDateString(),
             'tax_rate' => 0,
             'items' => [[
-                'inventory_part_id' => $cpu->id,
+                'custom_pc_component_id' => $cpu->id,
                 'quantity' => 1,
                 'unit_cost' => 500,
                 'unit_price' => 900,
@@ -564,7 +709,12 @@ class ShopTest extends TestCase
         $quote = BillingDocument::query()->where('customer_email', 'catalog-part-quote@example.test')->firstOrFail();
         $this->assertSame(900.0, (float) $quote->total);
         $this->assertSame(500.0, (float) $quote->items()->firstOrFail()->unit_cost);
-        $this->assertSame(0, $cpu->fresh()->stock_quantity);
+        $this->assertDatabaseHas('billing_document_items', [
+            'billing_document_id' => $quote->id,
+            'custom_pc_component_id' => $cpu->id,
+            'inventory_part_id' => null,
+        ]);
+        $this->assertDatabaseMissing('inventory_parts', ['sku' => $cpu->sku]);
 
         $this->from(route('shop.custom-pc-builder'))->post(route('billing.store'), [
             'custom_pc_build' => 1,
@@ -573,7 +723,7 @@ class ShopTest extends TestCase
             'issue_date' => now()->toDateString(),
             'tax_rate' => 0,
             'items' => [[
-                'inventory_part_id' => $cpu->id,
+                'custom_pc_component_id' => $cpu->id,
                 'quantity' => 1,
                 'unit_price' => 900,
             ]],
@@ -587,7 +737,7 @@ class ShopTest extends TestCase
             'issue_date' => now()->toDateString(),
             'tax_rate' => 0,
             'items' => [[
-                'inventory_part_id' => $cpu->id,
+                'custom_pc_component_id' => $cpu->id,
                 'quantity' => 1,
                 'unit_price' => '',
             ]],
@@ -599,7 +749,7 @@ class ShopTest extends TestCase
     {
         $this->seed(PcPartsSeeder::class);
         $staff = $this->staffUser();
-        $parts = InventoryPart::query()
+        $parts = CustomPcComponent::query()
             ->whereIn('sku', ['DEMO-CPU-001', 'DEMO-MB-001', 'DEMO-OS-W11H-001', 'DEMO-SW-M365-001', 'DEMO-USB-EXT-001'])
             ->get()
             ->keyBy('sku');
@@ -611,8 +761,8 @@ class ShopTest extends TestCase
             'customer_email' => 'software-bundle@example.test',
             'issue_date' => now()->toDateString(),
             'tax_rate' => 6,
-            'items' => $parts->map(fn (InventoryPart $part): array => [
-                'inventory_part_id' => $part->id,
+            'items' => $parts->map(fn (CustomPcComponent $part): array => [
+                'custom_pc_component_id' => $part->id,
                 'quantity' => 1,
                 'unit_cost' => $part->cost_price,
                 'unit_price' => $part->selling_price,
@@ -631,7 +781,8 @@ class ShopTest extends TestCase
         ]);
         $this->assertDatabaseHas('billing_document_items', [
             'billing_document_id' => $quote->id,
-            'inventory_part_id' => $parts['DEMO-USB-EXT-001']->id,
+            'custom_pc_component_id' => $parts['DEMO-USB-EXT-001']->id,
+            'inventory_part_id' => null,
             'description' => 'USB 3.0 extension cable (2 m)',
         ]);
     }
@@ -640,8 +791,8 @@ class ShopTest extends TestCase
     {
         $this->seed(PcPartsSeeder::class);
         $staff = $this->staffUser();
-        $am5Cpu = InventoryPart::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
-        $intelBoard = InventoryPart::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
+        $am5Cpu = CustomPcComponent::query()->where('sku', 'DEMO-CPU-001')->firstOrFail();
+        $intelBoard = CustomPcComponent::query()->where('sku', 'DEMO-MB-002')->firstOrFail();
 
         $this->actingAs($staff)->post(route('billing.store'), [
             'type' => 'quotation',
@@ -650,12 +801,12 @@ class ShopTest extends TestCase
             'issue_date' => now()->toDateString(),
             'tax_rate' => 6,
             'items' => [
-                ['inventory_part_id' => $am5Cpu->id, 'quantity' => 1, 'unit_price' => 799],
-                ['inventory_part_id' => $intelBoard->id, 'quantity' => 1, 'unit_price' => 679],
+                ['custom_pc_component_id' => $am5Cpu->id, 'quantity' => 1, 'unit_price' => 799],
+                ['custom_pc_component_id' => $intelBoard->id, 'quantity' => 1, 'unit_price' => 679],
             ],
         ])->assertSessionHasErrors([
-            'items.0.inventory_part_id',
-            'items.1.inventory_part_id',
+            'items.0.custom_pc_component_id',
+            'items.1.custom_pc_component_id',
         ]);
 
         $this->assertDatabaseMissing('billing_documents', [
@@ -1106,7 +1257,7 @@ class ShopTest extends TestCase
         $this->assertNotNull($staff->fresh());
     }
 
-    public function test_pc_parts_seeder_updates_existing_sample_inventory_without_resetting_stock(): void
+    public function test_pc_parts_seeder_keeps_demo_components_out_of_inventory_and_is_idempotent(): void
     {
         $part = InventoryPart::query()->create([
             'sku' => 'DEMO-CPU-001',
@@ -1122,20 +1273,26 @@ class ShopTest extends TestCase
         $this->seed(PcPartsSeeder::class);
         $this->seed(PcPartsSeeder::class);
 
-        $this->assertTrue($part->fresh()->is_for_sale);
+        $this->assertFalse($part->fresh()->is_for_sale);
         $this->assertSame(5, $part->fresh()->stock_quantity);
-        $this->assertSame('AM5', $part->fresh()->specification('Socket'));
-        $this->assertDatabaseHas('inventory_parts', [
+        $this->assertNull($part->fresh()->specification('Socket'));
+        $this->assertDatabaseHas('custom_pc_components', [
+            'sku' => 'DEMO-CPU-001',
+            'name' => 'AMD Ryzen 5 7600 processor',
+            'type' => 'cpu',
+        ]);
+        $this->assertDatabaseHas('custom_pc_components', [
             'sku' => 'DEMO-CPU-002',
             'name' => 'Intel Core i5-12400F processor',
             'type' => 'cpu',
         ]);
-        $this->assertDatabaseHas('inventory_parts', [
+        $this->assertDatabaseHas('custom_pc_components', [
             'sku' => 'DEMO-MB-002',
             'name' => 'B760M LGA1700 motherboard (DDR5)',
             'type' => 'motherboard',
         ]);
-        $this->assertSame(1, InventoryPart::query()->where('sku', 'DEMO-CPU-002')->count());
+        $this->assertSame(0, InventoryPart::query()->whereIn('sku', ['DEMO-CPU-002', 'DEMO-MB-002'])->count());
+        $this->assertSame(1, CustomPcComponent::query()->where('sku', 'DEMO-CPU-002')->count());
     }
 
     public function test_staff_can_add_and_remove_part_quantity_from_the_product_list_modal(): void

@@ -138,7 +138,7 @@ class CsvPcPartsSeeder extends Seeder
 
     private function upsertBatch(array $batch): void
     {
-        DB::table('inventory_parts')->upsert(
+        DB::table('custom_pc_components')->upsert(
             $batch,
             ['sku'],
             ['name', 'type', 'description', 'catalog_price', 'catalog_currency', 'updated_at'],

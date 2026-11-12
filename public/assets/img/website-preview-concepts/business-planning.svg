@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Illustrated business planning board</title>
+  <rect width="1200" height="800" fill="#e8f0f3"/>
+  <path d="M0 628h1200v172H0z" fill="#d4e2e7"/>
+  <rect x="167" y="115" width="866" height="496" rx="24" fill="#fff"/>
+  <rect x="207" y="153" width="786" height="48" rx="10" fill="#f1f6f7"/>
+  <circle cx="239" cy="177" r="8" fill="#d37a54"/><circle cx="267" cy="177" r="8" fill="#e5b55c"/><circle cx="295" cy="177" r="8" fill="#5b9b8c"/>
+  <rect x="226" y="236" width="233" height="322" rx="17" fill="#edf5f5"/>
+  <rect x="483" y="236" width="233" height="322" rx="17" fill="#f5f2e9"/>
+  <rect x="740" y="236" width="223" height="322" rx="17" fill="#edf0f7"/>
+  <rect x="252" y="264" width="134" height="14" rx="7" fill="#286b79"/>
+  <rect x="509" y="264" width="126" height="14" rx="7" fill="#c38a48"/>
+  <rect x="766" y="264" width="107" height="14" rx="7" fill="#4a6486"/>
+  <g fill="#fff">
+    <rect x="251" y="303" width="183" height="72" rx="11"/><rect x="251" y="392" width="183" height="72" rx="11"/><rect x="251" y="481" width="183" height="49" rx="11"/>
+    <rect x="508" y="303" width="183" height="72" rx="11"/><rect x="508" y="392" width="183" height="72" rx="11"/><rect x="765" y="303" width="174" height="72" rx="11"/><rect x="765" y="392" width="174" height="72" rx="11"/>
+  </g>
+  <g fill="#9bb6bc">
+    <rect x="270" y="322" width="97" height="9" rx="4"/><rect x="270" y="341" width="135" height="7" rx="3"/>
+    <rect x="270" y="411" width="122" height="9" rx="4"/><rect x="270" y="430" width="142" height="7" rx="3"/>
+    <rect x="527" y="322" width="111" height="9" rx="4"/><rect x="527" y="341" width="139" height="7" rx="3"/>
+    <rect x="527" y="411" width="93" height="9" rx="4"/><rect x="527" y="430" width="137" height="7" rx="3"/>
+    <rect x="784" y="322" width="102" height="9" rx="4"/><rect x="784" y="341" width="132" height="7" rx="3"/>
+    <rect x="784" y="411" width="117" height="9" rx="4"/><rect x="784" y="430" width="127" height="7" rx="3"/>
+  </g>
+  <path d="M363 674h474l-29 44H393z" fill="#286b79"/>
+  <rect x="406" y="718" width="388" height="19" rx="9" fill="#1d5360"/>
+</svg>

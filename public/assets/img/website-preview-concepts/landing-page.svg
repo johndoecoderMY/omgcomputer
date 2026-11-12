@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Responsive product landing page concept</title>
+  <rect width="1200" height="800" fill="#eef2ff"/>
+  <rect x="95" y="80" width="1010" height="640" rx="26" fill="#fff"/>
+  <rect x="95" y="80" width="1010" height="52" rx="26" fill="#f7f8fc"/>
+  <circle cx="127" cy="106" r="7" fill="#f28b82"/><circle cx="151" cy="106" r="7" fill="#fbbc04"/><circle cx="175" cy="106" r="7" fill="#34a853"/>
+  <rect x="155" y="159" width="890" height="42" rx="12" fill="#fff"/>
+  <circle cx="184" cy="180" r="12" fill="#6558d3"/><rect x="207" y="173" width="103" height="14" rx="7" fill="#252444"/>
+  <rect x="793" y="174" width="55" height="11" rx="5" fill="#a6a7b5"/><rect x="870" y="174" width="55" height="11" rx="5" fill="#a6a7b5"/>
+  <rect x="949" y="159" width="96" height="42" rx="21" fill="#6558d3"/>
+  <rect x="155" y="251" width="433" height="19" rx="9" fill="#a7a5ed"/>
+  <rect x="155" y="291" width="435" height="66" rx="8" fill="#252444"/>
+  <rect x="155" y="375" width="380" height="13" rx="6" fill="#9c9eac"/><rect x="155" y="400" width="348" height="13" rx="6" fill="#9c9eac"/>
+  <rect x="155" y="448" width="141" height="48" rx="24" fill="#6558d3"/>
+  <rect x="625" y="247" width="420" height="275" rx="24" fill="#e9e7ff"/>
+  <rect x="683" y="300" width="304" height="180" rx="15" fill="#fff"/>
+  <rect x="710" y="325" width="250" height="12" rx="6" fill="#deddf7"/>
+  <rect x="710" y="355" width="112" height="96" rx="12" fill="#7467db"/>
+  <rect x="837" y="355" width="123" height="43" rx="10" fill="#f2b880"/>
+  <rect x="837" y="408" width="123" height="43" rx="10" fill="#b9ddcf"/>
+  <rect x="155" y="564" width="890" height="1" fill="#ececf2"/>
+  <g fill="#f5f4ff"><rect x="155" y="594" width="275" height="91" rx="16"/><rect x="462" y="594" width="275" height="91" rx="16"/><rect x="769" y="594" width="276" height="91" rx="16"/></g>
+  <g fill="#6558d3"><circle cx="190" cy="629" r="12"/><circle cx="497" cy="629" r="12"/><circle cx="804" cy="629" r="12"/></g>
+  <g fill="#44445c"><rect x="215" y="623" width="152" height="12" rx="6"/><rect x="522" y="623" width="152" height="12" rx="6"/><rect x="829" y="623" width="152" height="12" rx="6"/></g>
+</svg>

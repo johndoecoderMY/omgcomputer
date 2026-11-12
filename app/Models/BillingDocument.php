@@ -12,7 +12,8 @@ class BillingDocument extends Model
     protected $fillable = [
         'number', 'type', 'status', 'user_id', 'customer_name', 'customer_email',
         'repair_ticket_id', 'project_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal',
-        'tax_rate', 'tax_amount', 'total', 'paid_amount', 'notes',
+        'tax_rate', 'tax_amount', 'total', 'paid_amount', 'notes', 'project_scope',
+        'included_revision_rounds', 'project_due_date', 'payment_terms',
     ];
 
     protected static function booted(): void
@@ -40,6 +41,8 @@ class BillingDocument extends Model
         return [
             'issue_date' => 'date',
             'due_date' => 'date',
+            'project_due_date' => 'date',
+            'included_revision_rounds' => 'integer',
             'subtotal' => 'decimal:2',
             'tax_rate' => 'decimal:2',
             'tax_amount' => 'decimal:2',

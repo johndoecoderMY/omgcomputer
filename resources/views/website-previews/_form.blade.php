@@ -38,13 +38,37 @@
                 @error('sort_order')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
             <div class="col-12">
-                <label class="form-label" for="image">Preview screenshot</label>
+                <label class="form-label" for="image">Main preview image</label>
                 <input class="form-control" type="file" id="image" name="image" accept="image/jpeg,image/png,image/webp" {{ $preview->exists ? '' : 'required' }}>
-                <div class="form-text">JPEG, PNG, or WebP, up to 10 MB. Use an image you have permission to publish.</div>
+                <div class="form-text">This is the cover image shown on the portfolio card. JPEG, PNG, or WebP, up to 10 MB.</div>
                 @if ($preview->exists && Storage::disk('public')->exists($preview->image_path))
-                    <img class="img-thumbnail mt-3" src="{{ Storage::disk('public')->url($preview->image_path) }}" alt="Current preview screenshot" style="max-width: 360px">
+                    <img class="img-thumbnail mt-3" src="{{ Storage::disk('public')->url($preview->image_path) }}" alt="Current main preview image" style="max-width: 360px">
                 @endif
                 @error('image')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-12">
+                <label class="form-label" for="gallery_images">Additional preview images <span class="text-body-secondary">(optional)</span></label>
+                <input class="form-control" type="file" id="gallery_images" name="gallery_images[]" accept="image/jpeg,image/png,image/webp" multiple>
+                <div class="form-text">Add up to 8 extra screenshots (JPEG, PNG, or WebP, up to 5 MB each). Optimize images before uploading to save hosting space.</div>
+                @if ($preview->exists && $preview->gallery_images)
+                    <div class="row g-2 mt-2">
+                        @foreach ($preview->gallery_images as $galleryImage)
+                            @if (Storage::disk('public')->exists($galleryImage))
+                                <div class="col-6 col-md-3">
+                                    <label class="d-block border rounded p-2 h-100">
+                                        <img class="img-fluid rounded mb-2" src="{{ Storage::disk('public')->url($galleryImage) }}" alt="Additional preview image" style="aspect-ratio: 16 / 10; object-fit: cover;">
+                                        <span class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="remove_gallery_images[]" value="{{ $galleryImage }}">
+                                            <span class="form-check-label">Remove image</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
+                @error('gallery_images')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                @error('gallery_images.*')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
             </div>
             <div class="col-12">
                 <div class="form-check">

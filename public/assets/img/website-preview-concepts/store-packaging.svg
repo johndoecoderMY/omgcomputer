@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Illustrated thoughtfully packed online order</title>
+  <rect width="1200" height="800" fill="#f3ece1"/>
+  <path d="M0 596h1200v204H0z" fill="#e6d9c8"/>
+  <ellipse cx="592" cy="628" rx="382" ry="48" fill="#cabaab" opacity=".55"/>
+  <path d="m329 308 263-134 276 134-276 142z" fill="#d9a968"/>
+  <path d="M329 308v270l263 150V450z" fill="#bd8454"/>
+  <path d="M868 308v270L592 728V450z" fill="#c99560"/>
+  <path d="m452 246 141-72 139 71-143 77z" fill="#f0ce99"/>
+  <path d="m524 288 68 35 67-35v101l-67 36-68-36z" fill="#f8f2e8"/>
+  <path d="M557 327h70v15h-70zm8 29h54v10h-54z" fill="#746454"/>
+  <rect x="815" y="450" width="196" height="136" rx="18" fill="#fffaf2" transform="rotate(8 815 450)"/>
+  <path d="M850 481h119m-110 26h100m-93 26h75" stroke="#b9a58f" stroke-width="9" stroke-linecap="round" transform="rotate(8 815 450)"/>
+  <circle cx="907" cy="572" r="12" fill="#c56f50"/>
+  <path d="M242 238q-2-82 60-96 23 71-60 96zm33 29q42-61 96-26-33 62-96 26z" fill="#69836e"/>
+  <path d="M270 297q11-79 54-122" fill="none" stroke="#69836e" stroke-width="9"/>
+  <circle cx="1003" cy="230" r="42" fill="#e8c889"/>
+</svg>

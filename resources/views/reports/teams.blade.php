@@ -20,9 +20,9 @@
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Team members', 'value' => number_format($users->count()), 'icon' => 'bi-people'],
-            ['label' => 'Assigned tasks', 'value' => number_format($users->sum('assigned_tasks_count')), 'icon' => 'bi-list-check'],
-            ['label' => 'Completed tasks', 'value' => number_format($users->sum('completed_tasks_count')), 'icon' => 'bi-check-circle'],
+            ['label' => 'Team members', 'value' => number_format($memberCount), 'icon' => 'bi-people'],
+            ['label' => 'Assigned tasks', 'value' => number_format($assignedTaskCount), 'icon' => 'bi-list-check'],
+            ['label' => 'Completed tasks', 'value' => number_format($completedTaskCount), 'icon' => 'bi-check-circle'],
             ['label' => 'Unassigned tasks', 'value' => number_format($unassignedTasks), 'icon' => 'bi-person-gear'],
         ] as $metric)
             <div class="col-6 col-xl-3">
@@ -54,7 +54,7 @@
     <div class="card p-2">
         <div class="card-header bg-body d-flex justify-content-between align-items-center">
             <div><h2 class="h5 mb-1 text-primary">Member performance</h2><p class="small text-body-secondary mb-0">Task completion rates by assignee.</p></div>
-            <span class="badge text-bg-light border">{{ $users->count() }} members</span>
+            <span class="badge text-bg-light border">{{ number_format($memberCount) }} members</span>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 table-bordered">
@@ -87,6 +87,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="card-body">{{ $users->links() }}</div>
     </div>
 </div>
 @endsection

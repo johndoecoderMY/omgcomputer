@@ -139,7 +139,7 @@
                         <div class="col-12 col-sm-3">
                             <div class="project-stat">
                                 <span class="small text-body-secondary d-block mb-2">Estimated total</span>
-                                <span class="project-stat-value">RM {{ number_format($partsEstimateTotal + $otherEstimateTotal, 2) }}</span>
+                                <span class="project-stat-value">RM {{ number_format($partsEstimateTotal + $customHardwareTotal + $otherEstimateTotal, 2) }}</span>
                                 <span class="small text-body-secondary">parts + software + other</span>
                             </div>
                         </div>
@@ -417,25 +417,24 @@
                 <h2 class="h5 mb-0">Parts & hardware recommendations</h2>
                 <p class="small text-body-secondary mb-0">Track suggested parts for this project without changing inventory stock.</p>
             </div>
-            <span class="badge text-bg-light border">{{ $project->inventoryParts->count() }} recommended</span>
+            <span class="badge text-bg-light border">{{ $project->inventoryParts->count() + $customHardwareParts->count() }} recommended</span>
         </div>
         <div class="card-body border-bottom">
-            @if ($availableParts->isNotEmpty())
+            @if ($hasInventoryParts)
                 <form class="row g-3 align-items-start" method="POST" action="{{ route('projects.parts.store', $project) }}">
                     @csrf
                     <div class="col-12 col-lg-5">
-                        <label class="form-label" for="project-part-search">Find a part</label>
-                        <input class="form-control mb-2" id="project-part-search" type="search" placeholder="Search name or SKU">
-                        <select class="form-select @error('inventory_part_id') is-invalid @enderror" id="project-part-select" name="inventory_part_id" required>
-                            <option value="">Choose an inventory part</option>
-                            @foreach ($availableParts as $part)
-                                <option value="{{ $part->id }}" data-search="{{ strtolower($part->name.' '.$part->sku) }}"
-                                    data-selling-price="{{ $part->selling_price }}"
-                                    data-cost-price="{{ $part->cost_price }}"
-                                    @selected(old('inventory_part_id') == $part->id)>
-                                    {{ $part->name }}{{ $part->sku ? ' · '.$part->sku : '' }} · stock {{ $part->stock_quantity }}
+                        <label class="form-label" for="project-part-select">Find a part</label>
+                        <select class="form-select @error('inventory_part_id') is-invalid @enderror" id="project-part-select" name="inventory_part_id"
+                            data-search-url="{{ route('projects.parts.search', $project) }}" required>
+                            <option value="">Type at least 2 characters to search inventory</option>
+                            @if ($selectedInventoryPart)
+                                <option value="{{ $selectedInventoryPart->id }}" selected
+                                    data-selling-price="{{ $selectedInventoryPart->selling_price }}"
+                                    data-cost-price="{{ $selectedInventoryPart->cost_price }}">
+                                    {{ $selectedInventoryPart->name }}{{ $selectedInventoryPart->sku ? ' · '.$selectedInventoryPart->sku : '' }} · stock {{ $selectedInventoryPart->stock_quantity }}
                                 </option>
-                            @endforeach
+                            @endif
                         </select>
                         @error('inventory_part_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
@@ -492,6 +491,38 @@
                 <p class="small text-body-secondary mb-2">Add parts to the inventory before recommending them for a project.</p>
                 <a class="btn btn-sm btn-outline-primary" href="{{ route('inventory.index') }}">Open inventory</a>
             @endif
+            <div class="border-top mt-4 pt-3">
+                <h3 class="h6">Add a custom part</h3>
+                <p class="small text-body-secondary">For project-specific parts that are not in inventory. This does not create an inventory item or change stock.</p>
+                <form class="row g-2 align-items-end" method="POST" action="{{ route('projects.estimate-items.store', $project) }}">
+                    @csrf
+                    <input type="hidden" name="category" value="hardware">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label" for="custom-part-description">Part name / description</label>
+                        <input class="form-control @error('description') is-invalid @enderror" id="custom-part-description"
+                            name="description" value="{{ old('category') === 'hardware' ? old('description') : '' }}" maxlength="255"
+                            placeholder="e.g. Compatible replacement battery" required>
+                        @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="custom-part-quantity">Quantity</label>
+                        <input class="form-control @error('quantity') is-invalid @enderror" id="custom-part-quantity"
+                            type="number" name="quantity" min="1" max="100000"
+                            value="{{ old('category') === 'hardware' ? old('quantity', 1) : 1 }}" required>
+                        @error('quantity')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label" for="custom-part-unit-price">Unit price (RM)</label>
+                        <input class="form-control @error('unit_price') is-invalid @enderror" id="custom-part-unit-price"
+                            type="number" name="unit_price" min="0" max="99999999" step="0.01"
+                            value="{{ old('category') === 'hardware' ? old('unit_price') : '' }}" placeholder="0.00" required>
+                        @error('unit_price')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <button class="btn btn-outline-primary w-100" type="submit">Add custom part</button>
+                    </div>
+                </form>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table table-bordered align-middle mb-0">
@@ -550,14 +581,36 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td class="text-body-secondary" colspan="5">No parts have been recommended for this project yet.</td></tr>
+                        @if ($customHardwareParts->isEmpty())
+                            <tr><td class="text-body-secondary" colspan="5">No parts have been recommended for this project yet.</td></tr>
+                        @endif
                     @endforelse
+                    @foreach ($customHardwareParts as $item)
+                        <tr>
+                            <th scope="row">
+                                {{ $item->description }}
+                                <div class="small text-body-secondary">Custom project part · not in inventory</div>
+                            </th>
+                            <td>{{ $item->quantity }} needed<br><span class="small text-body-secondary">Stock not tracked</span></td>
+                            <td>RM {{ number_format((float) $item->unit_price, 2) }}</td>
+                            <td><span class="small text-body-secondary">Added for this project only.</span></td>
+                            <td>
+                                <div class="small text-body-secondary mb-2">Line total<br><strong class="text-body">RM {{ number_format($item->line_total, 2) }}</strong></div>
+                                <form method="POST" action="{{ route('projects.estimate-items.destroy', [$project, $item]) }}"
+                                    onsubmit="return confirm('Remove this custom part?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
                 </tbody>
             </table>
         </div>
         <div class="card-footer bg-body d-flex justify-content-between align-items-center">
             <span class="fw-semibold">Recommended parts subtotal</span>
-            <strong>RM {{ number_format($partsEstimateTotal, 2) }}</strong>
+            <strong>RM {{ number_format($partsEstimateTotal + $customHardwareTotal, 2) }}</strong>
         </div>
     </div>
 
@@ -566,7 +619,7 @@
                 <h2 class="h5 mb-0">Software &amp; other project costs</h2>
                 <p class="small text-body-secondary mb-0">Add software licenses, labor, or other estimated costs to the project total.</p>
             </div>
-            <span class="badge text-bg-light border">{{ $project->estimateItems->count() }} items</span>
+            <span class="badge text-bg-light border">{{ $project->estimateItems->where('category', '!=', 'hardware')->count() }} items</span>
         </div>
         <div class="card-body border-bottom">
             <form class="row g-3 align-items-end" method="POST" action="{{ route('projects.estimate-items.store', $project) }}">
@@ -605,7 +658,7 @@
             </form>
         </div>
         <div class="list-group list-group-flush">
-            @forelse ($project->estimateItems as $item)
+            @forelse ($project->estimateItems->where('category', '!=', 'hardware') as $item)
                 <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-3 px-4 py-3">
                     <div>
                         <span class="badge text-bg-light border">{{ ucfirst($item->category) }}</span>
@@ -919,7 +972,32 @@
             );
         };
 
-        partSelect?.addEventListener('change', updateNewPartPrice);
+        if (partSelect && !partSelect.dataset.priceSyncInitialized) {
+            partSelect.dataset.priceSyncInitialized = 'true';
+            partSelect.addEventListener('change', updateNewPartPrice);
+        }
+        if (partSelect && window.jQuery && !window.jQuery(partSelect).hasClass('select2-hidden-accessible')) {
+            const $partSelect = window.jQuery(partSelect);
+            $partSelect.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: 'Search inventory by name or SKU',
+                minimumInputLength: 2,
+                ajax: {
+                    url: partSelect.dataset.searchUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({ q: params.term }),
+                    processResults: (payload) => payload,
+                },
+            });
+            $partSelect.on('select2:select', (event) => {
+                const selectedOption = partSelect.selectedOptions[0];
+                selectedOption.dataset.sellingPrice = event.params.data.selling_price;
+                selectedOption.dataset.costPrice = event.params.data.cost_price;
+                updateNewPartPrice();
+            });
+        }
         newPartPriceSource?.addEventListener('change', updateNewPartPrice);
         if (newPartPriceSource && newPartUnitPrice && partSelect?.value) {
             if (newPartPriceSource.value === 'custom') {

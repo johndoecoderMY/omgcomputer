@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Illustrated business team meeting</title>
+  <rect width="1200" height="800" fill="#e5edf5"/>
+  <rect x="113" y="104" width="974" height="507" rx="24" fill="#f9fbfd"/>
+  <rect x="165" y="154" width="870" height="345" rx="13" fill="#d5e6e9"/>
+  <path d="M165 410h870v89H165z" fill="#c3d9dd"/>
+  <circle cx="817" cy="267" r="84" fill="#f1cb85"/>
+  <path d="M733 276q84-118 168 0" fill="#f1cb85"/>
+  <g fill="#fff">
+    <rect x="216" y="208" width="170" height="112" rx="11"/><rect x="412" y="208" width="170" height="112" rx="11"/>
+  </g>
+  <g fill="#8db0b8">
+    <rect x="239" y="232" width="115" height="12" rx="6"/><rect x="239" y="255" width="90" height="8" rx="4"/>
+    <rect x="435" y="232" width="115" height="12" rx="6"/><rect x="435" y="255" width="90" height="8" rx="4"/>
+  </g>
+  <path d="M0 658h1200v142H0z" fill="#d3dce7"/>
+  <ellipse cx="600" cy="642" rx="351" ry="48" fill="#526f86"/>
+  <path d="M257 637h686l-48 85H304z" fill="#718ba0"/>
+  <g>
+    <circle cx="376" cy="440" r="56" fill="#a96c50"/><path d="M287 601c8-93 39-132 89-132s81 39 89 132z" fill="#286b79"/>
+    <circle cx="594" cy="421" r="61" fill="#d39a71"/><path d="M497 607c10-105 43-151 97-151s87 46 97 151z" fill="#d37b57"/>
+    <circle cx="812" cy="440" r="56" fill="#ba815f"/><path d="M723 601c8-93 39-132 89-132s81 39 89 132z" fill="#526b96"/>
+  </g>
+  <rect x="502" y="617" width="191" height="17" rx="8" fill="#f3f6f7"/>
+</svg>

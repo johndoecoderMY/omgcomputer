@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title">
+  <title id="title">Landing page feature and testimonial sections</title>
+  <rect width="1200" height="800" fill="#f8f8fc"/>
+  <rect x="115" y="100" width="970" height="600" rx="24" fill="#fff"/>
+  <rect x="451" y="151" width="298" height="16" rx="8" fill="#a7a5ed"/>
+  <rect x="371" y="185" width="458" height="33" rx="9" fill="#252444"/>
+  <g>
+    <rect x="158" y="272" width="274" height="176" rx="16" fill="#f5f4ff"/>
+    <rect x="463" y="272" width="274" height="176" rx="16" fill="#f5f4ff"/>
+    <rect x="768" y="272" width="274" height="176" rx="16" fill="#f5f4ff"/>
+  </g>
+  <g fill="#6558d3"><circle cx="198" cy="316" r="17"/><circle cx="503" cy="316" r="17"/><circle cx="808" cy="316" r="17"/></g>
+  <g fill="#37364f">
+    <rect x="183" y="351" width="161" height="13" rx="6"/><rect x="488" y="351" width="161" height="13" rx="6"/><rect x="793" y="351" width="161" height="13" rx="6"/>
+  </g>
+  <g fill="#a6a7b5">
+    <rect x="183" y="379" width="207" height="9" rx="4"/><rect x="183" y="398" width="189" height="9" rx="4"/>
+    <rect x="488" y="379" width="207" height="9" rx="4"/><rect x="488" y="398" width="189" height="9" rx="4"/>
+    <rect x="793" y="379" width="207" height="9" rx="4"/><rect x="793" y="398" width="189" height="9" rx="4"/>
+  </g>
+  <rect x="158" y="490" width="884" height="157" rx="18" fill="#e9e7ff"/>
+  <circle cx="234" cy="565" r="37" fill="#f2b880"/>
+  <rect x="296" y="536" width="625" height="13" rx="6" fill="#575674"/>
+  <rect x="296" y="563" width="584" height="11" rx="5" fill="#77778c"/>
+  <rect x="296" y="586" width="380" height="11" rx="5" fill="#77778c"/>
+  <rect x="296" y="615" width="162" height="9" rx="4" fill="#6558d3"/>
+</svg>

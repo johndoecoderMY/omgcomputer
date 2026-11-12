@@ -46,6 +46,8 @@ class EnsureWorkspacePermission
             'billing.datatable',
             'billing.documents.show',
             'billing.documents.pdf',
+            'billing.receipts.index',
+            'billing.receipts.pdf',
             'billing.documents.quotation-status',
             'billing.chip.checkout',
             'billing.chip.return',
@@ -172,11 +174,11 @@ class EnsureWorkspacePermission
         }
         if (str_starts_with($name, 'billing.')) {
             if ($request->user()->hasRole('customer')
-                && ! in_array($name, ['billing.index', 'billing.datatable', 'billing.documents.show', 'billing.documents.pdf'], true)) {
+                && ! in_array($name, ['billing.index', 'billing.datatable', 'billing.documents.show', 'billing.documents.pdf', 'billing.receipts.index', 'billing.receipts.pdf'], true)) {
                 return null;
             }
 
-            return in_array($name, ['billing.index', 'billing.datatable', 'billing.documents.show', 'billing.documents.pdf'], true)
+            return in_array($name, ['billing.index', 'billing.datatable', 'billing.documents.show', 'billing.documents.pdf', 'billing.receipts.index', 'billing.receipts.pdf'], true)
                 ? 'billing.view'
                 : 'billing.manage';
         }

@@ -27,7 +27,7 @@
 
     <div class="row g-3 mb-4">
         @foreach ([
-            ['label' => 'Tracked items', 'value' => number_format($parts->count()), 'icon' => 'bi-boxes', 'color' => 'primary'],
+            ['label' => 'Tracked items', 'value' => number_format($partCount), 'icon' => 'bi-boxes', 'color' => 'primary'],
             ['label' => 'At or below reorder level', 'value' => number_format($lowStockCount), 'icon' => 'bi-exclamation-triangle', 'color' => 'danger'],
             ['label' => 'Stock value at cost', 'value' => 'RM '.number_format($stockValue, 2), 'icon' => 'bi-coin', 'color' => 'success'],
         ] as $metric)
@@ -60,7 +60,7 @@
             <div class="card h-100 p-2">
                 <div class="card-header bg-body"><h2 class="h5 mb-1 text-primary">Stock health</h2><p class="small text-body-secondary mb-0">Items against reorder point.</p></div>
                 <div class="card-body">
-                    @if ($parts->isEmpty())
+                    @if ($partCount === 0)
                         <p class="text-body-secondary text-center py-5 mb-0">No inventory data yet.</p>
                     @else
                         <div id="inventory-health-chart" role="img" aria-label="Inventory stock health" style="height: 280px"></div>
@@ -74,7 +74,7 @@
         <div class="col-12 col-xxl-8">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
-                    <div><h2 class="h5 mb-1 text-primary">Stock on hand</h2><p class="small text-body-secondary mb-0">{{ $parts->count() }} tracked item(s)</p></div>
+                <div><h2 class="h5 mb-1 text-primary">Stock on hand</h2><p class="small text-body-secondary mb-0">{{ number_format($partCount) }} tracked item(s)</p></div>
                     <a class="btn btn-sm btn-outline-primary" href="{{ route('inventory.movements') }}">Stock movements</a>
                 </div>
                 <div class="table-responsive">
@@ -93,6 +93,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="card-body">{{ $parts->links() }}</div>
             </div>
         </div>
         <div class="col-12 col-xxl-4">

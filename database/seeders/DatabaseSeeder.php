@@ -76,6 +76,7 @@ class DatabaseSeeder extends Seeder
             StudentFypSopSeeder::class,
             SoftwareStructureSopSeeder::class,
             DeveloperSetupFlowChartSeeder::class,
+            WebsiteDemosSeeder::class,
         ]);
     }
 
@@ -84,7 +85,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PcPartsSeeder::class,
             ReadyBuiltPcSeeder::class,
-            WebsitePreviewSeeder::class,
             DemoDataSeeder::class,
             BusinessPlanTaskSeeder::class,
             RentalExpenseSeeder::class,

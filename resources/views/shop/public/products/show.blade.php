@@ -44,6 +44,7 @@
 @endphp
 
 @section('title', $product->name.' | OMG Computer')
+@section('meta_description', \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish(strip_tags($product->description ?: 'View '.$product->name.' at the OMG Computer shop. Contact us for product information and availability.')), 155))
 
 @section('content')
 <section class="pt-7 pt-lg-8 pb-6">
