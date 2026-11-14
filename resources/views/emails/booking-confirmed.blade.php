@@ -24,6 +24,14 @@
                     <div style="margin-top:5px;font-weight:bold;color:#12263f;">{{ $booking->service_name }}</div>
                 </td>
             </tr>
+            @if ($booking->repairTicket)
+                <tr>
+                    <td style="padding:18px;border-bottom:1px solid #e2e8f0;">
+                        <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:bold;">Repair ticket</div>
+                        <div style="margin-top:5px;font-weight:bold;color:#12263f;">{{ $booking->repairTicket->ticket_number }}</div>
+                    </td>
+                </tr>
+            @endif
             <tr>
                 <td style="padding:18px;border-bottom:1px solid #e2e8f0;">
                     <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:bold;">Appointment</div>

@@ -169,7 +169,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     @unless (auth()->user()->hasRole('customer'))
         <div class="modal fade" id="ticket-workflow-modal" tabindex="-1" aria-labelledby="ticket-workflow-title" aria-hidden="true">
@@ -297,8 +296,8 @@
                 </div>
             </div>
         </div>
-
     @endunless
+    </div>
 @endsection
 
 @push('scripts')

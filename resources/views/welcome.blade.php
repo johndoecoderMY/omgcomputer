@@ -28,6 +28,33 @@
         .landing-hero .hero-copy { max-width: 590px; }
         .landing-hero .hero-primary-button { color: #fff; background: var(--falcon-primary); border-color: var(--falcon-primary); box-shadow: 0 12px 30px rgba(var(--falcon-primary-rgb), .22); }
         .landing-hero .hero-primary-button:hover { filter: brightness(.92); }
+        .track-repair-button {
+            --falcon-btn-color: #172033;
+            --falcon-btn-bg: #ffb51b;
+            --falcon-btn-border-color: #ffb51b;
+            --falcon-btn-hover-color: #172033;
+            --falcon-btn-hover-bg: #e6a317;
+            --falcon-btn-hover-border-color: #e6a317;
+            --falcon-btn-focus-shadow-rgb: 255, 181, 27;
+            --falcon-btn-active-color: #172033;
+            --falcon-btn-active-bg: #cc9015;
+            --falcon-btn-active-border-color: #cc9015;
+        }
+        [data-bs-theme="dark"] .landing-hero .hero-shop-button {
+            --falcon-btn-color: var(--falcon-gray-100);
+            --falcon-btn-bg: var(--falcon-gray-900);
+            --falcon-btn-border-color: var(--falcon-gray-900);
+            --falcon-btn-focus-shadow-rgb: 157, 169, 187;
+            --falcon-btn-hover-color: var(--falcon-gray-100);
+            --falcon-btn-hover-bg: var(--falcon-gray-800);
+            --falcon-btn-hover-border-color: var(--falcon-gray-800);
+            --falcon-btn-active-color: var(--falcon-gray-100);
+            --falcon-btn-active-bg: var(--falcon-gray-700);
+            --falcon-btn-active-border-color: var(--falcon-gray-700);
+            --falcon-btn-disabled-color: var(--falcon-gray-100);
+            --falcon-btn-disabled-bg: var(--falcon-gray-900);
+            --falcon-btn-disabled-border-color: var(--falcon-gray-900);
+        }
         .landing-hero .hero-visual { position: relative; }
         .landing-hero .hero-image { border-radius: 28px; ; box-shadow: 0 28px 70px rgba(23,32,51,.16); }
         .landing-hero .hero-float { position: absolute; z-index: 2; display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,.96); border: 1px solid rgba(23,32,51,.08); border-radius: 16px; box-shadow: 0 16px 40px rgba(23,32,51,.14); }
@@ -69,8 +96,13 @@
                             </a>
                         </div>
                         <div class="col-12 col-lg-6">
-                            <a class="btn btn-outline-primary btn-lg rounded-pill px-3 w-100" href="{{ route('shop.public') }}">
+                            <a class="hero-shop-button btn btn-dark btn-lg rounded-pill px-3 w-100" href="{{ route('shop.public') }}">
                                 <span class="bi bi-bag me-2" aria-hidden="true"></span>Shop
+                            </a>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <a class="track-repair-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('repairs.track.form') }}">
+                                <span class="bi bi-search me-2" aria-hidden="true"></span>Track your repair
                             </a>
                         </div>
                     </div>
@@ -126,7 +158,7 @@
                             <span class="bi bi-globe text-primary fs-4 mb-3"></span>
                             <h5 class="text-1000">Website design &amp; development</h5>
                             <p class="text-700">Get a custom website designed and built for your business or organization.</p>
-                            <a class="btn btn-sm btn-outline-primary rounded-pill" href="#website-pricing">
+                            <a class="btn btn-sm btn-primary rounded-pill" href="#website-pricing">
                                 Explore website packages <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
                             </a>
                         </div>
@@ -139,7 +171,7 @@
                             <span class="bi bi-pc-display-horizontal text-primary fs-4 mb-3" aria-hidden="true"></span>
                             <h5 class="text-1000">Ready-built custom PCs</h5>
                             <p class="text-700">Browse ready-built computers available from our shop, with options for different needs and budgets.</p>
-                            <a class="btn btn-sm btn-outline-primary rounded-pill" href="{{ route('shop.public', ['type' => 'ready_built_pc']) }}">
+                            <a class="btn btn-sm btn-primary rounded-pill" href="{{ route('shop.public', ['type' => 'ready_built_pc']) }}">
                                 Browse ready-built PCs <span class="bi bi-arrow-right ms-1" aria-hidden="true"></span>
                             </a>
                         </div>
@@ -168,7 +200,7 @@
                         <a class="btn btn-primary rounded-pill px-4" href="{{ route('bookings.create') }}">
                             <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
                         </a>
-                        <a class="btn btn-outline-primary rounded-pill px-4" href="{{ route('repairs.track.form') }}">
+                        <a class="track-repair-button btn rounded-pill px-4" href="{{ route('repairs.track.form') }}">
                             <span class="bi bi-search me-2" aria-hidden="true"></span>Track your repair
                         </a>
                     </div>
@@ -227,7 +259,7 @@
                     <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $websiteQuoteUrl }}" target="_blank" rel="noopener noreferrer">
                         <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Discuss a website project
                     </a>
-                    <a class="btn btn-outline-primary rounded-pill px-4 mt-3 ms-sm-2" href="{{ route('website-previews.index') }}">
+                    <a class="btn btn-primary rounded-pill px-4 mt-3 ms-sm-2" href="{{ route('website-previews.index') }}">
                         <span class="bi bi-images me-2" aria-hidden="true"></span>Browse website previews
                     </a>
                 </div>
@@ -246,7 +278,7 @@
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Request a quote</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
                         </div>
                     </article>
                 </div>
@@ -280,7 +312,7 @@
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Request a quote</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
                         </div>
                     </article>
                 </div>
@@ -353,12 +385,12 @@
         <div class="container">
             <div class="row align-items-center g-5">
                    <div class="col-lg-6">
-                        <span class="contact-kicker fw-bold text-uppercase fs-10">Ready for the next step?</span>
-                        <h2 class="h2 fw-bold text-white mt-2 mb-3">Let’s get your computer sorted.</h2>
+                        <span class="contact-kicker fw-bold text-primary text-uppercase fs-10">Ready for the next step?</span>
+                        <h2 class="h2 fw-bold text-1000 mt-2 mb-3">Let’s get your computer sorted.</h2>
                         <p class="contact-copy lead mb-4">Tell us what is happening and what device needs attention. We’ll help you figure out the next step.</p>
                         <div class="d-flex flex-wrap gap-2">
                             <a href="{{ route('bookings.create') }}" class="btn btn-primary rounded-pill px-4">Book a service</a>
-                            <a href="#faq" class="btn btn-outline-primary rounded-pill px-4">Read common questions</a>
+                            <a href="#faq" class="btn btn-secondary rounded-pill px-4">Read common questions</a>
                         </div>
                     </div>
                 <div class="col-lg-6">
@@ -367,7 +399,7 @@
                             <span class="bi bi-headset text-primary fs-2 mb-3"></span>
                             <h3 class="h3 fw-bold text-1000">Need a hand?</h3>
                             <p class="text-700 mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.</p>
-                                                            <a class="btn btn-outline-primary rounded-pill px-4 mt-3" href="mailto:support@omgcomputer.my">
+                                                            <a class="btn btn-primary rounded-pill px-4 mt-3" href="mailto:support@omgcomputer.my">
                                     <span class="bi bi-envelope me-2" aria-hidden="true"></span>support@omgcomputer.my
                                 </a>
                                                         <a class="btn btn-success rounded-pill px-4 mt-3" href="https://wa.me/60104224350?text=Hi%20OMG%20Computer%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp</a>

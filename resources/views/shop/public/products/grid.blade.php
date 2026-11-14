@@ -4,6 +4,11 @@
 @section('meta_description', 'Browse computer parts, accessories, and ready-built PCs at the OMG Computer shop. Check product availability and contact us for details.')
 
 @section('content')
+@php
+    $isCustomerShop = auth()->check() && auth()->user()->hasRole('customer');
+    $shopListingRoute = $isCustomerShop ? 'shop.panel' : 'shop.public';
+    $shopProductRoute = $isCustomerShop ? 'shop.panel.products.show' : 'shop.public.products.show';
+@endphp
 <style>
     .shop-product-filters {
         position: sticky;
@@ -60,8 +65,8 @@
             @include('shop.public.products._custom-pc-quote')
         </div>
 
-        <form class="shop-product-filters card border-0 shadow-sm mb-4 {{ auth()->check() && auth()->user()->hasRole('customer') ? 'shop-product-filters-customer' : '' }}" method="GET" action="{{ route('shop.public') }}">
-            @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-grid'])
+        <form class="shop-product-filters card border-0 shadow-sm mb-4 {{ $isCustomerShop ? 'shop-product-filters-customer' : '' }}" method="GET" action="{{ route($shopListingRoute) }}">
+            @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-grid', 'shopListingRoute' => $shopListingRoute])
         </form>
 
         <button class="shop-filter-fab btn btn-primary rounded-pill px-4 py-3" type="button" data-bs-toggle="modal" data-bs-target="#shop-filter-modal">
@@ -77,8 +82,8 @@
                         <h2 class="modal-title fs-5" id="shop-filter-modal-title">Search and filter products</h2>
                         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form method="GET" action="{{ route('shop.public') }}">
-                        @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-modal'])
+                    <form method="GET" action="{{ route($shopListingRoute) }}">
+                        @include('shop.public.products._filter-fields', ['idPrefix' => 'shop-modal', 'shopListingRoute' => $shopListingRoute])
                     </form>
                 </div>
             </div>
@@ -92,12 +97,12 @@
             @forelse ($products as $product)
                 <div class="col-6 col-lg-4 col-xl-3">
                     <article class="card border-0 shadow-sm h-100 overflow-hidden">
-                        <a class="d-flex align-items-center justify-content-center bg-body-tertiary text-primary text-decoration-none" href="{{ route('shop.public.products.show', $product) }}" aria-label="View {{ $product->name }}" style="aspect-ratio: 4 / 3">
+                        <a class="d-flex align-items-center justify-content-center bg-body-tertiary text-primary text-decoration-none" href="{{ route($shopProductRoute, $product) }}" aria-label="View {{ $product->name }}" style="aspect-ratio: 4 / 3">
                             @include('shop.public.products._stock-image', ['product' => $product, 'class' => 'w-100 h-100 object-fit-cover'])
                         </a>
                         <div class="card-body p-3 p-lg-4 d-flex flex-column">
                             <p class="small text-primary fw-semibold mb-1">{{ $types[$product->type] ?? $product->type }}</p>
-                            <h3 class="h6 mb-2"><a class="text-1000 text-decoration-none" href="{{ route('shop.public.products.show', $product) }}">{{ $product->name }}</a></h3>
+                            <h3 class="h6 mb-2"><a class="text-1000 text-decoration-none" href="{{ route($shopProductRoute, $product) }}">{{ $product->name }}</a></h3>
                             <p class="small text-700 mb-3 d-none d-sm-block">{{ \Illuminate\Support\Str::limit($product->description ?: 'Contact us for product details.', 90) }}</p>
                             <div class="mt-auto">
                                 <p class="h5 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</p>
@@ -110,7 +115,7 @@
                                         </form>
                                     @endif
                                 @endauth
-                                <a class="btn btn-outline-primary btn-sm w-100" href="{{ route('shop.public.products.show', $product) }}">View details<i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a>
+                                <a class="btn btn-primary btn-sm w-100" href="{{ route($shopProductRoute, $product) }}">View details<i class="bi bi-arrow-right ms-2" aria-hidden="true"></i></a>
                             </div>
                         </div>
                     </article>
@@ -121,7 +126,7 @@
                         <i class="bi bi-search text-500 bi-2x mb-3" aria-hidden="true"></i>
                         <h2 class="h5 text-1000">No matching products</h2>
                         <p class="text-700 mb-3">Try another search or category, or check back later.</p>
-                        <a class="btn btn-outline-primary rounded-pill align-self-center" href="{{ route('shop.public') }}">View all products</a>
+                        <a class="btn btn-primary rounded-pill align-self-center" href="{{ route($shopListingRoute) }}">View all products</a>
                     </div>
                 </div>
             @endforelse

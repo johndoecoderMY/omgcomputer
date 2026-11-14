@@ -37,7 +37,7 @@ class CustomerRepairTicketTest extends TestCase
             'received_at' => now(),
         ]);
 
-        $this->actingAs($staff)->get(route('tickets.show', $ticket))
+        $ticketPage = $this->actingAs($staff)->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('data-bs-target="#ticket-workflow-modal"', false)
             ->assertSee('data-bs-target="#ticket-step-modal"', false)
@@ -53,6 +53,18 @@ class CustomerRepairTicketTest extends TestCase
                 'repair_ticket_id' => $ticket->id,
                 'ticket_modal' => 1,
             ])).'"', false);
+
+        $previousLibxmlErrorSetting = libxml_use_internal_errors(true);
+        $document = new \DOMDocument;
+        $loadedDocument = $document->loadHTML($ticketPage->getContent());
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxmlErrorSetting);
+        $this->assertTrue($loadedDocument);
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(
+            1,
+            $xpath->query('//*[@data-ticket-page]//form[@id="ticket-step-form"]')->length,
+        );
 
         $workflowResponse = $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
             'status' => 'in_repair',

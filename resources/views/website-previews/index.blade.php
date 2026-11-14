@@ -92,15 +92,23 @@
         text-align: center;
     }
     .portfolio-showcase { padding: 5rem 0; background: var(--falcon-gray-100, #f8f9fa); }
-    .portfolio-contact { background: #0b1727; }
     .portfolio-contact .contact-kicker,
     .portfolio-contact .contact-icon { color: #ff4b0b; }
-    .portfolio-contact .contact-copy,
     .portfolio-contact-card p { color: #a9bdd5; }
     .portfolio-contact-card { background: #111f30; }
     .portfolio-contact-card h3 { color: #fff; }
-    .portfolio-contact-card .btn-outline-primary { color: #ff4b0b; border-color: #ff4b0b; }
-    .portfolio-contact-card .btn-outline-primary:hover { color: #fff; background: #ff4b0b; }
+    .portfolio-make-button {
+        --falcon-btn-color: #172033;
+        --falcon-btn-bg: #ffb51b;
+        --falcon-btn-border-color: #ffb51b;
+        --falcon-btn-hover-color: #172033;
+        --falcon-btn-hover-bg: #e6a317;
+        --falcon-btn-hover-border-color: #e6a317;
+        --falcon-btn-focus-shadow-rgb: 255, 181, 27;
+        --falcon-btn-active-color: #172033;
+        --falcon-btn-active-bg: #cc9015;
+        --falcon-btn-active-border-color: #cc9015;
+    }
     .portfolio-card { transition: transform .2s ease, box-shadow .2s ease; }
     .portfolio-card:hover { transform: translateY(-4px); box-shadow: 0 1rem 2rem rgba(19, 34, 54, .12) !important; }
     .portfolio-lightbox { background: rgba(8, 13, 22, .96); }
@@ -161,7 +169,7 @@
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#portfolio">
                             Explore demos <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
                         </a>
-                        <a class="btn btn-outline-light btn-lg rounded-pill px-4" href="#contact">
+                        <a class="btn btn-primary btn-lg rounded-pill px-4" href="#contact">
                             Request a website
                         </a>
                     </div>
@@ -243,21 +251,13 @@
                                     @endif
                                 </div>
                                 <div class="card-footer bg-body border-0 px-4 pb-4 d-flex flex-wrap gap-2">
-                                    <button class="btn btn-primary rounded-pill px-4" type="button"
-                                        data-portfolio-lightbox
-                                        data-gallery="{{ json_encode($galleryUrls, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}"
-                                        data-gallery-title="{{ $preview->title }}"
-                                        data-preview-url="{{ $preview->preview_url }}"
-                                        data-preview-label="{{ $preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'View website') }}">
-                                        View images <span class="bi bi-arrows-fullscreen ms-1" aria-hidden="true"></span>
-                                    </button>
                                     @if ($preview->preview_url)
-                                        <a class="btn btn-outline-secondary rounded-pill px-4" href="{{ $preview->preview_url }}" target="_blank" rel="noopener noreferrer">
+                                        <a class="btn btn-primary rounded-pill px-4" href="{{ $preview->preview_url }}" target="_blank" rel="noopener noreferrer">
                                             {{ $preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'Live website') }}
                                             <span class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></span>
                                         </a>
                                     @endif
-                                    <a class="btn btn-outline-primary rounded-pill px-4" href="#contact">Make one for me</a>
+                                    <a class="portfolio-make-button btn rounded-pill px-4" href="#contact">Make one for me</a>
                                 </div>
                             </article>
                         </div>
@@ -276,16 +276,16 @@
         </div>
     </section>
 
-    <section class="portfolio-contact py-7" id="contact" style="scroll-margin-top: 100px;">
+    <section class="portfolio-contact bg-body-tertiary py-7" id="contact" style="scroll-margin-top: 100px;">
         <div class="container">
             <div class="row align-items-center g-5">
                 <div class="col-lg-6">
                     <span class="contact-kicker fw-bold text-uppercase fs-10">Ready for the next step?</span>
-                    <h2 class="h2 fw-bold text-white mt-2 mb-3">Let’s get your computer sorted.</h2>
-                    <p class="contact-copy lead mb-4">Tell us what is happening and what device needs attention. We’ll help you figure out the next step.</p>
+                    <h2 class="h2 fw-bold text-1000 mt-2 mb-3">Let’s get your computer sorted.</h2>
+                    <p class="contact-copy lead text-700 mb-4">Tell us what is happening and what device needs attention. We’ll help you figure out the next step.</p>
                     <div class="d-flex flex-wrap gap-2">
                         <a href="{{ route('bookings.create') }}" class="btn btn-primary rounded-pill px-4">Book a service</a>
-                        <a href="{{ url('/') }}" class="btn btn-outline-primary rounded-pill px-4">Go home</a>
+                        <a href="{{ url('/') }}" class="btn btn-primary rounded-pill px-4">Go home</a>
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -294,7 +294,7 @@
                             <span class="contact-icon bi bi-headset fs-2 mb-3" aria-hidden="true"></span>
                             <h3 class="h3 fw-bold">Need a hand?</h3>
                             <p class="mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.</p>
-                            <a class="btn btn-outline-primary rounded-pill px-4 mt-3" href="mailto:{{ $portfolioContactEmail }}">
+                            <a class="btn btn-primary rounded-pill px-4 mt-3" href="mailto:{{ $portfolioContactEmail }}">
                                 <span class="bi bi-envelope me-2" aria-hidden="true"></span>{{ $portfolioContactEmail }}
                             </a>
                             <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $portfolioWhatsAppUrl }}" target="_blank" rel="noopener noreferrer">
@@ -328,7 +328,7 @@
                 </div>
                 <div class="modal-footer justify-content-between border-0">
                     <span class="small text-white-50" data-lightbox-count></span>
-                    <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="#" target="_blank" rel="noopener noreferrer" data-lightbox-preview hidden>
+                    <a class="btn btn-primary btn-sm rounded-pill px-3" href="#" target="_blank" rel="noopener noreferrer" data-lightbox-preview hidden>
                         <span data-lightbox-preview-label>View demo</span>
                         <span class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></span>
                     </a>

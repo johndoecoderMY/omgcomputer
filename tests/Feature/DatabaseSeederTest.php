@@ -80,6 +80,14 @@ class DatabaseSeederTest extends TestCase
             'is_for_sale' => true,
             'stock_quantity' => 2,
         ]);
+        $officePc = InventoryPart::query()->where('sku', 'DEMO-PC-OFFICE-001')->firstOrFail();
+        $gamingPc = InventoryPart::query()->where('sku', 'DEMO-PC-GAMING-001')->firstOrFail();
+        $performancePc = InventoryPart::query()->where('sku', 'DEMO-PC-GAMING-002')->firstOrFail();
+        $this->assertSame('AMD Ryzen 5 5600G', $officePc->specification('Processor'));
+        $this->assertSame('Integrated Radeon graphics', $officePc->specification('Graphics'));
+        $this->assertSame('GeForce RTX 4060 8GB', $gamingPc->specification('Graphics'));
+        $this->assertSame('1TB NVMe SSD', $gamingPc->specification('Storage'));
+        $this->assertSame('AMD Ryzen 5 7600', $performancePc->specification('Processor'));
         $this->assertDatabaseHas('inventory_movements', [
             'reference' => 'SEED-OPENING-DEMO-PC-OFFICE-001',
             'type' => 'received',
@@ -90,6 +98,13 @@ class DatabaseSeederTest extends TestCase
             ->assertSee('Ready-built Office PC')
             ->assertSee('Ready-built 1080p Gaming PC')
             ->assertSee('Ready-built Performance Gaming PC');
+        $this->get(route('shop.public.products.show', $gamingPc))
+            ->assertOk()
+            ->assertSee('Processor')
+            ->assertSee('AMD Ryzen 5 5600')
+            ->assertSee('Graphics')
+            ->assertSee('GeForce RTX 4060 8GB')
+            ->assertSee('Specifications');
         $this->assertGreaterThan(0, $counts['suppliers']);
         $this->assertDatabaseHas('suppliers', [
             'name' => 'Demo PC Components Supply',
@@ -109,9 +124,16 @@ class DatabaseSeederTest extends TestCase
 
         $admin->forceFill(['force_password_change' => false])->save();
         $admin->forceFill(['password' => Hash::make('NewAdmin!Password-2026')])->save();
+        $officePc->update([
+            'description' => 'Sample ready-built office desktop with AMD Ryzen 5 5600G, 16GB DDR4 memory, 512GB NVMe SSD, Wi-Fi, and Windows 11. Update specifications, price, and stock to match your actual build.',
+        ]);
+        $customDescription = "Processor: Custom customer-selected processor\nMemory: 64GB DDR5";
+        $performancePc->update(['description' => $customDescription]);
         $this->seed();
         $this->assertFalse($admin->fresh()->force_password_change);
         $this->assertTrue(Hash::check('NewAdmin!Password-2026', $admin->fresh()->password));
+        $this->assertSame('AMD Ryzen 5 5600G', $officePc->fresh()->specification('Processor'));
+        $this->assertSame($customDescription, $performancePc->fresh()->description);
         $this->assertSame(
             3,
             InventoryPart::query()->whereIn('sku', [

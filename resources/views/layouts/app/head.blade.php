@@ -83,6 +83,17 @@
              gap: .5rem;
          }
 
+         @media (max-width: 575.98px) {
+             .dropdown-menu-notification {
+                 position: fixed !important;
+                 top: 4.5rem !important;
+                 right: .5rem !important;
+                 left: auto !important;
+                 width: min(22rem, calc(100% - 1rem));
+                 max-width: 22rem;
+             }
+         }
+
          .modal-footer {
              justify-content: flex-end;
          }

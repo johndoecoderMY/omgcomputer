@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class AttachmentStorage
 {
+    private const MAX_COMPRESS_PIXELS = 13_000_000;
+
     public static function validationRules(): array
     {
         return [
@@ -113,7 +115,7 @@ class AttachmentStorage
         }
 
         $dimensions = @getimagesize($photo->getPathname());
-        if (! $dimensions || ($dimensions[0] * $dimensions[1]) > 12_000_000) {
+        if (! $dimensions || ($dimensions[0] * $dimensions[1]) > self::MAX_COMPRESS_PIXELS) {
             return $original;
         }
 

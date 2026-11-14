@@ -25,7 +25,7 @@
         <div class="col-12 {{ $idPrefix === 'shop-grid' ? 'col-md-auto' : '' }} d-flex gap-2">
             <button class="btn btn-primary flex-grow-1" type="submit"><i class="bi bi-search me-1" aria-hidden="true"></i>Search</button>
             @if ($filters['search'] || $filters['type'] || $filters['sort'] !== 'name')
-                <a class="btn btn-outline-secondary" href="{{ route('shop.public') }}">Clear</a>
+                <a class="btn btn-primary" href="{{ route($shopListingRoute) }}">Clear</a>
             @endif
         </div>
     </div>

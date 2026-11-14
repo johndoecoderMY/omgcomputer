@@ -19,6 +19,44 @@ class AttachmentUploadTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_camera_sized_repair_step_photo_over_twelve_megapixels_is_compressed(): void
+    {
+        Storage::fake('local');
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $this->actingAs($user);
+
+        $customer = Customer::query()->create([
+            'name' => 'Camera Photo Test Customer',
+            'email' => 'camera-photo@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-CAMERA-PHOTO-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'Camera image compression test.',
+            'status' => 'diagnosing',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $step = $ticket->updates()->create([
+            'user_id' => $user->id,
+            'title' => 'Camera photo step',
+            'status' => 'diagnosing',
+        ]);
+
+        $this->postJson(route('tickets.steps.attachments.store', [$ticket, $step]), [
+            'photos' => [UploadedFile::fake()->image('camera-photo.jpg', 3072, 4080)],
+            'caption' => 'Camera image',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Photo added to repair step.');
+
+        $attachment = $step->attachments()->firstOrFail();
+        $this->assertSame('image/webp', $attachment->mime_type);
+        [$width, $height] = getimagesize(Storage::disk('local')->path($attachment->path));
+        $this->assertLessThanOrEqual(1920, max($width, $height));
+    }
+
     public function test_private_photos_can_be_attached_to_tasks_ticket_steps_tickets_and_templates(): void
     {
         Storage::fake('local');

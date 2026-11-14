@@ -46,10 +46,13 @@ class BookingTest extends TestCase
             'status' => 'confirmed',
         ])->assertSessionHas('success', 'Booking updated.');
 
+        $ticketNumber = $booking->fresh()->repairTicket->ticket_number;
+
         Mail::assertSent(BookingConfirmedMail::class, fn (BookingConfirmedMail $mail): bool => $mail->hasTo('booking-customer@example.test')
             && $mail->booking->reference === 'BK-CONFIRM-EMAIL'
             && str_contains($mail->render(), 'Your booking is confirmed')
-            && str_contains($mail->render(), 'Computer/PC Troubleshooting'));
+            && str_contains($mail->render(), 'Computer/PC Troubleshooting')
+            && str_contains($mail->render(), $ticketNumber));
 
         $this->actingAs($staff)->put(route('bookings.update', $booking), [
             'status' => 'confirmed',

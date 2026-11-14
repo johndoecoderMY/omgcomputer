@@ -19,7 +19,8 @@ class ReadyBuiltPcSeeder extends Seeder
             [
                 'sku' => 'DEMO-PC-OFFICE-001',
                 'name' => 'Ready-built Office PC',
-                'description' => 'Sample ready-built office desktop with AMD Ryzen 5 5600G, 16GB DDR4 memory, 512GB NVMe SSD, Wi-Fi, and Windows 11. Update specifications, price, and stock to match your actual build.',
+                'legacy_description' => 'Sample ready-built office desktop with AMD Ryzen 5 5600G, 16GB DDR4 memory, 512GB NVMe SSD, Wi-Fi, and Windows 11. Update specifications, price, and stock to match your actual build.',
+                'description' => "Sample ready-built office desktop.\nProcessor: AMD Ryzen 5 5600G\nGraphics: Integrated Radeon graphics\nMemory: 16GB DDR4\nStorage: 512GB NVMe SSD\nConnectivity: Wi-Fi\nOperating system: Windows 11\n\nSample specifications; update details, price, and stock to match your actual build.",
                 'cost_price' => 1450,
                 'selling_price' => 1799,
                 'stock_quantity' => 2,
@@ -28,7 +29,8 @@ class ReadyBuiltPcSeeder extends Seeder
             [
                 'sku' => 'DEMO-PC-GAMING-001',
                 'name' => 'Ready-built 1080p Gaming PC',
-                'description' => 'Sample ready-built gaming desktop with AMD Ryzen 5 5600, GeForce RTX 4060 8GB, 16GB DDR4 memory, 1TB NVMe SSD, and a 650W power supply. Update specifications, price, and stock to match your actual build.',
+                'legacy_description' => 'Sample ready-built gaming desktop with AMD Ryzen 5 5600, GeForce RTX 4060 8GB, 16GB DDR4 memory, 1TB NVMe SSD, and a 650W power supply. Update specifications, price, and stock to match your actual build.',
+                'description' => "Sample ready-built gaming desktop.\nProcessor: AMD Ryzen 5 5600\nGraphics: GeForce RTX 4060 8GB\nMemory: 16GB DDR4\nStorage: 1TB NVMe SSD\nPower supply: 650W\n\nSample specifications; update details, price, and stock to match your actual build.",
                 'cost_price' => 2750,
                 'selling_price' => 3299,
                 'stock_quantity' => 2,
@@ -37,7 +39,8 @@ class ReadyBuiltPcSeeder extends Seeder
             [
                 'sku' => 'DEMO-PC-GAMING-002',
                 'name' => 'Ready-built Performance Gaming PC',
-                'description' => 'Sample ready-built gaming desktop with AMD Ryzen 5 7600, GeForce RTX 4070 SUPER 12GB, 32GB DDR5 memory, 1TB NVMe SSD, and a 750W power supply. Update specifications, price, and stock to match your actual build.',
+                'legacy_description' => 'Sample ready-built gaming desktop with AMD Ryzen 5 7600, GeForce RTX 4070 SUPER 12GB, 32GB DDR5 memory, 1TB NVMe SSD, and a 750W power supply. Update specifications, price, and stock to match your actual build.',
+                'description' => "Sample ready-built gaming desktop.\nProcessor: AMD Ryzen 5 7600\nGraphics: GeForce RTX 4070 SUPER 12GB\nMemory: 32GB DDR5\nStorage: 1TB NVMe SSD\nPower supply: 750W\n\nSample specifications; update details, price, and stock to match your actual build.",
                 'cost_price' => 5250,
                 'selling_price' => 5999,
                 'stock_quantity' => 1,
@@ -46,6 +49,9 @@ class ReadyBuiltPcSeeder extends Seeder
         ];
 
         foreach ($pcs as $pcData) {
+            $legacyDescription = $pcData['legacy_description'];
+            unset($pcData['legacy_description']);
+
             $part = InventoryPart::query()->firstOrCreate(
                 ['sku' => $pcData['sku']],
                 [
@@ -55,6 +61,11 @@ class ReadyBuiltPcSeeder extends Seeder
                     'is_for_sale' => true,
                 ],
             );
+
+            if ($part->description === $legacyDescription) {
+                $part->update(['description' => $pcData['description']]);
+            }
+
             $part->update(['is_for_sale' => true]);
 
             InventoryMovement::query()->firstOrCreate(
