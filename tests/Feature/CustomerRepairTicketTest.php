@@ -137,7 +137,7 @@ class CustomerRepairTicketTest extends TestCase
         $this->assertStringContainsString('data-bs-slide="next"', $secondPhotoResponse->json('updates_html'));
         $this->assertSame(
             ['Port inspection', 'Bent connector pin'],
-            $update->attachments()->orderBy('id')->pluck('caption')->all(),
+            $update->attachments()->reorder('id')->pluck('caption')->all(),
         );
         $this->assertSame('waiting_parts', $ticket->fresh()->status);
     }

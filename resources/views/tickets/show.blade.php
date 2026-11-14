@@ -466,20 +466,16 @@
                 window.initializeProjectAjaxControls(workflowAssignees.closest('.modal'));
             }
 
-            document.addEventListener('show.bs.modal', (event) => {
-                const modal = event.target;
-                if (!(modal instanceof Element) || !modal.matches('#ticket-step-photo-modal')) return;
+            document.addEventListener('click', (event) => {
+                if (!(event.target instanceof Element)) return;
+                const button = event.target.closest('[data-ticket-step-photo-action]');
+                if (!button) return;
 
-                const button = event.relatedTarget;
-                const stepPhotoForm = modal.querySelector('#ticket-step-photo-form');
-                const stepPhotoName = modal.querySelector('[data-ticket-step-photo-name]');
+                const page = button.closest('[data-ticket-page]');
+                const stepPhotoForm = page?.querySelector('#ticket-step-photo-form');
+                const stepPhotoName = page?.querySelector('[data-ticket-step-photo-name]');
                 const errorBox = stepPhotoForm?.querySelector('[data-ticket-form-error]');
-                if (!(button instanceof Element)
-                    || !button.matches('[data-ticket-step-photo-action]')
-                    || !stepPhotoForm
-                    || !stepPhotoName
-                    || !errorBox
-                    || !button.dataset.ticketStepPhotoAction) {
+                if (!stepPhotoForm || !stepPhotoName || !errorBox || !button.dataset.ticketStepPhotoAction) {
                     event.preventDefault();
                     const message = 'Could not identify the repair step. Close this dialog and try again.';
                     console.error(message);
@@ -495,7 +491,7 @@
                 stepPhotoName.textContent = button.dataset.ticketStepPhotoName;
                 errorBox.classList.add('d-none');
                 errorBox.textContent = '';
-            });
+            }, true);
 
             document.addEventListener('project:content-updated', () => {
                 initializeLightbox();
