@@ -345,18 +345,22 @@
                     }
 
                     event.preventDefault();
-                    const errorBox = form.querySelector('[data-ticket-form-error]');
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    if (!errorBox || !submitButton) {
-                        const message = 'This ticket form is incomplete. Refresh the page and try again.';
-                        console.error(message, { formId: form.id });
-                        showToast(message, 'danger');
-                        return;
+                    const errorBox = form.querySelector('[data-ticket-form-error]')
+                        || form.closest('.modal')?.querySelector('[data-ticket-form-error]');
+                    const submitter = event.submitter instanceof HTMLButtonElement
+                        || event.submitter instanceof HTMLInputElement
+                        ? event.submitter
+                        : null;
+                    const submitButton = submitter
+                        || form.querySelector('button[type="submit"], input[type="submit"]');
+                    const originalLabel = submitButton instanceof HTMLButtonElement
+                        ? submitButton.textContent.trim()
+                        : '';
+                    if (errorBox) errorBox.classList.add('d-none');
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        if (submitButton instanceof HTMLButtonElement) submitButton.textContent = 'Saving…';
                     }
-                    const originalLabel = submitButton.textContent.trim();
-                    errorBox.classList.add('d-none');
-                    submitButton.disabled = true;
-                    submitButton.textContent = 'Saving…';
 
                     try {
                         const response = await fetch(form.action, {
@@ -432,11 +436,18 @@
                         }
                         showToast(result.message || 'Ticket updated.');
                     } catch (error) {
-                        errorBox.textContent = error.message || 'Could not save changes. Please try again.';
-                        errorBox.classList.remove('d-none');
+                        const message = error.message || 'Could not save changes. Please try again.';
+                        if (errorBox) {
+                            errorBox.textContent = message;
+                            errorBox.classList.remove('d-none');
+                        } else {
+                            showToast(message, 'danger');
+                        }
                     } finally {
-                        submitButton.disabled = false;
-                        submitButton.textContent = originalLabel;
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            if (submitButton instanceof HTMLButtonElement) submitButton.textContent = originalLabel;
+                        }
                     }
                 }, true);
 
