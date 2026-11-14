@@ -234,6 +234,9 @@ class BookingController extends Controller
             'statuses' => Booking::STATUSES,
             'customerView' => request()->user()->hasRole('customer'),
             'services' => $services,
+            'users' => $request->user()->hasRole('admin')
+                ? AssignmentAccess::users()->get(['id', 'name'])
+                : collect(),
         ]);
     }
 
@@ -333,10 +336,6 @@ class BookingController extends Controller
         )->validate()['filter'] ?? [];
         $queryRequest = Request::createFrom($request);
         $queryRequest->query->set('filter', $filterValues);
-        $users = $request->user()->hasRole('admin')
-            ? AssignmentAccess::users()->get(['id', 'name'])
-            : collect();
-
         return DataTables::eloquent(DataTableQueryBuilder::for($query, $queryRequest, [
             'status' => AllowedFilter::exact('status'),
             'service' => AllowedFilter::exact('service', 'service_name'),
@@ -397,43 +396,27 @@ class BookingController extends Controller
                 $booking->status,
                 Booking::STATUSES[$booking->status] ?? $booking->status,
             ))
-            ->addColumn('management', function (Booking $booking) use ($users, $request): string {
+            ->addColumn('management', function (Booking $booking) use ($request): string {
                 if ($request->user()->hasRole('customer')) {
                     return '';
                 }
-                $statusOptions = collect(Booking::STATUSES)->map(fn (string $label, string $value): string => sprintf(
-                    '<option value="%s"%s>%s</option>',
-                    e($value),
-                    $booking->status === $value ? ' selected' : '',
-                    e($label),
-                ))->implode('');
-                $assignmentField = '';
-                if ($request->user()->hasRole('admin')) {
-                    $userOptions = '<option value="">Unassigned</option>'.$users->map(fn (User $user): string => sprintf(
-                        '<option value="%d"%s>%s</option>',
-                        $user->id,
-                        $booking->assigned_to === $user->id ? ' selected' : '',
-                        e($user->name),
-                    ))->implode('');
-                    $assignmentField = sprintf(
-                        '<select class="form-select form-select-sm js-user-search" name="assigned_to" aria-label="Assigned staff" data-placeholder="Search staff by name">%s</select>',
-                        $userOptions,
-                    );
-                }
+                $assignedTo = $request->user()->hasRole('admin')
+                    ? (string) $booking->assigned_to
+                    : '';
 
                 return sprintf(
-                    '<form class="d-flex flex-column gap-2" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="PUT"><select class="form-select form-select-sm" name="status" aria-label="Booking status">%s</select>%s<button class="btn btn-sm btn-outline-primary">Save</button></form>',
+                    '<button type="button" class="btn btn-sm btn-outline-primary" data-booking-update data-booking-update-url="%s" data-booking-status="%s" data-booking-assigned-to="%s" data-booking-reference="%s">Update</button>',
                     e(route('bookings.update', $booking)),
-                    e(csrf_token()),
-                    $statusOptions,
-                    $assignmentField,
+                    e($booking->status),
+                    e($assignedTo),
+                    e($booking->reference),
                 );
             })
             ->rawColumns(['customer_contact', 'service', 'status_label', 'management'])
             ->toJson();
     }
 
-    public function update(Request $request, Booking $booking, WorkspaceNotifier $notifier): RedirectResponse
+    public function update(Request $request, Booking $booking, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to']);
 
@@ -497,6 +480,10 @@ class BookingController extends Controller
             && $booking->status === 'confirmed'
             && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
             Mail::to($customerEmail)->send(new BookingConfirmedMail($booking));
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Booking updated.']);
         }
 
         return back()->with('success', 'Booking updated.');

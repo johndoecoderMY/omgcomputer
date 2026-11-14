@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive site inspection website demo with photo previews.">
+  <title>Fieldnote - Site inspection demo</title>
+  <style>
+    :root{--ink:#172b32;--muted:#75848a;--line:#e4e9e7;--paper:#f4f7f5;--green:#18866d;--green-dark:#126b57;--soft:#eaf4ef;--amber:#f3b866}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 Inter,Arial,sans-serif}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}
+    .topbar{height:68px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 30px;background:#fff;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:18px;font-weight:800;letter-spacing:-.04em;text-decoration:none}
+    .brand-mark{display:grid;width:34px;height:34px;place-items:center;border-radius:10px;background:var(--green);color:white;font-size:16px}
+    .top-nav{display:flex;gap:25px;color:var(--muted);font-size:13px}.top-nav a{color:inherit;text-decoration:none}.top-nav a.active{color:var(--green);font-weight:700}
+    .account{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700}.avatar{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:#dcebe3;color:var(--green-dark)}
+    .shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:calc(100vh - 68px)}
+    aside{padding:26px 15px;background:#fff;border-right:1px solid var(--line)}.side-label{margin:16px 10px 7px;color:#a1ada9;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+    .side-link{display:flex;align-items:center;gap:11px;margin:3px 0;padding:10px;border-radius:9px;color:#65747a;text-decoration:none;font-size:13px}.side-link.active{background:var(--soft);color:var(--green-dark);font-weight:700}
+    .side-icon{display:inline-grid;width:22px;place-items:center;font-size:16px}
+    main{width:min(1360px,100%);margin:0 auto;padding:32px 38px 55px}
+    .crumb{margin-bottom:20px;color:var(--muted);font-size:12px}.crumb strong{color:var(--ink)}
+    .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:20px}.eyebrow{margin:0 0 6px;color:var(--green);font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+    h1{margin:0;font-size:30px;line-height:1.15;letter-spacing:-.045em}.subhead{margin:7px 0 0;color:var(--muted)}
+    .draft{padding:7px 11px;border:1px solid #e8dfce;border-radius:20px;background:#fff7e8;color:#966321;font-size:11px;font-weight:700;white-space:nowrap}
+    .demo-note{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;padding:12px 15px;border:1px solid #d5e9dd;border-radius:10px;background:#edf7f0;color:#416851;font-size:12px}
+    .workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.8fr);align-items:start;gap:20px}
+    .panel{border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 8px 26px #18352d08}
+    .panel-section{padding:22px 24px;border-bottom:1px solid #edf0ee}.panel-section:last-child{border-bottom:0}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:17px}
+    h2{margin:0;font-size:16px;letter-spacing:-.02em}.section-hint{color:var(--muted);font-size:11px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+    .field label{display:block;margin-bottom:6px;color:#53636a;font-size:11px;font-weight:700}
+    .field input,.field select,.field textarea{width:100%;min-height:42px;padding:10px 11px;border:1px solid #dfe6e3;border-radius:8px;background:#fff;color:var(--ink);outline:none}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:#72b9a2;box-shadow:0 0 0 3px #18866d18}
+    .field textarea{min-height:94px;resize:vertical}.field.full{grid-column:1/-1}
+    .upload-zone{display:grid;min-height:160px;place-items:center;padding:20px;border:1.5px dashed #b5cfc4;border-radius:12px;background:#f8fbf9;text-align:center;transition:background .15s,border .15s}
+    .upload-zone.dragging{border-color:var(--green);background:#eaf6ef}.upload-inner{max-width:330px}
+    .upload-icon{display:grid;width:42px;height:42px;margin:0 auto 10px;place-items:center;border-radius:12px;background:#e4f2eb;color:var(--green);font-size:21px}
+    .upload-title{margin:0 0 4px;font-weight:800}.upload-copy{margin:0 0 12px;color:var(--muted);font-size:11px}
+    .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border:1px solid transparent;border-radius:8px;background:var(--green);color:#fff;font-size:12px;font-weight:700;text-decoration:none}
+    .button:hover{background:var(--green-dark)}.button.secondary{border-color:#dbe4df;background:#fff;color:#425650}.button.secondary:hover{background:#f3f7f5}
+    .photo-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 10px}
+    .photo-count{color:var(--muted);font-size:11px}.photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .photo-card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:9px;background:#f5f7f6}
+    .photo-card img{display:block;width:100%;height:112px;object-fit:cover}.photo-card figcaption{overflow:hidden;padding:7px 8px;color:#586970;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+    .remove-photo{position:absolute;top:6px;right:6px;display:grid;width:25px;height:25px;place-items:center;border:0;border-radius:50%;background:#13232dcc;color:#fff;font-size:14px}
+    .upload-error{min-height:18px;margin:8px 0 0;color:#b33a35;font-size:11px}
+    .actions{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:#fbfcfb;border-radius:0 0 14px 14px}
+    .actions small{color:var(--muted);font-size:10px}
+    .summary{padding:20px}.summary-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:17px}
+    .summary-status{padding:5px 9px;border-radius:16px;background:#fff4df;color:#a16a1e;font-size:10px;font-weight:700}
+    .site-card{padding:13px;border:1px solid var(--line);border-radius:10px;background:#fbfcfb}
+    .site-label{margin:0 0 4px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.site-name{margin:0;font-size:14px;font-weight:800}
+    .site-address{margin:4px 0 0;color:#6b7b80;font-size:11px}
+    .progress-block{margin:18px 0}.progress-title{display:flex;justify-content:space-between;margin-bottom:7px;font-size:11px}.progress-track{height:6px;overflow:hidden;border-radius:6px;background:#e9efec}.progress-fill{width:40%;height:100%;border-radius:inherit;background:var(--green);transition:width .2s}
+    .checklist{display:grid;gap:12px;margin:17px 0 0;padding:0;list-style:none}.checklist label{display:flex;align-items:center;gap:9px;color:#506067;font-size:12px}
+    .checklist input{width:15px;height:15px;accent-color:var(--green)}
+    .summary-divider{height:1px;margin:18px 0;background:var(--line)}
+    .summary-tip{padding:12px;border-radius:9px;background:#f4f8f6;color:#67777b;font-size:11px}
+    .success{display:none;margin:0 0 18px;padding:13px 15px;border:1px solid #cce5d5;border-radius:10px;background:#edf8f1;color:#356349;font-size:12px}
+    .success.show{display:block}
+    @media(max-width:980px){.topbar{padding:0 18px}.shell{grid-template-columns:70px minmax(0,1fr)}aside{padding:20px 8px}.side-label{font-size:0}.side-link{justify-content:center;font-size:0}.side-icon{font-size:17px}.brand-name,.top-nav{display:none}main{padding:27px 22px}.workspace{grid-template-columns:minmax(0,1.4fr) minmax(230px,.8fr)}}
+    @media(max-width:700px){.topbar{height:60px}.account span:last-child{display:none}.shell{display:block;min-height:calc(100vh - 60px)}aside{display:none}main{padding:22px 14px 35px}.page-head{align-items:flex-start;flex-direction:column}h1{font-size:26px}.workspace{grid-template-columns:1fr}.summary{order:-1}.panel-section{padding:18px 16px}.actions{padding:15px 16px}.photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:420px){.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.photo-card img{height:100px}.section-hint{max-width:120px;text-align:right}.actions{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Fieldnote home"><span class="brand-mark" aria-hidden="true">F</span><span class="brand-name">fieldnote</span></a>
+    <nav class="top-nav" aria-label="Main navigation"><a href="#">Overview</a><a class="active" href="#">Inspections</a><a href="#">Sites</a><a href="#">Reports</a></nav>
+    <div class="account"><span class="avatar" aria-hidden="true">JL</span><span>Jordan Lee</span></div>
+  </header>
+  <div class="shell">
+    <aside aria-label="Workspace navigation">
+      <p class="side-label">Workspace</p>
+      <a class="side-link" href="#"><span class="side-icon" aria-hidden="true">⌂</span>Overview</a>
+      <a class="side-link active" href="#"><span class="side-icon" aria-hidden="true">▤</span>Inspections</a>
+      <a class="side-link" href="#"><span class="side-icon" aria-hidden="true">⌖</span>Sites</a>
+      <a class="side-link" href="#"><span class="side-icon" aria-hidden="true">▧</span>Reports</a>
+      <p class="side-label">Manage</p>
+      <a class="side-link" href="#"><span class="side-icon" aria-hidden="true">⚙</span>Settings</a>
+    </aside>
+    <main>
+      <div class="crumb">Inspections <span aria-hidden="true">/</span> <strong>New inspection</strong></div>
+      <header class="page-head">
+        <div><p class="eyebrow">Field report / Demo</p><h1>New site inspection</h1><p class="subhead">Capture the details, check each area, and add photo evidence.</p></div>
+        <span class="draft">Draft report</span>
+      </header>
+      <div class="demo-note" role="note"><strong>Interactive demo</strong><span>Choose images to preview them here. Photos stay in this browser and are not uploaded or saved.</span></div>
+      <div class="success" id="success-message" role="status" aria-live="polite"></div>
+      <div class="workspace">
+        <form class="panel" id="inspection-form">
+          <section class="panel-section">
+            <div class="section-head"><h2>Inspection details</h2><span class="section-hint">Required fields are marked *</span></div>
+            <div class="form-grid">
+              <div class="field"><label for="site-name">Site name *</label><select id="site-name" required><option value="">Select a site</option><option selected>Northpoint Office Renovation</option><option>Riverside Apartments</option><option>Central Warehouse</option></select></div>
+              <div class="field"><label for="inspection-type">Inspection type *</label><select id="inspection-type" required><option>Progress check</option><option>Safety walkthrough</option><option>Handover review</option></select></div>
+              <div class="field"><label for="inspector-name">Inspector *</label><input id="inspector-name" value="Jordan Lee" required></div>
+              <div class="field"><label for="inspection-date">Inspection date *</label><input id="inspection-date" type="date" required></div>
+              <div class="field full"><label for="site-location">Site location</label><input id="site-location" value="18 Northpoint Avenue, Kuala Lumpur"></div>
+            </div>
+          </section>
+          <section class="panel-section">
+            <div class="section-head"><h2>Photo evidence</h2><span class="section-hint">Add up to 8 images, 10 MB each</span></div>
+            <div class="upload-zone" id="upload-zone">
+              <div class="upload-inner">
+                <span class="upload-icon" aria-hidden="true">+</span>
+                <p class="upload-title">Upload site photos</p>
+                <p class="upload-copy">Drag photos here or choose images from your device.</p>
+                <label class="button secondary" for="photo-input">Choose photos</label>
+                <input id="photo-input" type="file" accept="image/*" multiple hidden>
+              </div>
+            </div>
+            <div class="photo-tools"><span class="photo-count" id="photo-count">0 photos selected</span><button class="button secondary" type="button" id="clear-photos">Clear photos</button></div>
+            <div class="photo-grid" id="photo-grid" aria-live="polite"></div>
+            <p class="upload-error" id="upload-error" role="alert"></p>
+          </section>
+          <section class="panel-section">
+            <div class="section-head"><h2>Inspector notes</h2><span class="section-hint">Add context for the report</span></div>
+            <div class="field"><label for="inspection-notes">Notes</label><textarea id="inspection-notes" placeholder="Describe findings, follow-up actions, or anything the team should know."></textarea></div>
+          </section>
+          <div class="actions"><small>Sample workflow only. Nothing is sent to a server.</small><button class="button" type="submit">Submit inspection report <span aria-hidden="true">→</span></button></div>
+        </form>
+        <aside class="panel summary" aria-label="Inspection checklist">
+          <div class="summary-head"><h2>Inspection checklist</h2><span class="summary-status">In progress</span></div>
+          <div class="site-card"><p class="site-label">Current site</p><p class="site-name">Northpoint Office Renovation</p><p class="site-address">18 Northpoint Avenue, Kuala Lumpur</p></div>
+          <div class="progress-block"><div class="progress-title"><span>Checklist progress</span><strong id="checklist-progress-label">2 of 5</strong></div><div class="progress-track"><div class="progress-fill" id="checklist-progress"></div></div></div>
+          <ul class="checklist" id="checklist">
+            <li><label><input type="checkbox" checked> Entry and access</label></li>
+            <li><label><input type="checkbox" checked> Work area condition</label></li>
+            <li><label><input type="checkbox"> Safety signage</label></li>
+            <li><label><input type="checkbox"> Materials and storage</label></li>
+            <li><label><input type="checkbox"> Attach photo evidence</label></li>
+          </ul>
+          <div class="summary-divider"></div>
+          <div class="summary-head"><h2>Photo attachments</h2><strong id="photo-summary-count">0</strong></div>
+          <div class="summary-tip">Add clear, well-lit photos to help your team review site conditions and follow-up work.</div>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const input = document.getElementById('photo-input');
+      const zone = document.getElementById('upload-zone');
+      const grid = document.getElementById('photo-grid');
+      const count = document.getElementById('photo-count');
+      const summaryCount = document.getElementById('photo-summary-count');
+      const error = document.getElementById('upload-error');
+      const photos = [];
+      const maxPhotos = 8;
+      const maxFileSize = 10 * 1024 * 1024;
+
+      const updatePhotoCount = () => {
+        count.textContent = `${photos.length} photo${photos.length === 1 ? '' : 's'} selected`;
+        summaryCount.textContent = String(photos.length);
+        const checklistPhoto = document.querySelector('#checklist li:last-child input');
+        if (checklistPhoto) checklistPhoto.checked = photos.length > 0;
+        updateChecklist();
+      };
+
+      const updateChecklist = () => {
+        const checks = [...document.querySelectorAll('#checklist input')];
+        const complete = checks.filter((check) => check.checked).length;
+        document.getElementById('checklist-progress-label').textContent = `${complete} of ${checks.length}`;
+        document.getElementById('checklist-progress').style.width = `${(complete / checks.length) * 100}%`;
+      };
+
+      const renderPhotos = () => {
+        grid.replaceChildren();
+        photos.forEach((photo, index) => {
+          const figure = document.createElement('figure');
+          figure.className = 'photo-card';
+          const image = document.createElement('img');
+          image.src = photo.url;
+          image.alt = `Selected inspection photo: ${photo.file.name}`;
+          const caption = document.createElement('figcaption');
+          caption.textContent = photo.file.name;
+          const remove = document.createElement('button');
+          remove.className = 'remove-photo';
+          remove.type = 'button';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label', `Remove ${photo.file.name}`);
+          remove.addEventListener('click', () => {
+            URL.revokeObjectURL(photo.url);
+            photos.splice(index, 1);
+            renderPhotos();
+          });
+          figure.append(image, caption, remove);
+          grid.append(figure);
+        });
+        updatePhotoCount();
+      };
+
+      const addFiles = (fileList) => {
+        error.textContent = '';
+        const candidates = [...fileList];
+        for (const file of candidates) {
+          if (!file.type.startsWith('image/')) {
+            error.textContent = 'Only image files can be added.';
+            continue;
+          }
+          if (file.size > maxFileSize) {
+            error.textContent = `${file.name} is larger than 10 MB.`;
+            continue;
+          }
+          if (photos.length >= maxPhotos) {
+            error.textContent = 'You can add up to 8 photos.';
+            break;
+          }
+          photos.push({ file, url: URL.createObjectURL(file) });
+        }
+        renderPhotos();
+      };
+
+      input.addEventListener('change', () => {
+        addFiles(input.files);
+        input.value = '';
+      });
+      ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
+        event.preventDefault();
+        zone.classList.add('dragging');
+      }));
+      ['dragleave', 'drop'].forEach((name) => zone.addEventListener(name, (event) => {
+        event.preventDefault();
+        zone.classList.remove('dragging');
+      }));
+      zone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+      document.getElementById('clear-photos').addEventListener('click', () => {
+        photos.forEach((photo) => URL.revokeObjectURL(photo.url));
+        photos.splice(0, photos.length);
+        error.textContent = '';
+        renderPhotos();
+      });
+      document.querySelectorAll('#checklist input').forEach((check) => check.addEventListener('change', updateChecklist));
+      document.getElementById('inspection-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const message = document.getElementById('success-message');
+        message.textContent = 'Demo complete. No report or photos were uploaded or saved.';
+        message.classList.add('show');
+        message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      window.addEventListener('beforeunload', () => photos.forEach((photo) => URL.revokeObjectURL(photo.url)));
+      updatePhotoCount();
+    })();
+  </script>
+</body>
+</html>

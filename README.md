@@ -73,6 +73,19 @@ For staff members with a connected cPanel mailbox, the mailbox password is synch
 
 Profile pictures use Laravel’s public disk. Run `php artisan storage:link` after setup, or use **System Maintenance → Create storage link**, so uploaded images can be served from `public/storage`.
 
+### Gmail sender logo (BIMI)
+
+The OMG Computer vector logo is at `public/bimi/logo.svg` and is intended to be served at `https://omgcomputer.my/bimi/logo.svg`. Hosting this SVG alone does not make Gmail display it. Gmail requires SPF or DKIM authentication aligned with the visible sender domain, a DMARC policy of `p=quarantine` or `p=reject` with `pct=100`, and a BIMI VMC or CMC certificate from an accepted certificate authority. Google currently requires a PEM certificate for Gmail BIMI.
+
+In cPanel, first use **Email Deliverability** to check SPF and DKIM. Identify every service that sends as `@omgcomputer.my`, then monitor DMARC reports before enforcing a policy; do not switch directly from no DMARC to quarantine/reject without confirming legitimate messages pass alignment. After obtaining the VMC/CMC, upload the CA-provided PEM chain to the public web root (for example, `public_html/bimi/certificate.pem`), verify it is reachable over HTTPS, and add this TXT record in the authoritative DNS zone:
+
+```text
+Host:  default._bimi
+Value: v=BIMI1; l=; a=https://omgcomputer.my/bimi/certificate.pem
+```
+
+The DNS zone may be managed outside cPanel if the domain uses an external DNS provider. A VMC generally requires a registered trademark; certificate authorities can advise whether the logo qualifies for a CMC instead. BIMI setup does not replace SPF, DKIM, or DMARC.
+
 ## Shopee and Lazada Shops
 
 Administrators can connect Shopee and Lazada shops from **Integrations → E-commerce Shops** and manually import recent orders. Connected Shopee shops also synchronize recently changed orders every 15 minutes using the Laravel scheduler; the scheduled sync updates existing orders and uses a rolling overlap to avoid missing changes. Product listings, initiating shipment, and downloading shipping labels are not currently supported.

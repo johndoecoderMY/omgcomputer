@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create and preview a document locally, then save it as a PDF from your browser.">
+  <title>Paperplane - PDF document creator demo</title>
+  <style>
+    :root{--ink:#17212b;--muted:#75808c;--line:#e4e9ef;--surface:#fff;--canvas:#f2f4f7;--accent:#5d5ce2;--accent-soft:#eeedff;--paper-accent:#5958d8}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:14px/1.5 Inter,Arial,sans-serif}
+    button,input,select,textarea{font:inherit}button{cursor:pointer}
+    .topbar{height:66px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#fff;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:10px;color:var(--ink);font-size:17px;font-weight:800;letter-spacing:-.04em;text-decoration:none}
+    .brand-mark{display:grid;width:32px;height:32px;place-items:center;border-radius:9px;background:var(--accent);color:#fff;font-size:17px}
+    .top-links{display:flex;align-items:center;gap:24px;color:var(--muted);font-size:12px}.top-links span:first-child{color:var(--accent);font-weight:700}
+    .account{display:flex;align-items:center;gap:9px;color:#46515c;font-size:12px;font-weight:700}.avatar{display:grid;width:31px;height:31px;place-items:center;border-radius:50%;background:#e8e8f8;color:#4f4eb9}
+    .app{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:calc(100vh - 66px)}
+    .editor{padding:24px 22px;background:#fff;border-right:1px solid var(--line)}
+    .editor-head{margin-bottom:20px}.eyebrow{margin:0 0 5px;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    h1{margin:0;font-size:23px;line-height:1.2;letter-spacing:-.045em}.editor-intro{margin:7px 0 0;color:var(--muted);font-size:12px}
+    .field{margin-bottom:15px}.field label{display:block;margin-bottom:6px;color:#4c5864;font-size:11px;font-weight:700}
+    .field input,.field select,.field textarea{width:100%;padding:10px 11px;border:1px solid #dfe4eb;border-radius:8px;background:#fff;color:var(--ink);outline:none}
+    .field input,.field select{height:40px}.field textarea{min-height:180px;resize:vertical;line-height:1.55}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:#9c9bea;box-shadow:0 0 0 3px #5d5ce21a}
+    .field-help{margin:5px 0 0;color:#939ca6;font-size:10px}
+    .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+    .settings .field{margin:0}.divider{height:1px;margin:19px 0;background:var(--line)}
+    .word-count{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+    .button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:39px;padding:9px 13px;border:1px solid transparent;border-radius:8px;background:var(--accent);color:#fff;font-size:11px;font-weight:700}
+    .button:hover{background:#4948c3}.button.secondary{border-color:#dfe4eb;background:#fff;color:#4d5865}.button.secondary:hover{background:#f7f8fa}
+    .editor-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px}
+    .workspace{min-width:0;padding:24px 30px 44px}
+    .workspace-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 auto 16px;max-width:1050px}
+    .workspace-title{display:flex;align-items:center;gap:10px}.workspace-title strong{font-size:13px}.saved{display:flex;align-items:center;gap:6px;color:#63716c;font-size:10px}
+    .saved-dot{width:7px;height:7px;border-radius:50%;background:#46b287}
+    .export-button{min-height:39px;padding:9px 15px}
+    .demo-note{max-width:1050px;margin:0 auto 18px;padding:10px 13px;border:1px solid #dbdafb;border-radius:8px;background:#f8f7ff;color:#55548a;font-size:11px}
+    .paper-wrap{display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:5px 0 22px}
+    .paper{--page-width:794px;--page-height:1123px;width:min(var(--page-width),100%);min-height:var(--page-height);padding:75px 78px 58px;background:#fff;box-shadow:0 10px 35px #19233419;overflow-wrap:anywhere}
+    .paper.theme-editorial{--paper-accent:#a5653d}.paper.theme-classic{--paper-accent:#345f71}
+    .paper-kicker{margin:0 0 38px;color:var(--paper-accent);font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+    .paper-title{margin:0;color:#17212b;font-size:38px;line-height:1.14;letter-spacing:-.045em}
+    .paper.theme-editorial .paper-title{font-family:Georgia,'Times New Roman',serif;font-size:42px;font-weight:500;letter-spacing:-.035em}
+    .paper.theme-classic .paper-title{font-family:Georgia,'Times New Roman',serif;font-size:36px;font-weight:600;letter-spacing:-.025em}
+    .paper-subtitle{margin:14px 0 0;color:#697581;font-size:15px}
+    .paper-rule{height:1px;margin:31px 0 18px;background:#e6e9ed}
+    .paper-byline{display:flex;justify-content:space-between;gap:15px;color:#74808b;font-size:10px}
+    .paper-body{margin-top:42px;color:#37434e;font-size:13px;line-height:1.85}
+    .paper-body p{margin:0 0 17px;white-space:pre-wrap}
+    .paper-footer{margin-top:55px;padding-top:13px;border-top:1px solid #e6e9ed;color:#87919c;font-size:9px}
+    .status{min-height:17px;margin:8px 0 0;color:#5655b5;font-size:10px}
+    @media(max-width:980px){.topbar{padding:0 18px}.top-links{gap:14px}.app{grid-template-columns:290px minmax(0,1fr)}.editor{padding:21px 17px}.workspace{padding:20px 18px 35px}.paper{padding:58px 54px 45px}}
+    @media(max-width:720px){.topbar{height:58px}.top-links{display:none}.app{display:flex;flex-direction:column}.editor{border-right:0;border-bottom:1px solid var(--line)}.editor-head{margin-bottom:16px}.field textarea{min-height:115px}.workspace{padding:18px 12px 30px}.workspace-head{align-items:flex-start}.workspace-title{flex-wrap:wrap}.paper{min-height:940px;padding:48px 35px 40px}.paper-kicker{margin-bottom:28px}.paper-title{font-size:31px}.paper.theme-editorial .paper-title{font-size:34px}}
+    @media(max-width:420px){.topbar{padding:0 12px}.account span:last-child{display:none}.editor{padding:18px 14px}.workspace-head{gap:8px}.export-button{padding:8px 10px}.paper{padding:38px 25px 32px}.paper-title{font-size:27px}.paper-subtitle{font-size:13px}.paper-byline{flex-direction:column;gap:4px}}
+    @media print{
+      body{background:#fff}
+      .topbar,.editor,.workspace-head,.demo-note,.status{display:none!important}
+      .app,.workspace,.paper-wrap{display:block;min-height:0;padding:0;margin:0;overflow:visible}
+      .paper{width:auto!important;min-height:0;padding:18mm 20mm;box-shadow:none;overflow:visible}
+      .paper-body p{orphans:3;widows:3}
+    }
+  </style>
+  <style id="print-page-style">@page{size:A4 portrait;margin:0}</style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Paperplane home"><span class="brand-mark" aria-hidden="true">P</span><span>paperplane</span></a>
+    <nav class="top-links" aria-label="Main navigation"><span>Document editor</span><span>Templates</span><span>Help</span></nav>
+    <div class="account"><span class="avatar" aria-hidden="true">JT</span><span>Jamie Tan</span></div>
+  </header>
+  <div class="app">
+    <aside class="editor" aria-label="Document settings">
+      <div class="editor-head"><p class="eyebrow">Document studio / Demo</p><h1>Create a PDF</h1><p class="editor-intro">Shape your content and see the page update as you type.</p></div>
+      <div class="field"><label for="document-title">Document title</label><input id="document-title" value="Project proposal" maxlength="100"></div>
+      <div class="field"><label for="document-subtitle">Subtitle</label><input id="document-subtitle" value="Website refresh for Northstar Coffee" maxlength="140"></div>
+      <div class="field"><label for="document-author">Prepared by</label><input id="document-author" value="Jamie Tan" maxlength="80"></div>
+      <div class="field"><label for="document-body">Document content</label><textarea id="document-body" spellcheck="true">Project overview
+Northstar Coffee is ready for a clearer, more welcoming online presence. This proposal outlines a refreshed website that helps customers discover the menu, find the cafe, and learn the story behind each cup.
+
+Recommended approach
+We will create a responsive landing page with an easy-to-scan menu, opening hours, location details, and a simple enquiry path. The visual direction will pair warm photography with calm typography and accessible contrast.
+
+Next steps
+After the content and visual direction are approved, we can prepare a detailed timeline and confirm the final project scope.</textarea><p class="field-help">Separate paragraphs with a blank line.</p></div>
+      <div class="field"><label for="document-footer">Footer text</label><input id="document-footer" value="Prepared for Northstar Coffee"></div>
+      <div class="settings">
+        <div class="field"><label for="template-select">Style</label><select id="template-select"><option value="modern">Modern</option><option value="editorial">Editorial</option><option value="classic">Classic</option></select></div>
+        <div class="field"><label for="page-size">Paper</label><select id="page-size"><option value="a4">A4</option><option value="letter">US Letter</option></select></div>
+        <div class="field"><label for="orientation">Orientation</label><select id="orientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+        <div class="field"><label>Word count</label><div class="word-count"><span id="word-count">0 words</span><span>Local preview</span></div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="editor-actions"><button class="button secondary" type="button" id="reset-document">Reset sample</button><button class="button" type="button" id="export-pdf">Export PDF <span aria-hidden="true">↗</span></button></div>
+      <p class="status" id="export-status" role="status" aria-live="polite"></p>
+    </aside>
+    <main class="workspace">
+      <div class="workspace-head"><div class="workspace-title"><strong>Live preview</strong><span class="saved"><span class="saved-dot" aria-hidden="true"></span>All changes stay in this browser</span></div><button class="button export-button" type="button" id="export-pdf-top">Export PDF <span aria-hidden="true">↗</span></button></div>
+      <div class="demo-note" role="note">Interactive demo: your text is not uploaded or saved. Export opens your browser's print dialog; choose <strong>Save as PDF</strong> there.</div>
+      <div class="paper-wrap">
+        <article class="paper theme-modern" id="document-preview" aria-label="Document preview">
+          <p class="paper-kicker">Project proposal / 2026</p>
+          <h2 class="paper-title" id="preview-title">Project proposal</h2>
+          <p class="paper-subtitle" id="preview-subtitle">Website refresh for Northstar Coffee</p>
+          <div class="paper-rule"></div>
+          <div class="paper-byline"><span id="preview-author">Prepared by Jamie Tan</span><span id="preview-date"></span></div>
+          <div class="paper-body" id="preview-body"></div>
+          <footer class="paper-footer" id="preview-footer">Prepared for Northstar Coffee</footer>
+        </article>
+      </div>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const titleInput = document.getElementById('document-title');
+      const subtitleInput = document.getElementById('document-subtitle');
+      const authorInput = document.getElementById('document-author');
+      const bodyInput = document.getElementById('document-body');
+      const footerInput = document.getElementById('document-footer');
+      const preview = document.getElementById('document-preview');
+      const previewBody = document.getElementById('preview-body');
+      const wordCount = document.getElementById('word-count');
+      const pageSizeInput = document.getElementById('page-size');
+      const orientationInput = document.getElementById('orientation');
+      const printPageStyle = document.getElementById('print-page-style');
+      const status = document.getElementById('export-status');
+      const sample = {
+        title: 'Project proposal',
+        subtitle: 'Website refresh for Northstar Coffee',
+        author: 'Jamie Tan',
+        body: bodyInput.value,
+        footer: 'Prepared for Northstar Coffee',
+      };
+
+      const updatePreview = () => {
+        document.getElementById('preview-title').textContent = titleInput.value.trim() || 'Untitled document';
+        document.getElementById('preview-subtitle').textContent = subtitleInput.value;
+        document.getElementById('preview-author').textContent = `Prepared by ${authorInput.value}`;
+        document.getElementById('preview-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('preview-footer').textContent = footerInput.value;
+        previewBody.replaceChildren();
+        bodyInput.value.split(/\n\s*\n/).map((paragraph) => paragraph.trim()).filter(Boolean).forEach((paragraph) => {
+          const element = document.createElement('p');
+          element.textContent = paragraph;
+          previewBody.append(element);
+        });
+        const words = bodyInput.value.trim().split(/\s+/).filter(Boolean).length;
+        wordCount.textContent = `${words} word${words === 1 ? '' : 's'}`;
+      };
+
+      const updatePageFormat = () => {
+        const letter = pageSizeInput.value === 'letter';
+        const landscape = orientationInput.value === 'landscape';
+        const width = letter ? 816 : 794;
+        const height = letter ? 1056 : 1123;
+        preview.style.setProperty('--page-width', `${landscape ? height : width}px`);
+        preview.style.setProperty('--page-height', `${landscape ? width : height}px`);
+        printPageStyle.textContent = `@page{size:${letter ? 'Letter' : 'A4'} ${landscape ? 'landscape' : 'portrait'};margin:0}`;
+      };
+
+      [titleInput, subtitleInput, authorInput, bodyInput, footerInput].forEach((input) => input.addEventListener('input', updatePreview));
+      document.getElementById('template-select').addEventListener('change', (event) => {
+        preview.className = `paper theme-${event.target.value}`;
+      });
+      [pageSizeInput, orientationInput].forEach((input) => input.addEventListener('change', updatePageFormat));
+      document.getElementById('reset-document').addEventListener('click', () => {
+        titleInput.value = sample.title;
+        subtitleInput.value = sample.subtitle;
+        authorInput.value = sample.author;
+        bodyInput.value = sample.body;
+        footerInput.value = sample.footer;
+        document.getElementById('template-select').value = 'modern';
+        pageSizeInput.value = 'a4';
+        orientationInput.value = 'portrait';
+        preview.className = 'paper theme-modern';
+        status.textContent = 'Sample document restored.';
+        updatePreview();
+        updatePageFormat();
+      });
+      const exportPdf = () => {
+        status.textContent = 'Choose “Save as PDF” in the print dialog to create your PDF.';
+        window.print();
+      };
+      document.getElementById('export-pdf').addEventListener('click', exportPdf);
+      document.getElementById('export-pdf-top').addEventListener('click', exportPdf);
+      updatePreview();
+      updatePageFormat();
+    })();
+  </script>
+</body>
+</html>

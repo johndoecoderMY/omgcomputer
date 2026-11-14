@@ -5,6 +5,11 @@
     $emailKicker = 'BOOKING CONFIRMED';
     $emailReference = $booking->reference;
     $appointmentTime = $booking->starts_at->copy()->setTimezone('Asia/Kuala_Lumpur')->format('j M Y, g:i A');
+    $repairTrackingUrl = route('repairs.track.form');
+    $supportEmail = 'support@omgcomputer.my';
+    $supportWhatsAppUrl = 'https://wa.me/60104224350?text='.rawurlencode(
+        'Hi OMG Computer, I have a question about booking '.$booking->reference.'.'
+    );
 @endphp
 
 @section('email-content')
@@ -51,5 +56,7 @@
 
 @section('email-footer')
 <p style="margin:0;font-size:14px;line-height:22px;color:#475569;">If you have questions or need to make a change, please contact OMG Computer and include your booking reference.</p>
+<p style="margin:18px 0 0;font-size:14px;line-height:22px;color:#475569;">Track your service: <a href="{{ $repairTrackingUrl }}" style="color:#2c7be5;text-decoration:underline;">Track a repair</a></p>
+<p style="margin:10px 0 0;font-size:14px;line-height:22px;color:#475569;">Need help? Email <a href="mailto:{{ $supportEmail }}" style="color:#2c7be5;text-decoration:underline;">{{ $supportEmail }}</a> or <a href="{{ $supportWhatsAppUrl }}" style="color:#2c7be5;text-decoration:underline;">message us on WhatsApp</a>.</p>
 <p style="margin:18px 0 0;font-size:14px;color:#12263f;"><strong>OMG Computer</strong><br><span style="color:#64748b;">Customer Support</span></p>
 @endsection

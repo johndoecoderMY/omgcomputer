@@ -52,13 +52,65 @@ class BookingTest extends TestCase
             && $mail->booking->reference === 'BK-CONFIRM-EMAIL'
             && str_contains($mail->render(), 'Your booking is confirmed')
             && str_contains($mail->render(), 'Computer/PC Troubleshooting')
-            && str_contains($mail->render(), $ticketNumber));
+            && str_contains($mail->render(), $ticketNumber)
+            && str_contains($mail->render(), route('repairs.track.form'))
+            && str_contains($mail->render(), 'mailto:support@omgcomputer.my')
+            && str_contains($mail->render(), 'https://wa.me/60104224350?text='));
 
         $this->actingAs($staff)->put(route('bookings.update', $booking), [
             'status' => 'confirmed',
         ])->assertSessionHas('success', 'Booking updated.');
 
         Mail::assertSent(BookingConfirmedMail::class, 1);
+    }
+
+    public function test_booking_can_be_updated_with_json_for_the_ajax_status_modal(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Booking Customer',
+            'email' => 'booking-customer@example.test',
+            'phone' => '+60112223333',
+        ]);
+        $booking = Booking::query()->create([
+            'reference' => 'BK-AJAX-UPDATE',
+            'customer_id' => $customer->id,
+            'customer_name' => 'Booking Customer',
+            'customer_email' => 'booking-customer@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'service_name' => 'Computer/PC Troubleshooting',
+            'starts_at' => Carbon::now('UTC')->addDays(2),
+            'duration_minutes' => 60,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
+            'status' => 'completed',
+            'assigned_to' => $staff->id,
+        ])->assertOk()->assertJson(['message' => 'Booking updated.']);
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'completed',
+            'assigned_to' => $staff->id,
+        ]);
+    }
+
+    public function test_staff_booking_list_renders_the_status_update_modal(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        $this->actingAs($staff)->get(route('bookings.index'))
+            ->assertOk()
+            ->assertSee('id="booking-status-modal"', false)
+            ->assertSee('id="booking-status-form"', false)
+            ->assertSee('id="booking-assigned-to"', false)
+            ->assertSee('Save changes');
     }
 
     public function test_booking_confirmation_skips_email_when_customer_address_is_missing_or_invalid(): void
@@ -427,7 +479,7 @@ class BookingTest extends TestCase
             'start' => 0,
             'length' => 25,
         ]))->assertJsonPath('recordsFiltered', 1);
-        $this->getJson(route('bookings.datatable', [
+        $datatableResponse = $this->getJson(route('bookings.datatable', [
             'filter' => [
                 'service' => 'Laptop cleaning',
                 'customer_name' => 'Avery',
@@ -437,9 +489,11 @@ class BookingTest extends TestCase
             'draw' => 1,
             'start' => 0,
             'length' => 25,
-        ]))->assertOk()
+        ]));
+        $datatableResponse->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.reference', 'BK-FILTER-1');
+        $this->assertStringContainsString('data-booking-update', $datatableResponse->json('data.0.management'));
 
         $this->get(route('bookings.index', [
             'service' => 'Laptop cleaning',

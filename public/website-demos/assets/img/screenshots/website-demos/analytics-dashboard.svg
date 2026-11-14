@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f5f7f6"/>
+  <rect width="224" height="760" fill="#fff"/>
+  <path d="M224 0v760" stroke="#e4eae8"/>
+  <rect x="22" y="24" width="32" height="32" rx="10" fill="#14866c"/>
+  <text x="38" y="46" fill="#fff" font-family="Arial,sans-serif" font-size="16" font-weight="700" text-anchor="middle">N</text>
+  <text x="63" y="46" fill="#172b32" font-family="Arial,sans-serif" font-size="15" font-weight="700">northstar</text>
+  <text x="132" y="46" fill="#14866c" font-family="Arial,sans-serif" font-size="10" font-weight="700">insights</text>
+  <rect x="24" y="75" width="176" height="48" rx="8" fill="#fff" stroke="#e8edeb"/>
+  <text x="36" y="94" fill="#a0aaa8" font-family="Arial,sans-serif" font-size="8" font-weight="700" letter-spacing="1">WORKSPACE</text>
+  <text x="36" y="111" fill="#516169" font-family="Arial,sans-serif" font-size="10" font-weight="700">Northstar Coffee</text>
+  <text x="27" y="154" fill="#a0aaa8" font-family="Arial,sans-serif" font-size="8" font-weight="700" letter-spacing="1.5">OVERVIEW</text>
+  <rect x="19" y="164" width="186" height="36" rx="7" fill="#e9f4ef"/>
+  <text x="42" y="187" fill="#0f6b56" font-family="Arial,sans-serif" font-size="11" font-weight="700">▦  Dashboard</text>
+  <text x="42" y="222" fill="#69797d" font-family="Arial,sans-serif" font-size="11">⌁  Analytics</text>
+  <text x="42" y="257" fill="#69797d" font-family="Arial,sans-serif" font-size="11">▤  Orders</text>
+  <text x="42" y="292" fill="#69797d" font-family="Arial,sans-serif" font-size="11">◈  Products</text>
+  <text x="27" y="337" fill="#a0aaa8" font-family="Arial,sans-serif" font-size="8" font-weight="700" letter-spacing="1.5">MANAGE</text>
+  <text x="42" y="370" fill="#69797d" font-family="Arial,sans-serif" font-size="11">♙  Customers</text>
+  <text x="42" y="405" fill="#69797d" font-family="Arial,sans-serif" font-size="11">⚙  Settings</text>
+  <text x="256" y="51" fill="#172b32" font-family="Arial,sans-serif" font-size="24" font-weight="700">Good morning, Alex</text>
+  <text x="256" y="74" fill="#75848a" font-family="Arial,sans-serif" font-size="11">Here’s your business performance at a glance.</text>
+  <rect x="1018" y="25" width="128" height="34" rx="8" fill="#fff" stroke="#e4eae8"/>
+  <text x="1031" y="46" fill="#8b9899" font-family="Arial,sans-serif" font-size="10">⌕  Search dashboard</text>
+  <circle cx="1171" cy="42" r="17" fill="#e2eee8"/>
+  <text x="1171" y="46" fill="#0f6b56" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">AC</text>
+  <rect x="256" y="92" width="890" height="36" rx="8" fill="#edf7f0" stroke="#d5e9dd"/>
+  <text x="270" y="115" fill="#416851" font-family="Arial,sans-serif" font-size="10" font-weight="700">Interactive demo · Sample data only.</text>
+  <text x="475" y="115" fill="#416851" font-family="Arial,sans-serif" font-size="10">Not connected to a business account or live data.</text>
+  <text x="256" y="160" fill="#172b32" font-family="Arial,sans-serif" font-size="14" font-weight="700">Overview</text>
+  <rect x="810" y="140" width="210" height="32" rx="8" fill="#fff" stroke="#e4eae8"/>
+  <rect x="875" y="144" width="62" height="24" rx="6" fill="#e9f4ef"/>
+  <text x="833" y="161" fill="#738084" font-family="Arial,sans-serif" font-size="9">7 days</text>
+  <text x="906" y="161" fill="#0f6b56" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">30 days</text>
+  <text x="973" y="161" fill="#738084" font-family="Arial,sans-serif" font-size="9">90 days</text>
+  <rect x="1033" y="140" width="113" height="32" rx="8" fill="#fff" stroke="#dfe7e3"/>
+  <text x="1089" y="160" fill="#495c60" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">↓  Export CSV</text>
+  <g font-family="Arial,sans-serif">
+    <rect x="256" y="184" width="211" height="105" rx="10" fill="#fff" stroke="#e4eae8"/>
+    <text x="272" y="208" fill="#65757a" font-size="9" font-weight="700">TOTAL REVENUE</text><text x="272" y="244" fill="#172b32" font-size="23" font-weight="700">$32,480</text><text x="272" y="268" fill="#14866c" font-size="9" font-weight="700">↑ 12.6%  vs. previous period</text>
+    <rect x="480" y="184" width="211" height="105" rx="10" fill="#fff" stroke="#e4eae8"/>
+    <text x="496" y="208" fill="#65757a" font-size="9" font-weight="700">ORDERS</text><text x="496" y="244" fill="#172b32" font-size="23" font-weight="700">742</text><text x="496" y="268" fill="#14866c" font-size="9" font-weight="700">↑ 8.2%  vs. previous period</text>
+    <rect x="704" y="184" width="211" height="105" rx="10" fill="#fff" stroke="#e4eae8"/>
+    <text x="720" y="208" fill="#65757a" font-size="9" font-weight="700">AVERAGE ORDER</text><text x="720" y="244" fill="#172b32" font-size="23" font-weight="700">$43.77</text><text x="720" y="268" fill="#14866c" font-size="9" font-weight="700">↑ 3.4%  vs. previous period</text>
+    <rect x="928" y="184" width="218" height="105" rx="10" fill="#fff" stroke="#e4eae8"/>
+    <text x="944" y="208" fill="#65757a" font-size="9" font-weight="700">CONVERSION RATE</text><text x="944" y="244" fill="#172b32" font-size="23" font-weight="700">3.5%</text><text x="944" y="268" fill="#14866c" font-size="9" font-weight="700">↑ 0.6%  vs. previous period</text>
+  </g>
+  <rect x="256" y="305" width="555" height="266" rx="11" fill="#fff" stroke="#e4eae8"/>
+  <text x="274" y="331" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">Revenue overview</text>
+  <text x="274" y="348" fill="#75848a" font-family="Arial,sans-serif" font-size="9">Daily revenue for the last 30 days</text>
+  <path d="M306 390h482M306 427h482M306 464h482M306 501h482M306 538h482" stroke="#edf1ef"/>
+  <text x="274" y="394" fill="#899694" font-family="Arial,sans-serif" font-size="8">$5k</text><text x="274" y="431" fill="#899694" font-family="Arial,sans-serif" font-size="8">$4k</text><text x="274" y="468" fill="#899694" font-family="Arial,sans-serif" font-size="8">$3k</text><text x="274" y="505" fill="#899694" font-family="Arial,sans-serif" font-size="8">$2k</text>
+  <path d="M306 510 385 485 465 495 545 455 625 465 705 432 788 442V538H306Z" fill="#14866c" fill-opacity=".08"/>
+  <path d="M306 510 385 485 465 495 545 455 625 465 705 432 788 442" fill="none" stroke="#14866c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#fff" stroke="#14866c" stroke-width="2"><circle cx="306" cy="510" r="4"/><circle cx="385" cy="485" r="4"/><circle cx="465" cy="495" r="4"/><circle cx="545" cy="455" r="4"/><circle cx="625" cy="465" r="4"/><circle cx="705" cy="432" r="4"/><circle cx="788" cy="442" r="4"/></g>
+  <rect x="827" y="305" width="319" height="266" rx="11" fill="#fff" stroke="#e4eae8"/>
+  <text x="845" y="331" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">Top products</text>
+  <text x="845" y="348" fill="#75848a" font-family="Arial,sans-serif" font-size="9">By units sold this month</text>
+  <text x="845" y="382" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">House blend beans</text><text x="1127" y="382" fill="#879392" font-family="Arial,sans-serif" font-size="9" text-anchor="end">284 sold</text>
+  <rect x="845" y="390" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="390" width="231" height="6" rx="3" fill="#14866c"/>
+  <text x="845" y="422" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">Ceramic pour-over</text><text x="1127" y="422" fill="#879392" font-family="Arial,sans-serif" font-size="9" text-anchor="end">216 sold</text>
+  <rect x="845" y="430" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="430" width="186" height="6" rx="3" fill="#5875d8"/>
+  <text x="845" y="462" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">Cold brew bottle</text><text x="1127" y="462" fill="#879392" font-family="Arial,sans-serif" font-size="9" text-anchor="end">173 sold</text>
+  <rect x="845" y="470" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="470" width="147" height="6" rx="3" fill="#e5a15a"/>
+  <text x="845" y="502" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">Tasting flight</text><text x="1127" y="502" fill="#879392" font-family="Arial,sans-serif" font-size="9" text-anchor="end">128 sold</text>
+  <rect x="845" y="510" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="510" width="110" height="6" rx="3" fill="#14866c"/>
+  <rect x="256" y="587" width="555" height="151" rx="11" fill="#fff" stroke="#e4eae8"/>
+  <text x="274" y="613" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">Recent orders</text>
+  <text x="274" y="638" fill="#9aa5a4" font-family="Arial,sans-serif" font-size="8" font-weight="700">ORDER</text><text x="385" y="638" fill="#9aa5a4" font-family="Arial,sans-serif" font-size="8" font-weight="700">CUSTOMER</text><text x="560" y="638" fill="#9aa5a4" font-family="Arial,sans-serif" font-size="8" font-weight="700">DATE</text><text x="690" y="638" fill="#9aa5a4" font-family="Arial,sans-serif" font-size="8" font-weight="700">TOTAL</text>
+  <path d="M274 646h518M274 677h518M274 708h518" stroke="#f0f3f1"/>
+  <text x="274" y="666" fill="#34494f" font-family="Arial,sans-serif" font-size="8" font-weight="700">#NC-2048</text><text x="385" y="666" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Olivia Lee</text><text x="560" y="666" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Today, 10:42</text><text x="690" y="666" fill="#53636a" font-family="Arial,sans-serif" font-size="8">$86.00</text>
+  <text x="274" y="697" fill="#34494f" font-family="Arial,sans-serif" font-size="8" font-weight="700">#NC-2047</text><text x="385" y="697" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Marcus Reed</text><text x="560" y="697" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Today, 09:18</text><text x="690" y="697" fill="#53636a" font-family="Arial,sans-serif" font-size="8">$42.50</text>
+  <text x="274" y="728" fill="#34494f" font-family="Arial,sans-serif" font-size="8" font-weight="700">#NC-2046</text><text x="385" y="728" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Amira Patel</text><text x="560" y="728" fill="#53636a" font-family="Arial,sans-serif" font-size="8">Yesterday</text><text x="690" y="728" fill="#53636a" font-family="Arial,sans-serif" font-size="8">$119.00</text>
+  <rect x="827" y="587" width="319" height="151" rx="11" fill="#fff" stroke="#e4eae8"/>
+  <text x="845" y="613" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">Customer snapshot</text>
+  <text x="845" y="644" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">Returning customers</text><text x="1127" y="644" fill="#172b32" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="end">38%</text>
+  <rect x="845" y="653" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="653" width="107" height="6" rx="3" fill="#14866c"/>
+  <text x="845" y="684" fill="#4b5c60" font-family="Arial,sans-serif" font-size="9" font-weight="700">New customers</text><text x="1127" y="684" fill="#172b32" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="end">62%</text>
+  <rect x="845" y="693" width="282" height="6" rx="3" fill="#edf1ef"/><rect x="845" y="693" width="175" height="6" rx="3" fill="#5875d8"/>
+</svg>

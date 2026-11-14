@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f8fbf9"/>
+      <stop offset="1" stop-color="#e7f0ec"/>
+    </linearGradient>
+    <linearGradient id="photo-a" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#b5d5cc"/>
+      <stop offset="1" stop-color="#56736b"/>
+    </linearGradient>
+    <linearGradient id="photo-b" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#d8c8ad"/>
+      <stop offset="1" stop-color="#82715d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="760" fill="#f3f6f4"/>
+  <rect width="1200" height="64" fill="#fff"/>
+  <path d="M0 64h1200" stroke="#e2e8e5"/>
+  <rect x="38" y="16" width="32" height="32" rx="9" fill="#18866d"/>
+  <text x="54" y="38" fill="#fff" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">F</text>
+  <text x="80" y="39" fill="#172b32" font-family="Arial,sans-serif" font-size="20" font-weight="700">fieldnote</text>
+  <text x="405" y="39" fill="#75848a" font-family="Arial,sans-serif" font-size="13">Overview</text>
+  <text x="505" y="39" fill="#18866d" font-family="Arial,sans-serif" font-size="13" font-weight="700">Inspections</text>
+  <text x="613" y="39" fill="#75848a" font-family="Arial,sans-serif" font-size="13">Sites</text>
+  <text x="670" y="39" fill="#75848a" font-family="Arial,sans-serif" font-size="13">Reports</text>
+  <circle cx="1110" cy="32" r="17" fill="#dcebe3"/>
+  <text x="1110" y="37" fill="#126b57" font-family="Arial,sans-serif" font-size="11" font-weight="700" text-anchor="middle">JL</text>
+  <text x="1135" y="37" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">Jordan Lee</text>
+  <rect y="64" width="184" height="696" fill="#fff"/>
+  <path d="M184 64v696" stroke="#e2e8e5"/>
+  <text x="25" y="104" fill="#a1ada9" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1.5">WORKSPACE</text>
+  <text x="43" y="148" fill="#65747a" font-family="Arial,sans-serif" font-size="13">Overview</text>
+  <rect x="16" y="164" width="152" height="38" rx="8" fill="#eaf4ef"/>
+  <text x="43" y="188" fill="#126b57" font-family="Arial,sans-serif" font-size="13" font-weight="700">Inspections</text>
+  <text x="43" y="229" fill="#65747a" font-family="Arial,sans-serif" font-size="13">Sites</text>
+  <text x="43" y="270" fill="#65747a" font-family="Arial,sans-serif" font-size="13">Reports</text>
+  <text x="25" y="323" fill="#a1ada9" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1.5">MANAGE</text>
+  <text x="43" y="365" fill="#65747a" font-family="Arial,sans-serif" font-size="13">Settings</text>
+  <text x="224" y="103" fill="#75848a" font-family="Arial,sans-serif" font-size="12">Inspections /</text>
+  <text x="305" y="103" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700">New inspection</text>
+  <text x="224" y="154" fill="#18866d" font-family="Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="1.5">FIELD REPORT / DEMO</text>
+  <text x="224" y="193" fill="#172b32" font-family="Arial,sans-serif" font-size="31" font-weight="700">New site inspection</text>
+  <text x="224" y="219" fill="#75848a" font-family="Arial,sans-serif" font-size="13">Capture the details, check each area, and add photo evidence.</text>
+  <rect x="1023" y="134" width="117" height="27" rx="14" fill="#fff7e8" stroke="#eadfc8"/>
+  <text x="1081" y="152" fill="#966321" font-family="Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">DRAFT REPORT</text>
+  <rect x="224" y="241" width="916" height="45" rx="9" fill="#edf7f0" stroke="#d5e9dd"/>
+  <circle cx="246" cy="263" r="7" fill="#18866d"/>
+  <text x="263" y="267" fill="#356349" font-family="Arial,sans-serif" font-size="11" font-weight="700">Interactive demo</text>
+  <text x="360" y="267" fill="#416851" font-family="Arial,sans-serif" font-size="11">Photos stay in this browser and are not uploaded or saved.</text>
+  <rect x="224" y="307" width="580" height="420" rx="13" fill="#fff" stroke="#e4e9e7"/>
+  <text x="248" y="342" fill="#172b32" font-family="Arial,sans-serif" font-size="16" font-weight="700">Inspection details</text>
+  <text x="248" y="377" fill="#53636a" font-family="Arial,sans-serif" font-size="10" font-weight="700">SITE NAME</text>
+  <rect x="248" y="386" width="258" height="37" rx="7" fill="#fff" stroke="#dfe6e3"/>
+  <text x="260" y="410" fill="#172b32" font-family="Arial,sans-serif" font-size="11">Northpoint Office Renovation</text>
+  <text x="524" y="377" fill="#53636a" font-family="Arial,sans-serif" font-size="10" font-weight="700">INSPECTION TYPE</text>
+  <rect x="524" y="386" width="256" height="37" rx="7" fill="#fff" stroke="#dfe6e3"/>
+  <text x="536" y="410" fill="#172b32" font-family="Arial,sans-serif" font-size="11">Progress check</text>
+  <text x="248" y="451" fill="#53636a" font-family="Arial,sans-serif" font-size="10" font-weight="700">INSPECTOR</text>
+  <rect x="248" y="460" width="258" height="37" rx="7" fill="#fff" stroke="#dfe6e3"/>
+  <text x="260" y="484" fill="#172b32" font-family="Arial,sans-serif" font-size="11">Jordan Lee</text>
+  <text x="524" y="451" fill="#53636a" font-family="Arial,sans-serif" font-size="10" font-weight="700">INSPECTION DATE</text>
+  <rect x="524" y="460" width="256" height="37" rx="7" fill="#fff" stroke="#dfe6e3"/>
+  <text x="536" y="484" fill="#172b32" font-family="Arial,sans-serif" font-size="11">Today</text>
+  <text x="248" y="525" fill="#172b32" font-family="Arial,sans-serif" font-size="16" font-weight="700">Photo evidence</text>
+  <text x="660" y="525" fill="#75848a" font-family="Arial,sans-serif" font-size="10">Up to 8 images, 10 MB each</text>
+  <rect x="248" y="540" width="532" height="111" rx="10" fill="#f8fbf9" stroke="#b5cfc4" stroke-dasharray="6 5"/>
+  <circle cx="514" cy="571" r="18" fill="#e4f2eb"/>
+  <path d="M514 580v-18m-7 7 7-7 7 7m-17 8v5h20v-5" fill="none" stroke="#18866d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="514" y="610" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700" text-anchor="middle">Upload site photos</text>
+  <text x="514" y="628" fill="#75848a" font-family="Arial,sans-serif" font-size="10" text-anchor="middle">Drag photos here or choose images from your device</text>
+  <rect x="248" y="665" width="532" height="42" rx="0" fill="#fbfcfb"/>
+  <text x="263" y="691" fill="#75848a" font-family="Arial,sans-serif" font-size="10">Sample workflow only. Nothing is sent to a server.</text>
+  <rect x="622" y="673" width="158" height="28" rx="7" fill="#18866d"/>
+  <text x="701" y="691" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="700" text-anchor="middle">Submit inspection report</text>
+  <rect x="823" y="307" width="317" height="230" rx="13" fill="#fff" stroke="#e4e9e7"/>
+  <text x="846" y="341" fill="#172b32" font-family="Arial,sans-serif" font-size="15" font-weight="700">Inspection checklist</text>
+  <rect x="1067" y="323" width="54" height="22" rx="11" fill="#fff4df"/>
+  <text x="1094" y="338" fill="#a16a1e" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle">IN PROGRESS</text>
+  <rect x="846" y="360" width="270" height="63" rx="8" fill="#fbfcfb" stroke="#e4e9e7"/>
+  <text x="860" y="380" fill="#75848a" font-family="Arial,sans-serif" font-size="9" letter-spacing="1">CURRENT SITE</text>
+  <text x="860" y="399" fill="#172b32" font-family="Arial,sans-serif" font-size="11" font-weight="700">Northpoint Office Renovation</text>
+  <text x="860" y="414" fill="#6b7b80" font-family="Arial,sans-serif" font-size="9">18 Northpoint Avenue, Kuala Lumpur</text>
+  <text x="846" y="450" fill="#172b32" font-family="Arial,sans-serif" font-size="10">Checklist progress</text>
+  <text x="1115" y="450" fill="#172b32" font-family="Arial,sans-serif" font-size="10" text-anchor="end">2 of 5</text>
+  <rect x="846" y="459" width="270" height="6" rx="3" fill="#e9efec"/>
+  <rect x="846" y="459" width="108" height="6" rx="3" fill="#18866d"/>
+  <text x="846" y="490" fill="#18866d" font-family="Arial,sans-serif" font-size="12">●</text>
+  <text x="864" y="490" fill="#506067" font-family="Arial,sans-serif" font-size="10">Entry and access</text>
+  <text x="846" y="515" fill="#18866d" font-family="Arial,sans-serif" font-size="12">●</text>
+  <text x="864" y="515" fill="#506067" font-family="Arial,sans-serif" font-size="10">Work area condition</text>
+  <rect x="823" y="551" width="317" height="176" rx="13" fill="#fff" stroke="#e4e9e7"/>
+  <text x="846" y="584" fill="#172b32" font-family="Arial,sans-serif" font-size="15" font-weight="700">Photo attachments</text>
+  <text x="1117" y="584" fill="#172b32" font-family="Arial,sans-serif" font-size="12" font-weight="700" text-anchor="end">0</text>
+  <rect x="846" y="603" width="270" height="96" rx="8" fill="#f4f8f6"/>
+  <text x="862" y="629" fill="#67777b" font-family="Arial,sans-serif" font-size="10">Add clear, well-lit photos to help your</text>
+  <text x="862" y="646" fill="#67777b" font-family="Arial,sans-serif" font-size="10">team review conditions and follow-up work.</text>
+</svg>

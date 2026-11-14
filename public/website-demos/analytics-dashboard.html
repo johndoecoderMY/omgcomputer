@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive analytics dashboard demo with sample revenue and order metrics.">
+  <title>Northstar - Analytics dashboard demo</title>
+  <style>
+    :root{--ink:#172b32;--muted:#75848a;--line:#e4eae8;--canvas:#f5f7f6;--green:#14866c;--green-dark:#0f6b56;--soft:#e9f4ef;--blue:#5875d8;--orange:#e5a15a}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:14px/1.5 Inter,Arial,sans-serif}
+    button{font:inherit;cursor:pointer}
+    .layout{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:100vh}
+    aside{padding:25px 14px;background:#fff;border-right:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:10px;padding:0 10px 29px;color:var(--ink);font-size:17px;font-weight:800;letter-spacing:-.04em}
+    .brand-mark{display:grid;width:32px;height:32px;place-items:center;border-radius:10px;background:var(--green);color:#fff;font-size:17px}
+    .brand span:last-child em{color:var(--green);font-style:normal}
+    .workspace-name{margin:0 9px 22px;padding:10px;border:1px solid #e8edeb;border-radius:9px;color:#516169;font-size:11px;font-weight:700}
+    .workspace-name small{display:block;margin-bottom:3px;color:#a0aaa8;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+    .nav-label{margin:17px 10px 7px;color:#a0aaa8;font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .nav-link{display:flex;align-items:center;gap:10px;margin:3px 0;padding:10px;border-radius:8px;color:#69797d;text-decoration:none;font-size:12px}
+    .nav-link.active{background:var(--soft);color:var(--green-dark);font-weight:700}
+    .nav-icon{display:inline-grid;width:19px;place-items:center;font-size:15px}
+    main{width:min(1440px,100%);margin:0 auto;padding:29px 35px 48px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}
+    .welcome h1{margin:0;font-size:25px;line-height:1.2;letter-spacing:-.04em}
+    .welcome p{margin:6px 0 0;color:var(--muted);font-size:12px}
+    .top-actions{display:flex;align-items:center;gap:11px}
+    .search{width:205px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;color:#8b9899;font-size:11px}
+    .avatar{display:grid;width:35px;height:35px;place-items:center;border-radius:50%;background:#e2eee8;color:var(--green-dark);font-size:11px;font-weight:800}
+    .demo-note{margin-bottom:20px;padding:10px 13px;border:1px solid #d5e9dd;border-radius:9px;background:#edf7f0;color:#416851;font-size:11px}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:15px}
+    .toolbar h2{margin:0;font-size:15px;letter-spacing:-.02em}
+    .toolbar-right{display:flex;align-items:center;gap:10px}
+    .periods{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:8px;background:#fff}
+    .period{padding:6px 10px;border:0;border-radius:6px;background:transparent;color:#738084;font-size:10px;font-weight:700}
+    .period[aria-pressed="true"]{background:var(--soft);color:var(--green-dark)}
+    .button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:8px 11px;border:1px solid #dfe7e3;border-radius:8px;background:#fff;color:#495c60;font-size:10px;font-weight:700}
+    .button:hover{background:#f8faf9}.button.primary{border-color:var(--green);background:var(--green);color:#fff}.button.primary:hover{background:var(--green-dark)}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:17px}
+    .card,.panel{border:1px solid var(--line);border-radius:11px;background:#fff;box-shadow:0 3px 12px #20352d05}
+    .stat-card{padding:16px}
+    .stat-top{display:flex;align-items:center;justify-content:space-between;gap:9px;color:#65757a;font-size:10px;font-weight:700}
+    .stat-icon{display:grid;width:27px;height:27px;place-items:center;border-radius:8px;background:#eff6f2;color:var(--green);font-size:13px}
+    .stat-value{margin:12px 0 5px;font-size:24px;font-weight:800;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+    .stat-note{display:flex;align-items:center;gap:5px;color:#819091;font-size:9px}
+    .trend{color:var(--green);font-weight:700}
+    .content-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(245px,.8fr);gap:16px}
+    .panel{padding:18px;margin-bottom:16px}
+    .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .panel-head h2{margin:0;font-size:13px;letter-spacing:-.02em}
+    .panel-head p{margin:4px 0 0;color:var(--muted);font-size:10px}
+    .revenue-total{font-size:17px;font-weight:800;letter-spacing:-.03em}
+    .chart-legend{display:flex;align-items:center;gap:7px;color:#718084;font-size:9px}
+    .legend-dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+    .chart-wrap{width:100%;overflow:hidden}
+    .chart{display:block;width:100%;height:auto;min-width:420px}
+    .chart-grid{stroke:#edf1ef;stroke-width:1}
+    .chart-axis{fill:#899694;font:9px Arial,sans-serif}
+    .chart-area{fill:url(#chart-fill)}
+    .chart-line{fill:none;stroke:var(--green);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+    .chart-point{fill:#fff;stroke:var(--green);stroke-width:2}
+    .lower-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,.8fr);gap:16px}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse;white-space:nowrap}
+    th{padding:10px 7px;border-bottom:1px solid var(--line);color:#9aa5a4;font-size:8px;font-weight:700;letter-spacing:.08em;text-align:left;text-transform:uppercase}
+    td{padding:11px 7px;border-bottom:1px solid #f0f3f1;color:#53636a;font-size:10px}
+    tbody tr:last-child td{border-bottom:0}
+    .order-id{color:#34494f;font-weight:700}
+    .customer{display:flex;align-items:center;gap:7px}
+    .customer-mark{display:grid;width:25px;height:25px;place-items:center;border-radius:50%;background:#edf1f8;color:#566b9c;font-size:8px;font-weight:700}
+    .badge{display:inline-block;padding:4px 7px;border-radius:14px;background:#eaf5ee;color:#39845f;font-size:8px;font-weight:700}
+    .badge.pending{background:#fff4e5;color:#a7752b}
+    .product-list{display:grid;gap:15px}
+    .product-top{display:flex;justify-content:space-between;gap:10px;margin-bottom:6px;font-size:10px}
+    .product-name{color:#4b5c60;font-weight:700}.product-sales{color:#879392}
+    .bar-track{height:6px;overflow:hidden;border-radius:9px;background:#edf1ef}
+    .bar-fill{height:100%;border-radius:inherit;background:var(--green)}
+    .bar-fill.alt{background:var(--blue)}.bar-fill.warm{background:var(--orange)}
+    .product-foot{display:flex;justify-content:space-between;margin-top:13px;padding-top:12px;border-top:1px solid #edf1ef;color:#788786;font-size:9px}
+    .footer-note{margin-top:3px;color:#99a3a2;font-size:9px}
+    @media(max-width:1050px){.layout{grid-template-columns:190px minmax(0,1fr)}aside{padding:20px 10px}main{padding:24px 20px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.content-grid{grid-template-columns:minmax(0,1.3fr) minmax(220px,.8fr)}}
+    @media(max-width:760px){.layout{display:block}aside{display:none}main{padding:20px 14px 35px}.topbar{align-items:flex-start;flex-direction:column;margin-bottom:20px}.top-actions{width:100%;justify-content:space-between}.search{flex:1;max-width:320px}.toolbar{align-items:flex-start;flex-direction:column}.toolbar-right{width:100%;justify-content:space-between}.content-grid{grid-template-columns:1fr}.lower-grid{grid-template-columns:1fr}.chart-wrap{overflow-x:auto}.panel{padding:15px}}
+    @media(max-width:430px){.welcome h1{font-size:22px}.stats{gap:9px}.stat-card{padding:12px}.stat-value{font-size:20px}.stat-top{align-items:flex-start}.stat-icon{width:24px;height:24px}.toolbar-right{align-items:flex-start;flex-direction:column}.periods{width:100%;justify-content:space-between}.period{flex:1}.button{width:100%}.panel-head{flex-wrap:wrap}}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside aria-label="Dashboard navigation">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">N</span><span>northstar <em>insights</em></span></div>
+      <p class="workspace-name"><small>Workspace</small>Northstar Coffee <span aria-hidden="true">⌄</span></p>
+      <p class="nav-label">Overview</p>
+      <a class="nav-link active" href="#overview"><span class="nav-icon" aria-hidden="true">▦</span>Dashboard</a>
+      <a class="nav-link" href="#revenue"><span class="nav-icon" aria-hidden="true">⌁</span>Analytics</a>
+      <a class="nav-link" href="#orders"><span class="nav-icon" aria-hidden="true">▤</span>Orders</a>
+      <a class="nav-link" href="#products"><span class="nav-icon" aria-hidden="true">◈</span>Products</a>
+      <p class="nav-label">Manage</p>
+      <a class="nav-link" href="#customers"><span class="nav-icon" aria-hidden="true">♙</span>Customers</a>
+      <a class="nav-link" href="#settings"><span class="nav-icon" aria-hidden="true">⚙</span>Settings</a>
+    </aside>
+    <main id="overview">
+      <header class="topbar">
+        <div class="welcome"><h1>Good morning, Alex</h1><p>Here’s your business performance at a glance.</p></div>
+        <div class="top-actions"><div class="search" role="search">⌕ &nbsp; Search dashboard</div><div class="avatar" aria-label="Alex Chen">AC</div></div>
+      </header>
+      <div class="demo-note" role="note"><strong>Interactive demo · Sample data only.</strong> This dashboard is not connected to a business account or live data.</div>
+      <section class="toolbar" aria-label="Dashboard controls">
+        <h2>Overview</h2>
+        <div class="toolbar-right">
+          <div class="periods" role="group" aria-label="Choose date range">
+            <button class="period" type="button" data-range="7d" aria-pressed="false">7 days</button>
+            <button class="period" type="button" data-range="30d" aria-pressed="true">30 days</button>
+            <button class="period" type="button" data-range="90d" aria-pressed="false">90 days</button>
+          </div>
+          <button class="button" type="button" id="export-report">↓ &nbsp; Export CSV</button>
+        </div>
+      </section>
+      <section class="stats" aria-label="Business performance metrics">
+        <article class="card stat-card"><div class="stat-top"><span>Total revenue</span><span class="stat-icon" aria-hidden="true">↗</span></div><div class="stat-value" id="revenue-value">$32,480</div><div class="stat-note"><span class="trend" id="revenue-change">↑ 12.6%</span><span>vs. previous period</span></div></article>
+        <article class="card stat-card"><div class="stat-top"><span>Orders</span><span class="stat-icon" aria-hidden="true">▤</span></div><div class="stat-value" id="orders-value">742</div><div class="stat-note"><span class="trend" id="orders-change">↑ 8.2%</span><span>vs. previous period</span></div></article>
+        <article class="card stat-card"><div class="stat-top"><span>Average order</span><span class="stat-icon" aria-hidden="true">◉</span></div><div class="stat-value" id="average-value">$43.77</div><div class="stat-note"><span class="trend" id="average-change">↑ 3.4%</span><span>vs. previous period</span></div></article>
+        <article class="card stat-card"><div class="stat-top"><span>Conversion rate</span><span class="stat-icon" aria-hidden="true">◎</span></div><div class="stat-value" id="conversion-value">3.5%</div><div class="stat-note"><span class="trend" id="conversion-change">↑ 0.6%</span><span>vs. previous period</span></div></article>
+      </section>
+      <div class="content-grid">
+        <section class="panel" id="revenue" aria-labelledby="revenue-heading">
+          <div class="panel-head"><div><h2 id="revenue-heading">Revenue overview</h2><p id="revenue-period">Daily revenue for the last 30 days</p></div><div class="chart-legend"><span class="legend-dot"></span>Revenue</div></div>
+          <div class="chart-wrap">
+            <svg class="chart" viewBox="0 0 700 240" role="img" aria-label="Revenue trend chart" id="revenue-chart">
+              <defs><linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#14866c" stop-opacity=".2"/><stop offset="1" stop-color="#14866c" stop-opacity="0"/></linearGradient></defs>
+              <path class="chart-grid" d="M45 30H680M45 70H680M45 110H680M45 150H680M45 190H680"/>
+              <text class="chart-axis" x="5" y="33">$5k</text><text class="chart-axis" x="5" y="73">$4k</text><text class="chart-axis" x="5" y="113">$3k</text><text class="chart-axis" x="5" y="153">$2k</text><text class="chart-axis" x="5" y="193">$1k</text>
+              <path class="chart-area" id="revenue-area" d=""/>
+              <path class="chart-line" id="revenue-line" d=""/>
+              <g id="chart-points"></g>
+              <g id="chart-labels"></g>
+            </svg>
+          </div>
+          <div class="footer-note">Values are illustrative and update when you change the date range.</div>
+        </section>
+        <section class="panel" id="products" aria-labelledby="products-heading">
+          <div class="panel-head"><div><h2 id="products-heading">Top products</h2><p>By units sold this month</p></div><button class="button" type="button">View all</button></div>
+          <div class="product-list">
+            <div><div class="product-top"><span class="product-name">House blend beans</span><span class="product-sales">284 sold</span></div><div class="bar-track"><div class="bar-fill" style="width:82%"></div></div></div>
+            <div><div class="product-top"><span class="product-name">Ceramic pour-over</span><span class="product-sales">216 sold</span></div><div class="bar-track"><div class="bar-fill alt" style="width:66%"></div></div></div>
+            <div><div class="product-top"><span class="product-name">Cold brew bottle</span><span class="product-sales">173 sold</span></div><div class="bar-track"><div class="bar-fill warm" style="width:52%"></div></div></div>
+            <div><div class="product-top"><span class="product-name">Tasting flight</span><span class="product-sales">128 sold</span></div><div class="bar-track"><div class="bar-fill" style="width:39%"></div></div></div>
+          </div>
+          <div class="product-foot"><span>Compared with previous month</span><strong class="trend">↑ 9.2%</strong></div>
+        </section>
+      </div>
+      <div class="lower-grid">
+        <section class="panel" id="orders" aria-labelledby="orders-heading">
+          <div class="panel-head"><div><h2 id="orders-heading">Recent orders</h2><p>Latest activity from your store</p></div><button class="button" type="button">All orders</button></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Total</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td class="order-id">#NC-2048</td><td><span class="customer"><span class="customer-mark">OL</span>Olivia Lee</span></td><td>Today, 10:42</td><td>$86.00</td><td><span class="badge">Paid</span></td></tr>
+                <tr><td class="order-id">#NC-2047</td><td><span class="customer"><span class="customer-mark">MR</span>Marcus Reed</span></td><td>Today, 09:18</td><td>$42.50</td><td><span class="badge">Paid</span></td></tr>
+                <tr><td class="order-id">#NC-2046</td><td><span class="customer"><span class="customer-mark">AP</span>Amira Patel</span></td><td>Yesterday</td><td>$119.00</td><td><span class="badge pending">Processing</span></td></tr>
+                <tr><td class="order-id">#NC-2045</td><td><span class="customer"><span class="customer-mark">JW</span>Jamie Wong</span></td><td>Yesterday</td><td>$34.00</td><td><span class="badge">Paid</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="panel" id="customers" aria-labelledby="customers-heading">
+          <div class="panel-head"><div><h2 id="customers-heading">Customer snapshot</h2><p>Audience at a glance</p></div></div>
+          <div class="product-top"><span class="product-name">Returning customers</span><strong>38%</strong></div>
+          <div class="bar-track"><div class="bar-fill" style="width:38%"></div></div>
+          <div class="product-top" style="margin-top:19px"><span class="product-name">New customers</span><strong>62%</strong></div>
+          <div class="bar-track"><div class="bar-fill alt" style="width:62%"></div></div>
+          <div class="product-foot"><span>Customer satisfaction</span><strong>4.8 / 5</strong></div>
+        </section>
+      </div>
+      <p class="footer-note">Northstar Insights · Dashboard concept preview</p>
+    </main>
+  </div>
+  <script>
+    (() => {
+      const ranges = {
+        '7d': { label: 'last 7 days', revenue: '$8,240', revenueChange: '↑ 8.4%', orders: '186', ordersChange: '↑ 5.1%', average: '$44.30', averageChange: '↑ 2.8%', conversion: '3.8%', conversionChange: '↑ 0.4%', values: [38, 45, 41, 58, 52, 72, 67], labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+        '30d': { label: 'last 30 days', revenue: '$32,480', revenueChange: '↑ 12.6%', orders: '742', ordersChange: '↑ 8.2%', average: '$43.77', averageChange: '↑ 3.4%', conversion: '3.5%', conversionChange: '↑ 0.6%', values: [30, 43, 38, 61, 55, 74, 69], labels: ['1', '5', '10', '15', '20', '25', '30'] },
+        '90d': { label: 'last 90 days', revenue: '$91,620', revenueChange: '↑ 18.3%', orders: '2,108', ordersChange: '↑ 14.7%', average: '$43.47', averageChange: '↑ 3.1%', conversion: '3.7%', conversionChange: '↑ 0.8%', values: [28, 35, 46, 42, 63, 72, 86], labels: ['Aug', 'Aug 15', 'Sep', 'Sep 15', 'Oct', 'Oct 15', 'Nov'] },
+      };
+      const svgNamespace = 'http://www.w3.org/2000/svg';
+
+      const updateChart = (range) => {
+        const points = range.values.map((value, index) => ({
+          x: 45 + (635 / (range.values.length - 1)) * index,
+          y: 190 - (value / 100) * 160,
+        }));
+        const line = points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ');
+        document.getElementById('revenue-line').setAttribute('d', line);
+        document.getElementById('revenue-area').setAttribute('d', `${line} L 680 190 L 45 190 Z`);
+        const pointGroup = document.getElementById('chart-points');
+        const labelGroup = document.getElementById('chart-labels');
+        pointGroup.replaceChildren();
+        labelGroup.replaceChildren();
+        points.forEach((point, index) => {
+          const circle = document.createElementNS(svgNamespace, 'circle');
+          circle.setAttribute('class', 'chart-point');
+          circle.setAttribute('cx', point.x);
+          circle.setAttribute('cy', point.y);
+          circle.setAttribute('r', '4');
+          pointGroup.append(circle);
+          const label = document.createElementNS(svgNamespace, 'text');
+          label.setAttribute('class', 'chart-axis');
+          label.setAttribute('x', point.x);
+          label.setAttribute('y', '218');
+          label.setAttribute('text-anchor', 'middle');
+          label.textContent = range.labels[index];
+          labelGroup.append(label);
+        });
+        document.getElementById('revenue-chart').setAttribute('aria-label', `Revenue trend chart for the ${range.label}`);
+        document.getElementById('revenue-period').textContent = `Daily revenue for the ${range.label}`;
+      };
+
+      const setRange = (key) => {
+        const range = ranges[key];
+        if (!range) throw new RangeError(`Unknown dashboard date range: ${key}`);
+        document.querySelectorAll('.period').forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.range === key));
+        });
+        document.getElementById('revenue-value').textContent = range.revenue;
+        document.getElementById('revenue-change').textContent = range.revenueChange;
+        document.getElementById('orders-value').textContent = range.orders;
+        document.getElementById('orders-change').textContent = range.ordersChange;
+        document.getElementById('average-value').textContent = range.average;
+        document.getElementById('average-change').textContent = range.averageChange;
+        document.getElementById('conversion-value').textContent = range.conversion;
+        document.getElementById('conversion-change').textContent = range.conversionChange;
+        updateChart(range);
+      };
+
+      document.querySelectorAll('.period').forEach((button) => {
+        button.addEventListener('click', () => setRange(button.dataset.range));
+      });
+      document.getElementById('export-report').addEventListener('click', () => {
+        const range = ranges[document.querySelector('.period[aria-pressed="true"]').dataset.range];
+        const rows = [
+          ['Metric', 'Value'],
+          ['Period', range.label],
+          ['Revenue', range.revenue],
+          ['Orders', range.orders],
+          ['Average order', range.average],
+          ['Conversion rate', range.conversion],
+        ];
+        const csv = rows.map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'northstar-dashboard-report.csv';
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+      setRange('30d');
+    })();
+  </script>
+</body>
+</html>

@@ -61,4 +61,22 @@ return [
         'description' => 'A music production studio website demo with services, rooms, and booking details. This is a sample design, not a client project.',
         'sort_order' => 19,
     ],
+    'site-inspection' => [
+        'title' => 'Site inspection & photo upload',
+        'filename' => 'site-inspection.svg',
+        'description' => 'A mobile-friendly site inspection demo with a checklist, notes, and local photo previews. Photos are not uploaded or saved. This is a sample design, not a client project.',
+        'sort_order' => 20,
+    ],
+    'pdf-creator' => [
+        'title' => 'PDF document creator',
+        'filename' => 'pdf-creator.svg',
+        'description' => 'A local document editor with live preview and browser print-to-PDF export. Document content is not uploaded or saved. This is a sample design, not a client project.',
+        'sort_order' => 21,
+    ],
+    'analytics-dashboard' => [
+        'title' => 'Business analytics dashboard',
+        'filename' => 'analytics-dashboard.svg',
+        'description' => 'An interactive analytics dashboard concept with revenue trends, performance metrics, top products, and sample orders. It uses demo data only and is not connected to a business account. This is a sample design, not a client project.',
+        'sort_order' => 22,
+    ],
 ];
