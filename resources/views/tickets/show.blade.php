@@ -284,19 +284,48 @@
                                         placeholder="Share a brief, customer-safe summary of this repair step."></textarea>
                                     <div class="form-text">This summary appears to customers on the public repair tracking page.</div>
                                 </div>
-                                <div class="col-md-8">
-                                    <label class="form-label" for="step-photos">Step photos <span class="text-body-secondary">(optional)</span></label>
-                                    <x-image-upload-input id="step-photos" name="photos[]" :multiple="true" :required="false" />
-                                    <div class="form-text">Photos are attached to this specific repair step.</div>
-                                </div>
                                 <div class="col-12">
-                                    <div class="row g-2" id="step-photo-captions" aria-live="polite"></div>
+                                    <div class="form-text">Save the repair step first, then add photos one at a time with an individual caption.</div>
                                 </div>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                             <button class="btn btn-primary" type="submit">Add repair step</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="ticket-step-photo-modal" tabindex="-1" aria-labelledby="ticket-step-photo-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form id="ticket-step-photo-form" method="POST" action="{{ route('tickets.show', $ticket) }}"
+                        enctype="multipart/form-data" data-ticket-ajax-form>
+                        @csrf
+                        <div class="modal-header">
+                            <div>
+                                <h2 class="modal-title fs-5" id="ticket-step-photo-title">Add photo to repair step</h2>
+                                <div class="small text-body-secondary" data-ticket-step-photo-name></div>
+                            </div>
+                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
+                            <div class="mb-3">
+                                <label class="form-label" for="ticket-step-photo-file">Photo</label>
+                                <x-image-upload-input id="ticket-step-photo-file" name="photos[]" :required="true" />
+                            </div>
+                            <div>
+                                <label class="form-label" for="ticket-step-photo-caption">Caption</label>
+                                <input class="form-control" id="ticket-step-photo-caption" name="caption"
+                                    maxlength="255" placeholder="Describe this photo" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">Add photo</button>
                         </div>
                     </form>
                 </div>
@@ -395,11 +424,14 @@
                         bootstrap.Modal.getOrCreateInstance(form.closest('.modal')).hide();
                         if (form.id === 'ticket-step-form') {
                             form.reset();
+                            const stepStatus = document.getElementById('step-status');
+                            if (stepStatus) stepStatus.value = result.status || stepStatus.value;
+                        }
+                        if (form.id === 'ticket-step-photo-form') {
+                            form.reset();
                             form.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
                                 selection.textContent = '';
                             });
-                            const stepStatus = document.getElementById('step-status');
-                            if (stepStatus) stepStatus.value = result.status || stepStatus.value;
                         }
                         showToast(result.message || 'Ticket updated.');
                     } catch (error) {
@@ -417,30 +449,21 @@
                 window.initializeProjectAjaxControls(workflowAssignees.closest('.modal'));
             }
 
-            const stepPhotoInput = document.getElementById('step-photos');
-            const stepPhotoCaptions = document.getElementById('step-photo-captions');
-            const renderStepPhotoCaptions = () => {
-                stepPhotoCaptions.replaceChildren();
-                Array.from(stepPhotoInput.files || []).forEach((file, index) => {
-                    const column = document.createElement('div');
-                    column.className = 'col-12 col-md-6';
-                    const label = document.createElement('label');
-                    label.className = 'form-label';
-                    label.htmlFor = `step-photo-caption-${index}`;
-                    label.textContent = `Caption for ${file.name}`;
-                    const input = document.createElement('input');
-                    input.className = 'form-control';
-                    input.id = `step-photo-caption-${index}`;
-                    input.name = `captions[${index}]`;
-                    input.maxLength = 255;
-                    input.placeholder = 'Optional caption';
-                    column.append(label, input);
-                    stepPhotoCaptions.append(column);
+            const stepPhotoForm = document.getElementById('ticket-step-photo-form');
+            const stepPhotoName = document.querySelector('[data-ticket-step-photo-name]');
+            page.addEventListener('click', (event) => {
+                if (!stepPhotoForm || !stepPhotoName || !(event.target instanceof Element)) return;
+                const button = event.target.closest('[data-ticket-step-photo-action]');
+                if (!button) return;
+
+                stepPhotoForm.reset();
+                stepPhotoForm.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
+                    selection.textContent = '';
                 });
-            };
-            if (stepPhotoInput && stepPhotoCaptions) {
-                stepPhotoInput.addEventListener('change', renderStepPhotoCaptions);
-            }
+                stepPhotoForm.action = button.dataset.ticketStepPhotoAction;
+                stepPhotoName.textContent = button.dataset.ticketStepPhotoName;
+                stepPhotoForm.querySelector('[data-ticket-form-error]').classList.add('d-none');
+            });
         })();
     </script>
 @endpush

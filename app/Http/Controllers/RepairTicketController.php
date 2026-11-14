@@ -9,7 +9,6 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Rules\AssignableUser;
-use App\Services\AttachmentStorage;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
 use App\Support\DataTableQueryBuilder;
@@ -396,22 +395,16 @@ class RepairTicketController extends Controller
         return array_values(array_unique(array_map('intval', $ids)));
     }
 
-    public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
+    public function storeUpdate(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'notes' => ['nullable', 'string', 'max:5000'],
             'customer_details' => ['nullable', 'string', 'max:5000'],
-            'photos' => ['nullable', 'array', 'max:8'],
-            'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-            'captions' => ['nullable', 'array', 'max:8'],
-            'captions.*' => ['nullable', 'string', 'max:255'],
+            'photos' => ['prohibited'],
+            'captions' => ['prohibited'],
         ]);
-        $photos = $data['photos'] ?? [];
-        unset($data['photos']);
-        $captions = $data['captions'] ?? [];
-        unset($data['captions']);
 
         $update = DB::transaction(function () use ($ticket, $data, $request): RepairTicketUpdate {
             $ticket->update(['status' => $data['status']]);
@@ -422,9 +415,6 @@ class RepairTicketController extends Controller
             ]);
         });
 
-        if ($photos) {
-            $storage->store($update->attachments(), $photos, $request->user(), $captions);
-        }
         $ticket->load(['creator', 'assignees']);
         $notifier->notifyUsers(
             collect([$ticket->creator])->merge($ticket->assignees),

@@ -43,6 +43,8 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('data-bs-target="#ticket-step-modal"', false)
             ->assertSee('id="ticket-workflow-modal"', false)
             ->assertSee('id="ticket-step-modal"', false)
+            ->assertSee('id="ticket-step-photo-modal"', false)
+            ->assertSee('id="ticket-step-photo-file"', false)
             ->assertSee('id="workflow-device-model"', false)
             ->assertSee('id="workflow-serial-number"', false)
             ->assertSee('id="step-customer-details"', false)
@@ -75,19 +77,18 @@ class CustomerRepairTicketTest extends TestCase
         $this->assertSame('ThinkPad T14', $ticket->fresh()->device_model);
         $this->assertSame('SN-1001', $ticket->fresh()->serial_number);
 
+        $this->postJson(route('tickets.steps.store', $ticket), [
+            'title' => 'A step with photos must be rejected',
+            'status' => 'in_repair',
+            'photos' => [UploadedFile::fake()->image('batch-photo.png')],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('photos');
+
         $stepResponse = $this->post(route('tickets.steps.store', $ticket), [
             'title' => 'Replace charging port',
             'status' => 'waiting_parts',
             'notes' => 'Replacement part ordered.',
             'customer_details' => 'The replacement part has been ordered.',
-            'photos' => [
-                UploadedFile::fake()->image('port-inspection.png'),
-                UploadedFile::fake()->image('bent-pin.png'),
-            ],
-            'captions' => [
-                0 => 'Port inspection',
-                1 => 'Bent connector pin',
-            ],
         ], [
             'Accept' => 'application/json',
             'X-Requested-With' => 'XMLHttpRequest',
@@ -97,12 +98,43 @@ class CustomerRepairTicketTest extends TestCase
 
         $this->assertStringContainsString('Replace charging port', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('The replacement part has been ordered.', $stepResponse->json('updates_html'));
-        $this->assertStringContainsString('Port inspection', $stepResponse->json('updates_html'));
-        $this->assertStringContainsString('Bent connector pin', $stepResponse->json('updates_html'));
-        $this->assertStringContainsString('data-ticket-step-carousel', $stepResponse->json('updates_html'));
-        $this->assertStringContainsString('data-bs-slide="next"', $stepResponse->json('updates_html'));
         $update = $ticket->updates()->latest('id')->firstOrFail();
         $this->assertSame('The replacement part has been ordered.', $update->customer_details);
+        $this->assertStringContainsString(
+            route('tickets.steps.attachments.store', [$ticket, $update]),
+            $stepResponse->json('updates_html'),
+        );
+
+        $photoRoute = route('tickets.steps.attachments.store', [$ticket, $update]);
+        $this->postJson($photoRoute, [
+            'photos' => [
+                UploadedFile::fake()->image('first.png'),
+                UploadedFile::fake()->image('second.png'),
+            ],
+            'caption' => 'A batch should be rejected.',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('photos');
+        $this->postJson($photoRoute, [
+            'photos' => [UploadedFile::fake()->image('caption-required.png')],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('caption');
+
+        $this->postJson($photoRoute, [
+            'photos' => [UploadedFile::fake()->image('port-inspection.png')],
+            'caption' => 'Port inspection',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Photo added to repair step.');
+
+        $secondPhotoResponse = $this->postJson($photoRoute, [
+            'photos' => [UploadedFile::fake()->image('bent-pin.png')],
+            'caption' => 'Bent connector pin',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Photo added to repair step.');
+
+        $this->assertStringContainsString('Port inspection', $secondPhotoResponse->json('updates_html'));
+        $this->assertStringContainsString('Bent connector pin', $secondPhotoResponse->json('updates_html'));
+        $this->assertStringContainsString('data-ticket-step-carousel', $secondPhotoResponse->json('updates_html'));
+        $this->assertStringContainsString('data-bs-slide="next"', $secondPhotoResponse->json('updates_html'));
         $this->assertSame(
             ['Port inspection', 'Bent connector pin'],
             $update->attachments()->orderBy('id')->pluck('caption')->all(),
@@ -309,7 +341,7 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('RT-2026-000123')
             ->assertSee('Waiting for parts')
             ->assertSee('Repair timeline')
-            ->assertSee('Repair steps')
+            ->assertDontSee('<h3 class="h5 mb-3">Repair steps</h3>', false)
             ->assertSee('New')
             ->assertSee('Waiting for parts')
             ->assertSee('Parts ordered')

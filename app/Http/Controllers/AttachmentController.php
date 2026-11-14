@@ -11,6 +11,7 @@ use App\Models\RepairTicketUpdate;
 use App\Models\Task;
 use App\Services\AttachmentStorage;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -85,11 +86,32 @@ class AttachmentController extends Controller
         return back()->with('success', 'Ticket photos uploaded.');
     }
 
-    public function storeTicketUpdate(Request $request, RepairTicket $ticket, RepairTicketUpdate $update, AttachmentStorage $storage): RedirectResponse
+    public function storeTicketUpdate(Request $request, RepairTicket $ticket, RepairTicketUpdate $update, AttachmentStorage $storage): RedirectResponse|JsonResponse
     {
         abort_unless($update->repair_ticket_id === $ticket->id, 404);
-        $data = $request->validate(AttachmentStorage::validationRules());
+        $data = $request->validate([
+            'photos' => ['required', 'array', 'size:1'],
+            'photos.0' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'caption' => ['required', 'string', 'max:255'],
+        ]);
         $storage->store($update->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
+
+        if ($request->expectsJson()) {
+            $ticket->load(['assignees', 'updates.user', 'updates.attachments.uploader']);
+
+            return response()->json([
+                'message' => 'Photo added to repair step.',
+                'status' => $ticket->status,
+                'status_html' => view('tickets.partials.status-badge', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+                'updates_html' => view('tickets.partials.update-list', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+            ]);
+        }
 
         return back()->with('success', 'Step photos uploaded.');
     }

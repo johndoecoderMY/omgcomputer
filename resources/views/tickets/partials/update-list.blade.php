@@ -11,6 +11,13 @@
                     {{ $update->created_at->format('M j, Y g:i A') }}<br>{{ $update->user?->name ?? 'System' }}
                 </div>
             </div>
+            <button class="btn btn-sm btn-outline-primary mt-2" type="button"
+                data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal"
+                data-ticket-step-photo-action="{{ route('tickets.steps.attachments.store', [$ticket, $update]) }}"
+                data-ticket-step-photo-name="{{ $update->title }}"
+                aria-label="Add photo to {{ $update->title }}">
+                <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
+            </button>
             @if ($update->notes)
                 <p class="text-pre-line mt-2 mb-0">{{ $update->notes }}</p>
             @endif

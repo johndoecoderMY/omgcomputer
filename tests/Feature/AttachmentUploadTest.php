@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,9 @@ class AttachmentUploadTest extends TestCase
     public function test_private_photos_can_be_attached_to_tasks_ticket_steps_tickets_and_templates(): void
     {
         Storage::fake('local');
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('admin');
         $this->actingAs($user);
         $project = Project::query()->create(['name' => 'Repair SOP project']);
         $task = $project->tasks()->create([
@@ -63,7 +66,15 @@ class AttachmentUploadTest extends TestCase
             'title' => 'Inspect power input',
             'status' => 'diagnosing',
             'notes' => 'Check adapter output and charging port before opening the chassis.',
-            'photos' => [UploadedFile::fake()->image('power-input.png')],
+        ])->assertRedirect();
+        $step = RepairTicketUpdate::query()
+            ->where('repair_ticket_id', $ticket->id)
+            ->where('title', 'Inspect power input')
+            ->firstOrFail();
+        $stepPhoto = UploadedFile::fake()->image('power-input.png', 2400, 1600);
+        $stepOriginalSize = $stepPhoto->getSize();
+        $this->post(route('tickets.steps.attachments.store', [$ticket, $step]), [
+            'photos' => [$stepPhoto],
             'caption' => 'Power input inspection',
         ])->assertRedirect();
 
@@ -78,10 +89,15 @@ class AttachmentUploadTest extends TestCase
             ->assertSee('data-gallery="task-photos"', false)
             ->assertSee('name="caption"', false)
             ->assertSee('vendors/glightbox/glightbox.min.js');
-        $step = RepairTicketUpdate::query()->where('repair_ticket_id', $ticket->id)->where('title', 'Inspect power input')->firstOrFail();
         $this->assertSame(1, $ticket->attachments()->count());
         $this->assertSame(1, $step->attachments()->count());
+        $stepAttachment = $step->attachments()->firstOrFail();
+        $this->assertSame('Power input inspection', $stepAttachment->caption);
         $this->assertSame(1, $template->attachments()->count());
+        $this->assertSame('image/webp', $stepAttachment->mime_type);
+        $this->assertLessThan($stepOriginalSize, $stepAttachment->size);
+        [$stepWidth, $stepHeight] = getimagesize(Storage::disk('local')->path($stepAttachment->path));
+        $this->assertLessThanOrEqual(1920, max($stepWidth, $stepHeight));
         Storage::disk('local')->assertExists($taskAttachment->path);
         $this->assertSame('image/webp', $taskAttachment->mime_type);
         $this->assertSame('webp', pathinfo($taskAttachment->path, PATHINFO_EXTENSION));
