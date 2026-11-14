@@ -595,4 +595,35 @@ class IntegrationTestPagesTest extends TestCase
         Mail::assertSent(IntegrationTestMail::class, fn (IntegrationTestMail $mail): bool => $mail->recipientName === $admin->name
             && $mail->hasTo($admin->email));
     }
+
+    public function test_admin_can_preview_booking_ticket_and_project_emails(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->get(route('reports.integrations.email.preview'))
+            ->assertOk()
+            ->assertSee('Booking confirmed (customer)')
+            ->assertSee('Repair step added (staff)')
+            ->assertSee('Project event scheduled (staff)')
+            ->assertSee('width:100%;max-width:600px', false);
+
+        foreach ([
+            'booking_confirmation',
+            'booking_received',
+            'booking_updated',
+            'booking_assigned',
+            'ticket_created',
+            'ticket_assigned',
+            'ticket_updated',
+            'ticket_details_updated',
+            'ticket_step_added',
+            'project_created',
+            'project_updated',
+            'project_event',
+        ] as $preview) {
+            $response->assertSee('data-email-preview="'.$preview.'"', false);
+        }
+    }
 }

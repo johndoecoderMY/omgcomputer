@@ -26,6 +26,21 @@ class WorkspaceNotificationsTest extends TestCase
         $this->assertSame('sync', $notification->toBroadcast(User::factory()->make())->connection);
     }
 
+    public function test_workspace_notification_email_uses_the_responsive_branded_layout(): void
+    {
+        $recipient = User::factory()->make(['name' => 'Jamie Lee']);
+        $mail = (new WorkspaceNotification('Project updated', 'Website refresh was updated.', '/projects/12'))
+            ->toMail($recipient);
+        $html = (string) $mail->render();
+
+        $this->assertSame('Project updated', $mail->subject);
+        $this->assertStringContainsString('Hello Jamie Lee,', $html);
+        $this->assertStringContainsString('Website refresh was updated.', $html);
+        $this->assertStringContainsString('href="/projects/12"', $html);
+        $this->assertStringContainsString('Open workspace', $html);
+        $this->assertStringContainsString('max-width: 620px', $html);
+    }
+
     public function test_task_assignment_notifies_the_assignee(): void
     {
         Notification::fake();

@@ -5,14 +5,14 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Integrations" title="Email layout preview"
-        description="Preview the quotation email customers receive, including the accept and reject actions."
+    description="Preview customer and staff emails for bookings, repair tickets, projects, quotations, and account activity."
         :back-url="route('reports.integrations.notifications')" back-label="Email tests" />
 
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <div>
                 <h2 class="h5 mb-1">Choose an email layout</h2>
-                <div class="small text-body-secondary">All customer and account emails use the shared OMG Computer layout.</div>
+                <div class="small text-body-secondary">Sample content only. Previews use the shared responsive OMG Computer email layout.</div>
             </div>
             <span class="badge text-bg-light border text-dark">Sample content only</span>
         </div>
@@ -47,7 +47,7 @@
         </div>
         <div class="bg-body-secondary-subtle p-3 p-md-4 overflow-auto">
             <div class="mx-auto" style="max-width:100%" id="email-preview-shell">
-                <iframe id="quotation-email-preview" title="Quotation email preview" class="bg-white border-0 rounded-3 mx-auto d-block" style="width:100%;max-width:100%;height:780px;"></iframe>
+                <iframe id="email-preview-frame" title="Email layout preview" class="bg-white border-0 rounded-3 mx-auto d-block" style="width:100%;max-width:100%;height:780px;"></iframe>
             </div>
         </div>
     </div>
@@ -57,10 +57,11 @@
 @push('scripts')
 <script>
 (() => {
-    const frame = document.getElementById('quotation-email-preview');
+    const frame = document.getElementById('email-preview-frame');
     const previews = @json($previews);
     const subject = document.getElementById('email-preview-subject');
     frame.srcdoc = previews.quotation.html;
+    frame.title = `${previews.quotation.label} email preview`;
 
     document.querySelectorAll('[data-email-preview]').forEach((button) => {
         button.addEventListener('click', () => {
@@ -73,6 +74,7 @@
 
             const preview = previews[button.dataset.emailPreview];
             frame.srcdoc = preview.html;
+            frame.title = `${preview.label} email preview`;
             subject.textContent = preview.subject;
         });
     });

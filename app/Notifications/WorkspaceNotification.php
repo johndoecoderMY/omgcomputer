@@ -37,9 +37,11 @@ class WorkspaceNotification extends Notification
     {
         return (new MailMessage)
             ->subject($this->title)
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line($this->message)
-            ->action('Open workspace', $this->url)
-            ->line('You can review this notification in your workspace.');
+            ->view('emails.workspace-notification', [
+                'recipientName' => $notifiable->name,
+                'notificationTitle' => $this->title,
+                'notificationMessage' => $this->message,
+                'actionUrl' => $this->url,
+            ]);
     }
 }

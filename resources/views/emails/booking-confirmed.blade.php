@@ -9,9 +9,9 @@
 
 @section('email-content')
 <tr>
-    <td style="padding:36px 36px 28px;">
+    <td class="email-content-padding" style="padding:36px 36px 28px;">
         <p style="margin:0 0 8px;font-size:14px;color:#64748b;">Hello {{ $booking->customer_name }},</p>
-        <h1 style="margin:0 0 14px;font-size:28px;line-height:36px;color:#12263f;">Your booking is confirmed</h1>
+        <h1 class="email-heading" style="margin:0 0 14px;font-size:28px;line-height:36px;color:#12263f;">Your booking is confirmed</h1>
         <p style="margin:0;font-size:16px;line-height:26px;color:#475569;">We’ve confirmed your appointment with OMG Computer. Here are the details:</p>
     </td>
 </tr>

@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BookingConfirmedMail;
 use App\Mail\IntegrationTestMail;
 use App\Models\BillingDocument;
+use App\Models\Booking;
 use App\Models\ChipSetting;
+use App\Models\Project;
+use App\Models\RepairTicket;
+use App\Models\User;
 use App\Notifications\IntegrationTestNotification;
+use App\Notifications\WorkspaceNotification;
 use App\Services\ChipCollect;
 use App\Services\CpanelEmailProvisioner;
 use App\Services\MailSettingsService;
@@ -115,14 +121,39 @@ class IntegrationTestController extends Controller
     public function emailPreview(): View
     {
         $document = new BillingDocument([
-                'number' => 'QUO-000123',
-                'type' => 'quotation',
-                'customer_name' => 'Sample Customer',
-                'customer_email' => 'customer@example.com',
+            'number' => 'QUO-000123',
+            'type' => 'quotation',
+            'customer_name' => 'Sample Customer',
+            'customer_email' => 'customer@example.com',
             'total' => 2480,
         ]);
         $document->id = 1;
         $document->exists = true;
+
+        $bookingDateTime = now('Asia/Kuala_Lumpur')->addDays(2)->setTime(11, 0);
+        $booking = new Booking([
+            'reference' => 'BK-PREVIEW123',
+            'customer_name' => 'Jamie Lee',
+            'customer_email' => 'jamie@example.com',
+            'customer_phone' => '+60123456789',
+            'service_name' => 'Computer/PC Troubleshooting',
+            'starts_at' => $bookingDateTime,
+        ]);
+        $bookingMail = new BookingConfirmedMail($booking);
+        $ticket = new RepairTicket(['ticket_number' => 'RT-2026-000123']);
+        $ticket->id = 123;
+        $project = new Project(['name' => 'Website refresh']);
+        $project->id = 456;
+        $sampleStaff = new User(['name' => 'Sample Staff', 'email' => 'staff@example.com']);
+        $workspacePreview = static function (string $label, string $title, string $message, string $url) use ($sampleStaff): array {
+            $mail = (new WorkspaceNotification($title, $message, $url))->toMail($sampleStaff);
+
+            return [
+                'label' => $label,
+                'subject' => $title,
+                'html' => (string) $mail->render(),
+            ];
+        };
 
         $previews = [
             'quotation' => [
@@ -130,6 +161,77 @@ class IntegrationTestController extends Controller
                 'subject' => 'Quotation '.$document->number.' from OMG Computer',
                 'html' => view('emails.quotation', compact('document'))->render(),
             ],
+            'booking_confirmation' => [
+                'label' => 'Booking confirmed (customer)',
+                'subject' => $bookingMail->envelope()->subject,
+                'html' => $bookingMail->render(),
+            ],
+            'booking_received' => $workspacePreview(
+                'New booking received (staff)',
+                'New booking received',
+                'Jamie Lee booked Computer/PC Troubleshooting for '.$bookingDateTime->format('M j, Y g:i A').'.',
+                route('bookings.index'),
+            ),
+            'booking_updated' => $workspacePreview(
+                'Booking updated (staff)',
+                'Booking updated',
+                'Booking BK-PREVIEW123 for Jamie Lee was updated to Confirmed.',
+                route('bookings.index'),
+            ),
+            'booking_assigned' => $workspacePreview(
+                'Booking assigned (staff)',
+                'Booking assigned to you',
+                'Booking BK-PREVIEW123 for Jamie Lee is assigned to you.',
+                route('bookings.index'),
+            ),
+            'ticket_created' => $workspacePreview(
+                'Ticket created (staff)',
+                'Repair ticket created',
+                'Repair ticket '.$ticket->ticket_number.' was created.',
+                route('tickets.show', $ticket),
+            ),
+            'ticket_assigned' => $workspacePreview(
+                'Ticket assigned (staff)',
+                'Repair ticket assigned',
+                'You have been assigned repair ticket '.$ticket->ticket_number.'.',
+                route('tickets.show', $ticket),
+            ),
+            'ticket_updated' => $workspacePreview(
+                'Ticket status updated (staff)',
+                'Repair ticket updated',
+                'Repair ticket '.$ticket->ticket_number.' was updated to In repair.',
+                route('tickets.show', $ticket),
+            ),
+            'ticket_details_updated' => $workspacePreview(
+                'Ticket details updated (staff)',
+                'Repair ticket details updated',
+                'Repair ticket '.$ticket->ticket_number.' was updated.',
+                route('tickets.show', $ticket),
+            ),
+            'ticket_step_added' => $workspacePreview(
+                'Repair step added (staff)',
+                'Repair ticket update',
+                'Repair ticket '.$ticket->ticket_number.': Replace charging port.',
+                route('tickets.show', $ticket),
+            ),
+            'project_created' => $workspacePreview(
+                'Project created (staff)',
+                'Project created',
+                sprintf('Project “%s” was created.', $project->name),
+                route('projects.show', $project),
+            ),
+            'project_updated' => $workspacePreview(
+                'Project updated (staff)',
+                'Project updated',
+                sprintf('Project “%s” was updated.', $project->name),
+                route('projects.show', $project),
+            ),
+            'project_event' => $workspacePreview(
+                'Project event scheduled (staff)',
+                'Project event scheduled',
+                '“Design review” was scheduled for Website refresh on '.now()->addDays(2)->format('M j, Y g:i A').'.',
+                route('projects.show', $project),
+            ),
             'member_invitation' => [
                 'label' => 'Member invitation',
                 'subject' => 'Verify your email and set up your OMG Computer account',
@@ -144,9 +246,8 @@ class IntegrationTestController extends Controller
                 'html' => view('emails.integration-test', ['recipientName' => 'Sample User'])->render(),
             ],
         ];
-        $emailHtml = $previews['quotation']['html'];
 
-        return view('reports.integrations.email-preview', compact('document', 'emailHtml', 'previews'));
+        return view('reports.integrations.email-preview', compact('previews'));
     }
 
     public function whatsapp(): View
