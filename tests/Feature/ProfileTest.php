@@ -30,6 +30,7 @@ class ProfileTest extends TestCase
             ->assertSee('Edit profile')
             ->assertSee('Take photo')
             ->assertSee('Security')
+            ->assertSee('Settings')
             ->assertSee('Activity')
             ->assertSee('nav-item dropdown d-flex align-items-center', false)
             ->assertSee('d-flex align-items-center justify-content-center px-2 py-0', false)
@@ -41,6 +42,52 @@ class ProfileTest extends TestCase
             ->assertSee('action="'.route('logout').'"', false)
             ->assertDontSee('navbar-vertical.html#!')
             ->assertDontSee('../pages/user/settings.html');
+    }
+
+    public function test_staff_notification_preferences_default_on_and_can_be_changed(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        config(['services.beams.enabled' => true]);
+        $staff = User::factory()->create(['email' => 'staff@omgcomputer.my']);
+        $staff->assignRole('member');
+
+        $this->assertSame(['email' => true, 'push' => true], $staff->notificationPreferences());
+
+        $this->actingAs($staff)
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Enable this browser')
+            ->assertSee('Receive staff notification emails');
+
+        $this->put(route('profile.notifications.update'), [
+            'email_notifications' => '0',
+            'push_notifications' => '0',
+        ])->assertRedirect(route('profile.edit'))
+            ->assertSessionHas('profile-tab', 'settings');
+
+        $this->assertSame(['email' => false, 'push' => false], $staff->fresh()->notificationPreferences());
+        $this->assertDatabaseHas('profile_activities', [
+            'actor_id' => $staff->id,
+            'event' => 'notification_preferences_updated',
+        ]);
+    }
+
+    public function test_customer_can_opt_in_to_push_but_cannot_enable_staff_notification_email(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        config(['services.beams.enabled' => true]);
+        $customer = User::factory()->create(['email' => 'customer@omgcomputer.my']);
+        $customer->assignRole('customer');
+
+        $this->assertSame(['email' => false, 'push' => false], $customer->notificationPreferences());
+
+        $this->actingAs($customer)
+            ->put(route('profile.notifications.update'), [
+                'email_notifications' => '1',
+                'push_notifications' => '1',
+            ])->assertRedirect(route('profile.edit'));
+
+        $this->assertSame(['email' => false, 'push' => true], $customer->fresh()->notificationPreferences());
     }
 
     public function test_admin_account_menu_links_to_email_calendar_and_tasks(): void

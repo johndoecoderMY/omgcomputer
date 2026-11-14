@@ -20,11 +20,15 @@ class WorkspaceNotification extends Notification
     {
         $channels = ['database', 'broadcast'];
 
-        if ($notifiable instanceof User && app(BeamsPushNotifier::class)->isConfigured()) {
+        if ($notifiable instanceof User
+            && $notifiable->receivesPushNotifications()
+            && app(BeamsPushNotifier::class)->isConfigured()) {
             $channels[] = BeamsPushNotifier::class;
         }
 
-        if ($this->canReceiveStaffEmail($notifiable)) {
+        if ($notifiable instanceof User
+            && $notifiable->canReceiveStaffNotificationEmail()
+            && $notifiable->receivesEmailNotifications()) {
             $channels[] = 'mail';
         }
 
@@ -57,15 +61,4 @@ class WorkspaceNotification extends Notification
             ]);
     }
 
-    private function canReceiveStaffEmail(object $notifiable): bool
-    {
-        if ($notifiable instanceof User && $notifiable->hasAnyRole(['admin', 'member'])) {
-            $email = strtolower(trim((string) $notifiable->email));
-
-            return filter_var($email, FILTER_VALIDATE_EMAIL) !== false
-                && str_ends_with($email, '@omgcomputer.my');
-        }
-
-        return false;
-    }
 }

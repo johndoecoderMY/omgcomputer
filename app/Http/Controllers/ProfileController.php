@@ -23,6 +23,8 @@ class ProfileController extends Controller
     {
         return view('profile.edit', [
             'user' => $request->user()->load('teams.department'),
+            'notificationPreferences' => $request->user()->notificationPreferences(),
+            'canManageNotificationEmail' => $request->user()->canReceiveStaffNotificationEmail(),
         ]);
     }
 
@@ -103,6 +105,44 @@ class ProfileController extends Controller
         return Redirect::route('profile.edit')
             ->with('status', 'profile-updated')
             ->with('profile-tab', 'overview');
+    }
+
+    public function updateNotificationPreferences(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'email_notifications' => ['required', 'boolean'],
+            'push_notifications' => ['required', 'boolean'],
+        ]);
+        $user = $request->user();
+        $previousPreferences = $user->notificationPreferences();
+        $updatedPreferences = $previousPreferences;
+
+        if ($user->canReceiveStaffNotificationEmail()) {
+            $updatedPreferences['email'] = (bool) $validated['email_notifications'];
+        }
+
+        if (config('services.beams.enabled')) {
+            $updatedPreferences['push'] = (bool) $validated['push_notifications'];
+        }
+
+        $changedPreferences = [];
+        foreach (['email', 'push'] as $channel) {
+            if ($updatedPreferences[$channel] !== $previousPreferences[$channel]) {
+                $changedPreferences[] = "{$channel}_notifications";
+            }
+        }
+
+        if ($changedPreferences !== []) {
+            $user->forceFill(['notification_preferences' => $updatedPreferences])->save();
+            $user->profileActivities()->create([
+                'event' => 'notification_preferences_updated',
+                'changed_fields' => $changedPreferences,
+            ]);
+        }
+
+        return Redirect::route('profile.edit')
+            ->with('status', 'notification-settings-updated')
+            ->with('profile-tab', 'settings');
     }
 
     /**

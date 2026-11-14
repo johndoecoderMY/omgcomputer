@@ -16,7 +16,9 @@ class QuotationInAppNotification extends Notification
     {
         $channels = ['database', 'broadcast'];
 
-        if ($notifiable instanceof User && app(BeamsPushNotifier::class)->isConfigured()) {
+        if ($notifiable instanceof User
+            && $notifiable->receivesPushNotifications()
+            && app(BeamsPushNotifier::class)->isConfigured()) {
             $channels[] = BeamsPushNotifier::class;
         }
 

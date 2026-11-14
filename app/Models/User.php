@@ -55,7 +55,37 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'force_password_change' => 'boolean',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    public function notificationPreferences(): array
+    {
+        $storedPreferences = $this->notification_preferences ?? [];
+
+        return [
+            'email' => (bool) ($storedPreferences['email'] ?? $this->canReceiveStaffNotificationEmail()),
+            'push' => (bool) ($storedPreferences['push'] ?? $this->hasAnyRole(['admin', 'member'])),
+        ];
+    }
+
+    public function receivesEmailNotifications(): bool
+    {
+        return $this->notificationPreferences()['email'];
+    }
+
+    public function receivesPushNotifications(): bool
+    {
+        return $this->notificationPreferences()['push'];
+    }
+
+    public function canReceiveStaffNotificationEmail(): bool
+    {
+        $email = strtolower(trim((string) $this->email));
+
+        return $this->hasAnyRole(['admin', 'member'])
+            && filter_var($email, FILTER_VALIDATE_EMAIL) !== false
+            && str_ends_with($email, '@omgcomputer.my');
     }
 
     public function getProfilePhotoUrlAttribute(): ?string

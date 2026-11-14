@@ -77,6 +77,7 @@ const readPrefix = page.dataset.notificationReadPrefix;
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 const beamsInstanceId = page.dataset.beamsInstanceId;
 const beamsAuthUrl = page.dataset.beamsAuthUrl;
+const beamsPushEnabled = page.dataset.beamsPushEnabled === 'true';
 const needsServiceWorker = userId && (beamsInstanceId || page.dataset.staffPwa === 'true');
 const serviceWorkerPath = beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js';
 const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
@@ -100,8 +101,26 @@ if (userId && beamsInstanceId && beamsAuthUrl) {
         });
         const registeredUserId = await client.getUserId();
 
+        if (!beamsPushEnabled) {
+            if (registeredUserId) {
+                await client.stop();
+            }
+
+            return client;
+        }
+
         if (registeredUserId && registeredUserId !== String(userId)) {
             await client.stop();
+        }
+
+        if ('Notification' in window
+            && Notification.permission === 'granted'
+            && registeredUserId !== String(userId)) {
+            await client.start();
+            if (await client.getUserId() !== String(userId)) {
+                const tokenProvider = new PusherPushNotifications.TokenProvider({ url: beamsAuthUrl });
+                await client.setUserId(String(userId), tokenProvider);
+            }
         }
 
         return client;
@@ -138,9 +157,11 @@ if (userId && beamsInstanceId && beamsAuthUrl) {
                         throw new Error('The push notification service worker could not be initialized.');
                     }
 
-                    await client.start();
-                    const tokenProvider = new PusherPushNotifications.TokenProvider({ url: beamsAuthUrl });
-                    await client.setUserId(String(userId), tokenProvider);
+                    if (await client.getUserId() !== String(userId)) {
+                        await client.start();
+                        const tokenProvider = new PusherPushNotifications.TokenProvider({ url: beamsAuthUrl });
+                        await client.setUserId(String(userId), tokenProvider);
+                    }
                     enablePushButton.textContent = 'Push notifications enabled';
                     window.showAppToast?.('Push notifications are enabled for this browser.', 'success');
                 } catch (error) {

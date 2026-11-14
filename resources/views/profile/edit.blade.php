@@ -11,6 +11,8 @@
         <div class="alert alert-success" role="status">Profile details saved.</div>
     @elseif (session('status') === 'password-updated')
         <div class="alert alert-success" role="status">Password changed.</div>
+    @elseif (session('status') === 'notification-settings-updated')
+        <div class="alert alert-success" role="status">Notification settings saved.</div>
     @endif
     @if ($errors->hasBag('default') && $errors->any())
         <div class="alert alert-danger" role="alert">
@@ -35,6 +37,9 @@
                         <button class="profile-tab" id="profile-tab-security" type="button"
                             role="tab" aria-selected="false" aria-controls="profile-pane-security"
                             data-profile-tab="security"><span class="bi bi-shield-shaded me-2" aria-hidden="true"></span>Security</button>
+                        <button class="profile-tab" id="profile-tab-settings" type="button"
+                            role="tab" aria-selected="false" aria-controls="profile-pane-settings"
+                            data-profile-tab="settings"><span class="bi bi-bell me-2" aria-hidden="true"></span>Settings</button>
                         <button class="profile-tab" id="profile-tab-activity" type="button"
                             role="tab" aria-selected="false" aria-controls="profile-pane-activity"
                             data-profile-tab="activity"><span class="bi bi-clock-history me-2" aria-hidden="true"></span>Activity</button>
@@ -137,6 +142,63 @@
                                 </table>
                             </div>
                         </section>
+
+                        <section class="profile-tab-pane" id="profile-pane-settings" role="tabpanel"
+                            aria-labelledby="profile-tab-settings" data-profile-pane="settings" hidden>
+                            <div class="profile-section-header">
+                                <h2 class="h5 mb-1">Notification settings</h2>
+                                <p class="text-body-secondary mb-0">Choose how you receive workspace notifications.</p>
+                            </div>
+                            <form method="POST" action="{{ route('profile.notifications.update') }}">
+                                @csrf
+                                @method('PUT')
+
+                                <div class="profile-section">
+                                    <h3 class="h6 mb-2">Email notifications</h3>
+                                    @if ($canManageNotificationEmail)
+                                        <input type="hidden" name="email_notifications" value="0">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" id="email-notifications" type="checkbox"
+                                                name="email_notifications" value="1"
+                                                @checked(old('email_notifications', $notificationPreferences['email']))>
+                                            <label class="form-check-label" for="email-notifications">Receive staff notification emails</label>
+                                        </div>
+                                        <p class="form-text mb-0">This only controls workspace notification emails. Password resets and other account or transactional emails are unaffected.</p>
+                                    @else
+                                        <input type="hidden" name="email_notifications" value="{{ $notificationPreferences['email'] ? '1' : '0' }}">
+                                        <p class="text-body-secondary mb-0">Notification emails are available for staff accounts with a company email address. Account and transactional emails are unaffected.</p>
+                                    @endif
+                                </div>
+
+                                <div class="profile-section">
+                                    <h3 class="h6 mb-2">Push notifications</h3>
+                                    @if (config('services.beams.enabled'))
+                                        <input type="hidden" name="push_notifications" value="0">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" id="push-notifications" type="checkbox"
+                                                name="push_notifications" value="1"
+                                                @checked(old('push_notifications', $notificationPreferences['push']))>
+                                            <label class="form-check-label" for="push-notifications">Receive push notifications</label>
+                                        </div>
+                                        @if ($notificationPreferences['push'])
+                                            <p class="form-text mb-2" data-push-browser-status>
+                                                Push is enabled for your account. Each browser needs permission before it can receive notifications.
+                                            </p>
+                                            <button class="btn btn-primary btn-sm" type="button" data-enable-push-notifications>
+                                                <span class="bi bi-bell me-1" aria-hidden="true"></span>Enable this browser
+                                            </button>
+                                        @else
+                                            <p class="form-text mb-0">Save this setting first, then enable push permission for each browser you use.</p>
+                                        @endif
+                                    @else
+                                        <input type="hidden" name="push_notifications" value="{{ $notificationPreferences['push'] ? '1' : '0' }}">
+                                        <p class="text-body-secondary mb-0">Push notifications are not configured on this server yet.</p>
+                                    @endif
+                                </div>
+
+                                <button class="btn btn-primary mt-3" type="submit">Save notification settings</button>
+                            </form>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -175,9 +237,9 @@
         const statusTab = @json(session('profile-tab'));
         const invalidPassword = document.querySelector('#profile-pane-security .is-invalid');
         const invalidProfile = document.querySelector('#profile-pane-edit .is-invalid');
-        const initialTab = ['overview', 'edit', 'security', 'activity'].includes(statusTab)
+        const initialTab = ['overview', 'edit', 'security', 'settings', 'activity'].includes(statusTab)
             ? statusTab
-            : ['overview', 'edit', 'security', 'activity'].includes(requestedTab)
+            : ['overview', 'edit', 'security', 'settings', 'activity'].includes(requestedTab)
             ? requestedTab
             : invalidPassword
                 ? 'security'

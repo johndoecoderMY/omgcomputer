@@ -180,6 +180,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::get('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/notifications', [ProfileController::class, 'updateNotificationPreferences'])
+        ->name('profile.notifications.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/activity', [ProfileController::class, 'activity'])->name('profile.activity');
     Route::get('/members/{member}', [ProfileController::class, 'showMember'])->name('members.show');

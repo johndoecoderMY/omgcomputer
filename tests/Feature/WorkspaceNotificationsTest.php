@@ -45,7 +45,9 @@ class WorkspaceNotificationsTest extends TestCase
             'services.beams.instance_id' => 'test-instance',
             'services.beams.secret_key' => $secretKey,
         ]);
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('member');
         $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
         $this->assertContains(BeamsPushNotifier::class, $notification->via($user));
         $this->assertInstanceOf(
@@ -65,20 +67,28 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertUnauthorized();
     }
 
-    public function test_push_enable_button_is_only_rendered_when_beams_is_configured(): void
+    public function test_push_settings_are_available_in_the_profile_when_beams_is_configured(): void
     {
         config([
             'services.beams.enabled' => true,
             'services.beams.instance_id' => 'test-instance',
             'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
         ]);
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('member');
 
         $this->actingAs($user)
-            ->get(route('notifications.index'))
+            ->get(route('profile.edit'))
             ->assertOk()
             ->assertSee('data-enable-push-notifications', false)
+            ->assertSee('data-beams-push-enabled="true"', false)
             ->assertSee('data-beams-instance-id="test-instance"', false);
+
+        $this->get(route('notifications.index'))
+            ->assertOk()
+            ->assertDontSee('data-enable-push-notifications', false)
+            ->assertDontSee('Enable push notifications');
     }
 
     public function test_workspace_notification_email_is_limited_to_company_domain_staff(): void
@@ -96,6 +106,26 @@ class WorkspaceNotificationsTest extends TestCase
         $this->assertSame(['database', 'broadcast', 'mail'], $notification->via($companyStaff));
         $this->assertSame(['database', 'broadcast'], $notification->via($otherDomainStaff));
         $this->assertSame(['database', 'broadcast'], $notification->via($nonStaff));
+    }
+
+    public function test_notification_preferences_gate_only_email_and_push_channels(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        config(['services.beams.enabled' => true]);
+        $staff = User::factory()->create(['email' => 'staff@omgcomputer.my']);
+        $staff->assignRole('member');
+        $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
+
+        $this->assertSame(
+            ['database', 'broadcast', BeamsPushNotifier::class, 'mail'],
+            $notification->via($staff),
+        );
+
+        $staff->forceFill([
+            'notification_preferences' => ['email' => false, 'push' => false],
+        ])->save();
+
+        $this->assertSame(['database', 'broadcast'], $notification->via($staff->fresh()));
     }
 
     public function test_workspace_notification_email_uses_the_responsive_branded_layout(): void
