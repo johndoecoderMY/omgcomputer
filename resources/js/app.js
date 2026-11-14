@@ -81,12 +81,125 @@ const beamsPushEnabled = page.dataset.beamsPushEnabled === 'true';
 const needsServiceWorker = userId && (beamsInstanceId || page.dataset.staffPwa === 'true');
 const serviceWorkerPath = beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js';
 const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
-    ? navigator.serviceWorker.register(serviceWorkerPath, { scope: '/' })
+    ? navigator.serviceWorker.register(serviceWorkerPath, { scope: '/', updateViaCache: 'none' })
         .catch((error) => {
             console.error('Application service worker registration failed.', error);
             return null;
         })
     : Promise.resolve(null);
+
+if (page.dataset.staffPwa === 'true') {
+    serviceWorkerPromise.then((registration) => {
+        if (!registration) {
+            return;
+        }
+
+        let updateRequested = false;
+        let updateBanner = null;
+        const showUpdateBanner = (waitingWorker) => {
+            if (!waitingWorker || !navigator.serviceWorker.controller || updateBanner) {
+                return;
+            }
+
+            updateBanner = document.createElement('div');
+            updateBanner.className = 'alert alert-primary d-flex align-items-center gap-3 position-fixed bottom-0 start-50 translate-middle-x m-3 shadow';
+            updateBanner.setAttribute('role', 'status');
+            updateBanner.style.zIndex = '1080';
+
+            const message = document.createElement('span');
+            message.textContent = 'A staff app update is ready. Save your work before applying it.';
+            const updateButton = document.createElement('button');
+            updateButton.className = 'btn btn-primary btn-sm text-nowrap';
+            updateButton.type = 'button';
+            updateButton.textContent = 'Update now';
+            updateButton.addEventListener('click', () => {
+                updateRequested = true;
+                updateButton.disabled = true;
+                updateButton.textContent = 'Updating…';
+                waitingWorker.postMessage({ type: 'ACTIVATE_STAFF_PWA_UPDATE' });
+            });
+
+            updateBanner.append(message, updateButton);
+            document.body.append(updateBanner);
+        };
+        const checkWaitingWorker = () => showUpdateBanner(registration.waiting);
+        const observeUpdate = () => {
+            const installing = registration.installing;
+            installing?.addEventListener('statechange', () => {
+                if (installing.state === 'installed') {
+                    checkWaitingWorker();
+                }
+            });
+        };
+
+        registration.addEventListener('updatefound', observeUpdate);
+        checkWaitingWorker();
+        observeUpdate();
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (updateRequested) {
+                window.location.reload();
+
+                return;
+            }
+
+            checkWaitingWorker();
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                registration.update().catch((error) => {
+                    console.error('Staff app update check failed.', error);
+                });
+            }
+        });
+    });
+}
+
+if (page.dataset.staffPwa === 'true') {
+    const installButton = document.querySelector('[data-staff-pwa-install]');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    let installPrompt = null;
+
+    if (isStandalone && installButton) {
+        installButton.hidden = true;
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        installPrompt = event;
+    });
+
+    installButton?.addEventListener('click', async () => {
+        if (!installPrompt) {
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            window.showAppToast?.(
+                isIos
+                    ? 'In Safari, tap Share, then Add to Home Screen.'
+                    : 'Use your browser menu to install the app or add it to your home screen.',
+                'info',
+            );
+
+            return;
+        }
+
+        const prompt = installPrompt;
+        installPrompt = null;
+        try {
+            await prompt.prompt();
+            await prompt.userChoice;
+        } catch (error) {
+            console.error('Staff app installation prompt failed.', error);
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        installPrompt = null;
+        if (installButton) {
+            installButton.hidden = true;
+        }
+    });
+}
+
 let beamsClientPromise = null;
 
 if (userId && beamsInstanceId && beamsAuthUrl) {
@@ -300,42 +413,6 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
             });
         }
 
-        if (page.dataset.staffPwa === 'true') {
-            const installButton = document.querySelector('[data-staff-pwa-install]');
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-            let installPrompt = null;
-
-            if (isStandalone && installButton) {
-                installButton.hidden = true;
-            }
-
-            window.addEventListener('beforeinstallprompt', (event) => {
-                event.preventDefault();
-                installPrompt = event;
-            });
-
-            installButton?.addEventListener('click', async () => {
-                if (!installPrompt) {
-                    window.showAppToast?.('Use your browser menu to install the app or add it to your home screen.', 'info');
-
-                    return;
-                }
-
-                const prompt = installPrompt;
-                installPrompt = null;
-                try {
-                    await prompt.prompt();
-                    await prompt.userChoice;
-                } catch (error) {
-                    console.error('Staff app installation prompt failed.', error);
-                }
-            });
-
-            window.addEventListener('appinstalled', () => {
-                installPrompt = null;
-                if (installButton) installButton.hidden = true;
-            });
-        }
     });
 } else if (userId) {
     console.error('Realtime notifications could not start because Pusher or CSRF configuration is missing.');

@@ -22,7 +22,13 @@ class ErrorPagesPreviewTest extends TestCase
             ->assertNotFound()
             ->assertSee('Error page previews')
             ->assertSee('404 · Not found')
-            ->assertSee('Page not found');
+            ->assertSee('Page not found')
+            ->assertSee('logoex2.png')
+            ->assertSee('logoex2w.png')
+            ->assertSee('brand-logo-light', false)
+            ->assertSee('brand-logo-dark', false)
+            ->assertSee('html[data-bs-theme="light"] .brand-logo-dark', false)
+            ->assertSee('html[data-bs-theme="dark"] .brand-logo-light', false);
 
         $this->get(route('error-pages.preview', '403'))
             ->assertForbidden()

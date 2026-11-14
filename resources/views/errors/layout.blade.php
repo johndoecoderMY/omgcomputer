@@ -1,5 +1,14 @@
 @extends('layouts.auth')
 
+@push('styles')
+    <style>
+        html[data-bs-theme="light"] .brand-logo-dark,
+        html[data-bs-theme="dark"] .brand-logo-light {
+            display: none;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="row flex-center min-vh-100 py-6 text-center">
         @if (request()->routeIs('error-pages.preview') && auth()->check())
@@ -20,7 +29,8 @@
         @endif
         <div class="col-sm-10 col-md-8 col-lg-6 col-xxl-5">
             <a class="d-flex flex-center mb-4" href="{{ url('/') }}">
-                <img src="{{ asset('assets/img/omg/logoex2.png') }}" alt="OMG Computer" width="120">
+                <img class="brand-logo-light" src="{{ asset('assets/img/omg/logoex2.png') }}" alt="OMG Computer" width="120">
+                <img class="brand-logo-dark" src="{{ asset('assets/img/omg/logoex2w.png') }}" alt="" width="120">
             </a>
             <div class="card">
                 <div class="card-body p-4 p-sm-5">

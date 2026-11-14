@@ -344,6 +344,11 @@ class ProfileTest extends TestCase
 
         $this->actingAs($user)->get('/profile')
             ->assertOk()
+            ->assertSee('data-profile-tab="overview"', false)
+            ->assertSee('data-profile-tab="edit"', false)
+            ->assertSee('data-profile-tab="security"', false)
+            ->assertSee('data-profile-tab="settings"', false)
+            ->assertSee('data-profile-tab="activity"', false)
             ->assertSee('Account activity')
             ->assertSee('data-datatable', false);
 

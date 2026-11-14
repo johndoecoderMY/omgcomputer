@@ -1,17 +1,2 @@
 importScripts('https://js.pusher.com/beams/service-worker.js');
-
-self.addEventListener('install', (event) => {
-    event.waitUntil(self.skipWaiting());
-});
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-    if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) {
-        return;
-    }
-
-    event.respondWith(fetch(event.request));
-});
+importScripts('/assets/js/staff-service-worker-runtime.js');

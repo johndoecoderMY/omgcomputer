@@ -248,6 +248,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/migrate/fresh-seed', 'freshSeed')->middleware('throttle:3,1')->name('migrate.fresh-seed');
         Route::post('/optimize-clear', 'optimizeClear')->middleware('throttle:10,1')->name('optimize-clear');
         Route::post('/storage-link', 'storageLink')->middleware('throttle:5,1')->name('storage-link');
+        Route::post('/clear-repair-ticket-photos', 'clearRepairTicketPhotos')->middleware('throttle:3,1,clear-repair-ticket-photos')->name('clear-repair-ticket-photos');
         Route::post('/build-assets', 'buildAssets')->middleware('throttle:10,1')->name('build-assets');
         Route::post('/composer-install', 'installComposerDependencies')->middleware('throttle:2,1,composer-install')->name('composer-install');
         Route::post('/git-pull', 'gitPull')->middleware('throttle:10,1')->name('git-pull');

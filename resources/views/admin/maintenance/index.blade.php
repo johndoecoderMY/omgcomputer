@@ -178,6 +178,22 @@
                             <span class="bi bi-brush me-2" aria-hidden="true"></span>Optimize clear
                         </button>
                     </form>
+                    <hr>
+                    <h2 class="h5 text-danger">Clear repair ticket photos</h2>
+                    <p class="small text-danger">
+                        Permanently delete uploaded photos for repair tickets and repair steps, along with their attachment records. Ticket history, other uploads, and user accounts will remain unchanged.
+                    </p>
+                    <form method="POST" action="{{ route('admin.maintenance.clear-repair-ticket-photos') }}"
+                        onsubmit="return confirm('Permanently delete all uploaded repair ticket and repair step photos? This cannot be undone.');">
+                        @csrf
+                        <label class="form-label small fw-semibold" for="clear-repair-ticket-photos-confirmation">Type DELETE REPAIR TICKET PHOTOS to confirm</label>
+                        <input class="form-control mb-2" id="clear-repair-ticket-photos-confirmation"
+                            name="confirmation" autocomplete="off" required
+                            pattern="DELETE REPAIR TICKET PHOTOS" value="{{ old('confirmation') }}">
+                        <button class="btn btn-outline-danger" type="submit">
+                            <span class="bi bi-trash me-2" aria-hidden="true"></span>Clear repair ticket photos
+                        </button>
+                    </form>
                 </div>
             </section>
         </div>

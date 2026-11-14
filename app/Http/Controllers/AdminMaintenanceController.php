@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
+use App\Models\RepairTicket;
+use App\Models\RepairTicketUpdate;
 use App\Services\GitPullService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -10,6 +13,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -17,6 +21,12 @@ use RuntimeException;
 
 class AdminMaintenanceController extends Controller
 {
+    private const REPAIR_PHOTO_PATH_PREFIXES = [
+        'attachments/repair_tickets/',
+        'attachments/repair_ticket_updates/',
+        'attachments/tickets/',
+    ];
+
     private const SEEDER_GROUPS = [
         [
             'name' => 'Roles and workspace setup',
@@ -270,6 +280,68 @@ class AdminMaintenanceController extends Controller
         return redirect()->route('admin.maintenance.index')
             ->with('maintenance_success', 'The public storage link was created successfully.')
             ->with('maintenance_output', $output);
+    }
+
+    public function clearRepairTicketPhotos(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => ['required', 'in:DELETE REPAIR TICKET PHOTOS'],
+        ]);
+
+        $disk = Storage::disk('local');
+        $deleted = 0;
+        $failed = 0;
+        $attachments = Attachment::query()
+            ->whereIn('attachable_type', [RepairTicket::class, RepairTicketUpdate::class])
+            ->where('mime_type', 'like', 'image/%')
+            ->get();
+
+        foreach ($attachments as $attachment) {
+            $path = $attachment->path;
+            if (
+                ! Str::startsWith($path, self::REPAIR_PHOTO_PATH_PREFIXES)
+                || substr_count($path, '/') !== 2
+                || str_contains($path, '\\')
+                || str_contains($path, '..')
+            ) {
+                $failed++;
+                Log::warning('Admin repair-ticket photo cleanup skipped an attachment with an unexpected storage path.', [
+                    'attachment_id' => $attachment->id,
+                    'path' => $path,
+                ]);
+
+                continue;
+            }
+
+            if ($disk->exists($path) && ! $disk->delete($path)) {
+                $failed++;
+                Log::error('Admin repair-ticket photo cleanup could not delete a stored file.', [
+                    'attachment_id' => $attachment->id,
+                    'path' => $path,
+                ]);
+
+                continue;
+            }
+
+            if (! $attachment->delete()) {
+                $failed++;
+                Log::error('Admin repair-ticket photo cleanup could not delete an attachment record.', [
+                    'attachment_id' => $attachment->id,
+                ]);
+
+                continue;
+            }
+
+            $deleted++;
+        }
+
+        if ($failed > 0) {
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', "{$deleted} repair-ticket photo attachments were cleared; {$failed} could not be fully removed. Review the application logs and retry.");
+        }
+
+        return redirect()->route('admin.maintenance.index')
+            ->with('maintenance_success', "{$deleted} repair-ticket photo attachments cleared. Ticket records and user accounts were not changed.");
     }
 
     public function buildAssets(): RedirectResponse

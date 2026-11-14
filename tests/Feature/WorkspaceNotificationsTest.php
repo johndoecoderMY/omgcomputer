@@ -177,9 +177,14 @@ class WorkspaceNotificationsTest extends TestCase
 
     public function test_task_assignment_notifies_the_assignee(): void
     {
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
+        ]);
         Notification::fake();
         $actor = $this->adminUser();
-        $assignee = User::factory()->create();
+        $assignee = User::factory()->create(['email' => 'staff@omgcomputer.my']);
         $assignee->assignRole('member');
         $project = Project::query()->create(['name' => 'Mentoring portal']);
 
@@ -192,8 +197,14 @@ class WorkspaceNotificationsTest extends TestCase
             ])
             ->assertSessionHasNoErrors();
 
-        Notification::assertSentTo($assignee, WorkspaceNotification::class, fn (WorkspaceNotification $notification): bool => $notification->title === 'Task assigned to you'
-            && str_contains($notification->message, 'Review the student proposal'));
+        Notification::assertSentTo($assignee, WorkspaceNotification::class, function (WorkspaceNotification $notification) use ($assignee): bool {
+            $channels = $notification->via($assignee);
+
+            return $notification->title === 'Task assigned to you'
+                && str_contains($notification->message, 'Review the student proposal')
+                && in_array(BeamsPushNotifier::class, $channels, true)
+                && in_array('mail', $channels, true);
+        });
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
     }
 
@@ -431,6 +442,41 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::assertSentTo($assignee, WorkspaceNotification::class, fn (WorkspaceNotification $notification): bool => $notification->title === 'Project event scheduled'
             && str_contains($notification->message, 'FYP progress review'));
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
+    }
+
+    public function test_general_calendar_events_notify_staff_via_push_and_email(): void
+    {
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
+        ]);
+        Notification::fake();
+        $actor = $this->adminUser();
+        $staff = User::factory()->create(['email' => 'staff@omgcomputer.my']);
+        $staff->assignRole('member');
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $this->actingAs($actor)
+            ->post(route('events.store'), [
+                'title' => 'Department planning',
+                'event_type' => 'other',
+                'starts_at' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            ])
+            ->assertRedirect(route('calendar'))
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($staff, WorkspaceNotification::class, function (WorkspaceNotification $notification) use ($staff): bool {
+            $channels = $notification->via($staff);
+
+            return $notification->title === 'Calendar event scheduled'
+                && str_contains($notification->message, 'Department planning')
+                && in_array(BeamsPushNotifier::class, $channels, true)
+                && in_array('mail', $channels, true);
+        });
+        Notification::assertNotSentTo($actor, WorkspaceNotification::class);
+        Notification::assertNotSentTo($customer, WorkspaceNotification::class);
     }
 
     public function test_users_can_read_and_clear_their_notifications(): void

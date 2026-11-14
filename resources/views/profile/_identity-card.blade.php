@@ -20,14 +20,20 @@
     </div>
     @if ($isSelf)
         <div class="list-group list-group-flush text-start">
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="overview">
+                <span class="bi bi-person me-2" aria-hidden="true"></span>Overview
+            </button>
             <button class="list-group-item list-group-item-action" type="button" data-profile-tab="edit">
                 <span class="bi bi-person-gear me-2" aria-hidden="true"></span>Edit profile
             </button>
-            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="activity">
-                <span class="bi bi-clock-history me-2" aria-hidden="true"></span>Account activity
-            </button>
             <button class="list-group-item list-group-item-action" type="button" data-profile-tab="security">
                 <span class="bi bi-shield-shaded me-2" aria-hidden="true"></span>Security
+            </button>
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="settings">
+                <span class="bi bi-bell me-2" aria-hidden="true"></span>Settings
+            </button>
+            <button class="list-group-item list-group-item-action" type="button" data-profile-tab="activity">
+                <span class="bi bi-clock-history me-2" aria-hidden="true"></span>Account activity
             </button>
         </div>
     @elseif (!$user->hasRole('customer'))

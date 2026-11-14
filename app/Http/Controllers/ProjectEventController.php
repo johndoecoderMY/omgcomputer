@@ -91,6 +91,13 @@ class ProjectEventController extends Controller
                 sprintf('“%s” was scheduled for %s on %s.', $event->title, $project->name, $event->starts_at->format('M j, Y g:i A')),
                 route('projects.show', $event->project_id),
             );
+        } else {
+            $notifier->notifyStaff(
+                $request->user(),
+                'Calendar event scheduled',
+                sprintf('“%s” is scheduled for %s.', $event->title, $event->starts_at->format('M j, Y g:i A')),
+                route('calendar'),
+            );
         }
 
         if ($returnTo === 'project' && ! empty($data['project_id'])) {

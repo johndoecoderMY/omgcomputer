@@ -33,4 +33,14 @@ class WorkspaceNotifier
 
         $this->notifyUsers($admins, $actor, $title, $message, $url);
     }
+
+    public function notifyStaff(?User $actor, string $title, string $message, string $url): void
+    {
+        $staff = User::query()
+            ->whereHas('roles', fn ($roles) => $roles->whereIn('name', ['admin', 'member']))
+            ->whereDoesntHave('roles', fn ($roles) => $roles->where('name', 'customer'))
+            ->get();
+
+        $this->notifyUsers($staff, $actor, $title, $message, $url);
+    }
 }

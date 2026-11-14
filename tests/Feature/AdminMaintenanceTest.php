@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attachment;
+use App\Models\RepairTicket;
+use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Services\GitPullService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Storage;
 use Mockery\MockInterface;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -28,6 +32,7 @@ class AdminMaintenanceTest extends TestCase
         $this->actingAs($member)->post(route('admin.maintenance.migrate.fresh-seed'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.storage-link'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.clear-repair-ticket-photos'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.composer-install'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
@@ -45,6 +50,7 @@ class AdminMaintenanceTest extends TestCase
             ->assertSee('Fresh migrate & seed')
             ->assertSee('Optimize clear')
             ->assertSee('Create storage link')
+            ->assertSee('Clear repair ticket photos')
             ->assertSee('Install Composer dependencies')
             ->assertSee('Git pull');
     }
@@ -225,6 +231,67 @@ class AdminMaintenanceTest extends TestCase
             ->assertSessionHas('maintenance_success', 'The public storage link is already configured.');
     }
 
+    public function test_administrator_can_clear_repair_ticket_photos_without_affecting_other_uploads(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Storage::fake('local');
+
+        $ticketPhoto = $this->createAttachment(RepairTicket::class, 'attachments/repair_tickets/ticket.png', 'image/png');
+        $stepPhoto = $this->createAttachment(RepairTicketUpdate::class, 'attachments/tickets/step.webp', 'image/webp');
+        $ticketDocument = $this->createAttachment(RepairTicket::class, 'attachments/repair_tickets/manual.pdf', 'application/pdf');
+        $otherPhoto = $this->createAttachment('App\\Models\\Project', 'attachments/projects/diagram.png', 'image/png');
+        foreach ([$ticketPhoto, $stepPhoto, $ticketDocument, $otherPhoto] as $attachment) {
+            Storage::disk('local')->put($attachment->path, 'uploaded file');
+        }
+
+        $this->actingAs($admin)->from(route('admin.maintenance.index'))
+            ->post(route('admin.maintenance.clear-repair-ticket-photos'), [
+                'confirmation' => 'yes',
+            ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHasErrors('confirmation');
+        Storage::disk('local')->assertExists($ticketPhoto->path);
+        $this->assertDatabaseHas('attachments', ['id' => $ticketPhoto->id]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.clear-repair-ticket-photos'), [
+            'confirmation' => 'DELETE REPAIR TICKET PHOTOS',
+        ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', '2 repair-ticket photo attachments cleared. Ticket records and user accounts were not changed.');
+
+        Storage::disk('local')->assertMissing($ticketPhoto->path);
+        Storage::disk('local')->assertMissing($stepPhoto->path);
+        Storage::disk('local')->assertExists($ticketDocument->path);
+        Storage::disk('local')->assertExists($otherPhoto->path);
+        $this->assertDatabaseMissing('attachments', ['id' => $ticketPhoto->id]);
+        $this->assertDatabaseMissing('attachments', ['id' => $stepPhoto->id]);
+        $this->assertDatabaseHas('attachments', ['id' => $ticketDocument->id]);
+        $this->assertDatabaseHas('attachments', ['id' => $otherPhoto->id]);
+    }
+
+    public function test_repair_ticket_photo_cleanup_rejects_unexpected_storage_paths(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Storage::fake('local');
+        $attachment = $this->createAttachment(
+            RepairTicketUpdate::class,
+            'attachments/repair_ticket_updates/../../projects/keep.png',
+            'image/png',
+        );
+        Storage::disk('local')->put('attachments/projects/keep.png', 'keep this file');
+
+        $this->actingAs($admin)->post(route('admin.maintenance.clear-repair-ticket-photos'), [
+            'confirmation' => 'DELETE REPAIR TICKET PHOTOS',
+        ])->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_error', '0 repair-ticket photo attachments were cleared; 1 could not be fully removed. Review the application logs and retry.');
+
+        Storage::disk('local')->assertExists('attachments/projects/keep.png');
+        $this->assertDatabaseHas('attachments', ['id' => $attachment->id]);
+    }
+
+
     public function test_administrator_can_fresh_migrate_and_seed_after_typed_confirmation(): void
     {
         Role::findOrCreate('admin', 'web');
@@ -329,5 +396,17 @@ class AdminMaintenanceTest extends TestCase
             ->assertRedirect(route('admin.maintenance.index'))
             ->assertSessionHas('maintenance_error')
             ->assertSessionHas('maintenance_output', 'npm is not installed.');
+    }
+
+    private function createAttachment(string $attachableType, string $path, string $mimeType): Attachment
+    {
+        return Attachment::query()->forceCreate([
+            'attachable_type' => $attachableType,
+            'attachable_id' => 1,
+            'path' => $path,
+            'original_name' => basename($path),
+            'mime_type' => $mimeType,
+            'size' => 13,
+        ]);
     }
 }
