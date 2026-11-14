@@ -1,0 +1,27 @@
+{
+    "id": "/dashboard",
+    "name": "OMG Computer Staff",
+    "short_name": "OMG Staff",
+    "description": "Staff workspace for OMG Computer.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "theme_color": "#f34303",
+    "background_color": "#ffffff",
+    "categories": ["business", "productivity"],
+    "icons": [
+        {
+            "src": "/assets/img/favicons/android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/img/favicons/android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}

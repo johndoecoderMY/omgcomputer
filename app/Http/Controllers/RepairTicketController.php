@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
 use App\Models\Booking;
+use App\Models\Customer;
 use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
@@ -14,6 +14,7 @@ use App\Support\AssignmentAccess;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -265,13 +266,11 @@ class RepairTicketController extends Controller
             'updates.attachments.uploader',
         ]);
         if ($request->user()->hasRole('customer')) {
-            if ($ticket->project_id) {
-                $ticket->load(['billingDocuments' => fn ($documents) => $documents
-                    ->whereIn('type', ['invoice', 'quotation'])
-                    ->whereHas('repairTicket.project')]);
-            } else {
-                $ticket->setRelation('billingDocuments', collect());
-            }
+            $customerEmail = strtolower(trim($request->user()->email));
+            $ticket->load(['billingDocuments' => fn ($documents) => $documents
+                ->whereIn('type', ['invoice', 'quotation'])
+                ->where('status', '!=', 'draft')
+                ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$customerEmail])]);
         }
 
         return view('tickets.show', [
@@ -282,7 +281,7 @@ class RepairTicketController extends Controller
         ]);
     }
 
-    public function update(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse
+    public function update(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         $ticket->loadMissing(['creator', 'assignees']);
         $existingAssigneeIds = $ticket->assignees->modelKeys();
@@ -297,6 +296,8 @@ class RepairTicketController extends Controller
             'assignees_present' => ['sometimes', 'boolean'],
             'diagnosis' => ['nullable', 'string', 'max:5000'],
             'due_at' => ['nullable', 'date'],
+            'device_model' => ['nullable', 'string', 'max:255'],
+            'serial_number' => ['nullable', 'string', 'max:255'],
         ]);
         $assignees = $request->user()->hasRole('admin')
             ? $this->assigneeIds($request, $data)
@@ -335,6 +336,32 @@ class RepairTicketController extends Controller
             route('tickets.show', $ticket),
         );
 
+        if ($request->expectsJson()) {
+            $ticket->load(['assignees', 'updates.user', 'updates.attachments.uploader']);
+
+            return response()->json([
+                'message' => 'Repair ticket updated.',
+                'status' => $ticket->status,
+                'status_html' => view('tickets.partials.status-badge', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+                'updates_html' => view('tickets.partials.update-list', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+                'diagnosis' => $ticket->diagnosis,
+                'priority' => $ticket->priority,
+                'priority_label' => RepairTicket::PRIORITIES[$ticket->priority] ?? $ticket->priority,
+                'assignees' => $ticket->assignees->pluck('name')->all(),
+                'assignee_ids' => $ticket->assignees->modelKeys(),
+                'due_at' => $ticket->due_at?->format('M j, Y') ?? 'Not set',
+                'due_at_value' => $ticket->due_at?->format('Y-m-d') ?? '',
+                'device_model' => $ticket->device_model,
+                'serial_number' => $ticket->serial_number,
+            ]);
+        }
+
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket updated.');
     }
 
@@ -349,7 +376,7 @@ class RepairTicketController extends Controller
         return array_values(array_unique(array_map('intval', $ids)));
     }
 
-    public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage, WorkspaceNotifier $notifier): RedirectResponse
+    public function storeUpdate(Request $request, RepairTicket $ticket, AttachmentStorage $storage, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
@@ -357,10 +384,13 @@ class RepairTicketController extends Controller
             'notes' => ['nullable', 'string', 'max:5000'],
             'photos' => ['nullable', 'array', 'max:8'],
             'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-            'caption' => ['nullable', 'string', 'max:255'],
+            'captions' => ['nullable', 'array', 'max:8'],
+            'captions.*' => ['nullable', 'string', 'max:255'],
         ]);
         $photos = $data['photos'] ?? [];
-        unset($data['photos'], $data['caption']);
+        unset($data['photos']);
+        $captions = $data['captions'] ?? [];
+        unset($data['captions']);
 
         $update = DB::transaction(function () use ($ticket, $data, $request): RepairTicketUpdate {
             $ticket->update(['status' => $data['status']]);
@@ -372,7 +402,7 @@ class RepairTicketController extends Controller
         });
 
         if ($photos) {
-            $storage->store($update->attachments(), $photos, $request->user(), $request->input('caption'));
+            $storage->store($update->attachments(), $photos, $request->user(), $captions);
         }
         $ticket->load(['creator', 'assignees']);
         $notifier->notifyUsers(
@@ -382,6 +412,23 @@ class RepairTicketController extends Controller
             sprintf('Repair ticket %s: %s.', $ticket->ticket_number, $update->title),
             route('tickets.show', $ticket),
         );
+
+        if ($request->expectsJson()) {
+            $ticket->load(['assignees', 'updates.user', 'updates.attachments.uploader']);
+
+            return response()->json([
+                'message' => 'Ticket work step added.',
+                'status' => $ticket->status,
+                'status_html' => view('tickets.partials.status-badge', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+                'updates_html' => view('tickets.partials.update-list', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+            ]);
+        }
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Ticket work step added.');
     }

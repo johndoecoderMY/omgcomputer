@@ -27,23 +27,50 @@
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="bi bi-person-circle me-1" aria-hidden="true"></span>{{ auth()->user()->name }}
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="guest-account-menu">
-                            <li><span class="dropdown-item-text small text-body-secondary">Signed in as {{ auth()->user()->email }}</span></li>
-                            <li><hr class="dropdown-divider"></li>
-                            @if (auth()->user()->hasRole('customer'))
-                                <li><a class="dropdown-item" href="{{ route('shop.my-orders.index') }}"><span class="bi bi-bag-check me-2" aria-hidden="true"></span>My orders</a></li>
-                                <li><a class="dropdown-item" href="{{ route('shop.tracking') }}"><span class="bi bi-truck me-2" aria-hidden="true"></span>Track parcel</a></li>
-                                <li><a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}"><span class="bi bi-cart3 me-2" aria-hidden="true"></span>Cart <span class="badge rounded-pill text-bg-primary ms-1" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span></a></li>
-                                <li><hr class="dropdown-divider"></li>
-                            @endif
-                            <li><a class="dropdown-item" href="{{ route('dashboard') }}"><span class="bi bi-speedometer2 me-2" aria-hidden="true"></span>Go to panel</a></li>
-                            <li>
+                        <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="guest-account-menu">
+                            <div class="rounded-2 py-2">
+                                <div class="px-3 py-2">
+                                    <div class="fw-semibold text-body">{{ auth()->user()->name }}</div>
+                                    <div class="small text-body-secondary text-break">{{ auth()->user()->email }}</div>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                @if (auth()->user()->hasRole('customer'))
+                                    <a class="dropdown-item" href="{{ route('shop.tracking') }}">
+                                        <span class="bi bi-geo-alt me-2 text-body-secondary" aria-hidden="true"></span>Track parcel
+                                    </a>
+                                    <a class="dropdown-item" href="{{ route('shop.my-orders.index') }}">
+                                        <span class="bi bi-receipt me-2 text-body-secondary" aria-hidden="true"></span>My orders
+                                    </a>
+                                    <a class="dropdown-item" href="{{ route('shop.cart') }}" aria-label="Shopping cart, {{ $cartItemCount }} {{ \Illuminate\Support\Str::plural('item', $cartItemCount) }}">
+                                        <span class="bi bi-cart3 me-2 text-body-secondary" aria-hidden="true"></span>Cart
+                                        <span class="badge rounded-pill text-bg-primary ms-1" data-cart-count>{{ $cartItemCount > 99 ? '99+' : $cartItemCount }}</span>
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                @else
+                                    <a class="dropdown-item" href="{{ route('email.inbox') }}">
+                                        <span class="bi bi-envelope me-2 text-body-secondary" aria-hidden="true"></span>Email inbox
+                                    </a>
+                                    @if (auth()->user()->hasRole('admin') || auth()->user()->can('projects.calendar.manage'))
+                                        <a class="dropdown-item" href="{{ route('calendar') }}">
+                                            <span class="bi bi-calendar3 me-2 text-body-secondary" aria-hidden="true"></span>Calendar
+                                        </a>
+                                    @endif
+                                    <a class="dropdown-item" href="{{ route('tasks.index') }}">
+                                        <span class="bi bi-list-task me-2 text-body-secondary" aria-hidden="true"></span>Tasks
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                @endif
+                                <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                                    <span class="bi bi-person me-2 text-body-secondary" aria-hidden="true"></span>Profile and account
+                                </a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
-                                    <button class="dropdown-item" type="submit"><span class="bi bi-box-arrow-right me-2" aria-hidden="true"></span>Sign out</button>
+                                    <button class="dropdown-item" type="submit">
+                                        <span class="bi bi-box-arrow-right me-2" aria-hidden="true"></span>Log out
+                                    </button>
                                 </form>
-                            </li>
-                        </ul>
+                            </div>
+                        </div>
                     </li>
                 @else
                     <li class="nav-item my-2 mx-lg-0 ms-lg-2"><a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ route('login') }}">Sign in</a></li>

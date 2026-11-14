@@ -37,7 +37,7 @@ class MetaGraphApi
             'response_type' => 'code',
             'auth_type' => 'rerequest',
             'return_scopes' => 'true',
-            'scope' => 'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts',
+            'scope' => 'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,pages_read_user_content,pages_manage_engagement,instagram_basic,instagram_content_publish,instagram_manage_comments',
         ]);
     }
 
@@ -207,13 +207,13 @@ class MetaGraphApi
     }
 
     /**
-     * @return array{page: array{id: string, name: string, category: ?string, fan_count: ?int, link: ?string}, posts: list<array{id: string, message: string, created_time: ?string, permalink_url: ?string}>}
+     * @return array{page: array{id: string, name: string, category: ?string, about: ?string, website: ?string, picture: ?string, fan_count: ?int, link: ?string}, posts: list<array{id: string, message: string, created_time: ?string, permalink_url: ?string}>}
      */
     public function pageContent(MetaPageConnection $connection): array
     {
         $this->assertPageConnectionUsable($connection);
         $page = $this->requestJson($connection->access_token, 'GET', $connection->page_id, [
-            'fields' => 'id,name,category,fan_count,link',
+            'fields' => 'id,name,category,about,website,picture,fan_count,link',
         ]);
         if (($page['id'] ?? null) !== $connection->page_id || ! is_string($page['name'] ?? null)) {
             throw new RuntimeException('Meta did not return the connected Page details.');
@@ -244,11 +244,161 @@ class MetaGraphApi
                 'id' => $connection->page_id,
                 'name' => $connection->page_name,
                 'category' => is_string($page['category'] ?? null) ? $page['category'] : $connection->category,
+                'about' => is_string($page['about'] ?? null) ? $page['about'] : null,
+                'website' => is_string($page['website'] ?? null) ? $page['website'] : null,
+                'picture' => is_string($page['picture']['data']['url'] ?? null) ? $page['picture']['data']['url'] : null,
                 'fan_count' => is_int($page['fan_count'] ?? null) ? $page['fan_count'] : null,
                 'link' => is_string($page['link'] ?? null) ? $page['link'] : null,
             ],
             'posts' => $posts,
         ];
+    }
+
+    public function updatePageProfile(MetaPageConnection $connection, string $name, string $about, ?string $website): void
+    {
+        $this->assertPageConnectionUsable($connection);
+        $this->requestJson($connection->access_token, 'POST', $connection->page_id, [
+            'name' => $name,
+            'about' => $about,
+            'website' => $website ?? '',
+        ]);
+    }
+
+    public function updatePagePicture(MetaPageConnection $connection, string $url): void
+    {
+        $this->assertPageConnectionUsable($connection);
+        $this->requestJson($connection->access_token, 'POST', $connection->page_id.'/picture', [
+            'url' => $url,
+        ]);
+    }
+
+    public function instagramProfile(): array
+    {
+        [$accountId, $token] = $this->instagramCredentials();
+
+        $profile = $this->requestJson($token, 'GET', $accountId, [
+            'fields' => 'id,username,name,biography,website,followers_count,follows_count,media_count,profile_picture_url',
+        ]);
+        if (($profile['id'] ?? null) !== $accountId) {
+            throw new RuntimeException('Meta did not return the configured Instagram account.');
+        }
+
+        return $profile;
+    }
+
+    /**
+     * @return list<array{id: string, caption: string, media_type: ?string, timestamp: ?string, permalink: ?string, comments_count: ?int}>
+     */
+    public function instagramMedia(): array
+    {
+        [$accountId, $token] = $this->instagramCredentials();
+        $response = $this->requestJson($token, 'GET', $accountId.'/media', [
+            'fields' => 'id,caption,media_type,timestamp,permalink,comments_count',
+            'limit' => 20,
+        ]);
+        $media = [];
+        foreach ($response['data'] ?? [] as $item) {
+            if (! is_array($item) || ! is_string($item['id'] ?? null) || ! ctype_digit($item['id'])) {
+                continue;
+            }
+
+            $media[] = [
+                'id' => $item['id'],
+                'caption' => is_string($item['caption'] ?? null) ? $item['caption'] : '',
+                'media_type' => is_string($item['media_type'] ?? null) ? $item['media_type'] : null,
+                'timestamp' => is_string($item['timestamp'] ?? null) ? $item['timestamp'] : null,
+                'permalink' => is_string($item['permalink'] ?? null) ? $item['permalink'] : null,
+                'comments_count' => is_int($item['comments_count'] ?? null) ? $item['comments_count'] : null,
+            ];
+        }
+
+        return $media;
+    }
+
+    /**
+     * @return list<array{id: string, message: string, username: string, timestamp: ?string, hidden: bool}>
+     */
+    public function instagramMediaComments(string $mediaId): array
+    {
+        [$accountId, $token] = $this->instagramCredentials();
+        $this->assertInstagramMediaBelongsToAccount($accountId, $token, $mediaId);
+        $response = $this->requestJson($token, 'GET', $mediaId.'/comments', [
+            'fields' => 'id,text,username,timestamp,hidden',
+            'limit' => 50,
+        ]);
+
+        $comments = [];
+        foreach ($response['data'] ?? [] as $comment) {
+            if (! is_array($comment) || ! is_string($comment['id'] ?? null) || ! ctype_digit($comment['id'])) {
+                continue;
+            }
+
+            $comments[] = [
+                'id' => $comment['id'],
+                'message' => is_string($comment['text'] ?? null) ? $comment['text'] : '',
+                'username' => is_string($comment['username'] ?? null) ? $comment['username'] : 'Instagram user',
+                'timestamp' => is_string($comment['timestamp'] ?? null) ? $comment['timestamp'] : null,
+                'hidden' => ($comment['hidden'] ?? false) === true,
+            ];
+        }
+
+        return $comments;
+    }
+
+    public function replyToInstagramComment(string $mediaId, string $commentId, string $message): string
+    {
+        [, $token] = $this->instagramCredentials();
+        $this->assertInstagramCommentBelongsToMedia($mediaId, $commentId);
+
+        return $this->requiredString(
+            $this->requestJson($token, 'POST', $commentId.'/replies', ['message' => $message]),
+            'id',
+        );
+    }
+
+    public function updateInstagramCommentVisibility(string $mediaId, string $commentId, bool $hidden): void
+    {
+        [, $token] = $this->instagramCredentials();
+        $this->assertInstagramCommentBelongsToMedia($mediaId, $commentId);
+        $this->requestJson($token, 'POST', $commentId, ['hide' => $hidden ? 'true' : 'false']);
+    }
+
+    public function deleteInstagramComment(string $mediaId, string $commentId): void
+    {
+        [, $token] = $this->instagramCredentials();
+        $this->assertInstagramCommentBelongsToMedia($mediaId, $commentId);
+        $this->requestJson($token, 'DELETE', $commentId);
+    }
+
+    private function instagramCredentials(): array
+    {
+        $accountId = config('services.meta.instagram_user_id');
+        $token = config('services.meta.instagram_access_token') ?: config('services.meta.access_token');
+        if (! is_string($accountId) || $accountId === '' || ! is_string($token) || $token === '') {
+            throw new RuntimeException('Configure an Instagram account ID and access token before accessing Instagram.');
+        }
+
+        return [$accountId, $token];
+    }
+
+    private function assertInstagramMediaBelongsToAccount(string $accountId, string $token, string $mediaId): void
+    {
+        if (! ctype_digit($mediaId)) {
+            throw new RuntimeException('The Instagram media ID is invalid.');
+        }
+
+        $media = $this->requestJson($token, 'GET', $mediaId, ['fields' => 'id,owner']);
+        if (($media['id'] ?? null) !== $mediaId || ($media['owner']['id'] ?? null) !== $accountId) {
+            throw new RuntimeException('That media does not belong to the configured Instagram account.');
+        }
+    }
+
+    private function assertInstagramCommentBelongsToMedia(string $mediaId, string $commentId): void
+    {
+        if (! ctype_digit($commentId)
+            || ! collect($this->instagramMediaComments($mediaId))->contains('id', $commentId)) {
+            throw new RuntimeException('That comment does not belong to the selected Instagram media.');
+        }
     }
 
     public function publishPagePost(MetaPageConnection $connection, string $message, ?string $link): string
@@ -280,6 +430,58 @@ class MetaGraphApi
         $this->requestJson($connection->access_token, 'DELETE', $postId);
     }
 
+    /**
+     * @return list<array{id: string, message: string, author: string, created_time: ?string}>
+     */
+    public function pagePostComments(MetaPageConnection $connection, string $postId): array
+    {
+        $this->assertPageConnectionUsable($connection);
+        $this->assertPostBelongsToPage($connection, $postId);
+        $response = $this->requestJson($connection->access_token, 'GET', $postId.'/comments', [
+            'fields' => 'id,message,from,created_time',
+            'filter' => 'stream',
+            'limit' => 100,
+        ]);
+
+        $comments = [];
+        foreach ($response['data'] ?? [] as $comment) {
+            if (! is_array($comment)
+                || ! is_string($comment['id'] ?? null)
+                || ! preg_match('/^[0-9]+(?:_[0-9]+)?$/D', $comment['id'])) {
+                continue;
+            }
+
+            $comments[] = [
+                'id' => $comment['id'],
+                'message' => is_string($comment['message'] ?? null) ? $comment['message'] : '',
+                'author' => is_string($comment['from']['name'] ?? null) ? $comment['from']['name'] : 'Facebook user',
+                'created_time' => is_string($comment['created_time'] ?? null) ? $comment['created_time'] : null,
+            ];
+        }
+
+        return $comments;
+    }
+
+    public function replyToPageComment(
+        MetaPageConnection $connection,
+        string $postId,
+        string $commentId,
+        string $message,
+    ): string {
+        $this->assertCommentBelongsToPagePost($connection, $postId, $commentId);
+
+        return $this->requiredString(
+            $this->requestJson($connection->access_token, 'POST', $commentId.'/comments', ['message' => $message]),
+            'id',
+        );
+    }
+
+    public function deletePageComment(MetaPageConnection $connection, string $postId, string $commentId): void
+    {
+        $this->assertCommentBelongsToPagePost($connection, $postId, $commentId);
+        $this->requestJson($connection->access_token, 'DELETE', $commentId);
+    }
+
     private function assertPostBelongsToPage(MetaPageConnection $connection, string $postId): void
     {
         if (! preg_match('/^[0-9]+_[0-9]+$/', $postId)) {
@@ -289,6 +491,17 @@ class MetaGraphApi
         $post = $this->requestJson($connection->access_token, 'GET', $postId, ['fields' => 'id,from']);
         if (($post['id'] ?? null) !== $postId || ($post['from']['id'] ?? null) !== $connection->page_id) {
             throw new RuntimeException('That post does not belong to the connected Page.');
+        }
+    }
+
+    private function assertCommentBelongsToPagePost(
+        MetaPageConnection $connection,
+        string $postId,
+        string $commentId,
+    ): void {
+        if (! preg_match('/^[0-9]+(?:_[0-9]+)?$/D', $commentId)
+            || ! collect($this->pagePostComments($connection, $postId))->contains('id', $commentId)) {
+            throw new RuntimeException('That comment does not belong to the selected Facebook Page post.');
         }
     }
 

@@ -94,6 +94,9 @@
                         <a class="dropdown-item" href="{{ route('tasks.index') }}">
                             <span class="bi bi-list-task me-2 text-body-secondary" aria-hidden="true"></span>Tasks
                         </a>
+                        <button class="dropdown-item" type="button" data-staff-pwa-install>
+                            <span class="bi bi-download me-2 text-body-secondary" aria-hidden="true"></span>Install staff app
+                        </button>
                         <div class="dropdown-divider"></div>
                     @endif
                     <a class="dropdown-item" href="{{ route('profile.edit') }}">

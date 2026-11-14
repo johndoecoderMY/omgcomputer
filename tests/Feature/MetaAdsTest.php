@@ -57,7 +57,7 @@ class MetaAdsTest extends TestCase
         parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
 
         $this->assertSame(
-            'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts',
+            'ads_read,ads_management,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_metadata,pages_read_user_content,pages_manage_engagement,instagram_basic,instagram_content_publish,instagram_manage_comments',
             $query['scope'] ?? null,
         );
         $this->assertSame('rerequest', $query['auth_type'] ?? null);

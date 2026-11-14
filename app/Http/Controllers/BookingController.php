@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\BookingTimeSlot;
 use App\Models\Customer;
@@ -20,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -489,6 +491,12 @@ class BookingController extends Controller
                 sprintf('Booking %s for %s is assigned to you.', $booking->reference, $booking->customer_name),
                 route('bookings.index'),
             );
+        }
+        $customerEmail = trim((string) $booking->customer_email);
+        if ($previousStatus !== 'confirmed'
+            && $booking->status === 'confirmed'
+            && filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+            Mail::to($customerEmail)->send(new BookingConfirmedMail($booking));
         }
 
         return back()->with('success', 'Booking updated.');

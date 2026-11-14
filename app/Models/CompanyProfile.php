@@ -22,6 +22,8 @@ class CompanyProfile extends Model
         'email',
         'website_url',
         'facebook_url',
+        'instagram_url',
+        'tiktok_url',
     ];
 
     public static function current(): self

@@ -163,6 +163,7 @@ class BillingController extends Controller
             'type' => $type,
             'formAction' => route('billing.store'),
             'editing' => false,
+            'ticketModal' => $request->boolean('ticket_modal') && $ticket !== null,
         ]);
     }
 
@@ -336,6 +337,7 @@ class BillingController extends Controller
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
+            'modal_return_to_ticket' => ['nullable', 'integer', 'exists:repair_tickets,id'],
             'customer_phone' => ['nullable', 'string', 'max:64'],
             'customer_address' => ['nullable', 'string', 'max:2000'],
             'issue_date' => ['nullable', 'date'],
@@ -549,6 +551,12 @@ class BillingController extends Controller
 
             return $document;
         });
+
+        if ((int) ($data['modal_return_to_ticket'] ?? 0) === (int) $document->repair_ticket_id
+            && $document->repair_ticket_id) {
+            return redirect()->route('tickets.show', $document->repair_ticket_id)
+                ->with('success', 'Quotation saved as a draft.');
+        }
 
         return redirect()->route('billing.documents.show', $document)->with('success', 'Quotation saved as a draft.');
     }

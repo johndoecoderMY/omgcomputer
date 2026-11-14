@@ -20,10 +20,17 @@
                         <span class="bi bi-facebook" aria-hidden="true"></span>
                     </a>
                     <a class="btn btn-outline-light rounded-circle d-inline-flex align-items-center justify-content-center p-0"
-                        href="https://www.instagram.com/omgcomputer/"
+                        href="{{ $companyProfile->instagram_url ?: 'https://www.instagram.com/omg_computer/' }}"
                         target="_blank" rel="noopener noreferrer" aria-label="Instagram" style="width: 2.5rem; height: 2.5rem;">
                         <span class="bi bi-instagram" aria-hidden="true"></span>
                     </a>
+                    @if ($companyProfile->tiktok_url)
+                        <a class="btn btn-outline-light rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                            href="{{ $companyProfile->tiktok_url }}"
+                            target="_blank" rel="noopener noreferrer" aria-label="TikTok" style="width: 2.5rem; height: 2.5rem;">
+                            <span class="bi bi-tiktok" aria-hidden="true"></span>
+                        </a>
+                    @endif
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-4">
                     <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ route('shop.public') }}">Browse the shop</a>

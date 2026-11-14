@@ -476,6 +476,13 @@
                             </a>
                             <ul class="nav collapse" id="marketingMenu">
                                 @if (auth()->user()->hasRole('admin') || auth()->user()->can('meta_content.view'))
+                                    @if (auth()->user()->hasRole('admin'))
+                                        <li class="nav-item">
+                                            <a class="nav-link" href="{{ route('social-media.index') }}">
+                                                <span class="nav-link-text ps-1">Social Media</span>
+                                            </a>
+                                        </li>
+                                    @endif
                                     <li class="nav-item">
                                         <a class="nav-link" href="{{ route('meta-content.index') }}">
                                             <span class="nav-link-text ps-1">Content Planner</span>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\BookingTimeSlot;
 use App\Models\Customer;
@@ -10,11 +11,86 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class BookingTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_customer_is_emailed_when_booking_is_confirmed_once(): void
+    {
+        Mail::fake();
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Booking Customer',
+            'email' => 'booking-customer@example.test',
+            'phone' => '+60112223333',
+        ]);
+        $booking = Booking::query()->create([
+            'reference' => 'BK-CONFIRM-EMAIL',
+            'customer_id' => $customer->id,
+            'customer_name' => 'Booking Customer',
+            'customer_email' => 'booking-customer@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'service_name' => 'Computer/PC Troubleshooting',
+            'starts_at' => Carbon::now('UTC')->addDays(2),
+            'duration_minutes' => 60,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($staff)->put(route('bookings.update', $booking), [
+            'status' => 'confirmed',
+        ])->assertSessionHas('success', 'Booking updated.');
+
+        Mail::assertSent(BookingConfirmedMail::class, fn (BookingConfirmedMail $mail): bool => $mail->hasTo('booking-customer@example.test')
+            && $mail->booking->reference === 'BK-CONFIRM-EMAIL'
+            && str_contains($mail->render(), 'Your booking is confirmed')
+            && str_contains($mail->render(), 'Computer/PC Troubleshooting'));
+
+        $this->actingAs($staff)->put(route('bookings.update', $booking), [
+            'status' => 'confirmed',
+        ])->assertSessionHas('success', 'Booking updated.');
+
+        Mail::assertSent(BookingConfirmedMail::class, 1);
+    }
+
+    public function test_booking_confirmation_skips_email_when_customer_address_is_missing_or_invalid(): void
+    {
+        Mail::fake();
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Booking Customer',
+            'email' => 'booking-customer@example.test',
+            'phone' => '+60112223333',
+        ]);
+
+        foreach (['', 'not-an-email'] as $index => $email) {
+            $booking = Booking::query()->create([
+                'reference' => 'BK-NO-EMAIL-'.$index,
+                'customer_id' => $customer->id,
+                'customer_name' => 'Booking Customer',
+                'customer_email' => $email,
+                'customer_phone' => '+60112223333',
+                'service_id' => 'basic-troubleshooting',
+                'service_name' => 'Computer/PC Troubleshooting',
+                'starts_at' => Carbon::now('UTC')->addDays($index + 2),
+                'duration_minutes' => 60,
+                'status' => 'pending',
+            ]);
+
+            $this->actingAs($staff)->put(route('bookings.update', $booking), [
+                'status' => 'confirmed',
+            ])->assertSessionHas('success', 'Booking updated.');
+        }
+
+        Mail::assertNothingSent();
+    }
 
     public function test_public_booking_lists_only_the_two_enabled_customer_services(): void
     {
@@ -55,6 +131,9 @@ class BookingTest extends TestCase
             ->assertSee('Just contact us')
             ->assertSee('<div class="d-flex justify-content-end">', false)
             ->assertSee('<button class="btn btn-primary" type="submit">', false)
+            ->assertSee('id="customer-email" type="email"', false)
+            ->assertSee('name="customer_email"', false)
+            ->assertSee('required autocomplete="email"', false)
             ->assertSee('OMG Computer')
             ->assertSee('Computer/PC Troubleshooting')
             ->assertSee('FYP Consultation')
@@ -161,6 +240,32 @@ class BookingTest extends TestCase
             'assigned_to' => $staff->id,
         ])->assertSessionHas('success', 'Booking updated.');
         $this->assertSame(1, RepairTicket::query()->count());
+    }
+
+    public function test_customer_booking_requires_a_valid_email_address(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $data = [
+            'customer_name' => 'Booking Customer',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'device_model' => 'Dell XPS 13',
+            'request_notes' => 'The fan is noisy.',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ];
+
+        foreach (['', 'not-an-email'] as $email) {
+            $this->from(route('bookings.create', ['date' => $date->toDateString()]))
+                ->post(route('bookings.store'), [...$data, 'customer_email' => $email])
+                ->assertSessionHasErrors('customer_email');
+        }
+
+        $this->assertDatabaseCount('bookings', 0);
     }
 
     public function test_fyp_booking_does_not_store_computer_troubleshooting_details(): void

@@ -163,5 +163,47 @@ if (userId && pusherKey && pusherCluster) {
                 if (index > 5) entry.remove();
             });
         }
+
+        if (page.dataset.staffPwa === 'true') {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/staff-service-worker.js', { scope: '/' })
+                    .catch((error) => console.error('Staff app service worker registration failed.', error));
+            }
+
+            const installButton = document.querySelector('[data-staff-pwa-install]');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            let installPrompt = null;
+
+            if (isStandalone && installButton) {
+                installButton.hidden = true;
+            }
+
+            window.addEventListener('beforeinstallprompt', (event) => {
+                event.preventDefault();
+                installPrompt = event;
+            });
+
+            installButton?.addEventListener('click', async () => {
+                if (!installPrompt) {
+                    window.showAppToast?.('Use your browser menu to install the app or add it to your home screen.', 'info');
+
+                    return;
+                }
+
+                const prompt = installPrompt;
+                installPrompt = null;
+                try {
+                    await prompt.prompt();
+                    await prompt.userChoice;
+                } catch (error) {
+                    console.error('Staff app installation prompt failed.', error);
+                }
+            });
+
+            window.addEventListener('appinstalled', () => {
+                installPrompt = null;
+                if (installButton) installButton.hidden = true;
+            });
+        }
     });
 }

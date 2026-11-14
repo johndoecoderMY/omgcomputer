@@ -61,8 +61,10 @@
         In Meta for Developers, enable Marketing API access and register this exact OAuth redirect URI:
         <code>{{ route('meta-ads.callback') }}</code>.
         The app must have approval for <code>ads_read</code>, <code>ads_management</code>, <code>pages_show_list</code>,
-        <code>pages_read_engagement</code>, and <code>pages_manage_posts</code>. The authorizing user must have access to
-        the selected ad account and Page.
+        <code>pages_read_engagement</code>, <code>pages_manage_posts</code>, <code>pages_manage_metadata</code>,
+        <code>pages_read_user_content</code>, <code>pages_manage_engagement</code>, <code>instagram_basic</code>,
+        <code>instagram_content_publish</code>, and <code>instagram_manage_comments</code>. The authorizing user must
+        have access to the selected ad account, Facebook Page, and linked Instagram professional account.
     </div>
 
     @if ($pendingAccounts || $pendingPages)
@@ -179,6 +181,8 @@
                                                 @method('DELETE')
                                                 <button class="btn btn-sm btn-outline-danger" type="submit">Delete post</button>
                                             </form>
+                                            <a class="btn btn-sm btn-outline-secondary mt-2"
+                                                href="{{ route('meta-ads.page.posts.comments', $pagePost['id']) }}">Manage comments</a>
                                         @else
                                             <span class="text-body-secondary">This post cannot be edited here.</span>
                                         @endif

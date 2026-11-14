@@ -358,4 +358,72 @@ class MetaAdsController extends Controller
             ]);
         }
     }
+
+    public function pagePostComments(string $postId, MetaGraphApi $api): View
+    {
+        $pageConnection = MetaPageConnection::query()->firstOrFail();
+        $comments = [];
+        $commentsError = null;
+
+        try {
+            $comments = $api->pagePostComments($pageConnection, $postId);
+        } catch (RuntimeException $exception) {
+            Log::warning('Facebook Page post comments could not be loaded.', [
+                'connection_id' => $pageConnection->id,
+                'post_id' => $postId,
+                'exception' => $exception::class,
+            ]);
+            $commentsError = $exception->getMessage();
+        }
+
+        return view('meta-ads.comments', [
+            'pageName' => $pageConnection->page_name,
+            'postId' => $postId,
+            'comments' => $comments,
+            'commentsError' => $commentsError,
+        ]);
+    }
+
+    public function replyToPageComment(Request $request, string $postId, string $commentId, MetaGraphApi $api): RedirectResponse
+    {
+        $data = $request->validate([
+            'message' => ['required', 'string', 'max:8000'],
+        ]);
+        $pageConnection = MetaPageConnection::query()->firstOrFail();
+
+        try {
+            $api->replyToPageComment($pageConnection, $postId, $commentId, $data['message']);
+
+            return redirect()->route('meta-ads.page.posts.comments', $postId)->with('success', 'Reply posted.');
+        } catch (RuntimeException $exception) {
+            Log::warning('Facebook Page comment reply could not be posted.', [
+                'connection_id' => $pageConnection->id,
+                'post_id' => $postId,
+                'comment_id' => $commentId,
+                'exception' => $exception::class,
+            ]);
+
+            return redirect()->route('meta-ads.page.posts.comments', $postId)->with('comments_error', $exception->getMessage());
+        }
+    }
+
+    public function deletePageComment(string $postId, string $commentId, MetaGraphApi $api): RedirectResponse
+    {
+        $pageConnection = MetaPageConnection::query()->firstOrFail();
+
+        try {
+            $api->deletePageComment($pageConnection, $postId, $commentId);
+
+            return redirect()->route('meta-ads.page.posts.comments', $postId)->with('success', 'Comment deleted.');
+        } catch (RuntimeException $exception) {
+            Log::warning('Facebook Page comment could not be deleted.', [
+                'connection_id' => $pageConnection->id,
+                'post_id' => $postId,
+                'comment_id' => $commentId,
+                'exception' => $exception::class,
+            ]);
+
+            return redirect()->route('meta-ads.page.posts.comments', $postId)->with('comments_error', $exception->getMessage());
+        }
+    }
 }

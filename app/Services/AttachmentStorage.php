@@ -38,9 +38,9 @@ class AttachmentStorage
         ];
     }
 
-    public function store(MorphMany $attachments, array $photos, User $user, ?string $caption = null): void
+    public function store(MorphMany $attachments, array $photos, User $user, string|array|null $caption = null): void
     {
-        foreach ($photos as $photo) {
+        foreach ($photos as $index => $photo) {
             if (! $photo instanceof UploadedFile) {
                 continue;
             }
@@ -56,7 +56,7 @@ class AttachmentStorage
                 'original_name' => $photo->getClientOriginalName(),
                 'mime_type' => $mimeType,
                 'size' => strlen($contents),
-                'caption' => $caption,
+                'caption' => is_array($caption) ? ($caption[$index] ?? null) : $caption,
             ]);
         }
     }

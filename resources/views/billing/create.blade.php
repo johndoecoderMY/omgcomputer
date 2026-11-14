@@ -3,7 +3,7 @@
 @section('title', $editing ? 'Edit Draft' : 'Create Billing Document')
 
 @section('content')
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" data-project-ajax-root>
     <x-page-header eyebrow="Billing" :title="$editing ? (($document->status === 'rejected' ? 'Edit rejected quotation ' : 'Edit draft ') . $document->number) : 'Create ' . $type" :back-url="$editing ? route('billing.documents.show', $document) : ($project ? route('projects.show', $project) : route('billing.index'))" :back-label="$editing ? 'Back to document' : ($project ? 'Back to project' : 'Back to billing')" />
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif
     @if ($ticket)<div class="alert alert-info">Quotation for repair ticket <a href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>. Customer and issue details have been prefilled.</div>@endif
@@ -14,6 +14,9 @@
         @if ($editing)@method('PUT')@endif
         <input type="hidden" name="type" value="{{ $type }}">
         @if ($ticket)<input type="hidden" name="repair_ticket_id" value="{{ $ticket->id }}">@endif
+        @if (!empty($ticketModal) && $ticketModal && $ticket)
+            <input type="hidden" name="modal_return_to_ticket" value="{{ $ticket->id }}">
+        @endif
         @if ($project)<input type="hidden" name="project_id" value="{{ $project->id }}">@endif
         <div class="card mb-3"><div class="card-header fw-semibold">Customer and dates</div><div class="card-body row g-3">
             @if (! empty($customerRecipients))
@@ -142,11 +145,8 @@
         </div>
         <div class="d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ $editing ? route('billing.documents.show', $document) : route('billing.index') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ $editing ? ($document->status === 'rejected' ? 'Save revised quotation as draft' : 'Save draft changes') : ($type === 'invoice' ? 'Create and issue invoice' : 'Save quotation') }}</button></div>
     </form>
-</div>
-@endsection
-
-@push('scripts')
 <script>
+const initializeBillingCreateForm = () => {
 (() => {
     const customerRecipientSelect = document.getElementById('customer-recipient');
     if (!customerRecipientSelect) return;
@@ -238,5 +238,13 @@
         renumber();
     });
 })();
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeBillingCreateForm, { once: true });
+} else {
+    initializeBillingCreateForm();
+}
 </script>
-@endpush
+</div>
+@endsection

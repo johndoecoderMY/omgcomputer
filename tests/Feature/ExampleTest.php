@@ -35,7 +35,7 @@ class ExampleTest extends TestCase
             ->assertDontSee('<title>Computer Repair, Website Design &amp; Development - OMG Computer</title>', false);
     }
 
-    public function test_landing_page_shows_the_signed_in_users_workspace_menu(): void
+    public function test_landing_page_shows_the_signed_in_users_account_menu(): void
     {
         $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create(['name' => 'Signed In Staff']);
@@ -44,11 +44,18 @@ class ExampleTest extends TestCase
         $this->actingAs($user)->get('/')
             ->assertOk()
             ->assertSee('Signed In Staff')
-            ->assertSee('Go to workspace')
-            ->assertSee(route('dashboard'))
-            ->assertSee('Go to workspace')
-            ->assertSee('Sign out')
+            ->assertSee($user->email)
+            ->assertSee('Email inbox')
+            ->assertSee(route('email.inbox'))
+            ->assertSee('Calendar')
+            ->assertSee(route('calendar'))
+            ->assertSee('Tasks')
+            ->assertSee(route('tasks.index'))
+            ->assertSee('Profile and account')
+            ->assertSee(route('profile.edit'))
+            ->assertSee('Log out')
             ->assertSee('action="'.route('logout').'"', false)
+            ->assertDontSee('Signed in as')
             ->assertDontSee('Create account')
             ->assertDontSee('Staff sign in')
             ->assertDontSee('>Sign in</a>', false);

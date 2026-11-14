@@ -9,11 +9,248 @@ use App\Models\RepairTicket;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CustomerRepairTicketTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_staff_can_update_ticket_workflow_and_repair_steps_with_ajax(): void
+    {
+        Storage::fake('local');
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'AJAX Ticket Customer',
+            'email' => 'ajax-ticket@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-AJAX-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The laptop does not charge.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($staff)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('data-bs-target="#ticket-workflow-modal"', false)
+            ->assertSee('data-bs-target="#ticket-step-modal"', false)
+            ->assertSee('id="ticket-workflow-modal"', false)
+            ->assertSee('id="ticket-step-modal"', false)
+            ->assertSee('id="workflow-device-model"', false)
+            ->assertSee('id="workflow-serial-number"', false)
+            ->assertSee('Create quotation')
+            ->assertSee('data-project-ajax-modal', false)
+            ->assertSee('href="'.e(route('billing.create', [
+                'type' => 'quotation',
+                'repair_ticket_id' => $ticket->id,
+                'ticket_modal' => 1,
+            ])).'"', false);
+
+        $workflowResponse = $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
+            'status' => 'in_repair',
+            'priority' => 'high',
+            'assigned_to' => $staff->id,
+            'diagnosis' => 'Charging port requires replacement.',
+            'due_at' => now()->addDays(3)->toDateString(),
+            'device_model' => 'ThinkPad T14',
+            'serial_number' => 'SN-1001',
+        ])->assertOk()
+            ->assertJsonPath('status', 'in_repair')
+            ->assertJsonPath('priority', 'high')
+            ->assertJsonPath('priority_label', 'High')
+            ->assertJsonPath('assignees.0', $staff->name)
+            ->assertJsonPath('diagnosis', 'Charging port requires replacement.')
+            ->assertJsonPath('device_model', 'ThinkPad T14')
+            ->assertJsonPath('serial_number', 'SN-1001');
+
+        $this->assertStringContainsString('In repair', $workflowResponse->json('status_html'));
+        $this->assertSame('ThinkPad T14', $ticket->fresh()->device_model);
+        $this->assertSame('SN-1001', $ticket->fresh()->serial_number);
+
+        $stepResponse = $this->post(route('tickets.steps.store', $ticket), [
+            'title' => 'Replace charging port',
+            'status' => 'waiting_parts',
+            'notes' => 'Replacement part ordered.',
+            'photos' => [
+                UploadedFile::fake()->image('port-inspection.png'),
+                UploadedFile::fake()->image('bent-pin.png'),
+            ],
+            'captions' => [
+                0 => 'Port inspection',
+                1 => 'Bent connector pin',
+            ],
+        ], [
+            'Accept' => 'application/json',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->assertOk()
+            ->assertJsonPath('status', 'waiting_parts')
+            ->assertJsonPath('message', 'Ticket work step added.');
+
+        $this->assertStringContainsString('Replace charging port', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString('Port inspection', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString('Bent connector pin', $stepResponse->json('updates_html'));
+        $update = $ticket->updates()->latest('id')->firstOrFail();
+        $this->assertSame(
+            ['Port inspection', 'Bent connector pin'],
+            $update->attachments()->orderBy('id')->pluck('caption')->all(),
+        );
+        $this->assertSame('waiting_parts', $ticket->fresh()->status);
+    }
+
+    public function test_customer_ticket_page_keeps_the_app_footer_and_hides_staff_actions(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = Customer::query()->create([
+            'name' => 'Portal Ticket Customer',
+            'email' => 'portal-ticket@example.test',
+        ]);
+        $account = User::factory()->create(['email' => $customer->email]);
+        $account->assignRole('customer');
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-PORTAL-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The desktop will not start.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($account)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('<footer class="footer">', false)
+            ->assertDontSee('Edit ticket details')
+            ->assertDontSee('Add repair step')
+            ->assertDontSee('Create quotation')
+            ->assertDontSee('id="ticket-workflow-modal"', false)
+            ->assertDontSee('id="ticket-step-modal"', false);
+    }
+
+    public function test_customer_ticket_page_shows_only_their_sent_pricing_documents(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = Customer::query()->create([
+            'name' => 'Ticket Billing Customer',
+            'email' => 'ticket-billing@example.test',
+        ]);
+        $account = User::factory()->create(['email' => $customer->email]);
+        $account->assignRole('customer');
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-BILLING-PORTAL-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The desktop will not start.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $documentAttributes = [
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'repair_ticket_id' => $ticket->id,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => 80,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'paid_amount' => 20,
+        ];
+        BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'INV-TICKET-PORTAL-001',
+            'type' => 'invoice',
+            'status' => 'issued',
+            'total' => 80,
+        ]);
+        BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'QUO-TICKET-PORTAL-001',
+            'type' => 'quotation',
+            'status' => 'sent',
+            'total' => 100,
+        ]);
+        BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'QUO-TICKET-PORTAL-DRAFT',
+            'type' => 'quotation',
+            'status' => 'draft',
+            'total' => 120,
+        ]);
+        BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'INV-TICKET-PORTAL-OTHER',
+            'type' => 'invoice',
+            'status' => 'issued',
+            'customer_email' => 'someone-else@example.test',
+            'total' => 140,
+        ]);
+
+        $this->actingAs($account)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Pricing and Billing documents')
+            ->assertSee('INV-TICKET-PORTAL-001')
+            ->assertSee('QUO-TICKET-PORTAL-001')
+            ->assertSee('RM 80.00')
+            ->assertSee('Balance RM 60.00')
+            ->assertSee('RM 100.00')
+            ->assertDontSee('QUO-TICKET-PORTAL-DRAFT')
+            ->assertDontSee('INV-TICKET-PORTAL-OTHER');
+    }
+
+    public function test_ticket_quotation_modal_returns_to_the_ticket_after_saving(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Quotation Modal Customer',
+            'email' => 'quotation-modal@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-QUOTATION-MODAL',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The laptop does not charge.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $this->actingAs($staff);
+
+        $this->get(route('billing.create', [
+            'type' => 'quotation',
+            'repair_ticket_id' => $ticket->id,
+            'ticket_modal' => 1,
+        ]))->assertOk()
+            ->assertSee('data-project-ajax-root', false)
+            ->assertSee('name="modal_return_to_ticket" value="'.$ticket->id.'"', false)
+            ->assertSee('initializeBillingCreateForm');
+
+        $this->post(route('billing.store'), [
+            'type' => 'quotation',
+            'repair_ticket_id' => $ticket->id,
+            'modal_return_to_ticket' => $ticket->id,
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Laptop charging port repair',
+                'quantity' => 1,
+                'unit_price' => 120,
+            ]],
+        ])->assertRedirect(route('tickets.show', $ticket))
+            ->assertSessionHas('success', 'Quotation saved as a draft.');
+
+        $this->assertDatabaseHas('billing_documents', [
+            'repair_ticket_id' => $ticket->id,
+            'type' => 'quotation',
+            'status' => 'draft',
+            'total' => 120,
+        ]);
+    }
 
     public function test_guest_can_track_a_repair_with_only_the_service_number(): void
     {

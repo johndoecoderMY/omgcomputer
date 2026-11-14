@@ -2,6 +2,19 @@
 
 @section('title', 'Dashboard')
 
+@push('styles')
+    <style>
+        .dashboard-unread-title {
+            min-width: 0;
+            max-width: 100%;
+            font-size: clamp(1rem, 4vw, 1.35rem);
+            line-height: 1.2;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="container-fluid py-3">
         <x-page-header eyebrow="Workspace" title="Dashboard"
@@ -81,7 +94,7 @@
             <div class="col-6 col-xl-3">
                 <div class="card h-md-100">
                     <div class="card-header pb-0">
-                        <h4 class="mb-0 mt-2 d-flex align-items-center text-primary">Unread notifications</h4>
+                        <h4 class="dashboard-unread-title mb-0 mt-2 text-primary">Unread notifications</h4>
                     </div>
                     <div class="card-body d-flex flex-column justify-content-end">
                         <div class="row align-items-end g-2">

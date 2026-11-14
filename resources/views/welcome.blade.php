@@ -22,7 +22,9 @@
         .landing-hero { min-height: 720px; padding-top: 118px; background: linear-gradient(135deg, var(--falcon-gray-100, #fff) 0%, var(--falcon-body-bg, #edf2f9) 100%); overflow: hidden; }
         .landing-hero .hero-title { max-width: 760px; color: var(--falcon-gray-1000, #172033); font-size: clamp(3rem, 6vw, 5.6rem); line-height: .96; letter-spacing: -.055em; }
         .landing-hero .hero-title span { color: var(--falcon-primary); }
-        .landing-hero .hero-kicker { color: var(--falcon-primary); background: rgba(var(--falcon-primary-rgb), .08); border: 1px solid rgba(var(--falcon-primary-rgb), .18); }
+        .landing-hero .hero-kicker { display: inline-flex; align-items: flex-start; max-width: 100%; color: var(--falcon-primary); background: rgba(var(--falcon-primary-rgb), .08); border: 1px solid rgba(var(--falcon-primary-rgb), .18); white-space: normal; line-height: 1.4; }
+        .landing-hero .hero-kicker .bi { flex-shrink: 0; }
+        .landing-hero .hero-kicker-copy { min-width: 0; overflow-wrap: anywhere; }
         .landing-hero .hero-copy { max-width: 590px; }
         .landing-hero .hero-primary-button { color: #fff; background: var(--falcon-primary); border-color: var(--falcon-primary); box-shadow: 0 12px 30px rgba(var(--falcon-primary-rgb), .22); }
         .landing-hero .hero-primary-button:hover { filter: brightness(.92); }
@@ -50,7 +52,8 @@
             <div class="row align-items-center g-5 py-5">
                 <div class="col-lg-6">
                     <span class="hero-kicker badge rounded-pill mb-4 px-3 py-2">
-                        <span class="bi bi-tools me-2"></span>Computer repair, website design &amp; technology support
+                        <span class="bi bi-tools me-2" aria-hidden="true"></span>
+                        <span class="hero-kicker-copy">Computer repair, website design &amp; technology support</span>
                     </span>
                     <h1 class="hero-title fw-bold mb-4">Computer trouble?<br><span>We’ll fix it.</span></h1>
                     <p class="hero-copy lead text-700 mb-4">Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.</p>

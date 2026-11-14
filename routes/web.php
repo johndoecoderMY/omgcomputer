@@ -37,12 +37,13 @@ use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SocialMediaController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\WebsitePreviewController;
 use App\Http\Controllers\WhatsAppInboxController;
 use App\Http\Controllers\WhatsAppWebhookController;
-use App\Http\Controllers\WebsitePreviewController;
 use App\Models\InventoryPart;
 use App\Models\WebsitePreview;
 use Illuminate\Support\Facades\Route;
@@ -478,6 +479,30 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/{marketplaceShop}/disconnect', 'disconnect')->name('disconnect');
         Route::post('/{marketplaceShop}/orders/import', 'importOrders')->name('orders.import');
     });
+    Route::prefix('social-media')->name('social-media.')->middleware('role:admin')->controller(SocialMediaController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::put('/profiles', 'updateProfiles')->name('profiles.update');
+        Route::put('/facebook/profile', 'updateFacebookProfile')->name('facebook.profile.update');
+        Route::put('/facebook/picture', 'updateFacebookPicture')->name('facebook.picture.update');
+        Route::get('/tiktok/connect', 'connectTikTok')->name('tiktok.connect');
+        Route::get('/tiktok/callback', 'tiktokCallback')->name('tiktok.callback');
+        Route::delete('/tiktok/connection', 'disconnectTikTok')->name('tiktok.disconnect');
+        Route::get('/instagram/media/{mediaId}/comments', 'instagramMediaComments')
+            ->whereNumber('mediaId')
+            ->name('instagram.comments');
+        Route::post('/instagram/media/{mediaId}/comments/{commentId}/reply', 'replyToInstagramComment')
+            ->whereNumber('mediaId')
+            ->whereNumber('commentId')
+            ->name('instagram.comments.reply');
+        Route::patch('/instagram/media/{mediaId}/comments/{commentId}/visibility', 'updateInstagramCommentVisibility')
+            ->whereNumber('mediaId')
+            ->whereNumber('commentId')
+            ->name('instagram.comments.visibility');
+        Route::delete('/instagram/media/{mediaId}/comments/{commentId}', 'deleteInstagramComment')
+            ->whereNumber('mediaId')
+            ->whereNumber('commentId')
+            ->name('instagram.comments.delete');
+    });
     Route::prefix('meta-content')->name('meta-content.')->middleware('not-customer')->controller(MetaContentController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -498,6 +523,17 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/page', 'selectPage')->name('page.select');
         Route::delete('/page', 'disconnectPage')->name('page.disconnect');
         Route::post('/page/posts', 'storePagePost')->name('page.posts.store');
+        Route::get('/page/posts/{postId}/comments', 'pagePostComments')
+            ->where('postId', '[0-9]+_[0-9]+')
+            ->name('page.posts.comments');
+        Route::post('/page/posts/{postId}/comments/{commentId}/reply', 'replyToPageComment')
+            ->where('postId', '[0-9]+_[0-9]+')
+            ->where('commentId', '[0-9]+(?:_[0-9]+)?')
+            ->name('page.comments.reply');
+        Route::delete('/page/posts/{postId}/comments/{commentId}', 'deletePageComment')
+            ->where('postId', '[0-9]+_[0-9]+')
+            ->where('commentId', '[0-9]+(?:_[0-9]+)?')
+            ->name('page.comments.delete');
         Route::patch('/page/posts/{postId}', 'updatePagePost')
             ->where('postId', '[0-9]+_[0-9]+')
             ->name('page.posts.update');
