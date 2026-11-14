@@ -18,6 +18,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Pusher\PushNotifications\PushNotifications;
 use Tests\TestCase;
 
 class WorkspaceNotificationsTest extends TestCase
@@ -66,6 +67,36 @@ class WorkspaceNotificationsTest extends TestCase
 
         $this->getJson(route('beams.auth', ['user_id' => 'another-user']))
             ->assertUnauthorized();
+    }
+
+    public function test_beams_web_notification_includes_the_application_icon(): void
+    {
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
+        ]);
+        $user = User::factory()->create();
+        $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
+        $beamsClient = \Mockery::mock(PushNotifications::class);
+        $beamsClient->shouldReceive('publishToUsers')
+            ->once()
+            ->with([(string) $user->getKey()], [
+                'web' => [
+                    'notification' => [
+                        'title' => 'Task assigned',
+                        'body' => 'A task was assigned.',
+                        'icon' => asset('assets/img/favicons/android-chrome-192x192.png'),
+                        'deep_link' => url('/tasks'),
+                    ],
+                ],
+            ]);
+
+        $notifier = app(BeamsPushNotifier::class);
+        $clientProperty = new \ReflectionProperty(BeamsPushNotifier::class, 'client');
+        $clientProperty->setValue($notifier, $beamsClient);
+
+        $notifier->send($user, $notification);
     }
 
     public function test_push_settings_are_available_in_the_profile_when_beams_is_configured(): void

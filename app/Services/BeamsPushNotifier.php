@@ -42,6 +42,7 @@ class BeamsPushNotifier
                         'notification' => [
                             'title' => (string) ($data['title'] ?? config('app.name')),
                             'body' => (string) ($data['message'] ?? ''),
+                            'icon' => asset('assets/img/favicons/android-chrome-192x192.png'),
                             'deep_link' => url((string) ($data['url'] ?? route('notifications.index'))),
                         ],
                     ],
