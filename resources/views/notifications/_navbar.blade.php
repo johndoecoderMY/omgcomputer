@@ -11,7 +11,7 @@
         aria-label="Notifications, {{ $unreadNotificationCount }} unread"
         data-hide-on-body-scroll="data-hide-on-body-scroll">
         <span class="bi bi-bell" style="font-size: 22px;" aria-hidden="true"></span>
-        <span id="unread-notifications-count" class="notification-indicator-number {{ $unreadNotificationCount ? '' : 'd-none' }}"
+        <span id="unread-notifications-count" class="notification-indicator-number bg-primary rounded-pill {{ $unreadNotificationCount ? '' : 'd-none' }}"
             style="width: auto; min-width: 1rem; padding: 0 .15rem;" aria-live="polite"
             aria-label="{{ $unreadNotificationCount }} unread notifications">
             {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}

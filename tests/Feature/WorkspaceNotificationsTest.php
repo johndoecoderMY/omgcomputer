@@ -300,7 +300,7 @@ class WorkspaceNotificationsTest extends TestCase
             ->get(route('notifications.index'))
             ->assertOk()
             ->assertSee('Notifications')
-            ->assertSee('id="unread-notifications-count" class="notification-indicator-number', false)
+            ->assertSee('id="unread-notifications-count" class="notification-indicator-number bg-primary rounded-pill', false)
             ->assertSee('aria-label="1 unread notifications"', false)
             ->assertSee('class="bi bi-bell"', false)
             ->assertSee('Your Notifications')
@@ -338,7 +338,7 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertOk()
             ->assertSee('id="navbarDropdownNotification"', false)
             ->assertDontSee('notification-indicator-primary', false)
-            ->assertSee('class="notification-indicator-number d-none"', false);
+            ->assertSee('class="notification-indicator-number bg-primary rounded-pill d-none"', false);
     }
 
     public function test_users_cannot_read_another_users_notification(): void
