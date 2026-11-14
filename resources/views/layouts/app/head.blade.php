@@ -11,15 +11,14 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/img/favicons/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/img/favicons/favicon-16x16.png') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('assets/img/favicons/favicon.ico') }}">
-    @if (auth()->check() && ! auth()->user()->hasRole('customer'))
-        <link rel="manifest" href="{{ asset('staff.webmanifest') }}">
+    @if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'member']))
+        <link rel="manifest" href="{{ route('staff-pwa.manifest') }}">
         <meta name="theme-color" content="#f34303">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="OMG Staff">
     @else
-        <link rel="manifest" href="{{ asset('assets/img/favicons/manifest.json') }}">
         <meta name="theme-color" content="#ffffff">
     @endif
     <script src="{{ asset('assets/js/config.js') }}"></script>

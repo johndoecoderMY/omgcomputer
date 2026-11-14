@@ -38,6 +38,7 @@ use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SocialMediaController;
+use App\Http\Controllers\StaffPwaController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TeamController;
@@ -118,6 +119,10 @@ Route::redirect('/qa', '/#faq')->name('qa');
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'password.changed', 'verified'])
     ->name('dashboard');
+Route::middleware(['auth', 'password.changed', 'verified', 'role:admin|member'])->group(function (): void {
+    Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name('staff-pwa.manifest');
+    Route::get('/staff-service-worker.js', [StaffPwaController::class, 'serviceWorker'])->name('staff-pwa.service-worker');
+});
 
 Route::get('/error-pages/{code}', function (string $code) {
     abort_unless(in_array($code, ['403', '404', '419', '429', '500', '503'], true), 404);

@@ -36,7 +36,6 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/img/favicons/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/img/favicons/favicon-16x16.png') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('assets/img/favicons/favicon.ico') }}">
-    <link rel="manifest" href="{{ asset('assets/img/favicons/site.webmanifest') }}">
      <meta name="theme-color" content="#ffffff">
     <script src="{{ asset('assets/js/config.js') }}"></script>
     <script src="{{ asset('vendors/simplebar/simplebar.min.js') }}"></script>

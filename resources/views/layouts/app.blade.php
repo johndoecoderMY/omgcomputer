@@ -7,7 +7,7 @@
 <body
     @auth
         data-notifications-user="{{ auth()->id() }}"
-        data-staff-pwa="{{ auth()->user()->hasRole('customer') ? 'false' : 'true' }}"
+        data-staff-pwa="{{ auth()->user()->hasAnyRole(['admin', 'member']) ? 'true' : 'false' }}"
     @endauth
     data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
     data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
