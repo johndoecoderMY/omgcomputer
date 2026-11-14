@@ -14,6 +14,12 @@
             @if ($update->notes)
                 <p class="text-pre-line mt-2 mb-0">{{ $update->notes }}</p>
             @endif
+            @if ($update->customer_details)
+                <div class="mt-2">
+                    <div class="small fw-semibold text-body-secondary">Customer-facing update</div>
+                    <p class="text-pre-line mb-0">{{ $update->customer_details }}</p>
+                </div>
+            @endif
             @if ($update->attachments->isNotEmpty())
                 <div id="ticket-step-photos-{{ $update->id }}"
                     class="carousel slide ticket-step-photo-carousel mt-3"

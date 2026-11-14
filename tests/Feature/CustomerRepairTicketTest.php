@@ -11,6 +11,7 @@ use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class CustomerRepairTicketTest extends TestCase
@@ -44,6 +45,7 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('id="ticket-step-modal"', false)
             ->assertSee('id="workflow-device-model"', false)
             ->assertSee('id="workflow-serial-number"', false)
+            ->assertSee('id="step-customer-details"', false)
             ->assertSee('Create quotation')
             ->assertSee('data-project-ajax-modal', false)
             ->assertSee('href="'.e(route('billing.create', [
@@ -77,6 +79,7 @@ class CustomerRepairTicketTest extends TestCase
             'title' => 'Replace charging port',
             'status' => 'waiting_parts',
             'notes' => 'Replacement part ordered.',
+            'customer_details' => 'The replacement part has been ordered.',
             'photos' => [
                 UploadedFile::fake()->image('port-inspection.png'),
                 UploadedFile::fake()->image('bent-pin.png'),
@@ -93,11 +96,13 @@ class CustomerRepairTicketTest extends TestCase
             ->assertJsonPath('message', 'Ticket work step added.');
 
         $this->assertStringContainsString('Replace charging port', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString('The replacement part has been ordered.', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('Port inspection', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('Bent connector pin', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('data-ticket-step-carousel', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('data-bs-slide="next"', $stepResponse->json('updates_html'));
         $update = $ticket->updates()->latest('id')->firstOrFail();
+        $this->assertSame('The replacement part has been ordered.', $update->customer_details);
         $this->assertSame(
             ['Port inspection', 'Bent connector pin'],
             $update->attachments()->orderBy('id')->pluck('caption')->all(),
@@ -279,7 +284,17 @@ class CustomerRepairTicketTest extends TestCase
             'title' => 'Parts ordered',
             'status' => 'waiting_parts',
             'notes' => 'Internal supplier details must not appear in public tracking.',
+            'customer_details' => 'We are waiting for the replacement part before continuing the repair.',
             'created_at' => now()->subHour(),
+        ]);
+        $step = $ticket->updates()->where('title', 'Parts ordered')->firstOrFail();
+        Storage::disk('local')->put('attachments/repair_ticket_updates/step-photo.jpg', 'fake image contents');
+        $attachment = $step->attachments()->create([
+            'path' => 'attachments/repair_ticket_updates/step-photo.jpg',
+            'original_name' => 'internal-filename.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 19,
+            'caption' => 'Replacement part inspection',
         ]);
 
         $this->get(route('repairs.track.form'))
@@ -294,11 +309,32 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('RT-2026-000123')
             ->assertSee('Waiting for parts')
             ->assertSee('Repair timeline')
+            ->assertSee('Repair steps')
             ->assertSee('New')
             ->assertSee('Waiting for parts')
+            ->assertSee('Parts ordered')
+            ->assertSee('We are waiting for the replacement part before continuing the repair.')
+            ->assertSee('Replacement part inspection')
+            ->assertSee('track-repair/photos/'.$attachment->id, false)
+            ->assertSee('class="attachment-lightbox public-repair-step-photo-link"', false)
+            ->assertSee('data-gallery="public-repair-step-'.$step->id.'"', false)
+            ->assertSee('vendors/glightbox/glightbox.min.css')
+            ->assertSee('vendors/glightbox/glightbox.min.js')
             ->assertDontSee('Private intake details')
             ->assertDontSee('Internal supplier details')
+            ->assertDontSee('internal-filename.jpg')
             ->assertDontSee('tracking@example.test');
+
+        $signedPhotoUrl = URL::temporarySignedRoute(
+            'repairs.track.photo',
+            now()->addMinutes(10),
+            ['attachment' => $attachment],
+        );
+        $this->get($signedPhotoUrl)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->get(route('repairs.track.photo', $attachment))->assertForbidden();
 
         $this->from(route('repairs.track.form'))
             ->post(route('repairs.track'), [
@@ -307,6 +343,10 @@ class CustomerRepairTicketTest extends TestCase
             ->assertRedirect(route('repairs.track.form'))
             ->assertSessionHasErrors('ticket_number');
 
+    }
+
+    public function test_homepage_links_to_public_repair_tracking(): void
+    {
         $this->get('/')
             ->assertOk()
             ->assertSee('Check the latest progress using the service number provided by our shop.')

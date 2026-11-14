@@ -14,6 +14,7 @@ class RepairTicketUpdate extends Model
         'title',
         'status',
         'notes',
+        'customer_details',
     ];
 
     public function ticket(): BelongsTo

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\User;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -16,7 +17,13 @@ class WorkspaceNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        $channels = ['database', 'broadcast'];
+
+        if ($this->canReceiveStaffEmail($notifiable)) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toArray(object $notifiable): array
@@ -43,5 +50,17 @@ class WorkspaceNotification extends Notification
                 'notificationMessage' => $this->message,
                 'actionUrl' => $this->url,
             ]);
+    }
+
+    private function canReceiveStaffEmail(object $notifiable): bool
+    {
+        if ($notifiable instanceof User && $notifiable->hasAnyRole(['admin', 'member'])) {
+            $email = strtolower(trim((string) $notifiable->email));
+
+            return filter_var($email, FILTER_VALIDATE_EMAIL) !== false
+                && str_ends_with($email, '@omgcomputer.my');
+        }
+
+        return false;
     }
 }

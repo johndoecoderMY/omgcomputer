@@ -276,6 +276,13 @@
                                     <label class="form-label" for="step-notes">Procedure and findings</label>
                                     <textarea class="form-control" id="step-notes" name="notes" rows="3" maxlength="5000"
                                         placeholder="Record checks performed, result, parts used, and customer approval. Keep sensitive customer data out of photos."></textarea>
+                                    <div class="form-text">Internal staff notes; not shown on public repair tracking.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="step-customer-details">Customer-facing update <span class="text-body-secondary">(optional)</span></label>
+                                    <textarea class="form-control" id="step-customer-details" name="customer_details" rows="3" maxlength="5000"
+                                        placeholder="Share a brief, customer-safe summary of this repair step."></textarea>
+                                    <div class="form-text">This summary appears to customers on the public repair tracking page.</div>
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label" for="step-photos">Step photos <span class="text-body-secondary">(optional)</span></label>

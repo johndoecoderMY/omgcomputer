@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attachment;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\RepairTicket;
@@ -18,11 +19,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Spatie\QueryBuilder\AllowedFilter;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Yajra\DataTables\Facades\DataTables;
 
 class RepairTicketController extends Controller
@@ -41,7 +44,8 @@ class RepairTicketController extends Controller
         $ticket = RepairTicket::query()
             ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($data['ticket_number']))])
             ->with(['updates' => fn ($updates) => $updates
-                ->select(['id', 'repair_ticket_id', 'status', 'created_at'])
+                ->select(['id', 'repair_ticket_id', 'title', 'customer_details', 'status', 'created_at'])
+                ->with('attachments')
                 ->oldest()])
             ->first();
 
@@ -52,6 +56,22 @@ class RepairTicketController extends Controller
         }
 
         return view('repairs.track', ['trackingTicket' => $ticket]);
+    }
+
+    public function trackingPhoto(Attachment $attachment): BinaryFileResponse
+    {
+        abort_unless(
+            $attachment->attachable_type === RepairTicketUpdate::class
+                && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
+                && Storage::disk('local')->exists($attachment->path),
+            404,
+        );
+
+        return response()->file(Storage::disk('local')->path($attachment->path), [
+            'Content-Type' => $attachment->mime_type,
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 
     public function index(Request $request): View
@@ -382,6 +402,7 @@ class RepairTicketController extends Controller
             'title' => ['required', 'string', 'max:180'],
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'customer_details' => ['nullable', 'string', 'max:5000'],
             'photos' => ['nullable', 'array', 'max:8'],
             'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'captions' => ['nullable', 'array', 'max:8'],

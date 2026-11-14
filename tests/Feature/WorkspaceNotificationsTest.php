@@ -26,6 +26,23 @@ class WorkspaceNotificationsTest extends TestCase
         $this->assertSame('sync', $notification->toBroadcast(User::factory()->make())->connection);
     }
 
+    public function test_workspace_notification_email_is_limited_to_company_domain_staff(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
+
+        $companyStaff = User::factory()->create(['email' => 'staff@OMGCOMPUTER.MY']);
+        $companyStaff->assignRole('member');
+        $otherDomainStaff = User::factory()->create(['email' => 'staff@example.test']);
+        $otherDomainStaff->assignRole('admin');
+        $nonStaff = User::factory()->create(['email' => 'customer@omgcomputer.my']);
+        $nonStaff->assignRole('customer');
+
+        $this->assertSame(['database', 'broadcast', 'mail'], $notification->via($companyStaff));
+        $this->assertSame(['database', 'broadcast'], $notification->via($otherDomainStaff));
+        $this->assertSame(['database', 'broadcast'], $notification->via($nonStaff));
+    }
+
     public function test_workspace_notification_email_uses_the_responsive_branded_layout(): void
     {
         $recipient = User::factory()->make(['name' => 'Jamie Lee']);

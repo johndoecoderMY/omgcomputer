@@ -49,6 +49,7 @@
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
      <link rel="preload" href="{{ Vite::asset('node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
      @vite('resources/css/icons.css')
+     @stack('styles')
     <script>
       var isRTL = JSON.parse(localStorage.getItem('isRTL'));
       if (isRTL) {

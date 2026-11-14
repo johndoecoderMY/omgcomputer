@@ -56,6 +56,9 @@ Route::get('/website-previews/concepts/{concept}', [WebsitePreviewController::cl
     ->name('website-previews.concepts.show');
 Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
     ->name('repairs.track.form');
+Route::get('/track-repair/photos/{attachment}', [RepairTicketController::class, 'trackingPhoto'])
+    ->middleware('signed')
+    ->name('repairs.track.photo');
 Route::post('/track-repair', [RepairTicketController::class, 'track'])
     ->middleware('throttle:5,1')
     ->name('repairs.track');

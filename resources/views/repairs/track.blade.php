@@ -23,6 +23,10 @@
     ];
 @endphp
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('vendors/glightbox/glightbox.min.css') }}">
+@endpush
+
 <style>
     .track-repair-page {
         background:
@@ -170,6 +174,23 @@
         background: rgba(148, 163, 184, 0.35);
     }
 
+    .public-repair-step-photo {
+        display: block;
+        width: 100%;
+        height: clamp(14rem, 55vw, 28rem);
+        object-fit: contain;
+        background: #f1f5f9;
+    }
+
+    .public-repair-step-photo-link {
+        display: block;
+        cursor: zoom-in;
+    }
+
+    .public-repair-step-caption {
+        overflow-wrap: anywhere;
+    }
+
     @media (max-width: 991.98px) {
         .repair-steps-grid {
             grid-template-columns: 1fr;
@@ -259,6 +280,78 @@
                                 </li>
                             @endforelse
                         </ol>
+
+                        <hr class="my-4 my-md-5">
+                        <h3 class="h5 mb-3">Repair steps</h3>
+                        <div class="d-grid gap-3">
+                            @forelse ($trackingTicket->updates as $update)
+                                <article class="card border-0 shadow-sm">
+                                    <div class="card-body p-3 p-md-4">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                            <h4 class="h6 mb-0">{{ $update->title }}</h4>
+                                            <time class="small text-body-secondary" datetime="{{ $update->created_at->toIso8601String() }}">
+                                                {{ $update->created_at->format('M j, Y g:i A') }}
+                                            </time>
+                                        </div>
+                                        @if ($update->customer_details)
+                                            <p class="text-pre-line mb-0">{{ $update->customer_details }}</p>
+                                        @endif
+
+                                        @if ($update->attachments->isNotEmpty())
+                                            <div id="public-repair-step-photos-{{ $update->id }}"
+                                                class="carousel slide mt-3" data-bs-touch="true" data-bs-interval="false">
+                                                <div class="carousel-inner rounded border bg-body-tertiary">
+                                                    @foreach ($update->attachments->sortBy('id')->values() as $attachment)
+                                                        @php
+                                                            $photoCaption = $attachment->caption ?: 'Repair step photo '.$loop->iteration;
+                                                            $photoUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+                                                                'repairs.track.photo',
+                                                                now()->addDays(7),
+                                                                ['attachment' => $attachment],
+                                                            );
+                                                        @endphp
+                                                        <div class="carousel-item {{ $loop->first ? 'active' : '' }}">
+                                                            <a class="attachment-lightbox public-repair-step-photo-link"
+                                                                href="{{ $photoUrl }}"
+                                                                data-type="image"
+                                                                data-gallery="public-repair-step-{{ $update->id }}"
+                                                                data-description="{{ $photoCaption }}">
+                                                                <img class="public-repair-step-photo"
+                                                                    src="{{ $photoUrl }}"
+                                                                    alt="{{ $photoCaption }}"
+                                                                    loading="lazy">
+                                                            </a>
+                                                            <div class="public-repair-step-caption text-center p-2 small">
+                                                                {{ $photoCaption }}
+                                                                @if ($update->attachments->count() > 1)
+                                                                    <span class="d-block text-body-secondary">Photo {{ $loop->iteration }} of {{ $loop->count }}</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                                @if ($update->attachments->count() > 1)
+                                                    <button class="carousel-control-prev" type="button"
+                                                        data-bs-target="#public-repair-step-photos-{{ $update->id }}"
+                                                        data-bs-slide="prev" aria-label="Previous photo">
+                                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">Previous photo</span>
+                                                    </button>
+                                                    <button class="carousel-control-next" type="button"
+                                                        data-bs-target="#public-repair-step-photos-{{ $update->id }}"
+                                                        data-bs-slide="next" aria-label="Next photo">
+                                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">Next photo</span>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+                                </article>
+                            @empty
+                                <p class="text-body-secondary mb-0">No repair steps have been shared yet.</p>
+                            @endforelse
+                        </div>
                     </div>
                 @endif
             </div>
@@ -266,3 +359,14 @@
     </div>
 </section>
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
+    <script>
+        (() => {
+            if (window.GLightbox) {
+                window.GLightbox({ selector: '.public-repair-step-photo-link' });
+            }
+        })();
+    </script>
+@endpush
