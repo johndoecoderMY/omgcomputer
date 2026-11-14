@@ -83,6 +83,10 @@
              gap: .5rem;
          }
 
+         .dropdown-menu-notification {
+             border: 1px solid var(--falcon-border-color) !important;
+         }
+
          @media (max-width: 575.98px) {
              .dropdown-menu-notification {
                  position: fixed !important;
