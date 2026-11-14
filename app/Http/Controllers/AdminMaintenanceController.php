@@ -7,6 +7,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
@@ -299,6 +300,61 @@ class AdminMaintenanceController extends Controller
 
         return redirect()->route('admin.maintenance.index')
             ->with('maintenance_success', 'Frontend assets built successfully.')
+            ->with('maintenance_output', $output);
+    }
+
+    public function installComposerDependencies(): RedirectResponse
+    {
+        foreach ([
+            base_path('bootstrap/cache/packages.php'),
+            base_path('bootstrap/cache/services.php'),
+        ] as $providerCache) {
+            if (is_file($providerCache) && ! File::delete($providerCache)) {
+                Log::error('Admin Composer install could not clear a cached Laravel provider manifest.', [
+                    'path' => $providerCache,
+                ]);
+
+                return redirect()->route('admin.maintenance.index')
+                    ->with('maintenance_error', 'Composer could not start because a cached Laravel provider manifest could not be cleared. Check file permissions.');
+            }
+        }
+
+        try {
+            $result = Process::path(base_path())
+                ->timeout(300)
+                ->run([
+                    'composer',
+                    'install',
+                    '--no-dev',
+                    '--prefer-dist',
+                    '--optimize-autoloader',
+                    '--no-interaction',
+                    '--no-progress',
+                ]);
+        } catch (RuntimeException $exception) {
+            Log::warning('Admin Composer install could not start.', [
+                'reason' => Str::limit($exception->getMessage(), 200),
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'Composer could not start. Confirm Composer is installed and available to the web server.');
+        }
+
+        $output = trim($result->output()."\n".$result->errorOutput());
+
+        if (! $result->successful()) {
+            Log::error('Admin Composer install failed.', [
+                'exit_code' => $result->exitCode(),
+                'output' => $output,
+            ]);
+
+            return redirect()->route('admin.maintenance.index')
+                ->with('maintenance_error', 'Composer dependency installation failed. Review the output and application logs.')
+                ->with('maintenance_output', $output);
+        }
+
+        return redirect()->route('admin.maintenance.index')
+            ->with('maintenance_success', 'Production Composer dependencies installed successfully.')
             ->with('maintenance_output', $output);
     }
 

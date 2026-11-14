@@ -29,6 +29,7 @@ class AdminMaintenanceTest extends TestCase
         $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.storage-link'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
+        $this->actingAs($member)->post(route('admin.maintenance.composer-install'))->assertForbidden();
         $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
 
         $admin = User::factory()->create();
@@ -44,6 +45,7 @@ class AdminMaintenanceTest extends TestCase
             ->assertSee('Fresh migrate & seed')
             ->assertSee('Optimize clear')
             ->assertSee('Create storage link')
+            ->assertSee('Install Composer dependencies')
             ->assertSee('Git pull');
     }
 
@@ -272,6 +274,46 @@ class AdminMaintenanceTest extends TestCase
             ->assertSessionHas('maintenance_output', 'Vite build complete.');
 
         Process::assertRan(fn ($process): bool => $process->command === ['npm', 'run', 'build']);
+    }
+
+    public function test_administrator_can_install_production_composer_dependencies(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Process::fake([
+            '*' => Process::result('Composer dependencies installed.'),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.composer-install'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'Production Composer dependencies installed successfully.')
+            ->assertSessionHas('maintenance_output', 'Composer dependencies installed.');
+
+        Process::assertRan(fn ($process): bool => $process->command === [
+            'composer',
+            'install',
+            '--no-dev',
+            '--prefer-dist',
+            '--optimize-autoloader',
+            '--no-interaction',
+            '--no-progress',
+        ]);
+    }
+
+    public function test_failed_composer_install_shows_command_output(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        Process::fake([
+            '*' => Process::result('', 'Composer is not available to the web server.', 127),
+        ]);
+
+        $this->actingAs($admin)->post(route('admin.maintenance.composer-install'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_error')
+            ->assertSessionHas('maintenance_output', 'Composer is not available to the web server.');
     }
 
     public function test_failed_frontend_build_shows_build_output(): void

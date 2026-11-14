@@ -53,6 +53,24 @@
         <div class="col-12 col-xl-6">
             <section class="card h-100">
                 <div class="card-body">
+                    <h2 class="h5">Install Composer dependencies</h2>
+                    <p class="text-body-secondary">
+                        Install the production PHP packages from <code>composer.lock</code> with development packages excluded.
+                        This clears Laravel's cached provider manifests first, which is needed when removing development-only packages such as Pail.
+                    </p>
+                    <form method="POST" action="{{ route('admin.maintenance.composer-install') }}"
+                        onsubmit="return confirm('Install production Composer dependencies from composer.lock?');">
+                        @csrf
+                        <button class="btn btn-primary" type="submit">
+                            <span class="bi bi-box-seam me-2" aria-hidden="true"></span>Install Composer dependencies
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="card h-100">
+                <div class="card-body">
                     <h2 class="h5">Build frontend assets</h2>
                     <p class="text-body-secondary">
                         Run <code>npm run build</code> to generate the production Vite assets in <code>public/build</code>.
