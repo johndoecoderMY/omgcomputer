@@ -127,8 +127,9 @@ Route::get('/beams/auth', BeamsAuthController::class)
     ->middleware(['auth', 'password.changed', 'verified', 'throttle:60,1'])
     ->name('beams.auth');
 
+Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name('staff-pwa.manifest');
+
 Route::middleware(['auth', 'password.changed', 'verified', 'role:admin|member'])->group(function (): void {
-    Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name('staff-pwa.manifest');
     Route::get('/staff-service-worker.js', [StaffPwaController::class, 'serviceWorker'])->name('staff-pwa.service-worker');
 });
 

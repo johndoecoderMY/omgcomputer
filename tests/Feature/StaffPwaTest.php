@@ -52,14 +52,17 @@ class StaffPwaTest extends TestCase
             ->assertDontSee('staff-pwa.manifest');
 
         $this->actingAs($customer)->get(route('staff-pwa.manifest'))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/manifest+json');
         $this->actingAs($customer)->get(route('staff-pwa.service-worker'))
             ->assertForbidden();
     }
 
-    public function test_guests_cannot_fetch_the_staff_pwa_files(): void
+    public function test_guests_can_fetch_the_staff_manifest_but_not_the_service_worker(): void
     {
-        $this->get(route('staff-pwa.manifest'))->assertRedirect(route('login'));
+        $this->get(route('staff-pwa.manifest'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/manifest+json');
         $this->get(route('staff-pwa.service-worker'))->assertRedirect(route('login'));
     }
 
@@ -68,7 +71,9 @@ class StaffPwaTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get(route('staff-pwa.manifest'))->assertForbidden();
+        $this->actingAs($user)->get(route('staff-pwa.manifest'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/manifest+json');
         $this->actingAs($user)->get(route('staff-pwa.service-worker'))->assertForbidden();
     }
 }

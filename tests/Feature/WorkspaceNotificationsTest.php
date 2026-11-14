@@ -23,6 +23,13 @@ class WorkspaceNotificationsTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.beams.enabled' => false]);
+    }
+
     public function test_workspace_notifications_broadcast_without_waiting_for_the_default_queue(): void
     {
         $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
