@@ -310,6 +310,11 @@
                 lightbox?.destroy();
                 lightbox = window.GLightbox ? window.GLightbox({ selector: '.attachment-lightbox' }) : null;
             };
+            const initializeStepCarousels = (container = page) => {
+                container.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
+                    bootstrap.Carousel.getOrCreateInstance(carousel, { interval: false, touch: true });
+                });
+            };
             const showToast = (message, type = 'success') => {
                 if (window.showAppToast) {
                     window.showAppToast(message, type, 'Repair ticket');
@@ -317,6 +322,7 @@
             };
 
             initializeLightbox();
+            initializeStepCarousels();
 
             document.querySelectorAll('[data-ticket-ajax-form]').forEach((form) => {
                 form.addEventListener('submit', async (event) => {
@@ -345,7 +351,12 @@
                         }
 
                         document.getElementById('ticket-status-display').innerHTML = result.status_html;
-                        document.getElementById('ticket-updates-display').innerHTML = result.updates_html;
+                        const updatesDisplay = document.getElementById('ticket-updates-display');
+                        updatesDisplay.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
+                            bootstrap.Carousel.getInstance(carousel)?.dispose();
+                        });
+                        updatesDisplay.innerHTML = result.updates_html;
+                        initializeStepCarousels(updatesDisplay);
                         if (Object.prototype.hasOwnProperty.call(result, 'diagnosis')) {
                             document.getElementById('ticket-diagnosis-display').textContent =
                                 result.diagnosis || 'No diagnosis or service notes recorded.';

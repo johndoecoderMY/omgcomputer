@@ -95,6 +95,8 @@ class CustomerRepairTicketTest extends TestCase
         $this->assertStringContainsString('Replace charging port', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('Port inspection', $stepResponse->json('updates_html'));
         $this->assertStringContainsString('Bent connector pin', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString('data-ticket-step-carousel', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString('data-bs-slide="next"', $stepResponse->json('updates_html'));
         $update = $ticket->updates()->latest('id')->firstOrFail();
         $this->assertSame(
             ['Port inspection', 'Bent connector pin'],
