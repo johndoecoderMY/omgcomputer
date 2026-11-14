@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Services\BeamsPushNotifier;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -18,6 +19,10 @@ class WorkspaceNotification extends Notification
     public function via(object $notifiable): array
     {
         $channels = ['database', 'broadcast'];
+
+        if ($notifiable instanceof User && app(BeamsPushNotifier::class)->isConfigured()) {
+            $channels[] = BeamsPushNotifier::class;
+        }
 
         if ($this->canReceiveStaffEmail($notifiable)) {
             $channels[] = 'mail';

@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.10.1",
         "mpdf/mpdf": "^8.3",
         "pusher/pusher-php-server": "^7.3",
+        "pusher/pusher-push-notifications": "^2.0",
         "spatie/laravel-backup": "^9.0",
         "spatie/laravel-permission": "^6.25",
         "spatie/laravel-query-builder": "^6.0",

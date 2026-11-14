@@ -9,8 +9,12 @@ use App\Models\RepairTicket;
 use App\Models\Task;
 use App\Models\User;
 use App\Notifications\WorkspaceNotification;
+use App\Services\BeamsPushNotifier;
 use Database\Seeders\PlannerRoleSeeder;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -24,6 +28,50 @@ class WorkspaceNotificationsTest extends TestCase
         $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
 
         $this->assertSame('sync', $notification->toBroadcast(User::factory()->make())->connection);
+    }
+
+    public function test_beams_auth_endpoint_only_issues_a_token_for_the_authenticated_user(): void
+    {
+        $secretKey = 'test-secret-key-with-at-least-32-bytes';
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => $secretKey,
+        ]);
+        $user = User::factory()->create();
+        $notification = new WorkspaceNotification('Task assigned', 'A task was assigned.', '/tasks');
+        $this->assertContains(BeamsPushNotifier::class, $notification->via($user));
+        $this->assertInstanceOf(
+            BeamsPushNotifier::class,
+            app(ChannelManager::class)->driver(BeamsPushNotifier::class),
+        );
+
+        $response = $this->actingAs($user)
+            ->getJson(route('beams.auth', ['user_id' => $user->getKey()]))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonStructure(['token']);
+        $claims = JWT::decode($response->json('token'), new Key($secretKey, 'HS256'));
+        $this->assertSame((string) $user->getKey(), $claims->sub);
+
+        $this->getJson(route('beams.auth', ['user_id' => 'another-user']))
+            ->assertUnauthorized();
+    }
+
+    public function test_push_enable_button_is_only_rendered_when_beams_is_configured(): void
+    {
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
+        ]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('notifications.index'))
+            ->assertOk()
+            ->assertSee('data-enable-push-notifications', false)
+            ->assertSee('data-beams-instance-id="test-instance"', false);
     }
 
     public function test_workspace_notification_email_is_limited_to_company_domain_staff(): void
@@ -300,6 +348,7 @@ class WorkspaceNotificationsTest extends TestCase
             ->get(route('notifications.index'))
             ->assertOk()
             ->assertSee('Notifications')
+            ->assertSee('meta name="csrf-token"', false)
             ->assertSee('id="unread-notifications-count" class="notification-indicator-number bg-primary rounded-pill', false)
             ->assertSee('aria-label="1 unread notifications"', false)
             ->assertSee('class="bi bi-bell"', false)

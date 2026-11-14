@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    'beams' => [
+        'instance_id' => env('BEAMS_INSTANCE_ID'),
+        'secret_key' => env('BEAMS_SECRET_KEY'),
+        'enabled' => filled(env('BEAMS_INSTANCE_ID')) && filled(env('BEAMS_SECRET_KEY')),
+    ],
+
     'cpanel' => [
         'host' => env('CPANEL_HOST'),
         'port' => (int) env('CPANEL_PORT', 2083),

@@ -3,6 +3,7 @@ import './bootstrap';
 import Alpine from 'alpinejs';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import * as PusherPushNotifications from '@pusher/push-notifications-web';
 
 window.Alpine = Alpine;
 window.Pusher = Pusher;
@@ -73,16 +74,130 @@ const userId = page.dataset.notificationsUser;
 const pusherKey = page.dataset.pusherKey;
 const pusherCluster = page.dataset.pusherCluster;
 const readPrefix = page.dataset.notificationReadPrefix;
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+const beamsInstanceId = page.dataset.beamsInstanceId;
+const beamsAuthUrl = page.dataset.beamsAuthUrl;
+const needsServiceWorker = userId && (beamsInstanceId || page.dataset.staffPwa === 'true');
+const serviceWorkerPath = beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js';
+const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
+    ? navigator.serviceWorker.register(serviceWorkerPath, { scope: '/' })
+        .catch((error) => {
+            console.error('Application service worker registration failed.', error);
+            return null;
+        })
+    : Promise.resolve(null);
+let beamsClientPromise = null;
 
-if (userId && pusherKey && pusherCluster) {
+if (userId && beamsInstanceId && beamsAuthUrl) {
+    beamsClientPromise = serviceWorkerPromise.then(async (registration) => {
+        if (!registration) {
+            return null;
+        }
+
+        const client = new PusherPushNotifications.Client({
+            instanceId: beamsInstanceId,
+            serviceWorkerRegistration: registration,
+        });
+        const registeredUserId = await client.getUserId();
+
+        if (registeredUserId && registeredUserId !== String(userId)) {
+            await client.stop();
+        }
+
+        return client;
+    }).catch((error) => {
+        console.error('Pusher Beams could not initialize.', error);
+        return null;
+    });
+
+    const enablePushButton = document.querySelector('[data-enable-push-notifications]');
+    if (enablePushButton) {
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+            enablePushButton.disabled = true;
+            enablePushButton.textContent = 'Push notifications are not supported';
+        } else if (Notification.permission === 'denied') {
+            enablePushButton.disabled = true;
+            enablePushButton.textContent = 'Allow notifications in browser settings';
+        } else {
+            enablePushButton.addEventListener('click', async () => {
+                enablePushButton.disabled = true;
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        enablePushButton.disabled = permission === 'denied';
+                        if (permission === 'denied') {
+                            enablePushButton.textContent = 'Allow notifications in browser settings';
+                        }
+                        window.showAppToast?.('Push notification permission was not granted.', 'info');
+
+                        return;
+                    }
+
+                    const client = await beamsClientPromise;
+                    if (!client) {
+                        throw new Error('The push notification service worker could not be initialized.');
+                    }
+
+                    await client.start();
+                    const tokenProvider = new PusherPushNotifications.TokenProvider({ url: beamsAuthUrl });
+                    await client.setUserId(String(userId), tokenProvider);
+                    enablePushButton.textContent = 'Push notifications enabled';
+                    window.showAppToast?.('Push notifications are enabled for this browser.', 'success');
+                } catch (error) {
+                    console.error('Could not enable Pusher Beams notifications.', error);
+                    enablePushButton.disabled = false;
+                    window.showAppToast?.('Could not enable push notifications. Check this site’s browser permissions and try again.', 'danger');
+                }
+            });
+
+            beamsClientPromise.then(async (client) => {
+                if (client && await client.getUserId() === String(userId)) {
+                    enablePushButton.textContent = 'Push notifications enabled';
+                    enablePushButton.disabled = true;
+                }
+            }).catch((error) => console.error('Could not read Pusher Beams registration state.', error));
+        }
+    }
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.action || !beamsClientPromise) {
+            return;
+        }
+
+        const logoutPath = new URL(form.action, window.location.href).pathname;
+        if (!logoutPath.endsWith('/logout') || form.dataset.beamsLogoutPending === 'true') {
+            return;
+        }
+
+        event.preventDefault();
+        form.dataset.beamsLogoutPending = 'true';
+        beamsClientPromise
+            .then((client) => client?.stop())
+            .catch((error) => console.error('Could not clear Pusher Beams registration during logout.', error))
+            .finally(() => form.submit());
+    });
+}
+
+if (userId && pusherKey && pusherCluster && csrfToken) {
     window.Echo = new Echo({
         broadcaster: 'pusher',
         key: pusherKey,
         cluster: pusherCluster,
         forceTLS: true,
+        authEndpoint: '/broadcasting/auth',
+        auth: {
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        },
     });
 
-    window.Echo.private(`App.Models.User.${userId}`).notification((notification) => {
+    const notificationsChannel = window.Echo.private(`App.Models.User.${userId}`);
+    notificationsChannel.error((error) => {
+        console.error('Pusher notification channel subscription failed.', error);
+    });
+    notificationsChannel.notification((notification) => {
         const list = document.getElementById('navbar-notifications-list');
         const count = document.getElementById('unread-notifications-count');
 
@@ -165,11 +280,6 @@ if (userId && pusherKey && pusherCluster) {
         }
 
         if (page.dataset.staffPwa === 'true') {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/staff-service-worker.js', { scope: '/' })
-                    .catch((error) => console.error('Staff app service worker registration failed.', error));
-            }
-
             const installButton = document.querySelector('[data-staff-pwa-install]');
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             let installPrompt = null;
@@ -206,4 +316,6 @@ if (userId && pusherKey && pusherCluster) {
             });
         }
     });
+} else if (userId) {
+    console.error('Realtime notifications could not start because Pusher or CSRF configuration is missing.');
 }

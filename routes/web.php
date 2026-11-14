@@ -8,6 +8,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
+use App\Http\Controllers\BeamsAuthController;
 use App\Http\Controllers\BusinessExpenseController;
 use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\CompanyProfileController;
@@ -122,6 +123,10 @@ Route::redirect('/qa', '/#faq')->name('qa');
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'password.changed', 'verified'])
     ->name('dashboard');
+Route::get('/beams/auth', BeamsAuthController::class)
+    ->middleware(['auth', 'password.changed', 'verified', 'throttle:60,1'])
+    ->name('beams.auth');
+
 Route::middleware(['auth', 'password.changed', 'verified', 'role:admin|member'])->group(function (): void {
     Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name('staff-pwa.manifest');
     Route::get('/staff-service-worker.js', [StaffPwaController::class, 'serviceWorker'])->name('staff-pwa.service-worker');

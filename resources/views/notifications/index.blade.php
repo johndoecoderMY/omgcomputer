@@ -17,6 +17,11 @@
                     <h2 class="h5 mb-1 mb-md-0">Your Notifications</h2>
                 </div>
                 <div class="col-sm-auto fs-10">
+                    @if (config('services.beams.enabled'))
+                        <button class="btn btn-primary btn-sm me-3" type="button" data-enable-push-notifications>
+                            <span class="bi bi-bell me-1" aria-hidden="true"></span>Enable push notifications
+                        </button>
+                    @endif
                     <form method="POST" action="{{ route('notifications.read-all') }}">
                         @csrf
                         <button class="font-sans-serif btn btn-link p-0" type="submit"

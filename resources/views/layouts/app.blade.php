@@ -9,6 +9,8 @@
         data-notifications-user="{{ auth()->id() }}"
         data-staff-pwa="{{ auth()->user()->hasAnyRole(['admin', 'member']) ? 'true' : 'false' }}"
     @endauth
+    data-beams-instance-id="{{ config('services.beams.enabled') ? config('services.beams.instance_id') : '' }}"
+    data-beams-auth-url="{{ route('beams.auth', [], false) }}"
     data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
     data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
     data-notification-read-prefix="{{ url('/notifications') }}">
