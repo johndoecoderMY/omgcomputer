@@ -338,15 +338,16 @@
     <script src="{{ asset('vendors/glightbox/glightbox.min.js') }}"></script>
     <script>
         (() => {
-            const page = document.querySelector('[data-ticket-page]');
-            if (!page) return;
+            const getPage = () => document.querySelector('[data-ticket-page]');
+            if (!getPage()) return;
 
             let lightbox;
             const initializeLightbox = () => {
                 lightbox?.destroy();
                 lightbox = window.GLightbox ? window.GLightbox({ selector: '.attachment-lightbox' }) : null;
             };
-            const initializeStepCarousels = (container = page) => {
+            const initializeStepCarousels = (container = getPage()) => {
+                if (!container) return;
                 container.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
                     bootstrap.Carousel.getOrCreateInstance(carousel, { interval: false, touch: true });
                 });
@@ -360,11 +361,23 @@
             initializeLightbox();
             initializeStepCarousels();
 
-            document.querySelectorAll('[data-ticket-ajax-form]').forEach((form) => {
-                form.addEventListener('submit', async (event) => {
+            document.addEventListener('submit', async (event) => {
+                    const form = event.target;
+                    if (!(form instanceof HTMLFormElement)
+                        || !form.matches('[data-ticket-ajax-form]')
+                        || !form.closest('[data-ticket-page]')) {
+                        return;
+                    }
+
                     event.preventDefault();
                     const errorBox = form.querySelector('[data-ticket-form-error]');
                     const submitButton = form.querySelector('button[type="submit"]');
+                    if (!errorBox || !submitButton) {
+                        const message = 'This ticket form is incomplete. Refresh the page and try again.';
+                        console.error(message, { formId: form.id });
+                        showToast(message, 'danger');
+                        return;
+                    }
                     const originalLabel = submitButton.textContent.trim();
                     errorBox.classList.add('d-none');
                     submitButton.disabled = true;
@@ -386,37 +399,42 @@
                             throw new Error(validationErrors || result.message || `Could not save changes (HTTP ${response.status}).`);
                         }
 
-                        document.getElementById('ticket-status-display').innerHTML = result.status_html;
-                        const updatesDisplay = document.getElementById('ticket-updates-display');
+                        const page = form.closest('[data-ticket-page]');
+                        const statusDisplay = page.querySelector('#ticket-status-display');
+                        const updatesDisplay = page.querySelector('#ticket-updates-display');
+                        if (!statusDisplay || !updatesDisplay) {
+                            throw new Error('Ticket details could not be refreshed. Reload the page to see the latest changes.');
+                        }
+                        statusDisplay.innerHTML = result.status_html;
                         updatesDisplay.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
                             bootstrap.Carousel.getInstance(carousel)?.dispose();
                         });
                         updatesDisplay.innerHTML = result.updates_html;
                         initializeStepCarousels(updatesDisplay);
                         if (Object.prototype.hasOwnProperty.call(result, 'diagnosis')) {
-                            document.getElementById('ticket-diagnosis-display').textContent =
+                            page.querySelector('#ticket-diagnosis-display').textContent =
                                 result.diagnosis || 'No diagnosis or service notes recorded.';
-                            document.getElementById('ticket-priority-display').textContent = `Priority: ${result.priority_label}`;
-                            document.getElementById('ticket-assignees-display').textContent = result.assignees.join(', ') || 'Unassigned';
-                            document.getElementById('ticket-due-date-display').textContent = result.due_at;
-                            document.getElementById('workflow-status').value = result.status;
-                            document.getElementById('workflow-priority').value = result.priority;
-                            document.getElementById('workflow-due-at').value = result.due_at_value;
-                            document.getElementById('workflow-diagnosis').value = result.diagnosis || '';
-                            document.getElementById('workflow-device-model').value = result.device_model || '';
-                            document.getElementById('workflow-serial-number').value = result.serial_number || '';
-                            document.getElementById('ticket-device-model').textContent = result.device_model || '';
-                            document.getElementById('ticket-serial-number').textContent = result.serial_number || '—';
-                            const workflowAssignees = document.getElementById('workflow-assignees');
+                            page.querySelector('#ticket-priority-display').textContent = `Priority: ${result.priority_label}`;
+                            page.querySelector('#ticket-assignees-display').textContent = result.assignees.join(', ') || 'Unassigned';
+                            page.querySelector('#ticket-due-date-display').textContent = result.due_at;
+                            page.querySelector('#workflow-status').value = result.status;
+                            page.querySelector('#workflow-priority').value = result.priority;
+                            page.querySelector('#workflow-due-at').value = result.due_at_value;
+                            page.querySelector('#workflow-diagnosis').value = result.diagnosis || '';
+                            page.querySelector('#workflow-device-model').value = result.device_model || '';
+                            page.querySelector('#workflow-serial-number').value = result.serial_number || '';
+                            page.querySelector('#ticket-device-model').textContent = result.device_model || '';
+                            page.querySelector('#ticket-serial-number').textContent = result.serial_number || '—';
+                            const workflowAssignees = page.querySelector('#workflow-assignees');
                             if (workflowAssignees) {
                                 workflowAssignees.value = result.assignee_ids.map(String);
                                 window.jQuery(workflowAssignees).trigger('change');
                             }
                         }
                         if (result.status) {
-                            const stepStatus = document.getElementById('step-status');
+                            const stepStatus = page.querySelector('#step-status');
                             if (stepStatus) stepStatus.value = result.status;
-                            const workflowStatus = document.getElementById('workflow-status');
+                            const workflowStatus = page.querySelector('#workflow-status');
                             if (workflowStatus) workflowStatus.value = result.status;
                         }
 
@@ -424,7 +442,7 @@
                         bootstrap.Modal.getOrCreateInstance(form.closest('.modal')).hide();
                         if (form.id === 'ticket-step-form') {
                             form.reset();
-                            const stepStatus = document.getElementById('step-status');
+                            const stepStatus = page.querySelector('#step-status');
                             if (stepStatus) stepStatus.value = result.status || stepStatus.value;
                         }
                         if (form.id === 'ticket-step-photo-form') {
@@ -441,20 +459,20 @@
                         submitButton.disabled = false;
                         submitButton.textContent = originalLabel;
                     }
-                });
-            });
+                }, true);
 
             const workflowAssignees = document.getElementById('workflow-assignees');
             if (workflowAssignees && window.initializeProjectAjaxControls) {
                 window.initializeProjectAjaxControls(workflowAssignees.closest('.modal'));
             }
 
-            const stepPhotoForm = document.getElementById('ticket-step-photo-form');
-            const stepPhotoName = document.querySelector('[data-ticket-step-photo-name]');
-            page.addEventListener('click', (event) => {
-                if (!stepPhotoForm || !stepPhotoName || !(event.target instanceof Element)) return;
+            document.addEventListener('click', (event) => {
+                if (!(event.target instanceof Element)) return;
                 const button = event.target.closest('[data-ticket-step-photo-action]');
-                if (!button) return;
+                const page = button?.closest('[data-ticket-page]');
+                const stepPhotoForm = page?.querySelector('#ticket-step-photo-form');
+                const stepPhotoName = page?.querySelector('[data-ticket-step-photo-name]');
+                if (!button || !stepPhotoForm || !stepPhotoName) return;
 
                 stepPhotoForm.reset();
                 stepPhotoForm.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
@@ -462,7 +480,20 @@
                 });
                 stepPhotoForm.action = button.dataset.ticketStepPhotoAction;
                 stepPhotoName.textContent = button.dataset.ticketStepPhotoName;
-                stepPhotoForm.querySelector('[data-ticket-form-error]').classList.add('d-none');
+                const errorBox = stepPhotoForm.querySelector('[data-ticket-form-error]');
+                if (errorBox) {
+                    errorBox.classList.add('d-none');
+                    errorBox.textContent = '';
+                } else {
+                    const message = 'The photo form is incomplete. Refresh the page and try again.';
+                    console.error(message);
+                    showToast(message, 'danger');
+                }
+            });
+
+            document.addEventListener('project:content-updated', () => {
+                initializeLightbox();
+                initializeStepCarousels();
             });
         })();
     </script>
