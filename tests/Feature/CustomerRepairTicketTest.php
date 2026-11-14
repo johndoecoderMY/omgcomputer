@@ -43,8 +43,6 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('data-bs-target="#ticket-step-modal"', false)
             ->assertSee('id="ticket-workflow-modal"', false)
             ->assertSee('id="ticket-step-modal"', false)
-            ->assertSee('id="ticket-step-photo-modal"', false)
-            ->assertSee('id="ticket-step-photo-file"', false)
             ->assertSee('id="workflow-device-model"', false)
             ->assertSee('id="workflow-serial-number"', false)
             ->assertSee('id="step-customer-details"', false)
@@ -102,6 +100,18 @@ class CustomerRepairTicketTest extends TestCase
         $this->assertSame('The replacement part has been ordered.', $update->customer_details);
         $this->assertStringContainsString(
             route('tickets.steps.attachments.store', [$ticket, $update]),
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString(
+            'data-bs-target="#ticket-step-photo-modal-'.$update->id.'"',
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString(
+            'id="ticket-step-photo-form-'.$update->id.'"',
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString(
+            'action="'.route('tickets.steps.attachments.store', [$ticket, $update]).'"',
             $stepResponse->json('updates_html'),
         );
 

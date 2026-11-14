@@ -11,13 +11,13 @@
                     {{ $update->created_at->format('M j, Y g:i A') }}<br>{{ $update->user?->name ?? 'System' }}
                 </div>
             </div>
-            <button class="btn btn-sm btn-outline-primary mt-2" type="button"
-                data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal"
-                data-ticket-step-photo-action="{{ route('tickets.steps.attachments.store', [$ticket, $update]) }}"
-                data-ticket-step-photo-name="{{ $update->title }}"
-                aria-label="Add photo to {{ $update->title }}">
-                <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
-            </button>
+            @unless (auth()->user()->hasRole('customer'))
+                <button class="btn btn-sm btn-outline-primary mt-2" type="button"
+                    data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal-{{ $update->id }}"
+                    aria-label="Add photo to {{ $update->title }}">
+                    <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
+                </button>
+            @endunless
             @if ($update->notes)
                 <p class="text-pre-line mt-2 mb-0">{{ $update->notes }}</p>
             @endif
@@ -67,6 +67,43 @@
                 </div>
             @endif
         </article>
+        @unless (auth()->user()->hasRole('customer'))
+            <div class="modal fade" id="ticket-step-photo-modal-{{ $update->id }}" tabindex="-1"
+                aria-labelledby="ticket-step-photo-title-{{ $update->id }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <form id="ticket-step-photo-form-{{ $update->id }}" method="POST"
+                            action="{{ route('tickets.steps.attachments.store', [$ticket, $update]) }}"
+                            enctype="multipart/form-data" data-ticket-ajax-form data-ticket-step-photo-form>
+                            @csrf
+                            <div class="modal-header">
+                                <div>
+                                    <h2 class="modal-title fs-5" id="ticket-step-photo-title-{{ $update->id }}">Add photo to repair step</h2>
+                                    <div class="small text-body-secondary">{{ $update->title }}</div>
+                                </div>
+                                <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="ticket-step-photo-file-{{ $update->id }}">Photo</label>
+                                    <x-image-upload-input :id="'ticket-step-photo-file-'.$update->id" name="photos[]" :required="true" />
+                                </div>
+                                <div>
+                                    <label class="form-label" for="ticket-step-photo-caption-{{ $update->id }}">Caption</label>
+                                    <input class="form-control" id="ticket-step-photo-caption-{{ $update->id }}" name="caption"
+                                        maxlength="255" placeholder="Describe this photo" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                                <button class="btn btn-primary" type="submit">Add photo</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endunless
     @empty
         <div class="list-group-item text-body-secondary">No repair steps recorded.</div>
     @endforelse

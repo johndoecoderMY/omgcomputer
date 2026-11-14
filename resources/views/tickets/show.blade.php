@@ -298,39 +298,6 @@
             </div>
         </div>
 
-        <div class="modal fade" id="ticket-step-photo-modal" tabindex="-1" aria-labelledby="ticket-step-photo-title" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <form id="ticket-step-photo-form" method="POST" action="{{ route('tickets.show', $ticket) }}"
-                        enctype="multipart/form-data" data-ticket-ajax-form>
-                        @csrf
-                        <div class="modal-header">
-                            <div>
-                                <h2 class="modal-title fs-5" id="ticket-step-photo-title">Add photo to repair step</h2>
-                                <div class="small text-body-secondary" data-ticket-step-photo-name></div>
-                            </div>
-                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
-                            <div class="mb-3">
-                                <label class="form-label" for="ticket-step-photo-file">Photo</label>
-                                <x-image-upload-input id="ticket-step-photo-file" name="photos[]" :required="true" />
-                            </div>
-                            <div>
-                                <label class="form-label" for="ticket-step-photo-caption">Caption</label>
-                                <input class="form-control" id="ticket-step-photo-caption" name="caption"
-                                    maxlength="255" placeholder="Describe this photo" required>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                            <button class="btn btn-primary" type="submit">Add photo</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
     @endunless
 @endsection
 
@@ -357,6 +324,14 @@
                     window.showAppToast(message, type, 'Repair ticket');
                 }
             };
+            const hideModal = (modal) => new Promise((resolve) => {
+                if (!modal.classList.contains('show')) {
+                    resolve();
+                    return;
+                }
+                modal.addEventListener('hidden.bs.modal', resolve, { once: true });
+                bootstrap.Modal.getOrCreateInstance(modal).hide();
+            });
 
             initializeLightbox();
             initializeStepCarousels();
@@ -405,6 +380,17 @@
                         if (!statusDisplay || !updatesDisplay) {
                             throw new Error('Ticket details could not be refreshed. Reload the page to see the latest changes.');
                         }
+                        const modal = form.closest('.modal');
+                        if (!modal) {
+                            throw new Error('The ticket form is not inside a dialog. Reload the page and try again.');
+                        }
+                        await hideModal(modal);
+                        if (form.matches('[data-ticket-step-photo-form]')) {
+                            form.reset();
+                            form.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
+                                selection.textContent = '';
+                            });
+                        }
                         statusDisplay.innerHTML = result.status_html;
                         updatesDisplay.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
                             bootstrap.Carousel.getInstance(carousel)?.dispose();
@@ -439,17 +425,10 @@
                         }
 
                         initializeLightbox();
-                        bootstrap.Modal.getOrCreateInstance(form.closest('.modal')).hide();
                         if (form.id === 'ticket-step-form') {
                             form.reset();
                             const stepStatus = page.querySelector('#step-status');
                             if (stepStatus) stepStatus.value = result.status || stepStatus.value;
-                        }
-                        if (form.id === 'ticket-step-photo-form') {
-                            form.reset();
-                            form.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
-                                selection.textContent = '';
-                            });
                         }
                         showToast(result.message || 'Ticket updated.');
                     } catch (error) {
@@ -465,33 +444,6 @@
             if (workflowAssignees && window.initializeProjectAjaxControls) {
                 window.initializeProjectAjaxControls(workflowAssignees.closest('.modal'));
             }
-
-            document.addEventListener('click', (event) => {
-                if (!(event.target instanceof Element)) return;
-                const button = event.target.closest('[data-ticket-step-photo-action]');
-                if (!button) return;
-
-                const page = button.closest('[data-ticket-page]');
-                const stepPhotoForm = page?.querySelector('#ticket-step-photo-form');
-                const stepPhotoName = page?.querySelector('[data-ticket-step-photo-name]');
-                const errorBox = stepPhotoForm?.querySelector('[data-ticket-form-error]');
-                if (!stepPhotoForm || !stepPhotoName || !errorBox || !button.dataset.ticketStepPhotoAction) {
-                    event.preventDefault();
-                    const message = 'Could not identify the repair step. Close this dialog and try again.';
-                    console.error(message);
-                    showToast(message, 'danger');
-                    return;
-                }
-
-                stepPhotoForm.reset();
-                stepPhotoForm.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
-                    selection.textContent = '';
-                });
-                stepPhotoForm.action = button.dataset.ticketStepPhotoAction;
-                stepPhotoName.textContent = button.dataset.ticketStepPhotoName;
-                errorBox.classList.add('d-none');
-                errorBox.textContent = '';
-            }, true);
 
             document.addEventListener('project:content-updated', () => {
                 initializeLightbox();
