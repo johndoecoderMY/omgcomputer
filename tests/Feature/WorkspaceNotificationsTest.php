@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\WorkspaceNotification;
 use App\Services\BeamsPushNotifier;
 use Database\Seeders\PlannerRoleSeeder;
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -284,6 +285,40 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::assertSentTo($admin, WorkspaceNotification::class, fn (WorkspaceNotification $notification): bool => $notification->title === 'Booking updated');
         Notification::assertSentTo($assignee, WorkspaceNotification::class, fn (WorkspaceNotification $notification): bool => $notification->title === 'Booking assigned to you');
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
+    }
+
+    public function test_new_booking_notification_uses_beams_for_push_enabled_admins(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        config([
+            'services.beams.enabled' => true,
+            'services.beams.instance_id' => 'test-instance',
+            'services.beams.secret_key' => 'test-secret-key-with-at-least-32-bytes',
+        ]);
+        Notification::fake();
+
+        $admin = User::factory()->create(['email' => 'admin@omgcomputer.my']);
+        $admin->assignRole('admin');
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'Booking Customer',
+            'customer_email' => 'booking-customer@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        Notification::assertSentTo(
+            $admin,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'New booking received'
+                && in_array(BeamsPushNotifier::class, $notification->via($admin), true),
+        );
     }
 
     public function test_ticket_creation_notifies_assignees_without_notifying_the_creator(): void
