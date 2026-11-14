@@ -40,15 +40,21 @@
     .profile-page .profile-tabs {
         border-bottom: 1px solid var(--falcon-border-color);
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: .25rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
     }
     .profile-page .profile-tab {
         background: transparent;
         border: 0;
         border-bottom: 2px solid transparent;
         color: var(--falcon-secondary-color);
+        flex: 0 0 auto;
         padding: .8rem 1rem;
+        white-space: nowrap;
     }
     .profile-page .profile-tab.active {
         border-bottom-color: var(--falcon-primary);
