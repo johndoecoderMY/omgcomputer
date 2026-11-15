@@ -3,7 +3,7 @@
 
     const CACHE_PREFIX = 'omg-staff-pwa-';
     // Bump this version when the offline shell or cached asset policy changes.
-    const CACHE_NAME = `${CACHE_PREFIX}v1`;
+    const CACHE_NAME = `${CACHE_PREFIX}v2`;
     const OFFLINE_URL = '/offline.html';
     const CORE_ASSETS = [
         OFFLINE_URL,
@@ -41,7 +41,7 @@
                 throw new Error('The Vite manifest contains an invalid staff app asset path.');
             }
 
-            return `/${file}`;
+            return `/build/${file}`;
         });
     }
 

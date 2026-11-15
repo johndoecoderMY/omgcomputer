@@ -4,7 +4,7 @@
   <path d="M0 66h1200" stroke="#e4e9ef"/>
   <rect x="28" y="17" width="32" height="32" rx="9" fill="#5d5ce2"/>
   <text x="44" y="39" fill="#fff" font-family="Arial,sans-serif" font-size="17" font-weight="700" text-anchor="middle">P</text>
-  <text x="70" y="40" fill="#17212b" font-family="Arial,sans-serif" font-size="19" font-weight="700">paperplane</text>
+  <text x="70" y="40" fill="#17212b" font-family="Arial,sans-serif" font-size="19" font-weight="700">OMG PDF</text>
   <text x="498" y="39" fill="#5d5ce2" font-family="Arial,sans-serif" font-size="12" font-weight="700">Document editor</text>
   <text x="610" y="39" fill="#75808c" font-family="Arial,sans-serif" font-size="12">Templates</text>
   <text x="690" y="39" fill="#75808c" font-family="Arial,sans-serif" font-size="12">Help</text>
@@ -21,11 +21,11 @@
   <text x="34" y="219" fill="#17212b" font-family="Arial,sans-serif" font-size="11">Project proposal</text>
   <text x="22" y="258" fill="#4c5864" font-family="Arial,sans-serif" font-size="10" font-weight="700">SUBTITLE</text>
   <rect x="22" y="266" width="286" height="37" rx="7" fill="#fff" stroke="#dfe4eb"/>
-  <text x="34" y="290" fill="#17212b" font-family="Arial,sans-serif" font-size="11">Website refresh for Northstar Coffee</text>
+  <text x="34" y="290" fill="#17212b" font-family="Arial,sans-serif" font-size="11">Website refresh for OMG Cafe</text>
   <text x="22" y="329" fill="#4c5864" font-family="Arial,sans-serif" font-size="10" font-weight="700">DOCUMENT CONTENT</text>
   <rect x="22" y="337" width="286" height="145" rx="7" fill="#fff" stroke="#dfe4eb"/>
   <text x="34" y="360" fill="#37434e" font-family="Arial,sans-serif" font-size="10" font-weight="700">Project overview</text>
-  <text x="34" y="379" fill="#68747f" font-family="Arial,sans-serif" font-size="9">Northstar Coffee is ready for a clearer,</text>
+  <text x="34" y="379" fill="#68747f" font-family="Arial,sans-serif" font-size="9">OMG Cafe is ready for a clearer,</text>
   <text x="34" y="394" fill="#68747f" font-family="Arial,sans-serif" font-size="9">more welcoming online presence.</text>
   <text x="34" y="427" fill="#37434e" font-family="Arial,sans-serif" font-size="10" font-weight="700">Recommended approach</text>
   <text x="34" y="446" fill="#68747f" font-family="Arial,sans-serif" font-size="9">A responsive page with menu, hours,</text>
@@ -51,12 +51,12 @@
   <rect x="449" y="190" width="606" height="544" fill="none" stroke="#e9ebef"/>
   <text x="514" y="242" fill="#5958d8" font-family="Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="1.7">PROJECT PROPOSAL / 2026</text>
   <text x="514" y="299" fill="#17212b" font-family="Arial,sans-serif" font-size="35" font-weight="700">Project proposal</text>
-  <text x="514" y="329" fill="#697581" font-family="Arial,sans-serif" font-size="13">Website refresh for Northstar Coffee</text>
+  <text x="514" y="329" fill="#697581" font-family="Arial,sans-serif" font-size="13">Website refresh for OMG Cafe</text>
   <path d="M514 355h476" stroke="#e6e9ed"/>
   <text x="514" y="379" fill="#74808b" font-family="Arial,sans-serif" font-size="9">Prepared by Jamie Tan</text>
   <text x="990" y="379" fill="#74808b" font-family="Arial,sans-serif" font-size="9" text-anchor="end">15 November 2026</text>
   <text x="514" y="431" fill="#37434e" font-family="Arial,sans-serif" font-size="11" font-weight="700">Project overview</text>
-  <text x="514" y="454" fill="#37434e" font-family="Arial,sans-serif" font-size="10">Northstar Coffee is ready for a clearer, more welcoming online</text>
+  <text x="514" y="454" fill="#37434e" font-family="Arial,sans-serif" font-size="10">OMG Cafe is ready for a clearer, more welcoming online</text>
   <text x="514" y="471" fill="#37434e" font-family="Arial,sans-serif" font-size="10">presence. This proposal outlines a refreshed website that helps</text>
   <text x="514" y="488" fill="#37434e" font-family="Arial,sans-serif" font-size="10">customers discover the menu, find the cafe, and learn its story.</text>
   <text x="514" y="529" fill="#37434e" font-family="Arial,sans-serif" font-size="11" font-weight="700">Recommended approach</text>
@@ -65,5 +65,5 @@
   <text x="514" y="610" fill="#37434e" font-family="Arial,sans-serif" font-size="11" font-weight="700">Next steps</text>
   <text x="514" y="633" fill="#37434e" font-family="Arial,sans-serif" font-size="10">Once the direction is approved, we can confirm timeline and scope.</text>
   <path d="M514 687h476" stroke="#e6e9ed"/>
-  <text x="514" y="704" fill="#87919c" font-family="Arial,sans-serif" font-size="8">Prepared for Northstar Coffee</text>
+  <text x="514" y="704" fill="#87919c" font-family="Arial,sans-serif" font-size="8">Prepared for OMG Cafe</text>
 </svg>

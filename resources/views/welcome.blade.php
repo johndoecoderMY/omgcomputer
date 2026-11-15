@@ -85,22 +85,22 @@
                     <h1 class="hero-title fw-bold mb-4">Computer trouble?<br><span>We’ll fix it.</span></h1>
                     <p class="hero-copy lead text-700 mb-4">Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.</p>
                     <div class="hero-actions row g-3">
-                        <div class="col-12 col-lg-6">
+                        <div class="col-12 col-md-6">
                             <a class="hero-primary-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('bookings.create') }}">
                                 <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
                             </a>
                         </div>
-                        <div class="col-12 col-lg-6">
+                        <div class="col-12 col-md-6">
                             <a class="btn btn-success btn-lg rounded-pill px-3 w-100" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer">
                                 <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>WhatsApp us
                             </a>
                         </div>
-                        <div class="col-12 col-lg-6">
+                        <div class="col-12 col-md-6">
                             <a class="hero-shop-button btn btn-dark btn-lg rounded-pill px-3 w-100" href="{{ route('shop.public') }}">
                                 <span class="bi bi-bag me-2" aria-hidden="true"></span>Shop
                             </a>
                         </div>
-                        <div class="col-12 col-lg-6">
+                        <div class="col-12 col-md-6">
                             <a class="track-repair-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('repairs.track.form') }}">
                                 <span class="bi bi-search me-2" aria-hidden="true"></span>Track your repair
                             </a>

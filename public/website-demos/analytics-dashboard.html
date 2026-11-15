@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interactive analytics dashboard demo with sample revenue and order metrics.">
-  <title>Northstar - Analytics dashboard demo</title>
+  <title>OMG Business Dashboard - Analytics dashboard demo</title>
   <style>
     :root{--ink:#172b32;--muted:#75848a;--line:#e4eae8;--canvas:#f5f7f6;--green:#14866c;--green-dark:#0f6b56;--soft:#e9f4ef;--blue:#5875d8;--orange:#e5a15a}
     *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font:14px/1.5 Inter,Arial,sans-serif}
@@ -86,8 +86,8 @@
 <body>
   <div class="layout">
     <aside aria-label="Dashboard navigation">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">N</span><span>northstar <em>insights</em></span></div>
-      <p class="workspace-name"><small>Workspace</small>Northstar Coffee <span aria-hidden="true">⌄</span></p>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">O</span><span>OMG <em>dashboard</em></span></div>
+      <p class="workspace-name"><small>Workspace</small>OMG Computer <span aria-hidden="true">⌄</span></p>
       <p class="nav-label">Overview</p>
       <a class="nav-link active" href="#overview"><span class="nav-icon" aria-hidden="true">▦</span>Dashboard</a>
       <a class="nav-link" href="#revenue"><span class="nav-icon" aria-hidden="true">⌁</span>Analytics</a>
@@ -170,7 +170,7 @@
           <div class="product-foot"><span>Customer satisfaction</span><strong>4.8 / 5</strong></div>
         </section>
       </div>
-      <p class="footer-note">Northstar Insights · Dashboard concept preview</p>
+      <p class="footer-note">OMG Business Dashboard · Dashboard concept preview</p>
     </main>
   </div>
   <script>
@@ -247,7 +247,7 @@
         const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'northstar-dashboard-report.csv';
+        link.download = 'omg-business-dashboard-report.csv';
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       });

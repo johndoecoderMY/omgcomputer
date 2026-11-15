@@ -50,6 +50,16 @@ class WebsiteDemosSeederTest extends TestCase
 
             $html = file_get_contents(public_path('website-demos/'.$slug.'.html'));
             $this->assertNotFalse($html);
+            $this->assertStringContainsString('<title>'.$demo['title'], $html);
+            if (in_array($slug, ['agency', 'bicycle', 'cafe', 'event', 'interior', 'shop', 'software', 'studio'], true)) {
+                $this->assertStringContainsString('data-whatsapp-demo', $html);
+                $this->assertStringContainsString('contact-examples.js', $html);
+                $this->assertStringNotContainsString('wa.me/', $html);
+            }
+            if (in_array($slug, ['bicycle', 'cafe', 'event', 'studio'], true)) {
+                $this->assertStringContainsString('https://maps.google.com/maps?q=Portland%2C%20Oregon&amp;output=embed', $html);
+                $this->assertStringContainsString('Example map only', $html);
+            }
             preg_match_all('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $html, $emails);
             $this->assertSame([], array_diff(array_unique($emails[0]), ['support@omgcomputer.my']));
         }
@@ -70,7 +80,7 @@ class WebsiteDemosSeederTest extends TestCase
         $pdfDemo = $demos->firstWhere('title', 'OMG PDF Creator');
         $pdfHtml = file_get_contents(public_path('website-demos/pdf-creator.html'));
         $this->assertNotFalse($pdfHtml);
-        $this->assertStringContainsString('<title>Paperplane - PDF document creator demo</title>', $pdfHtml);
+        $this->assertStringContainsString('<title>OMG PDF Creator - PDF document creator demo</title>', $pdfHtml);
         $this->assertStringContainsString('id="document-title"', $pdfHtml);
         $this->assertStringContainsString('id="document-preview"', $pdfHtml);
         $this->assertStringContainsString('window.print()', $pdfHtml);
@@ -78,6 +88,12 @@ class WebsiteDemosSeederTest extends TestCase
         $this->assertStringContainsString('not uploaded or saved', $pdfHtml);
         $this->assertStringContainsString('href="pdf-creator.html"', file_get_contents(public_path('website-demos/index.html')));
         $this->assertNotNull($pdfDemo);
+
+        $studioHtml = file_get_contents(public_path('website-demos/studio.html'));
+        $this->assertNotFalse($studioHtml);
+        $this->assertStringContainsString('<title>OMG Recording Studio — Recording studio</title>', $studioHtml);
+        $this->assertStringContainsString('OMG STUDIO', $studioHtml);
+        $this->assertStringNotContainsString('Room Tone', $studioHtml);
 
         $dashboardDemo = $demos->firstWhere('title', 'OMG Business Dashboard');
         $dashboardHtml = file_get_contents(public_path('website-demos/analytics-dashboard.html'));

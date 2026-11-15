@@ -84,6 +84,7 @@ class WebsitePreviewTest extends TestCase
         $this->seed(WebsitePreviewSeeder::class);
 
         foreach (config('website-preview-concepts') as $slug => $concept) {
+            $this->assertStringStartsWith('OMG ', $concept['brand']);
             $preview = WebsitePreview::query()->where('title', $concept['title'])->firstOrFail();
             $response = $this->get(route('website-previews.concepts.show', $slug))
                 ->assertOk()

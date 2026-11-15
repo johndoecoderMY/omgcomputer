@@ -51,6 +51,7 @@ class StaffPwaTest extends TestCase
         $this->assertStringContainsString("importScripts('/assets/js/staff-service-worker-runtime.js')", $beamsWorker);
         $this->assertStringContainsString("request.mode === 'navigate'", $runtime);
         $this->assertStringContainsString('caches.match(OFFLINE_URL)', $runtime);
+        $this->assertStringContainsString('return `/build/${file}`;', $runtime);
         $this->assertStringContainsString('ACTIVATE_STAFF_PWA_UPDATE', $runtime);
         $this->assertStringContainsString("beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js'", $appScript);
         $this->assertStringContainsString("updateViaCache: 'none'", $appScript);
