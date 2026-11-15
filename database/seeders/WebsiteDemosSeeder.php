@@ -12,7 +12,12 @@ class WebsiteDemosSeeder extends Seeder
     public function run(): void
     {
         $obsoleteTitles = collect(config('website-preview-concepts', []))
-            ->flatMap(fn (array $concept): array => [$concept['title'], $concept['legacy_title']])
+            ->flatMap(fn (array $concept): array => [
+                $concept['title'],
+                $concept['previous_title'] ?? null,
+                $concept['legacy_title'],
+            ])
+            ->filter()
             ->all();
         WebsitePreview::query()->whereIn('title', $obsoleteTitles)->delete();
 
@@ -32,18 +37,22 @@ class WebsiteDemosSeeder extends Seeder
                 throw new RuntimeException("Website demo screenshot could not be stored: {$imagePath}");
             }
 
-            WebsitePreview::query()->updateOrCreate(
-                ['title' => $demo['title']],
-                [
-                    'category' => 'Website demo',
-                    'description' => $demo['description'],
-                    'preview_url' => url('website-demos/'.$slug.'.html'),
-                    'image_path' => $imagePath,
-                    'gallery_images' => [],
-                    'is_published' => true,
-                    'sort_order' => $demo['sort_order'],
-                ],
-            );
+            $preview = WebsitePreview::query()->where('title', $demo['title'])->first()
+                ?? WebsitePreview::query()->where('title', $demo['legacy_title'])->first()
+                ?? new WebsitePreview;
+
+            $preview->fill([
+                'title' => $demo['title'],
+                'category' => 'Website demo',
+                'description' => $demo['description'],
+                'preview_url' => url('website-demos/'.$slug.'.html'),
+                'image_path' => $imagePath,
+                'gallery_images' => [],
+                'is_published' => true,
+                'sort_order' => $demo['sort_order'],
+            ])->save();
+
+            WebsitePreview::query()->where('title', $demo['legacy_title'])->delete();
         }
     }
 }

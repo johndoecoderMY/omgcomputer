@@ -60,7 +60,9 @@ class PublicSitemapTest extends TestCase
     {
         Storage::fake('public');
         $this->seed(WebsitePreviewSeeder::class);
-        $dashboard = WebsitePreview::query()->where('title', 'Demo concept: Analytics dashboard')->firstOrFail();
+        $dashboard = WebsitePreview::query()
+            ->where('title', config('website-preview-concepts.dashboard.title'))
+            ->firstOrFail();
         $dashboard->update(['is_published' => false]);
 
         $this->get(route('sitemap'))

@@ -46,8 +46,12 @@ class WebsitePreviewSeeder extends Seeder
                 $galleryPaths[] = $galleryPath;
             }
 
+            $previousTitles = array_values(array_filter([
+                $concept['previous_title'] ?? null,
+                $concept['legacy_title'],
+            ]));
             $preview = WebsitePreview::query()->where('title', $concept['title'])->first()
-                ?? WebsitePreview::query()->where('title', $concept['legacy_title'])->first()
+                ?? WebsitePreview::query()->whereIn('title', $previousTitles)->first()
                 ?? new WebsitePreview;
 
             $preview->fill([
@@ -60,6 +64,8 @@ class WebsitePreviewSeeder extends Seeder
                 'is_published' => true,
                 'sort_order' => $concept['sort_order'],
             ])->save();
+
+            WebsitePreview::query()->whereIn('title', $previousTitles)->delete();
         }
     }
 }

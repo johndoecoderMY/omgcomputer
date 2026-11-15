@@ -3,7 +3,8 @@
 return [
     'landing-page' => [
         'legacy_title' => 'Demo concept: Cafe website',
-        'title' => 'Demo concept: Landing page',
+        'previous_title' => 'Demo concept: Landing page',
+        'title' => 'OMG Landing Page',
         'filename' => 'landing-page.svg',
         'gallery' => ['landing-mobile.svg', 'landing-features.svg'],
         'description' => 'A responsive Bootstrap landing page concept with a clear hero, feature highlights, and calls to action. This is a sample design, not a client project.',
@@ -19,7 +20,8 @@ return [
     ],
     'dashboard' => [
         'legacy_title' => 'Demo concept: Business services website',
-        'title' => 'Demo concept: Analytics dashboard',
+        'previous_title' => 'Demo concept: Analytics dashboard',
+        'title' => 'OMG Analytics Dashboard',
         'filename' => 'dashboard-overview.svg',
         'gallery' => ['dashboard-performance.svg', 'dashboard-activity.svg'],
         'description' => 'A Bootstrap admin dashboard concept with KPI cards, performance graphs, and recent activity. This is a sample design, not a client project.',
@@ -35,7 +37,8 @@ return [
     ],
     'pos-catalogue' => [
         'legacy_title' => 'Demo concept: Online store',
-        'title' => 'Demo concept: POS & store catalogue',
+        'previous_title' => 'Demo concept: POS & store catalogue',
+        'title' => 'OMG POS Catalogue',
         'filename' => 'pos-catalogue.svg',
         'gallery' => ['pos-checkout.svg', 'pos-inventory.svg'],
         'description' => 'A Bootstrap point-of-sale and store catalogue concept with product browsing, checkout, and inventory views. This is a sample design, not a client project.',

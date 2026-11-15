@@ -16,6 +16,15 @@ class WebsiteDemosSeederTest extends TestCase
     public function test_website_demos_are_published_with_screenshots_and_static_demo_links(): void
     {
         Storage::fake('public');
+        foreach (config('website-demos') as $demo) {
+            WebsitePreview::query()->create([
+                'title' => $demo['legacy_title'],
+                'category' => 'Website demo',
+                'image_path' => 'website-previews/demos/'.$demo['filename'],
+                'is_published' => true,
+                'sort_order' => $demo['sort_order'],
+            ]);
+        }
 
         $this->seed(WebsitePreviewSeeder::class);
         $this->seed(WebsiteDemosSeeder::class);
@@ -25,12 +34,14 @@ class WebsiteDemosSeederTest extends TestCase
         $this->assertSame(13, WebsitePreview::query()->count());
         foreach (config('website-preview-concepts') as $concept) {
             $this->assertDatabaseMissing('website_previews', ['title' => $concept['title']]);
+            $this->assertDatabaseMissing('website_previews', ['title' => $concept['previous_title']]);
             $this->assertDatabaseMissing('website_previews', ['title' => $concept['legacy_title']]);
         }
 
         foreach (config('website-demos') as $slug => $demo) {
             $preview = $demos->firstWhere('title', $demo['title']);
             $this->assertNotNull($preview);
+            $this->assertDatabaseMissing('website_previews', ['title' => $demo['legacy_title']]);
             $this->assertTrue($preview->is_published);
             $this->assertSame(url('website-demos/'.$slug.'.html'), $preview->preview_url);
             $this->assertStringContainsString('not a client project', $preview->description);
@@ -42,9 +53,12 @@ class WebsiteDemosSeederTest extends TestCase
             preg_match_all('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', $html, $emails);
             $this->assertSame([], array_diff(array_unique($emails[0]), ['support@omgcomputer.my']));
         }
+        $demoIndex = file_get_contents(public_path('website-demos/index.html'));
+        $this->assertStringContainsString('<h2>Café landing page</h2>', $demoIndex);
+        $this->assertStringContainsString('<h2>PDF document creator</h2>', $demoIndex);
 
         $firstDemo = $demos->firstOrFail();
-        $inspectionDemo = $demos->firstWhere('title', 'Site inspection & photo upload');
+        $inspectionDemo = $demos->firstWhere('title', 'OMG Site Inspection');
         $inspectionHtml = file_get_contents(public_path('website-demos/site-inspection.html'));
         $this->assertNotFalse($inspectionHtml);
         $this->assertStringContainsString('Upload site photos', $inspectionHtml);
@@ -53,9 +67,10 @@ class WebsiteDemosSeederTest extends TestCase
         $this->assertStringContainsString('href="site-inspection.html"', file_get_contents(public_path('website-demos/index.html')));
         $this->assertNotNull($inspectionDemo);
 
-        $pdfDemo = $demos->firstWhere('title', 'PDF document creator');
+        $pdfDemo = $demos->firstWhere('title', 'OMG PDF Creator');
         $pdfHtml = file_get_contents(public_path('website-demos/pdf-creator.html'));
         $this->assertNotFalse($pdfHtml);
+        $this->assertStringContainsString('<title>Paperplane - PDF document creator demo</title>', $pdfHtml);
         $this->assertStringContainsString('id="document-title"', $pdfHtml);
         $this->assertStringContainsString('id="document-preview"', $pdfHtml);
         $this->assertStringContainsString('window.print()', $pdfHtml);
@@ -64,7 +79,7 @@ class WebsiteDemosSeederTest extends TestCase
         $this->assertStringContainsString('href="pdf-creator.html"', file_get_contents(public_path('website-demos/index.html')));
         $this->assertNotNull($pdfDemo);
 
-        $dashboardDemo = $demos->firstWhere('title', 'Business analytics dashboard');
+        $dashboardDemo = $demos->firstWhere('title', 'OMG Business Dashboard');
         $dashboardHtml = file_get_contents(public_path('website-demos/analytics-dashboard.html'));
         $this->assertNotFalse($dashboardHtml);
         $this->assertStringContainsString('id="revenue-value"', $dashboardHtml);

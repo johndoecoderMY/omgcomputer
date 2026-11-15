@@ -18,16 +18,23 @@ class WebsitePreviewTest extends TestCase
     public function test_concept_seeder_publishes_demo_previews_and_copies_images_idempotently(): void
     {
         Storage::fake('public');
+        foreach (config('website-preview-concepts') as $slug => $concept) {
+            WebsitePreview::query()->create([
+                'title' => $concept['previous_title'],
+                'image_path' => 'website-previews/demo/previous-'.$slug.'.svg',
+                'is_published' => true,
+                'sort_order' => $concept['sort_order'],
+            ]);
+        }
 
         $this->seed(WebsitePreviewSeeder::class);
 
         $previews = WebsitePreview::query()->orderBy('sort_order')->get();
         $this->assertCount(3, $previews);
-        $this->assertSame([
-            'Demo concept: Landing page',
-            'Demo concept: Analytics dashboard',
-            'Demo concept: POS & store catalogue',
-        ], $previews->pluck('title')->all());
+        $this->assertSame(
+            collect(config('website-preview-concepts'))->pluck('title')->all(),
+            $previews->pluck('title')->all(),
+        );
 
         foreach ($previews as $preview) {
             $this->assertTrue($preview->is_published);
@@ -44,12 +51,15 @@ class WebsitePreviewTest extends TestCase
 
         $this->seed(WebsitePreviewSeeder::class);
         $this->assertDatabaseCount('website_previews', 3);
+        foreach (config('website-preview-concepts') as $concept) {
+            $this->assertDatabaseMissing('website_previews', ['title' => $concept['previous_title']]);
+        }
 
         $this->get(route('website-previews.index'))
             ->assertOk()
-            ->assertSee('Demo concept: Landing page')
-            ->assertSee('Demo concept: Analytics dashboard')
-            ->assertSee('Demo concept: POS &amp; store catalogue', false)
+            ->assertSee(config('website-preview-concepts.landing-page.title'))
+            ->assertSee(config('website-preview-concepts.dashboard.title'))
+            ->assertSee(str_replace('&', '&amp;', config('website-preview-concepts.pos-catalogue.title')), false)
             ->assertSee('See what your website could')
             ->assertSee('portfolio-mosaic')
             ->assertSee('#0b1727', false)
@@ -117,9 +127,9 @@ class WebsitePreviewTest extends TestCase
         $this->seed(WebsitePreviewSeeder::class);
 
         $this->assertDatabaseCount('website_previews', 3);
-        $this->assertDatabaseHas('website_previews', ['title' => 'Demo concept: Landing page']);
-        $this->assertDatabaseHas('website_previews', ['title' => 'Demo concept: Analytics dashboard']);
-        $this->assertDatabaseHas('website_previews', ['title' => 'Demo concept: POS & store catalogue']);
+        foreach (config('website-preview-concepts') as $concept) {
+            $this->assertDatabaseHas('website_previews', ['title' => $concept['title']]);
+        }
         $this->assertDatabaseMissing('website_previews', ['title' => 'Demo concept: Cafe website']);
     }
 
