@@ -178,11 +178,13 @@ const initializeBillingCreateForm = () => {
     const initializeCatalogSelect = (select) => {
         if (!window.jQuery || !window.jQuery.fn.select2) return;
         const $select = window.jQuery(select);
+        const modal = $select.closest('.modal');
         $select.select2({
             theme: 'bootstrap-5',
             width: '100%',
             placeholder: 'Search inventory by name or SKU',
             minimumInputLength: 2,
+            dropdownParent: modal.length ? modal : window.jQuery(document.body),
             ajax: {
                 url: select.dataset.searchUrl,
                 dataType: 'json',

@@ -5,7 +5,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
-    <title>@yield('title', 'OMG Computer') - OMG Computer</title>
+    @php
+        $pageTitle = trim($__env->yieldContent('title', 'OMG Computer'));
+        $pageTitle = $pageTitle !== '' ? $pageTitle : 'OMG Computer';
+    @endphp
+    <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/omg/apple-touch-icon.png') }}">

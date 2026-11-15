@@ -89,6 +89,13 @@
                                     <label class="form-label" for="ticket-step-photo-file-{{ $update->id }}">Photo</label>
                                     <x-image-upload-input :id="'ticket-step-photo-file-'.$update->id" name="photos[]" :required="true" />
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="ticket-step-photo-paste-{{ $update->id }}">Or paste a copied photo</label>
+                                    <textarea class="form-control" id="ticket-step-photo-paste-{{ $update->id }}"
+                                        data-ticket-step-photo-paste rows="2"
+                                        placeholder="Click here, then press Ctrl+V or Cmd+V"></textarea>
+                                    <div class="form-text">Pasting replaces the selected file. Add one photo per repair step.</div>
+                                </div>
                                 <div>
                                     <label class="form-label" for="ticket-step-photo-caption-{{ $update->id }}">Caption</label>
                                     <input class="form-control" id="ticket-step-photo-caption-{{ $update->id }}" name="caption"

@@ -22,11 +22,14 @@ class IntegrationTestPagesTest extends TestCase
         Role::findOrCreate('admin', 'web');
         $admin->assignRole('admin');
         config([
-            'services.chip.secret_key' => 'private-chip-secret',
-            'services.chip.brand_id' => 'brand-123',
+            'services.chip.secret_key' => 'private-chip-live-secret',
+            'services.chip.test_secret_key' => 'private-chip-test-secret',
+            'services.chip.brand_id' => 'live-brand',
+            'services.chip.test_brand_id' => 'test-brand',
             'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
             'services.chip.currency' => 'MYR',
             'services.chip.test_mode' => false,
+            'services.chip.live_enabled' => false,
             'services.chip.enabled' => true,
         ]);
         $publicKey = "-----BEGIN PUBLIC KEY-----\n".
@@ -44,20 +47,23 @@ class IntegrationTestPagesTest extends TestCase
         $this->actingAs($admin)->get(route('reports.integrations.chip'))
             ->assertOk()
             ->assertSee('CHIP Collect')
+            ->assertSee('TEST')
             ->assertSee('gate.chip-in.asia')
-            ->assertDontSee('private-chip-secret');
+            ->assertDontSee('private-chip-test-secret')
+            ->assertDontSee('private-chip-live-secret');
         $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
             ->assertRedirect(route('reports.integrations.chip'));
         Http::assertSent(fn (ClientRequest $request): bool => $request->method() === 'GET'
             && $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
-            && $request->hasHeader('Authorization', 'Bearer private-chip-secret'));
+            && $request->hasHeader('Authorization', 'Bearer private-chip-test-secret'));
         $this->actingAs($admin)->get(route('reports.integrations.chip'))
             ->assertOk()
             ->assertSee('Connection successful')
-            ->assertDontSee('private-chip-secret');
+            ->assertDontSee('private-chip-test-secret')
+            ->assertDontSee('private-chip-live-secret');
     }
 
-    public function test_admin_can_switch_chip_test_mode_and_test_uses_the_selected_credentials(): void
+    public function test_live_chip_mode_is_disabled_by_default_and_test_uses_test_credentials(): void
     {
         $admin = User::factory()->create();
         Role::findOrCreate('admin', 'web');
@@ -69,6 +75,11 @@ class IntegrationTestPagesTest extends TestCase
             'services.chip.test_brand_id' => 'test-brand',
             'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
             'services.chip.test_mode' => false,
+            'services.chip.live_enabled' => false,
+        ]);
+        \App\Models\ChipSetting::query()->create([
+            'id' => 'primary',
+            'test_mode' => false,
         ]);
         $publicKey = "-----BEGIN PUBLIC KEY-----\n".
             "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqPF3VE4+gT75ApxadwRf\n".
@@ -84,11 +95,12 @@ class IntegrationTestPagesTest extends TestCase
 
         $this->actingAs($admin)->get(route('reports.integrations.chip'))
             ->assertOk()
-            ->assertSee('LIVE')
-            ->assertSee('Use CHIP test mode');
-        $this->actingAs($admin)->post(route('reports.integrations.chip.mode'), ['test_mode' => '1'])
-            ->assertRedirect(route('reports.integrations.chip'));
-        $this->assertDatabaseHas('chip_settings', ['id' => 'primary', 'test_mode' => true]);
+            ->assertSee('TEST')
+            ->assertSee('Test mode is enforced')
+            ->assertDontSee('chip-test-mode');
+        $this->actingAs($admin)->post(route('reports.integrations.chip.mode'), ['test_mode' => '0'])
+            ->assertForbidden();
+        $this->assertTrue(app(\App\Services\ChipCollect::class)->isTestMode());
         $this->assertSame('test-brand', app(\App\Services\ChipCollect::class)->brandId());
 
         $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
@@ -96,13 +108,22 @@ class IntegrationTestPagesTest extends TestCase
         Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
             && str_contains($request->header('Authorization')[0] ?? '', 'test-secret'));
 
-        $this->actingAs($admin)->post(route('reports.integrations.chip.mode'), ['test_mode' => '0'])
-            ->assertRedirect(route('reports.integrations.chip'));
-        $this->assertSame('live-brand', app(\App\Services\ChipCollect::class)->brandId());
-        $this->actingAs($admin)->post(route('reports.integrations.chip.check'))
-            ->assertRedirect(route('reports.integrations.chip'));
-        Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/public_key/'
-            && str_contains($request->header('Authorization')[0] ?? '', 'live-secret'));
+        Http::assertNotSent(fn (ClientRequest $request): bool => str_contains(
+            $request->header('Authorization')[0] ?? '',
+            'live-secret',
+        ));
+    }
+
+    public function test_chip_live_purchase_is_blocked_by_default(): void
+    {
+        config([
+            'services.chip.live_enabled' => false,
+            'services.chip.test_mode' => false,
+        ]);
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('CHIP live payments are disabled.');
+
+        app(\App\Services\ChipCollect::class)->createPurchase([], false);
     }
 
     public function test_chip_uses_test_secret_when_primary_key_is_empty(): void

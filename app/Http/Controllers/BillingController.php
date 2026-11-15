@@ -100,8 +100,12 @@ class BillingController extends Controller
                 str_replace('_', ' ', ucfirst($document->status)),
             ))
             ->editColumn('total', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->total, 2))
-            ->editColumn('paid_amount', fn (BillingDocument $document): string => 'RM '.number_format((float) $document->paid_amount, 2))
-            ->addColumn('balance', fn (BillingDocument $document): string => 'RM '.number_format($document->balance, 2))
+            ->editColumn('paid_amount', fn (BillingDocument $document): string => $document->type === 'invoice'
+                ? 'RM '.number_format((float) $document->paid_amount, 2)
+                : '—')
+            ->addColumn('balance', fn (BillingDocument $document): string => $document->type === 'invoice'
+                ? 'RM '.number_format($document->balance, 2)
+                : '—')
             ->rawColumns(['document', 'status_label'])
             ->toJson();
     }

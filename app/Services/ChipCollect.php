@@ -46,6 +46,11 @@ class ChipCollect
 
     public function createPurchase(array $payload, ?bool $testMode = null): array
     {
+        $testMode ??= $this->isTestMode();
+        if (! $testMode && ! ChipSetting::liveModeEnabled()) {
+            throw new RuntimeException('CHIP live payments are disabled.');
+        }
+
         $response = $this->request($testMode)
             ->post($this->endpoint('/purchases/'), $payload)
             ->throw()

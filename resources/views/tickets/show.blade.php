@@ -8,13 +8,23 @@
 
 @section('content')
     <div class="container-fluid py-3" data-ticket-page data-project-ajax-root>
-        <x-page-header eyebrow="Ticket" :title="$ticket->ticket_number" :back-url="route('tickets.index')"
+        <x-page-header eyebrow="Ticket" :title="$ticket->ticket_number"
+            :back-url="auth()->user()->hasRole('customer') ? route('tickets.index') : null"
             back-label="All tickets">
             @unless (auth()->user()->hasRole('customer'))
                 <x-slot name="actions">
-                    <a class="btn btn-outline-primary" href="{{ route('customers.show', $ticket->customer) }}">
+                    <a href="{{ route('tickets.index') }}">
+                        <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>All tickets
+                    </a>
+                    <a href="{{ route('customers.show', $ticket->customer) }}">
                         <span class="bi bi-person me-2" aria-hidden="true"></span>Customer profile
                     </a>
+                    <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-workflow-modal">
+                        <span class="bi bi-sliders me-2" aria-hidden="true"></span>Edit workflow
+                    </button>
+                    <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-step-modal">
+                        <span class="bi bi-plus me-2" aria-hidden="true"></span>Add repair step
+                    </button>
                 </x-slot>
             @endunless
         </x-page-header>
@@ -27,14 +37,6 @@
                 <span class="badge text-bg-light border" id="ticket-priority-display">
                     Priority: {{ $priorities[$ticket->priority] ?? $ticket->priority }}
                 </span>
-                <button class="btn btn-sm btn-outline-primary ms-auto" type="button" data-bs-toggle="modal"
-                    data-bs-target="#ticket-workflow-modal">
-                    <span class="bi bi-sliders me-1" aria-hidden="true"></span>Edit ticket details
-                </button>
-                <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal"
-                    data-bs-target="#ticket-step-modal">
-                    <span class="bi bi-plus me-1" aria-hidden="true"></span>Add repair step
-                </button>
             @endunless
         </div>
 
@@ -90,15 +92,7 @@
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header d-flex justify-content-between align-items-center gap-2">
-                        <span class="fw-semibold">Repair steps and SOP log</span>
-                        @unless (auth()->user()->hasRole('customer'))
-                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal"
-                                data-bs-target="#ticket-step-modal">
-                                <span class="bi bi-plus me-1" aria-hidden="true"></span>Add step
-                            </button>
-                        @endunless
-                    </div>
+                    <div class="card-header fw-semibold">Repair steps and SOP log</div>
                     <div id="ticket-updates-display">
                         @include('tickets.partials.update-list', ['ticket' => $ticket, 'statuses' => $statuses])
                     </div>
@@ -121,10 +115,6 @@
                                 <span id="ticket-due-date-display">{{ $ticket->due_at?->format('M j, Y') ?? 'Not set' }}</span>
                             </div>
                         </div>
-                        <div class="card-footer text-end">
-                            <button class="btn btn-primary" type="button" data-bs-toggle="modal"
-                                data-bs-target="#ticket-workflow-modal">Edit workflow</button>
-                        </div>
                     </div>
                 @endunless
 
@@ -141,27 +131,42 @@
                     </div>
                     <div class="list-group list-group-flush">
                         @forelse ($ticket->billingDocuments as $document)
-                            <a class="list-group-item list-group-item-action"
-                                href="{{ route('billing.documents.show', $document) }}">
-                                <div class="d-flex justify-content-between align-items-start gap-3">
-                                    <span>
-                                        <span class="fw-semibold d-block">{{ $document->number }}</span>
-                                        <small class="text-body-secondary">
-                                            {{ ucfirst($document->type) }} ·
-                                            <x-status-badge :status="$document->status" :label="ucfirst($document->status)" />
-                                        </small>
-                                    </span>
-                                    <span class="text-end">
-                                        <small class="d-block text-body-secondary">Total</small>
-                                        <strong>RM {{ number_format((float) $document->total, 2) }}</strong>
-                                        @if ($document->type === 'invoice')
-                                            <small class="d-block text-body-secondary">
-                                                Balance RM {{ number_format($document->balance, 2) }}
-                                            </small>
+                            <div class="list-group-item">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                                    <a class="flex-grow-1 text-decoration-none text-reset"
+                                        href="{{ route('billing.documents.show', $document) }}">
+                                        <div class="d-flex justify-content-between align-items-start gap-3">
+                                            <span>
+                                                <span class="fw-semibold d-block">{{ $document->number }}</span>
+                                                <small class="text-body-secondary">
+                                                    {{ ucfirst($document->type) }} ·
+                                                    <x-status-badge :status="$document->status" :label="ucfirst($document->status)" />
+                                                </small>
+                                            </span>
+                                            <span class="text-end">
+                                                <small class="d-block text-body-secondary">Total</small>
+                                                <strong>RM {{ number_format((float) $document->total, 2) }}</strong>
+                                                @if ($document->type === 'invoice')
+                                                    <small class="d-block text-body-secondary">
+                                                        Balance RM {{ number_format($document->balance, 2) }}
+                                                    </small>
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </a>
+                                    @unless (auth()->user()->hasRole('customer'))
+                                        @if ($document->type === 'quotation' && $document->status === 'accepted')
+                                            <form method="POST" action="{{ route('billing.documents.convert', $document) }}">
+                                                @csrf
+                                                <button class="btn btn-sm btn-primary" type="submit"
+                                                    onclick="return confirm('Issue this invoice and deduct listed stock?')">
+                                                    <span class="bi bi-receipt me-1" aria-hidden="true"></span>Create invoice
+                                                </button>
+                                            </form>
                                         @endif
-                                    </span>
+                                    @endunless
                                 </div>
-                            </a>
+                            </div>
                         @empty
                             <div class="list-group-item text-body-secondary">No quotations or invoices linked yet.</div>
                         @endforelse
@@ -247,53 +252,52 @@
 
         <div class="modal fade" id="ticket-step-modal" tabindex="-1" aria-labelledby="ticket-step-title" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                <div class="modal-content">
-                    <form id="ticket-step-form" method="POST" action="{{ route('tickets.steps.store', $ticket) }}" enctype="multipart/form-data"
-                        data-ticket-ajax-form>
-                        @csrf
-                        <div class="modal-header">
-                            <h2 class="modal-title fs-5" id="ticket-step-title">Add repair step</h2>
-                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label" for="step-title">Step performed</label>
-                                    <input class="form-control" id="step-title" name="title" maxlength="180"
-                                        placeholder="Example: Inspect charging port" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label" for="step-status">Ticket status after step</label>
-                                    <select class="form-select" id="step-status" name="status" required>
-                                        @foreach ($statuses as $value => $label)
-                                            <option value="{{ $value }}" @selected($ticket->status === $value)>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label" for="step-notes">Procedure and findings</label>
-                                    <textarea class="form-control" id="step-notes" name="notes" rows="3" maxlength="5000"
-                                        placeholder="Record checks performed, result, parts used, and customer approval. Keep sensitive customer data out of photos."></textarea>
-                                    <div class="form-text">Internal staff notes; not shown on public repair tracking.</div>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label" for="step-customer-details">Customer-facing update <span class="text-body-secondary">(optional)</span></label>
-                                    <textarea class="form-control" id="step-customer-details" name="customer_details" rows="3" maxlength="5000"
-                                        placeholder="Share a brief, customer-safe summary of this repair step."></textarea>
-                                    <div class="form-text">This summary appears to customers on the public repair tracking page.</div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-text">Save the repair step first, then add photos one at a time with an individual caption.</div>
-                                </div>
+                <form id="ticket-step-form" class="modal-content" method="POST"
+                    action="{{ route('tickets.steps.store', $ticket) }}" enctype="multipart/form-data"
+                    data-ticket-ajax-form>
+                    @csrf
+                    <div class="modal-header">
+                        <h2 class="modal-title fs-5" id="ticket-step-title">Add repair step</h2>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="step-title">Step performed</label>
+                                <input class="form-control" id="step-title" name="title" maxlength="180"
+                                    placeholder="Example: Inspect charging port" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="step-status">Ticket status after step</label>
+                                <select class="form-select" id="step-status" name="status" required>
+                                    @foreach ($statuses as $value => $label)
+                                        <option value="{{ $value }}" @selected($ticket->status === $value)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="step-notes">Procedure and findings</label>
+                                <textarea class="form-control" id="step-notes" name="notes" rows="3" maxlength="5000"
+                                    placeholder="Record checks performed, result, parts used, and customer approval. Keep sensitive customer data out of photos."></textarea>
+                                <div class="form-text">Internal staff notes; not shown on public repair tracking.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="step-customer-details">Customer-facing update <span class="text-body-secondary">(optional)</span></label>
+                                <textarea class="form-control" id="step-customer-details" name="customer_details" rows="3" maxlength="5000"
+                                    placeholder="Share a brief, customer-safe summary of this repair step."></textarea>
+                                <div class="form-text">This summary appears to customers on the public repair tracking page.</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-text">Save the repair step first, then add photos one at a time with an individual caption.</div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                            <button class="btn btn-primary" type="submit">Add repair step</button>
-                        </div>
-                    </form>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" type="submit">Add repair step</button>
+                    </div>
+                </form>
             </div>
         </div>
     @endunless
@@ -334,6 +338,57 @@
 
             initializeLightbox();
             initializeStepCarousels();
+
+            document.addEventListener('paste', (event) => {
+                if (!(event.target instanceof HTMLTextAreaElement)
+                    || !event.target.matches('[data-ticket-step-photo-paste]')) {
+                    return;
+                }
+
+                event.preventDefault();
+                const form = event.target.closest('form[data-ticket-step-photo-form]');
+                const input = form?.querySelector('input[type="file"][name="photos[]"]');
+                const errorBox = form?.querySelector('[data-ticket-form-error]');
+                if (!(input instanceof HTMLInputElement) || !errorBox) return;
+
+                const clipboardItems = Array.from(event.clipboardData?.items || []);
+                const imageItem = clipboardItems.find((item) => item.kind === 'file' && item.type.startsWith('image/'));
+                const clipboardFiles = Array.from(event.clipboardData?.files || []);
+                const sourceFile = imageItem?.getAsFile()
+                    || clipboardFiles.find((file) => file.type.startsWith('image/'));
+
+                const extensions = {
+                    'image/jpeg': 'jpg',
+                    'image/png': 'png',
+                    'image/webp': 'webp',
+                };
+                const extension = sourceFile ? extensions[sourceFile.type] : null;
+                if (!sourceFile || !extension) {
+                    errorBox.textContent = sourceFile
+                        ? 'Only JPEG, PNG, and WebP images can be pasted. Choose a supported photo file instead.'
+                        : 'The clipboard does not contain an image. Copy a photo or choose a file.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
+
+                try {
+                    const transfer = new DataTransfer();
+                    transfer.items.add(new File([sourceFile], `pasted-repair-photo.${extension}`, {
+                        type: sourceFile.type,
+                        lastModified: Date.now(),
+                    }));
+                    input.files = transfer.files;
+                } catch (error) {
+                    console.error('Could not attach the pasted repair-step photo.', error);
+                    errorBox.textContent = 'Could not attach the pasted photo. Choose a file from your device instead.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
+
+                errorBox.textContent = '';
+                errorBox.classList.add('d-none');
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
 
             document.addEventListener('submit', async (event) => {
                     const form = event.target;

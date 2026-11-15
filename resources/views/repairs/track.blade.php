@@ -223,7 +223,7 @@
                                     <div class="col-md-8">
                                         <label class="visually-hidden" for="service-number">Service number</label>
                                         <input class="form-control" id="service-number" name="ticket_number" type="text"
-                                            value="{{ old('ticket_number') }}" placeholder="Enter your service number" autocomplete="off" required>
+                                            value="{{ old('ticket_number', $ticketNumber ?? '') }}" placeholder="Enter your service number" autocomplete="off" required>
                                     </div>
                                     <div class="col-md-4">
                                         <button class="btn btn-primary w-100" type="submit">Track repair</button>
@@ -347,6 +347,76 @@
                             @endforelse
                         </ol>
                     </div>
+
+                    <section class="card border-0 shadow-sm mt-4" aria-labelledby="repair-billing-title">
+                        <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
+                            <h3 class="h5 mb-0" id="repair-billing-title">Billing details</h3>
+                            @if ($billingVerified)
+                                <span class="badge text-bg-success">Verified</span>
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            @if ($billingVerified)
+                                @if (session('billing_verified'))
+                                    <div class="alert alert-success" role="status">Your billing details are verified for this session.</div>
+                                @endif
+                                <div class="table-responsive">
+                                    <table class="table align-middle mb-0">
+                                        <thead>
+                                            <tr><th>Document</th><th>Status</th><th class="text-end">Total / balance</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse ($billingDocuments as $billingDocument)
+                                                <tr>
+                                                    <td>
+                                                        <span class="fw-semibold d-block">{{ $billingDocument->number }}</span>
+                                                        <small class="text-body-secondary">{{ ucfirst($billingDocument->type) }}</small>
+                                                    </td>
+                                                    <td>{{ str_replace('_', ' ', ucfirst($billingDocument->status)) }}</td>
+                                                    <td class="text-end">
+                                                        <span class="d-block">Total RM {{ number_format((float) $billingDocument->total, 2) }}</span>
+                                                        @if ($billingDocument->type === 'invoice')
+                                                            <small class="text-body-secondary">Balance RM {{ number_format($billingDocument->balance, 2) }}</small>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr><td class="text-center text-body-secondary py-3" colspan="3">No billing documents are linked to this repair ticket yet.</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                @if (session('billing_code_sent'))
+                                    <div class="alert alert-info" role="status">If a customer email is registered for this repair, a verification code has been sent there.</div>
+                                @endif
+                                @error('billing_verification')
+                                    <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                                @enderror
+                                <p class="text-body-secondary">Verify using a one-time code sent to the customer email on file to view linked quotations and invoices. The code expires in 10 minutes.</p>
+                                <form method="POST" action="{{ route('repairs.track.billing-code', $trackingTicket->ticket_number) }}" class="mb-3">
+                                    @csrf
+                                    <button class="btn btn-outline-primary" type="submit">
+                                        <span class="bi bi-envelope me-2" aria-hidden="true"></span>Send verification code
+                                    </button>
+                                </form>
+                                @if ($billingCodeAvailable)
+                                    <form method="POST" action="{{ route('repairs.track.billing-code.verify', $trackingTicket->ticket_number) }}" class="row g-2 align-items-end">
+                                        @csrf
+                                        <div class="col-sm-7">
+                                            <label class="form-label" for="repair-billing-code">Email verification code</label>
+                                            <input class="form-control" id="repair-billing-code" name="code" type="text"
+                                                inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+                                        </div>
+                                        <div class="col-sm-5">
+                                            <button class="btn btn-primary w-100" type="submit">Verify and view billing</button>
+                                        </div>
+                                    </form>
+                                @endif
+                                <p class="small text-body-secondary mb-0 mt-3">If you cannot access the email on file, please contact the shop for help.</p>
+                            @endif
+                        </div>
+                    </section>
                 @endif
             </div>
         </div>

@@ -936,10 +936,14 @@ class ShopTest extends TestCase
         ]);
         config([
             'services.chip.enabled' => true,
-            'services.chip.secret_key' => 'test-secret',
-            'services.chip.brand_id' => 'test-brand',
+            'services.chip.secret_key' => 'live-secret',
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.brand_id' => 'live-brand',
+            'services.chip.test_brand_id' => 'test-brand',
             'services.chip.api_url' => 'https://gate.chip-in.asia/api/v1',
             'services.chip.currency' => 'MYR',
+            'services.chip.test_mode' => false,
+            'services.chip.live_enabled' => false,
         ]);
         Http::fake([
             'gate.chip-in.asia/api/v1/purchases/' => Http::response([
@@ -973,12 +977,15 @@ class ShopTest extends TestCase
         $order = ShopOrder::query()->with('items')->firstOrFail();
         $this->assertSame('SHOP-'.now()->format('Y').'-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT), $order->order_number);
         $this->assertSame('pending', $order->payment_status);
-        $this->assertFalse($order->chip_test_mode);
+        $this->assertTrue($order->chip_test_mode);
         $this->assertSame(90.0, (float) $order->total);
         $this->assertSame(2, $order->items->firstOrFail()->quantity);
         $this->assertSame(2, $product->fresh()->stock_quantity);
         $this->assertSame($customer->id, $order->customer_id);
         $this->assertSame($user->id, $order->user_id);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
+            && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
+            && $request['brand_id'] === 'test-brand');
         $this->assertDatabaseHas('inventory_movements', [
             'inventory_part_id' => $product->id,
             'reference' => $order->order_number,
@@ -1061,7 +1068,6 @@ class ShopTest extends TestCase
                 'status' => 'paid',
             ]);
         });
-        ChipSetting::setTestMode(false);
         $callback = fn () => $this->call(
             'POST',
             route('webhooks.chip.shop', $order->uuid),

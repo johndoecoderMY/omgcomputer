@@ -199,3 +199,25 @@ a.flow-chart-preview:focus-visible {
         transition: none;
     }
 }
+
+.modal-dialog:not([class*="modal-fullscreen"]) {
+    height: calc(100% - var(--falcon-modal-margin) * 2);
+}
+
+.modal-dialog:not([class*="modal-fullscreen"]) .modal-content {
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.modal-dialog .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.modal-dialog .modal-content > form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}

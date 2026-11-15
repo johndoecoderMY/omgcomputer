@@ -344,6 +344,7 @@ class IntegrationTestController extends Controller
         return view('reports.integrations.chip', [
             'chipConfigured' => $chip->isConfigured(),
             'testMode' => $testMode,
+            'liveModeEnabled' => ChipSetting::liveModeEnabled(),
             'apiUrl' => config('services.chip.api_url'),
             'brandIdConfigured' => filled($chip->brandId()),
             'secretKeyConfigured' => $testMode
@@ -358,6 +359,11 @@ class IntegrationTestController extends Controller
         $data = $request->validate([
             'test_mode' => ['required', 'boolean'],
         ]);
+        abort_unless(
+            (bool) $data['test_mode'] || ChipSetting::liveModeEnabled(),
+            403,
+            'CHIP live mode is disabled.',
+        );
         ChipSetting::setTestMode((bool) $data['test_mode']);
 
         return redirect()->route('reports.integrations.chip')->with('chip_mode_saved', true);

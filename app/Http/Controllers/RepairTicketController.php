@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\RepairBillingVerificationMail;
 use App\Models\Attachment;
 use App\Models\Booking;
 use App\Models\Customer;
@@ -17,7 +18,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -29,9 +34,15 @@ use Yajra\DataTables\Facades\DataTables;
 
 class RepairTicketController extends Controller
 {
-    public function trackingForm(): View
+    public function trackingForm(Request $request): View
     {
-        return view('repairs.track');
+        $data = $request->validate([
+            'ticket_number' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        return view('repairs.track', [
+            'ticketNumber' => $data['ticket_number'] ?? '',
+        ]);
     }
 
     public function track(Request $request): View|RedirectResponse
@@ -40,8 +51,89 @@ class RepairTicketController extends Controller
             'ticket_number' => ['required', 'string', 'max:64'],
         ]);
 
+        return $this->showTrackingTicket($data['ticket_number'], $request);
+    }
+
+    public function trackByNumber(Request $request, string $ticketNumber): View|RedirectResponse
+    {
+        return $this->showTrackingTicket($ticketNumber, $request);
+    }
+
+    public function sendBillingVerificationCode(Request $request, string $ticketNumber): RedirectResponse
+    {
+        $requestKey = 'repair-billing-code-send:'.hash('sha256', strtolower(trim($ticketNumber)));
+        if (RateLimiter::tooManyAttempts($requestKey, 3)) {
+            return back()->withErrors([
+                'billing_verification' => 'Too many verification code requests. Please try again later.',
+            ]);
+        }
+        RateLimiter::hit($requestKey, 3600);
+
         $ticket = RepairTicket::query()
-            ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($data['ticket_number']))])
+            ->with('customer')
+            ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($ticketNumber))])
+            ->first();
+        $email = trim((string) $ticket?->customer?->email);
+
+        if ($ticket && $ticket->billingDocuments()->exists() && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $code = (string) random_int(100000, 999999);
+            Cache::put(
+                $this->billingVerificationCodeKey($ticket->id),
+                Hash::make($code),
+                now()->addMinutes(10),
+            );
+            RateLimiter::clear($this->billingVerificationAttemptKey($ticket->id));
+            Mail::to($email)->send(new RepairBillingVerificationMail($ticket, $code));
+        }
+
+        return back()->with('billing_code_sent', true);
+    }
+
+    public function verifyBillingCode(Request $request, string $ticketNumber): RedirectResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'digits:6'],
+        ]);
+        $ticket = RepairTicket::query()
+            ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($ticketNumber))])
+            ->first();
+
+        if (! $ticket || ! $ticket->billingDocuments()->exists()) {
+            return back()->withErrors([
+                'billing_verification' => 'The verification code is invalid or expired.',
+            ]);
+        }
+
+        $attemptKey = $this->billingVerificationAttemptKey($ticket->id);
+        if (RateLimiter::tooManyAttempts($attemptKey, 5)) {
+            return back()->withErrors([
+                'billing_verification' => 'Too many verification attempts. Request a new code.',
+            ]);
+        }
+        RateLimiter::hit($attemptKey, 600);
+
+        $codeHash = Cache::get($this->billingVerificationCodeKey($ticket->id));
+        if (! is_string($codeHash) || ! Hash::check($data['code'], $codeHash)) {
+            return back()->withErrors([
+                'billing_verification' => 'The verification code is invalid or expired.',
+            ]);
+        }
+
+        Cache::forget($this->billingVerificationCodeKey($ticket->id));
+        RateLimiter::clear($attemptKey);
+        $request->session()->put(
+            $this->billingVerificationSessionKey($ticket->id),
+            now()->addMinutes(15)->timestamp,
+        );
+
+        return redirect()->route('repairs.track.show', $ticket->ticket_number)
+            ->with('billing_verified', true);
+    }
+
+    private function showTrackingTicket(string $ticketNumber, Request $request): View|RedirectResponse
+    {
+        $ticket = RepairTicket::query()
+            ->whereRaw('LOWER(ticket_number) = ?', [strtolower(trim($ticketNumber))])
             ->with(['updates' => fn ($updates) => $updates
                 ->select(['id', 'repair_ticket_id', 'title', 'customer_details', 'status', 'created_at'])
                 ->with('attachments')
@@ -51,10 +143,42 @@ class RepairTicketController extends Controller
         if (! $ticket) {
             return redirect()->route('repairs.track.form')
                 ->withErrors(['ticket_number' => 'We could not find a repair with that service number.'])
-                ->withInput();
+                ->withInput(['ticket_number' => $ticketNumber]);
         }
 
-        return view('repairs.track', ['trackingTicket' => $ticket]);
+        $verificationKey = $this->billingVerificationSessionKey($ticket->id);
+        $verifiedUntil = $request->session()->get($verificationKey);
+        $billingVerified = is_numeric($verifiedUntil) && (int) $verifiedUntil > now()->timestamp;
+        if ($request->session()->has($verificationKey) && ! $billingVerified) {
+            $request->session()->forget($verificationKey);
+        }
+        $billingDocuments = $billingVerified
+            ? $ticket->billingDocuments()->latest('issue_date')->latest('id')->get()
+            : collect();
+        $billingCodeAvailable = Cache::has($this->billingVerificationCodeKey($ticket->id));
+
+        return view('repairs.track', [
+            'trackingTicket' => $ticket,
+            'ticketNumber' => $ticket->ticket_number,
+            'billingVerified' => $billingVerified,
+            'billingDocuments' => $billingDocuments,
+            'billingCodeAvailable' => $billingCodeAvailable,
+        ]);
+    }
+
+    private function billingVerificationCodeKey(int $ticketId): string
+    {
+        return 'repair-billing-code:'.$ticketId;
+    }
+
+    private function billingVerificationAttemptKey(int $ticketId): string
+    {
+        return 'repair-billing-code-attempt:'.$ticketId;
+    }
+
+    private function billingVerificationSessionKey(int $ticketId): string
+    {
+        return 'repair_billing_verified_'.$ticketId;
     }
 
     public function trackingPhoto(Attachment $attachment): BinaryFileResponse

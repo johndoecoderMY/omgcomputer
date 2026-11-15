@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\View\View;
@@ -29,9 +30,16 @@ class NotificationController extends Controller
         return redirect()->to($url);
     }
 
-    public function markAllRead(Request $request): RedirectResponse
+    public function markAllRead(Request $request): RedirectResponse|JsonResponse
     {
         $request->user()->unreadNotifications()->update(['read_at' => now()]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'All notifications marked as read.',
+                'unread_count' => 0,
+            ]);
+        }
 
         return redirect()->route('notifications.index')->with('success', 'All notifications marked as read.');
     }

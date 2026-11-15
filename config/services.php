@@ -86,7 +86,8 @@ return [
         'test_secret_key' => env('CHIP_SECRET_KEY_TEST'),
         'brand_id' => env('CHIP_BRAND_ID'),
         'test_brand_id' => env('CHIP_BRAND_ID_TEST'),
-        'test_mode' => env('CHIP_TEST_MODE', false),
+        'test_mode' => env('CHIP_TEST_MODE', true),
+        'live_enabled' => env('CHIP_LIVE_ENABLED', false),
         'api_url' => env('CHIP_API_URL', 'https://gate.chip-in.asia/api/v1'),
         'currency' => env('CHIP_CURRENCY', 'MYR'),
         'enabled' => (filled(env('CHIP_SECRET_KEY')) || filled(env('CHIP_SECRET_KEY_TEST')))

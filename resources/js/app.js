@@ -88,6 +88,95 @@ const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
         })
     : Promise.resolve(null);
 
+if (userId) {
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !form.matches('[data-notification-read-all]')) {
+            return;
+        }
+
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        if (button?.disabled) return;
+
+        if (button) {
+            button.disabled = true;
+            button.setAttribute('aria-busy', 'true');
+        }
+
+        let updated = false;
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+            });
+            let result;
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error(`Could not update notifications (HTTP ${response.status}).`);
+            }
+
+            if (!response.ok) {
+                throw new Error(result.message || `Could not update notifications (HTTP ${response.status}).`);
+            }
+            if (!Number.isInteger(result.unread_count) || result.unread_count < 0) {
+                throw new Error('The unread notification count was not returned.');
+            }
+
+            const count = document.getElementById('unread-notifications-count');
+            const notificationLink = document.getElementById('navbarDropdownNotification');
+            if (count) {
+                count.textContent = result.unread_count > 99 ? '99+' : String(result.unread_count);
+                count.setAttribute('aria-label', `${result.unread_count} unread notifications`);
+                count.classList.toggle('d-none', result.unread_count === 0);
+            }
+            if (notificationLink) {
+                const hasUnread = result.unread_count > 0;
+                notificationLink.classList.toggle('notification-indicator', hasUnread);
+                notificationLink.classList.toggle('notification-indicator-primary', hasUnread);
+                notificationLink.classList.toggle('notification-indicator-fill', hasUnread);
+                notificationLink.setAttribute('aria-label', `Notifications, ${result.unread_count} unread`);
+            }
+
+            document.querySelectorAll('.notification-unread').forEach((notification) => {
+                notification.classList.remove('notification-unread');
+            });
+            document.querySelectorAll('[data-notification-new-title]').forEach((title) => title.remove());
+
+            const notificationGroup = document.querySelector('#navbar-notifications-list .list-group');
+            const firstItem = notificationGroup?.querySelector('[data-notification-item]');
+            if (notificationGroup && firstItem && !notificationGroup.querySelector('.list-group-title')) {
+                const earlierTitle = document.createElement('div');
+                earlierTitle.className = 'list-group-title border-bottom px-3 py-2';
+                earlierTitle.textContent = 'EARLIER';
+                notificationGroup.insertBefore(earlierTitle, firstItem);
+            }
+
+            document.querySelectorAll('[data-notification-read-all] button[type="submit"]').forEach((submitButton) => {
+                submitButton.disabled = result.unread_count === 0;
+            });
+            updated = true;
+            window.showAppToast?.(result.message || 'All notifications marked as read.', 'success', 'Notifications');
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Could not update notifications.';
+            console.error('Could not mark all notifications as read.', error);
+            window.showAppToast?.(message, 'danger', 'Notifications');
+        } finally {
+            if (button) {
+                button.disabled = !updated;
+                button.removeAttribute('aria-busy');
+            }
+        }
+    });
+}
+
 if (page.dataset.staffPwa === 'true') {
     serviceWorkerPromise.then((registration) => {
         if (!registration) {

@@ -5,7 +5,9 @@
     $emailKicker = 'BOOKING CONFIRMED';
     $emailReference = $booking->reference;
     $appointmentTime = $booking->starts_at->copy()->setTimezone('Asia/Kuala_Lumpur')->format('j M Y, g:i A');
-    $repairTrackingUrl = route('repairs.track.form');
+    $repairTrackingUrl = $booking->repairTicket
+        ? route('repairs.track.show', $booking->repairTicket->ticket_number)
+        : route('repairs.track.form');
     $supportEmail = 'support@omgcomputer.my';
     $supportWhatsAppUrl = 'https://wa.me/60104224350?text='.rawurlencode(
         'Hi OMG Computer, I have a question about booking '.$booking->reference.'.'

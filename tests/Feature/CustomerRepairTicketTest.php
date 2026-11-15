@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\RepairBillingVerificationMail;
 use App\Models\BillingDocument;
 use App\Models\Customer;
 use App\Models\Project;
@@ -10,6 +11,7 @@ use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
@@ -63,7 +65,23 @@ class CustomerRepairTicketTest extends TestCase
         $xpath = new \DOMXPath($document);
         $this->assertSame(
             1,
+            $xpath->query('//*[@data-page-header]//button[@aria-label="Page actions"]')->length,
+        );
+        $this->assertSame(1, $xpath->query('//button[@data-bs-target="#ticket-workflow-modal"]')->length);
+        $this->assertSame(1, $xpath->query('//button[@data-bs-target="#ticket-step-modal"]')->length);
+        $this->assertSame(
+            1,
+            $xpath->query('//*[@data-page-header]//a[normalize-space(.)="All tickets"]')->length,
+        );
+        $this->assertSame(
+            1,
             $xpath->query('//*[@data-ticket-page]//form[@id="ticket-step-form"]')->length,
+        );
+        $this->assertSame(
+            1,
+            $xpath->query(
+                '//*[@id="ticket-step-modal"]/div[contains(concat(" ", normalize-space(@class), " "), " modal-dialog-scrollable ")]/form[@id="ticket-step-form" and contains(concat(" ", normalize-space(@class), " "), " modal-content ")]/div[contains(concat(" ", normalize-space(@class), " "), " modal-body ")]',
+            )->length,
         );
 
         $workflowResponse = $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
@@ -120,6 +138,10 @@ class CustomerRepairTicketTest extends TestCase
         );
         $this->assertStringContainsString(
             'id="ticket-step-photo-form-'.$update->id.'"',
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString(
+            'data-ticket-step-photo-paste',
             $stepResponse->json('updates_html'),
         );
         $this->assertStringContainsString(
@@ -261,6 +283,77 @@ class CustomerRepairTicketTest extends TestCase
             ->assertDontSee('INV-TICKET-PORTAL-OTHER');
     }
 
+    public function test_staff_can_create_invoice_from_an_accepted_ticket_quotation(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Accepted Ticket Quotation Customer',
+            'email' => 'accepted-ticket-quotation@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-ACCEPTED-QUOTATION-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The laptop does not charge.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $documentAttributes = [
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'repair_ticket_id' => $ticket->id,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => 100,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+            'total' => 100,
+        ];
+        $draftQuotation = BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'QUO-TICKET-DRAFT-001',
+            'type' => 'quotation',
+            'status' => 'draft',
+        ]);
+        $acceptedQuotation = BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'QUO-TICKET-ACCEPTED-001',
+            'type' => 'quotation',
+            'status' => 'accepted',
+        ]);
+
+        $ticketPage = $this->actingAs($staff)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee($draftQuotation->number)
+            ->assertSee($acceptedQuotation->number)
+            ->assertSee('Create invoice');
+
+        $previousLibxmlErrorSetting = libxml_use_internal_errors(true);
+        $document = new \DOMDocument;
+        $loadedDocument = $document->loadHTML($ticketPage->getContent());
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxmlErrorSetting);
+        $this->assertTrue($loadedDocument);
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(
+            1,
+            $xpath->query('//form[@action="'.route('billing.documents.convert', $acceptedQuotation).'"]')->length,
+        );
+        $this->assertSame(
+            0,
+            $xpath->query('//form[@action="'.route('billing.documents.convert', $draftQuotation).'"]')->length,
+        );
+
+        $this->post(route('billing.documents.convert', $acceptedQuotation))
+            ->assertRedirect(route('billing.documents.show', $acceptedQuotation));
+
+        $acceptedQuotation->refresh();
+        $this->assertSame('invoice', $acceptedQuotation->type);
+        $this->assertSame('issued', $acceptedQuotation->status);
+        $this->assertSame($ticket->id, $acceptedQuotation->repair_ticket_id);
+    }
+
     public function test_ticket_quotation_modal_returns_to_the_ticket_after_saving(): void
     {
         $this->seed(PlannerRoleSeeder::class);
@@ -356,6 +449,16 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('<title>Track a Repair | OMG Computer</title>', false)
             ->assertSee('name="ticket_number"', false)
             ->assertDontSee('name="email"', false);
+        $this->get(route('repairs.track.form', ['ticket_number' => $ticket->ticket_number]))
+            ->assertOk()
+            ->assertSee('value="'.$ticket->ticket_number.'"', false);
+        $this->get(route('repairs.track.show', $ticket->ticket_number))
+            ->assertOk()
+            ->assertSee('Repair timeline')
+            ->assertSee($ticket->ticket_number)
+            ->assertSee('We are waiting for the replacement part before continuing the repair.')
+            ->assertDontSee('Private intake details')
+            ->assertDontSee('Internal supplier details');
 
         $this->post(route('repairs.track'), [
             'ticket_number' => 'rt-2026-000123',
@@ -399,6 +502,98 @@ class CustomerRepairTicketTest extends TestCase
 
     }
 
+    public function test_guest_must_verify_customer_email_before_viewing_ticket_billing(): void
+    {
+        Mail::fake();
+        $customer = Customer::query()->create([
+            'name' => 'Billing Verification Customer',
+            'email' => 'billing-verification@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-BILLING-VERIFY-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The laptop does not charge.',
+            'status' => 'in_repair',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $documentAttributes = [
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'repair_ticket_id' => $ticket->id,
+            'issue_date' => now()->toDateString(),
+            'subtotal' => 100,
+            'tax_rate' => 0,
+            'tax_amount' => 0,
+        ];
+        $invoice = BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'INV-TRACK-VERIFY-001',
+            'type' => 'invoice',
+            'status' => 'partial',
+            'paid_amount' => 40,
+            'total' => 100,
+        ]);
+        $quotation = BillingDocument::query()->create([
+            ...$documentAttributes,
+            'number' => 'QUO-TRACK-VERIFY-001',
+            'type' => 'quotation',
+            'status' => 'accepted',
+            'paid_amount' => 0,
+            'total' => 120,
+        ]);
+        $trackingUrl = route('repairs.track.show', $ticket->ticket_number);
+
+        $this->get($trackingUrl)
+            ->assertOk()
+            ->assertSee('Billing details')
+            ->assertSee('Send verification code')
+            ->assertDontSee($invoice->number)
+            ->assertDontSee($quotation->number)
+            ->assertDontSee('RM 100.00');
+
+        $this->from($trackingUrl)->post(route('repairs.track.billing-code', $ticket->ticket_number))
+            ->assertRedirect($trackingUrl)
+            ->assertSessionHas('billing_code_sent', true);
+
+        $verificationCode = null;
+        Mail::assertSent(
+            RepairBillingVerificationMail::class,
+            function (RepairBillingVerificationMail $mail) use (&$verificationCode, $customer): bool {
+                $verificationCode = $mail->code;
+
+                return $mail->hasTo($customer->email)
+                    && str_contains($mail->render(), $mail->code);
+            },
+        );
+        $this->assertIsString($verificationCode);
+
+        $wrongCode = $verificationCode === '000000' ? '000001' : '000000';
+        $this->from($trackingUrl)->post(route('repairs.track.billing-code.verify', $ticket->ticket_number), [
+            'code' => $wrongCode,
+        ])->assertRedirect($trackingUrl)
+            ->assertSessionHasErrors('billing_verification');
+
+        $this->post(route('repairs.track.billing-code.verify', $ticket->ticket_number), [
+            'code' => $verificationCode,
+        ])->assertRedirect($trackingUrl)
+            ->assertSessionHas('billing_verified', true);
+
+        $this->from($trackingUrl)->post(route('repairs.track.billing-code.verify', $ticket->ticket_number), [
+            'code' => $verificationCode,
+        ])->assertRedirect($trackingUrl)
+            ->assertSessionHasErrors('billing_verification');
+
+        $this->get($trackingUrl)
+            ->assertOk()
+            ->assertSee($invoice->number)
+            ->assertSee($quotation->number)
+            ->assertSee('Total RM 100.00')
+            ->assertSee('Balance RM 60.00')
+            ->assertSee('Total RM 120.00')
+            ->assertDontSee('Balance RM 120.00');
+    }
+
     public function test_homepage_links_to_public_repair_tracking(): void
     {
         $this->get('/')
@@ -416,6 +611,17 @@ class CustomerRepairTicketTest extends TestCase
         }
 
         $this->post(route('repairs.track'), ['ticket_number' => 'RT-UNKNOWN'])
+            ->assertTooManyRequests();
+    }
+
+    public function test_public_repair_tracking_links_are_rate_limited(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->get(route('repairs.track.show', 'RT-UNKNOWN'))
+                ->assertRedirect(route('repairs.track.form'));
+        }
+
+        $this->get(route('repairs.track.show', 'RT-UNKNOWN'))
             ->assertTooManyRequests();
     }
 

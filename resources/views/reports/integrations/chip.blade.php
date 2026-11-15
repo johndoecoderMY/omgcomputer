@@ -34,7 +34,7 @@
                     </dl>
                 </div>
                 <div class="card-footer bg-body small text-body-secondary">
-                    Credentials are read from the server environment and are never displayed here. The selected mode controls new checkouts; existing purchases keep their original mode.
+                    Credentials are read from the server environment and are never displayed here. @if ($liveModeEnabled)The selected mode controls new checkouts; existing purchases keep their original mode.@else Test mode is enforced for new checkouts; existing purchases keep their original mode.@endif
                 </div>
             </div>
         </div>
@@ -42,31 +42,40 @@
         <div class="col-12 col-xl-7">
             <div class="card h-100 p-2">
                 <div class="card-header bg-body">
-                    <h2 class="h5 mb-0 text-primary">Checkout mode</h2>
+                    <h2 class="h5 mb-0 text-primary">{{ $liveModeEnabled ? 'Checkout mode' : 'Test-only checkout' }}</h2>
                 </div>
-                <form method="POST" action="{{ route('reports.integrations.chip.mode') }}">
-                    @csrf
-                    <div class="card-body">
-                        @if (session('chip_mode_saved'))
-                            <div class="alert alert-success" role="status">CHIP checkout mode updated.</div>
-                        @endif
-                        <div class="form-check">
-                            <input type="hidden" name="test_mode" value="0">
-                            <input class="form-check-input" type="checkbox" name="test_mode" id="chip-test-mode" value="1"
-                                @checked($testMode)>
-                            <label class="form-check-label" for="chip-test-mode">Use CHIP test mode</label>
+                @if ($liveModeEnabled)
+                    <form method="POST" action="{{ route('reports.integrations.chip.mode') }}">
+                        @csrf
+                        <div class="card-body">
+                            @if (session('chip_mode_saved'))
+                                <div class="alert alert-success" role="status">CHIP checkout mode updated.</div>
+                            @endif
+                            <div class="form-check">
+                                <input type="hidden" name="test_mode" value="0">
+                                <input class="form-check-input" type="checkbox" name="test_mode" id="chip-test-mode" value="1"
+                                    @checked($testMode)>
+                                <label class="form-check-label" for="chip-test-mode">Use CHIP test mode</label>
+                            </div>
+                            <p class="form-text mb-0">
+                                Test mode uses <code>CHIP_SECRET_KEY_TEST</code> and <code>CHIP_BRAND_ID_TEST</code>.
+                                Live mode uses <code>CHIP_SECRET_KEY</code> and <code>CHIP_BRAND_ID</code>.
+                                If no test brand ID is set, test mode uses the shared <code>CHIP_BRAND_ID</code>.
+                            </p>
+                            @error('test_mode')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
                         </div>
-                        <p class="form-text mb-0">
-                            Test mode uses <code>CHIP_SECRET_KEY_TEST</code> and <code>CHIP_BRAND_ID_TEST</code>.
-                            Live mode uses <code>CHIP_SECRET_KEY</code> and <code>CHIP_BRAND_ID</code>.
-                            If no test brand ID is set, test mode uses the shared <code>CHIP_BRAND_ID</code>.
-                        </p>
-                        @error('test_mode')<div class="text-danger small mt-2">{{ $message }}</div>@enderror
+                        <div class="card-footer bg-body">
+                            <button class="btn btn-primary" type="submit">Save checkout mode</button>
+                        </div>
+                    </form>
+                @else
+                    <div class="card-body">
+                        <div class="alert alert-warning mb-3" role="status">
+                            <strong>Test mode is enforced.</strong> Live CHIP payments are disabled.
+                        </div>
+                        <p class="mb-0">New checkouts use <code>CHIP_SECRET_KEY_TEST</code> and <code>CHIP_BRAND_ID_TEST</code> (or the shared brand ID fallback). Live mode cannot be selected here.</p>
                     </div>
-                    <div class="card-footer bg-body">
-                        <button class="btn btn-primary" type="submit">Save checkout mode</button>
-                    </div>
-                </form>
+                @endif
             </div>
         </div>
 

@@ -53,7 +53,7 @@ class BookingTest extends TestCase
             && str_contains($mail->render(), 'Your booking is confirmed')
             && str_contains($mail->render(), 'Computer/PC Troubleshooting')
             && str_contains($mail->render(), $ticketNumber)
-            && str_contains($mail->render(), route('repairs.track.form'))
+            && str_contains($mail->render(), route('repairs.track.show', $ticketNumber))
             && str_contains($mail->render(), 'mailto:support@omgcomputer.my')
             && str_contains($mail->render(), 'https://wa.me/60104224350?text='));
 
@@ -107,6 +107,7 @@ class BookingTest extends TestCase
 
         $this->actingAs($staff)->get(route('bookings.index'))
             ->assertOk()
+            ->assertSee('<title>Bookings | OMG Computer</title>', false)
             ->assertSee('id="booking-status-modal"', false)
             ->assertSee('id="booking-status-form"', false)
             ->assertSee('id="booking-assigned-to"', false)

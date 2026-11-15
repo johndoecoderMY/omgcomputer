@@ -247,7 +247,17 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
             ->assertSee('Mark as sent')
-            ->assertDontSee('Convert to invoice');
+            ->assertDontSee('Convert to invoice')
+            ->assertDontSee('Payment history')
+            ->assertDontSee('Record full payment');
+        $this->actingAs($user)->getJson(route('billing.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'search' => ['value' => $quote->number],
+        ]))->assertOk()
+            ->assertJsonPath('data.0.paid_amount', '—')
+            ->assertJsonPath('data.0.balance', '—');
 
         $this->actingAs($user)->post(route('billing.documents.convert', $quote))
             ->assertUnprocessable();
@@ -267,6 +277,20 @@ class BillingInventoryReportsTest extends TestCase
             ->assertRedirect(route('billing.documents.show', $quote));
         $this->assertSame('accepted', $quote->fresh()->status);
 
+        $paymentData = [
+            'amount' => 20,
+            'method' => 'cash',
+            'received_at' => now()->toDateString(),
+        ];
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
+            ->assertUnprocessable();
+        $this->assertSame(0, $quote->payments()->count());
+        $this->assertSame(0.0, (float) $quote->fresh()->paid_amount);
+        $this->actingAs($user)->get(route('billing.documents.show', $quote))
+            ->assertOk()
+            ->assertDontSee('Payment history')
+            ->assertDontSee('Record full payment');
+
         $this->actingAs($user)->post(route('billing.documents.convert', $quote))
             ->assertRedirect(route('billing.documents.show', $quote));
         $quote->refresh();
@@ -276,13 +300,10 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
             ->assertSee('Record full payment')
+            ->assertSee('Payment history')
             ->assertSee('Partial payments are not currently supported.');
 
-        $paymentData = [
-            'amount' => 10,
-            'method' => 'cash',
-            'received_at' => now()->toDateString(),
-        ];
+        $paymentData['amount'] = 10;
         $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
             ->assertSessionHasErrors('amount');
         $this->assertSame('issued', $quote->fresh()->status);
@@ -331,8 +352,12 @@ class BillingInventoryReportsTest extends TestCase
     {
         $this->seed(PlannerRoleSeeder::class);
         config([
-            'services.chip.secret_key' => 'test-secret',
-            'services.chip.brand_id' => 'test-brand',
+            'services.chip.secret_key' => 'live-secret',
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.brand_id' => 'live-brand',
+            'services.chip.test_brand_id' => 'test-brand',
+            'services.chip.test_mode' => false,
+            'services.chip.live_enabled' => false,
             'services.chip.enabled' => true,
         ]);
         Http::fake([
@@ -366,10 +391,11 @@ class BillingInventoryReportsTest extends TestCase
         $attempt = BillingPaymentAttempt::query()->firstOrFail();
         $this->assertSame('pending', $attempt->status);
         $this->assertSame('chip-purchase-123', $attempt->provider_purchase_id);
-        $this->assertFalse($attempt->chip_test_mode);
+        $this->assertTrue($attempt->chip_test_mode);
         $this->assertSame(125.50, (float) $attempt->amount);
         $this->assertSame(0.0, (float) $document->fresh()->paid_amount);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
+            && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
             && $request['purchase']['currency'] === 'MYR'
             && $request['brand_id'] === 'test-brand'
             && $request['purchase']['products'][0]['price'] === 12550
@@ -525,8 +551,6 @@ class BillingInventoryReportsTest extends TestCase
                 'status' => 'paid',
             ]);
         });
-        ChipSetting::setTestMode(false);
-
         $callback = fn () => $this->call(
             'POST',
             route('webhooks.chip.collect', $attempt->uuid),

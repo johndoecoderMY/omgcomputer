@@ -17,7 +17,7 @@
                     <h2 class="h5 mb-1 mb-md-0">Your Notifications</h2>
                 </div>
                 <div class="col-sm-auto fs-10">
-                    <form method="POST" action="{{ route('notifications.read-all') }}">
+                    <form method="POST" action="{{ route('notifications.read-all') }}" data-notification-read-all>
                         @csrf
                         <button class="font-sans-serif btn btn-link p-0" type="submit"
                             @disabled($unreadNotificationCount === 0)>

@@ -60,8 +60,20 @@ Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
 Route::get('/track-repair/photos/{attachment}', [RepairTicketController::class, 'trackingPhoto'])
     ->middleware('signed')
     ->name('repairs.track.photo');
+Route::get('/track-repair/{ticketNumber}', [RepairTicketController::class, 'trackByNumber'])
+    ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware('throttle:repair-tracking')
+    ->name('repairs.track.show');
+Route::post('/track-repair/{ticketNumber}/billing-code', [RepairTicketController::class, 'sendBillingVerificationCode'])
+    ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware('throttle:repair-billing-code-send')
+    ->name('repairs.track.billing-code');
+Route::post('/track-repair/{ticketNumber}/billing-code/verify', [RepairTicketController::class, 'verifyBillingCode'])
+    ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware('throttle:repair-billing-code-verify')
+    ->name('repairs.track.billing-code.verify');
 Route::post('/track-repair', [RepairTicketController::class, 'track'])
-    ->middleware('throttle:5,1')
+    ->middleware('throttle:repair-tracking-lookup')
     ->name('repairs.track');
 Route::get('/sitemap.xml', function () {
     $urls = collect([

@@ -500,6 +500,7 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertSee('meta name="csrf-token"', false)
             ->assertSee('id="unread-notifications-count" class="notification-indicator-number bg-primary rounded-pill', false)
             ->assertSee('aria-label="1 unread notifications"', false)
+            ->assertSee('data-notification-read-all', false)
             ->assertSee('class="bi bi-bell"', false)
             ->assertSee('Your Notifications')
             ->assertSee('notification-unread', false)
@@ -519,6 +520,19 @@ class WorkspaceNotificationsTest extends TestCase
             ->assertRedirect(route('notifications.index'));
 
         $this->assertNotNull($unread->fresh()->read_at);
+
+        $ajaxUnread = $user->notifications()->create([
+            'id' => (string) Str::uuid(),
+            'type' => WorkspaceNotification::class,
+            'data' => ['title' => 'AJAX update', 'message' => 'Details.'],
+        ]);
+        $this->postJson(route('notifications.read-all'))
+            ->assertOk()
+            ->assertJson([
+                'message' => 'All notifications marked as read.',
+                'unread_count' => 0,
+            ]);
+        $this->assertNotNull($ajaxUnread->fresh()->read_at);
     }
 
     public function test_notification_indicator_dot_is_hidden_when_there_are_no_unread_notifications(): void

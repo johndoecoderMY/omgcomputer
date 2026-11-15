@@ -24,7 +24,7 @@
                 <div class="row justify-content-between align-items-center">
                     <div class="col-auto"><h2 class="card-header-title h6 mb-0">Notifications</h2></div>
                     <div class="col-auto ps-0 ps-sm-3">
-                        <form method="POST" action="{{ route('notifications.read-all') }}">
+                        <form method="POST" action="{{ route('notifications.read-all') }}" data-notification-read-all>
                             @csrf
                             <button class="card-link fw-normal btn btn-link btn-sm p-0" type="submit"
                                 @disabled($unreadNotificationCount === 0)>Mark all as read</button>
