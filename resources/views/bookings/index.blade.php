@@ -164,7 +164,7 @@
 @unless ($customerView)
     @push('scripts')
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
+            (() => {
                 const table = document.querySelector('table[data-datatable]');
                 const modal = document.getElementById('booking-status-modal');
                 const form = document.getElementById('booking-status-form');
@@ -189,7 +189,6 @@
                     reference.textContent = trigger.dataset.bookingReference || '';
                     errorAlert.textContent = '';
                     errorAlert.classList.add('d-none');
-                    modalInstance.show();
                 });
 
                 form.addEventListener('submit', async (event) => {
@@ -250,7 +249,7 @@
                         submitButton.textContent = originalLabel;
                     }
                 });
-            });
+            })();
         </script>
     @endpush
 @endunless

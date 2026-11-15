@@ -493,7 +493,10 @@ class BookingTest extends TestCase
         $datatableResponse->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.reference', 'BK-FILTER-1');
-        $this->assertStringContainsString('data-booking-update', $datatableResponse->json('data.0.management'));
+        $management = $datatableResponse->json('data.0.management');
+        $this->assertStringContainsString('data-booking-update', $management);
+        $this->assertStringContainsString('data-bs-toggle="modal"', $management);
+        $this->assertStringContainsString('data-bs-target="#booking-status-modal"', $management);
 
         $this->get(route('bookings.index', [
             'service' => 'Laptop cleaning',

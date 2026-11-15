@@ -405,7 +405,7 @@ class BookingController extends Controller
                     : '';
 
                 return sprintf(
-                    '<button type="button" class="btn btn-sm btn-outline-primary" data-booking-update data-booking-update-url="%s" data-booking-status="%s" data-booking-assigned-to="%s" data-booking-reference="%s">Update</button>',
+                    '<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#booking-status-modal" data-booking-update data-booking-update-url="%s" data-booking-status="%s" data-booking-assigned-to="%s" data-booking-reference="%s">Update</button>',
                     e(route('bookings.update', $booking)),
                     e($booking->status),
                     e($assignedTo),
