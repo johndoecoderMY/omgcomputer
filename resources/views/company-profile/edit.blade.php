@@ -67,6 +67,24 @@
                     </div>
                 </div>
             </div>
+            <div class="card-header bg-body border-top">
+                <h2 class="h5 mb-1">Bank transfer details</h2>
+                <p class="small text-body-secondary mb-0">These details are saved in the admin company profile and are not displayed on public pages or invoices.</p>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="bank-name">Bank name</label>
+                        <input class="form-control" id="bank-name" name="bank_name" maxlength="255"
+                            value="{{ old('bank_name', $companyProfile->bank_name) }}" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="bank-account-number">Bank account number</label>
+                        <input class="form-control" id="bank-account-number" name="bank_account_number" maxlength="100"
+                            value="{{ old('bank_account_number', $companyProfile->bank_account_number) }}" autocomplete="off">
+                    </div>
+                </div>
+            </div>
             <div class="card-footer bg-body text-end">
                 <button class="btn btn-primary" type="submit"><span class="bi bi-save me-2" aria-hidden="true"></span>Save company profile</button>
             </div>

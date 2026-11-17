@@ -50,7 +50,9 @@ class CompanyProfileTest extends TestCase
             ->assertOk()
             ->assertSee('SSM registration number')
             ->assertSee('Tax identification number (TIN)')
-            ->assertSee('Facebook page URL');
+            ->assertSee('Facebook page URL')
+            ->assertSee('Bank name')
+            ->assertSee('Bank account number');
 
         $this->actingAs($admin)->put(route('admin.company-profile.update'), [
             'legal_name' => 'OMG Computer Sdn Bhd',
@@ -62,6 +64,8 @@ class CompanyProfileTest extends TestCase
             'email' => 'hello@omgcomputer.my',
             'website_url' => 'https://omgcomputer.my',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
+            'bank_name' => 'Example Bank',
+            'bank_account_number' => '1234567890',
         ])->assertRedirect(route('admin.company-profile.edit'))
             ->assertSessionHas('success', 'Company profile saved.');
 
@@ -72,7 +76,14 @@ class CompanyProfileTest extends TestCase
             'tax_identification_number' => 'C1234567890',
             'sst_registration_number' => 'B16-1234-12345678',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
+            'bank_name' => 'Example Bank',
         ]);
+        $profile = CompanyProfile::current();
+        $this->assertSame('1234567890', $profile->bank_account_number);
+        $this->assertNotSame(
+            '1234567890',
+            \Illuminate\Support\Facades\DB::table('company_profiles')->where('id', 'primary')->value('bank_account_number'),
+        );
     }
 
     public function test_company_profile_settings_are_admin_only(): void
@@ -96,6 +107,33 @@ class CompanyProfileTest extends TestCase
         $this->assertDatabaseMissing('company_profiles', ['id' => 'primary']);
     }
 
+    public function test_company_bank_details_are_not_rendered_on_public_pages_or_invoice_pdfs(): void
+    {
+        CompanyProfile::query()->create([
+            'id' => 'primary',
+            'bank_name' => 'PRIVATE-BANK-NAME',
+            'bank_account_number' => 'PRIVATE-BANK-ACCOUNT',
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertDontSee('PRIVATE-BANK-NAME')
+            ->assertDontSee('PRIVATE-BANK-ACCOUNT');
+
+        $document = BillingDocument::query()->create([
+            'number' => 'INV-BANK-PRIVACY',
+            'status' => 'draft',
+            'customer_name' => 'Invoice Customer',
+            'issue_date' => now()->toDateString(),
+        ]);
+        $this->view('billing.pdf', [
+            'document' => $document,
+            'logoData' => null,
+            'companyProfile' => CompanyProfile::current(),
+        ])->assertDontSee('PRIVATE-BANK-NAME')
+            ->assertDontSee('PRIVATE-BANK-ACCOUNT');
+    }
+
     public function test_public_website_shows_business_registration_and_facebook_but_not_tax_numbers(): void
     {
         CompanyProfile::query()->create([
@@ -104,6 +142,8 @@ class CompanyProfileTest extends TestCase
             'ssm_registration_number' => '202601001234',
             'tax_identification_number' => 'PRIVATE-TIN-123',
             'sst_registration_number' => 'PRIVATE-SST-123',
+            'bank_name' => 'PRIVATE-BANK-NAME',
+            'bank_account_number' => 'PRIVATE-BANK-ACCOUNT',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
         ]);
 
@@ -118,7 +158,9 @@ class CompanyProfileTest extends TestCase
             ->assertSee('aria-label="Instagram"', false)
             ->assertSee('rounded-circle')
             ->assertDontSee('PRIVATE-TIN-123')
-            ->assertDontSee('PRIVATE-SST-123');
+            ->assertDontSee('PRIVATE-SST-123')
+            ->assertDontSee('PRIVATE-BANK-NAME')
+            ->assertDontSee('PRIVATE-BANK-ACCOUNT');
 
         $this->actingAs($this->adminUser())
             ->get(route('admin.company-profile.edit'))

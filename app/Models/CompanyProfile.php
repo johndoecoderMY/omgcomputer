@@ -21,10 +21,19 @@ class CompanyProfile extends Model
         'phone',
         'email',
         'website_url',
+        'bank_name',
+        'bank_account_number',
         'facebook_url',
         'instagram_url',
         'tiktok_url',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'bank_account_number' => 'encrypted',
+        ];
+    }
 
     public static function current(): self
     {

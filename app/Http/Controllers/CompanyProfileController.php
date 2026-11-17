@@ -82,6 +82,8 @@ class CompanyProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'website_url' => ['nullable', 'url:http,https', 'max:255'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bank_account_number' => ['nullable', 'string', 'max:100'],
             'facebook_url' => [
                 'nullable',
                 'url:http,https',
