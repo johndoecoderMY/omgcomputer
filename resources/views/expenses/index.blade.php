@@ -15,6 +15,7 @@
             </a>
         </x-slot:actions>
     </x-page-header>
+    <p class="text-body-secondary">When you record a payment, choose the account it came from. The payment will appear in Company Funds and reduce that account's balance.</p>
 
     @if (session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
     @if ($errors->any())
@@ -84,6 +85,7 @@
                                             @foreach ($expense->payments as $payment)
                                                 <li>
                                                     {{ $payment->paid_at->format('M j, Y') }} · RM {{ number_format((float) $payment->amount, 2) }}
+                                                    @if ($payment->financeTransaction?->account) · {{ $payment->financeTransaction->account->name }}@endif
                                                     @if ($payment->reference) · {{ $payment->reference }}@endif
                                                     @if ($payment->user) · {{ $payment->user->name }}@endif
                                                 </li>
@@ -92,29 +94,41 @@
                                     @endif
                                 </details>
                                 @if ($expense->remaining_amount > 0)
-                                    <form class="mt-2" method="POST" action="{{ route('expenses.payments.store', [$category, $expense]) }}">
-                                        @csrf
-                                        <div class="row g-2">
-                                            <div class="col-6">
-                                                <label class="visually-hidden" for="payment-amount-{{ $expense->id }}">Payment amount for {{ $expense->name }}</label>
-                                                <input class="form-control form-control-sm" id="payment-amount-{{ $expense->id }}" name="amount"
-                                                    type="number" min="0.01" max="{{ number_format($expense->remaining_amount, 2, '.', '') }}" step="0.01"
-                                                    value="{{ number_format($expense->remaining_amount, 2, '.', '') }}" required>
+                                    @if ($activeAccounts->isNotEmpty())
+                                        <form class="mt-2" method="POST" action="{{ route('expenses.payments.store', [$category, $expense]) }}">
+                                            @csrf
+                                            <div class="row g-2">
+                                                <div class="col-6">
+                                                    <label class="visually-hidden" for="payment-amount-{{ $expense->id }}">Payment amount for {{ $expense->name }}</label>
+                                                    <input class="form-control form-control-sm" id="payment-amount-{{ $expense->id }}" name="amount"
+                                                        type="number" min="0.01" max="{{ number_format($expense->remaining_amount, 2, '.', '') }}" step="0.01"
+                                                        value="{{ number_format($expense->remaining_amount, 2, '.', '') }}" required>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="visually-hidden" for="payment-date-{{ $expense->id }}">Payment date for {{ $expense->name }}</label>
+                                                    <input class="form-control form-control-sm" id="payment-date-{{ $expense->id }}" name="paid_at"
+                                                        type="date" value="{{ now()->toDateString() }}" required>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="visually-hidden" for="payment-account-{{ $expense->id }}">Account used for {{ $expense->name }}</label>
+                                                    <select class="form-select form-select-sm" id="payment-account-{{ $expense->id }}" name="account_id" required>
+                                                        @foreach ($activeAccounts as $account)
+                                                            <option value="{{ $account->id }}">{{ $account->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="col-8">
+                                                    <label class="visually-hidden" for="payment-reference-{{ $expense->id }}">Payment reference for {{ $expense->name }}</label>
+                                                    <input class="form-control form-control-sm" id="payment-reference-{{ $expense->id }}" name="reference" maxlength="255" placeholder="Reference (optional)">
+                                                </div>
+                                                <div class="col-4 d-grid">
+                                                    <button class="btn btn-sm btn-outline-primary" type="submit">Record payment</button>
+                                                </div>
                                             </div>
-                                            <div class="col-6">
-                                                <label class="visually-hidden" for="payment-date-{{ $expense->id }}">Payment date for {{ $expense->name }}</label>
-                                                <input class="form-control form-control-sm" id="payment-date-{{ $expense->id }}" name="paid_at"
-                                                    type="date" value="{{ now()->toDateString() }}" required>
-                                            </div>
-                                            <div class="col-8">
-                                                <label class="visually-hidden" for="payment-reference-{{ $expense->id }}">Payment reference for {{ $expense->name }}</label>
-                                                <input class="form-control form-control-sm" id="payment-reference-{{ $expense->id }}" name="reference" maxlength="255" placeholder="Reference (optional)">
-                                            </div>
-                                            <div class="col-4 d-grid">
-                                                <button class="btn btn-sm btn-outline-primary" type="submit">Record payment</button>
-                                            </div>
-                                        </div>
-                                    </form>
+                                        </form>
+                                    @else
+                                        <div class="small text-body-secondary mt-2">Add an active Finance account before recording a payment.</div>
+                                    @endif
                                 @endif
                                 <details class="mt-2">
                                     <summary>{{ $expense->attachments->count() }} file(s) and references</summary>

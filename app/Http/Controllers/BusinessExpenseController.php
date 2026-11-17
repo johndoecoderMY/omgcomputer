@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\BusinessExpense;
+use App\Models\FinanceAccount;
+use App\Models\FinanceTransaction;
 use App\Services\WorkspaceNotifier;
 use App\Support\PdfAttachmentImage;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +24,7 @@ class BusinessExpenseController extends Controller
         $this->ensureCategory($category);
         $expenses = BusinessExpense::query()
             ->where('category', $category)
-            ->with(['payments.user', 'attachments'])
+            ->with(['payments.user', 'payments.financeTransaction.account', 'attachments'])
             ->orderByRaw('due_date IS NULL')
             ->orderBy('due_date')
             ->orderBy('name')
@@ -32,6 +34,7 @@ class BusinessExpenseController extends Controller
             'category' => $category,
             'categoryLabel' => BusinessExpense::CATEGORIES[$category],
             'expenses' => $expenses,
+            'activeAccounts' => FinanceAccount::query()->where('is_active', true)->orderBy('name')->get(),
             'upcomingCount' => $expenses->filter(fn (BusinessExpense $expense): bool => $expense->remaining_amount > 0
                 && $expense->due_date
                 && $expense->due_date->between(today(), today()->addDays(30)))->count(),
@@ -119,12 +122,25 @@ class BusinessExpenseController extends Controller
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0', 'max:9999999999'],
             'paid_at' => ['required', 'date'],
+            'account_id' => ['required', 'integer', 'exists:finance_accounts,id'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
         DB::transaction(function () use ($data, $expense, $request): void {
             $lockedExpense = BusinessExpense::query()->whereKey($expense->id)->lockForUpdate()->firstOrFail();
+            $account = FinanceAccount::query()->whereKey($data['account_id'])->lockForUpdate()->firstOrFail();
+            if (! $account->is_active) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'Choose an active account.',
+                ]);
+            }
+            if ($data['paid_at'] < $account->opening_balance_date->toDateString()) {
+                throw ValidationException::withMessages([
+                    'paid_at' => 'The payment date cannot be before the account opening balance date.',
+                ]);
+            }
+
             $amount = round((float) $data['amount'], 2);
             if ($amount > $lockedExpense->remaining_amount) {
                 throw ValidationException::withMessages([
@@ -132,11 +148,23 @@ class BusinessExpenseController extends Controller
                 ]);
             }
 
-            $lockedExpense->payments()->create([
-                ...$data,
+            $payment = $lockedExpense->payments()->create([
+                'paid_at' => $data['paid_at'],
+                'reference' => $data['reference'] ?? null,
+                'notes' => $data['notes'] ?? null,
                 'user_id' => $request->user()->id,
                 'period_due_date' => $lockedExpense->due_date?->toDateString(),
                 'amount' => $amount,
+            ]);
+            FinanceTransaction::query()->create([
+                'account_id' => $account->id,
+                'business_expense_payment_id' => $payment->id,
+                'user_id' => $request->user()->id,
+                'type' => 'expense',
+                'description' => 'Bill payment: '.$lockedExpense->name,
+                'amount' => $amount,
+                'transaction_date' => $data['paid_at'],
+                'reference' => $data['reference'] ?? null,
             ]);
             $lockedExpense->cycle_paid_amount = round((float) $lockedExpense->cycle_paid_amount + $amount, 2);
 

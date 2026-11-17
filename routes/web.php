@@ -10,6 +10,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
 use App\Http\Controllers\BeamsAuthController;
 use App\Http\Controllers\BusinessExpenseController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CustomerController;
@@ -143,6 +144,9 @@ Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name(
 
 Route::middleware(['auth', 'password.changed', 'verified', 'role:admin|member'])->group(function (): void {
     Route::get('/staff-service-worker.js', [StaffPwaController::class, 'serviceWorker'])->name('staff-pwa.service-worker');
+    Route::view('/generate-qr-with-logo', 'pages.generate-qr-with-logo')->name('tools.qr-logo');
+    Route::view('/qr-generator', 'pages.generate-qr-with-logo')->name('tools.qr-generator');
+    Route::get('/reports/teams', [ReportsController::class, 'teams'])->name('reports.teams');
 });
 
 Route::get('/error-pages/{code}', function (string $code) {
@@ -183,6 +187,13 @@ Route::redirect('/shop/preview/products', '/shop')->name('shop.legacy-preview.li
 Route::redirect('/shop/preview/products/{product}', '/shop')->name('shop.legacy-preview.product');
 
 Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])->group(function (): void {
+    Route::prefix('finance')->name('finance.')->middleware('role:admin')->controller(FinanceController::class)->group(function (): void {
+        Route::get('/', 'index')->name('index');
+        Route::post('/accounts', 'storeAccount')->name('accounts.store');
+        Route::patch('/accounts/{account}/toggle', 'toggleAccount')->name('accounts.toggle');
+        Route::post('/transactions', 'storeTransaction')->name('transactions.store');
+    });
+
     Route::view('/self-test', 'self-test.index')
         ->middleware('role:admin')
         ->name('self-test.index');
@@ -476,7 +487,6 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'index')->name('index');
         Route::get('/sales', 'sales')->name('sales');
         Route::get('/inventory', 'inventory')->name('inventory');
-        Route::get('/teams', 'teams')->name('teams');
         Route::get('/marketing', 'marketing')->name('marketing');
         Route::post('/marketing/campaigns', 'storeCampaign')->name('marketing.store');
         Route::get('/export', 'export')->name('export');

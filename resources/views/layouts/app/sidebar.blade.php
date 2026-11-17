@@ -402,6 +402,14 @@
                                 <span class="nav-link-text ps-1">SOPs</span>
                             </div>
                         </a>
+                        @role('admin|member')
+                            <a class="nav-link" href="{{ route('tools.qr-logo') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-qr-code"></span></span>
+                                    <span class="nav-link-text ps-1">QR Code Generator</span>
+                                </div>
+                            </a>
+                        @endrole
                         <a class="nav-link" href="{{ route('customer-messages.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-envelope"></span></span>
@@ -518,11 +526,17 @@
                     @role('admin')
                     <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
-                            <div class="col-auto navbar-vertical-label">Operating costs</div>
+                            <div class="col-auto navbar-vertical-label">Finance</div>
                             <div class="col ps-0">
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
+                        <a class="nav-link" href="{{ route('finance.index') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-wallet2"></span></span>
+                                <span class="nav-link-text ps-1">Company Funds</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('expenses.index', 'rental') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-building"></span></span>
@@ -590,6 +604,23 @@
                         </ul>
                     </li>
                     @endrole
+
+                    @if (auth()->user()->hasRole('member') && ! auth()->user()->hasRole('admin'))
+                        <li class="nav-item">
+                            <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                                <div class="col-auto navbar-vertical-label">Insights</div>
+                                <div class="col ps-0">
+                                    <hr class="mb-0 navbar-vertical-divider">
+                                </div>
+                            </div>
+                            <a class="nav-link" href="{{ route('reports.teams') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-graph-up"></span></span>
+                                    <span class="nav-link-text ps-1">Team Performance</span>
+                                </div>
+                            </a>
+                        </li>
+                    @endif
 
                     @role('admin')
                     {{-- Integrations --}}

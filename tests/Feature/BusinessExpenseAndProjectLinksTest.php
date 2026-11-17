@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BusinessExpense;
 use App\Models\Customer;
+use App\Models\FinanceAccount;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
@@ -36,6 +37,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
     public function test_recurring_service_payments_advance_the_due_date_and_keep_history(): void
     {
         $this->actingAs($this->adminUser());
+        $account = $this->financeAccount();
         $this->post(route('expenses.store', 'services'), [
             'name' => 'SSM renewal',
             'vendor' => 'SSM',
@@ -49,6 +51,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
             'amount' => 50,
             'paid_at' => '2026-10-20',
             'reference' => 'Transfer 001',
+            'account_id' => $account->id,
         ])->assertRedirect(route('expenses.index', 'services'));
 
         $this->assertSame('50.00', $expense->fresh()->cycle_paid_amount);
@@ -57,12 +60,15 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
         $this->post(route('expenses.payments.store', ['services', $expense]), [
             'amount' => 70,
             'paid_at' => '2026-10-21',
+            'account_id' => $account->id,
         ])->assertRedirect(route('expenses.index', 'services'));
 
         $expense->refresh();
         $this->assertSame('0.00', $expense->cycle_paid_amount);
         $this->assertSame('2027-10-21', $expense->due_date->toDateString());
         $this->assertDatabaseCount('business_expense_payments', 2);
+        $this->assertDatabaseCount('finance_transactions', 2);
+        $this->assertSame('880.00', number_format($account->fresh()->current_balance, 2, '.', ''));
         $this->get(route('expenses.index', 'services'))
             ->assertOk()
             ->assertSee('SSM renewal')
@@ -72,6 +78,7 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
     public function test_expenses_are_category_scoped_and_payments_cannot_exceed_the_remaining_balance(): void
     {
         $this->actingAs($this->adminUser());
+        $account = $this->financeAccount();
         $expense = BusinessExpense::query()->create([
             'category' => 'bills',
             'name' => 'Electricity',
@@ -84,10 +91,12 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
         $this->post(route('expenses.payments.store', ['bills', $expense]), [
             'amount' => 100.01,
             'paid_at' => today()->toDateString(),
+            'account_id' => $account->id,
         ])->assertSessionHasErrors('amount');
         $this->post(route('expenses.payments.store', ['bills', $expense]), [
             'amount' => 50,
             'paid_at' => today()->toDateString(),
+            'account_id' => $account->id,
         ])->assertRedirect(route('expenses.index', 'bills'));
         $this->assertDatabaseCount('business_expense_payments', 1);
         $this->get(route('expenses.index', 'bills'))
@@ -245,5 +254,15 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
         $admin->assignRole('admin');
 
         return $admin;
+    }
+
+    private function financeAccount(): FinanceAccount
+    {
+        return FinanceAccount::query()->create([
+            'name' => 'Main bank account',
+            'type' => 'bank',
+            'opening_balance' => 1000,
+            'opening_balance_date' => today()->subDays(30),
+        ]);
     }
 }

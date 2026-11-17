@@ -86,6 +86,7 @@ class DatabaseSeeder extends Seeder
             PcPartsSeeder::class,
             ReadyBuiltPcSeeder::class,
             DemoDataSeeder::class,
+            MetaContentDraftsSeeder::class,
             BusinessPlanTaskSeeder::class,
             RentalExpenseSeeder::class,
         ]);

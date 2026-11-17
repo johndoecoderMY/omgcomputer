@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\MetaContentPost;
 use App\Models\User;
+use Database\Seeders\MetaContentDraftsSeeder;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
@@ -51,6 +52,24 @@ class MetaContentTest extends TestCase
             ->assertSee('Take photo for image posts')
             ->assertSee('Choose a file for images or MP4 reels.')
             ->assertSee('capture', false);
+    }
+
+    public function test_content_draft_seeder_is_repeatable_and_adds_editable_planner_posts(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['email' => 'support@omgcomputer.my']);
+        $admin->assignRole('admin');
+
+        $this->seed(MetaContentDraftsSeeder::class);
+        $this->seed(MetaContentDraftsSeeder::class);
+
+        $this->assertSame(7, MetaContentPost::query()->count());
+        $this->assertSame(['draft'], MetaContentPost::query()->distinct()->pluck('status')->all());
+        $this->assertSame(['facebook', 'tiktok'], MetaContentPost::query()->distinct()->orderBy('platform')->pluck('platform')->all());
+        $this->actingAs($admin)->get(route('meta-content.index'))
+            ->assertOk()
+            ->assertSee('Choosing a laptop for study or work?')
+            ->assertSee('SSD vs RAM');
     }
 
     public function test_staff_can_save_and_schedule_meta_content_and_view_it_in_the_sidebar_section(): void

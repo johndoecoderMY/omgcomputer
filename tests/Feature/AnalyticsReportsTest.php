@@ -43,6 +43,28 @@ class AnalyticsReportsTest extends TestCase
             ->assertSee('Team performance');
     }
 
+    public function test_team_performance_and_qr_generator_are_available_to_staff_but_not_customers(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $this->actingAs($member)->get(route('reports.teams'))
+            ->assertOk()
+            ->assertSee('Team performance')
+            ->assertSee(route('tools.qr-logo'), false);
+        $this->actingAs($member)->get(route('tools.qr-logo'))
+            ->assertOk()
+            ->assertSee('Generate QR code with logo')
+            ->assertSee('QR Code Generator');
+
+        $this->actingAs($customer)->get(route('reports.teams'))->assertForbidden();
+        $this->actingAs($customer)->get(route('tools.qr-logo'))->assertForbidden();
+        $this->actingAs($customer)->get(route('tools.qr-generator'))->assertForbidden();
+    }
+
     public function test_inventory_and_marketing_reports_render_saved_data(): void
     {
         $user = $this->adminUser();

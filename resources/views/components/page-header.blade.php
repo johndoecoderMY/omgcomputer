@@ -32,7 +32,8 @@
         str_starts_with($routeName, 'meta-content.'),
         str_starts_with($routeName, 'meta-ads.'),
         str_starts_with($routeName, 'drama-content.') => 'Manage',
-        str_starts_with($routeName, 'expenses.') => 'Operating costs',
+        str_starts_with($routeName, 'finance.'),
+        str_starts_with($routeName, 'expenses.') => 'Finance',
         str_starts_with($routeName, 'billing.') => 'Billing & Payments',
         str_starts_with($routeName, 'reports.integrations.'),
         str_starts_with($routeName, 'marketing.'),
@@ -157,7 +158,7 @@
             ['label' => 'Backups', 'url' => route('admin.backups.index')],
         ],
         str_starts_with($routeName, 'expenses.') => [
-            ['label' => 'Operating costs'],
+            ['label' => 'Finance', 'url' => route('finance.index')],
             ['label' => match (request()->route('category')) {
                 'rental' => 'Rental',
                 'bills' => 'Bills',
