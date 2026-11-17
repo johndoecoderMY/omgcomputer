@@ -236,7 +236,24 @@ class BillingController extends Controller
                 'price' => $part->selling_price,
             ]);
 
-        return response()->json(['results' => $parts]);
+        $services = ProductService::query()
+            ->select(['id', 'name', 'billing_price'])
+            ->where('name', 'like', $likeTerm)
+            ->orderBy('name')
+            ->limit(20)
+            ->get()
+            ->map(fn (ProductService $service): array => [
+                'id' => 'service:'.$service->id,
+                'text' => $service->name.((float) $service->billing_price > 0
+                    ? ' · RM'.number_format((float) $service->billing_price, 2)
+                    : ' · Custom price'),
+                'name' => $service->name,
+                'price' => $service->billing_price,
+            ]);
+
+        return response()->json([
+            'results' => $parts->concat($services)->sortBy('text')->take(20)->values(),
+        ]);
     }
 
     private function selectedInventoryParts(Collection $partIds): Collection

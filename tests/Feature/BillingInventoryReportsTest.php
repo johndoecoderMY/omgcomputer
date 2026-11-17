@@ -8,6 +8,7 @@ use App\Models\ChipSetting;
 use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
+use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
@@ -155,6 +156,35 @@ class BillingInventoryReportsTest extends TestCase
             ->assertOk()
             ->assertJsonCount(20, 'results')
             ->assertJsonStructure(['results' => [['id', 'text', 'name', 'price']]]);
+    }
+
+    public function test_billing_search_includes_catalog_services_and_manual_line_option(): void
+    {
+        $admin = $this->adminUser();
+        ProductService::query()->create([
+            'id' => 'screen-replacement-service',
+            'category' => 'repair',
+            'name' => 'Screen replacement service',
+            'scope' => 'Replace a damaged screen.',
+            'audience' => 'Computer owners',
+            'price' => 'Quoted',
+            'billing_price' => 0,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->getJson(route('billing.parts.search').'?q=Screen%20replacement')
+            ->assertOk()
+            ->assertJsonPath('results.0.id', 'service:screen-replacement-service')
+            ->assertJsonPath('results.0.name', 'Screen replacement service')
+            ->assertJsonPath('results.0.price', '0.00');
+
+        $this->actingAs($admin)
+            ->get(route('billing.create', ['type' => 'quotation']))
+            ->assertOk()
+            ->assertSee('Custom line')
+            ->assertSee('Service or item description')
+            ->assertSee('Screen replacement service');
     }
 
     public function test_new_billing_documents_use_the_configured_tax_rate(): void

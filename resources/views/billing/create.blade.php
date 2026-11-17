@@ -129,7 +129,7 @@
                                     @endforeach
                                 </optgroup>
                             </select>
-                            <div class="form-text">Search inventory by name or SKU, or choose a listed service.</div>
+                            <div class="form-text">Search inventory by name or SKU, or services by name. Choose Custom line to enter a description and price manually.</div>
                             <input class="line-part-id" name="items[{{ $index }}][inventory_part_id]" value="{{ $line['inventory_part_id'] ?? '' }}" type="hidden">
                             <input class="line-component-id" name="items[{{ $index }}][custom_pc_component_id]" value="{{ $line['custom_pc_component_id'] ?? '' }}" type="hidden">
                             <input class="line-product-id" name="items[{{ $index }}][product_id]" value="{{ $line['product_id'] ?? $selectedProduct['id'] ?? '' }}" type="hidden">
@@ -182,7 +182,7 @@ const initializeBillingCreateForm = () => {
         $select.select2({
             theme: 'bootstrap-5',
             width: '100%',
-            placeholder: 'Search inventory by name or SKU',
+            placeholder: 'Search inventory or services by name',
             minimumInputLength: 2,
             dropdownParent: modal.length ? modal : window.jQuery(document.body),
             ajax: {
