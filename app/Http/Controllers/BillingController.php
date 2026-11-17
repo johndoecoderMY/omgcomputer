@@ -251,8 +251,18 @@ class BillingController extends Controller
                 'price' => $service->billing_price,
             ]);
 
+        $customLine = str_contains(strtolower($data['q']), 'custom')
+            || str_contains(strtolower($data['q']), 'manual')
+            ? collect([[
+                'id' => 'custom:manual',
+                'text' => 'Custom line · enter description and price manually',
+                'name' => '',
+                'price' => '',
+            ]])
+            : collect();
+
         return response()->json([
-            'results' => $parts->concat($services)->sortBy('text')->take(20)->values(),
+            'results' => $parts->concat($services)->concat($customLine)->sortBy('text')->take(20)->values(),
         ]);
     }
 

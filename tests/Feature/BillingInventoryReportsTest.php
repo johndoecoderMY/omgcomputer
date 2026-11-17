@@ -180,6 +180,12 @@ class BillingInventoryReportsTest extends TestCase
             ->assertJsonPath('results.0.price', '0.00');
 
         $this->actingAs($admin)
+            ->getJson(route('billing.parts.search').'?q=Custom%20line')
+            ->assertOk()
+            ->assertJsonPath('results.0.id', 'custom:manual')
+            ->assertJsonPath('results.0.name', '');
+
+        $this->actingAs($admin)
             ->get(route('billing.create', ['type' => 'quotation']))
             ->assertOk()
             ->assertSee('Custom line')
