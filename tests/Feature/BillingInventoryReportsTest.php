@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\BillingReceiptMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPaymentAttempt;
 use App\Models\ChipSetting;
@@ -16,6 +17,7 @@ use App\Services\ChipCollect;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -113,6 +115,33 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($otherCustomer)
             ->get(route('billing.receipts.pdf', $payment))
             ->assertNotFound();
+    }
+
+    public function test_staff_payment_emails_a_pdf_receipt_and_keeps_it_printable(): void
+    {
+        Mail::fake();
+        $admin = $this->adminUser();
+        $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Receipt email project']), 42);
+
+        $this->actingAs($admin)
+            ->post(route('billing.documents.payments.store', $document), [
+                'amount' => 42,
+                'method' => 'bank_transfer',
+                'paid_at' => now()->toDateString(),
+            ])
+            ->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Payment recorded and the receipt was emailed to the customer.');
+
+        Mail::assertSent(
+            BillingReceiptMail::class,
+            fn (BillingReceiptMail $mail): bool => $mail->hasTo($document->customer_email),
+        );
+        $payment = $document->payments()->firstOrFail();
+        $this->assertNotNull($payment->receipt_emailed_at);
+        $this->actingAs($admin)
+            ->get(route('billing.receipts.pdf', $payment))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_project_inventory_search_returns_a_limited_result_set(): void
@@ -475,6 +504,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_guest_invoice_link_can_checkout_without_an_account_and_confirm_payment(): void
     {
+        Mail::fake();
         $admin = $this->adminUser();
         ChipSetting::setTestMode(true);
         config([
@@ -520,6 +550,11 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('paid', $attempt->fresh()->status);
         $this->assertSame(85.0, (float) $document->fresh()->paid_amount);
         $this->assertDatabaseCount('billing_payments', 1);
+        Mail::assertSent(
+            BillingReceiptMail::class,
+            fn (BillingReceiptMail $mail): bool => $mail->hasTo($document->customer_email),
+        );
+        $this->assertNotNull($document->payments()->firstOrFail()->receipt_emailed_at);
     }
 
     public function test_guest_invoice_links_expire_and_replacements_revoke_previous_links(): void
@@ -680,6 +715,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void
     {
+        Mail::fake();
         ChipSetting::setTestMode(true);
         $project = Project::query()->create(['name' => 'Callback project']);
         $document = $this->createIssuedInvoice($project, 40);
@@ -716,6 +752,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('paid', $document->fresh()->status);
         $this->assertSame(40.0, (float) $document->fresh()->paid_amount);
         $this->assertDatabaseCount('billing_payments', 1);
+        Mail::assertSentCount(1);
     }
 
     public function test_chip_callback_rejects_invalid_signatures(): void

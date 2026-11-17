@@ -9,6 +9,7 @@ use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\CustomPcComponent;
 use App\Services\ChipCollect;
+use App\Services\BillingReceiptService;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\Project;
@@ -912,7 +913,7 @@ class BillingController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        DB::transaction(function () use ($document, $request, $data): void {
+        $payment = DB::transaction(function () use ($document, $request, $data): BillingPayment {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
             abort_if($locked->type !== 'invoice' || ! in_array($locked->status, ['issued', 'partial', 'part_paid'], true), 422, 'This invoice cannot accept a payment.');
             $amount = round((float) $data['amount'], 2);
@@ -921,7 +922,7 @@ class BillingController extends Controller
                 throw ValidationException::withMessages(['amount' => 'Partial payments are not supported. Record the full outstanding balance.']);
             }
 
-            $locked->payments()->create([
+            $payment = $locked->payments()->create([
                 'amount' => $amount,
                 'method' => $data['method'],
                 'reference' => $data['reference'] ?? null,
@@ -932,9 +933,17 @@ class BillingController extends Controller
             $locked->paid_amount = round((float) $locked->paid_amount + $amount, 2);
             $locked->status = $locked->paid_amount >= $locked->total ? 'paid' : 'partial';
             $locked->save();
+
+            return $payment;
         });
 
-        return redirect()->route('billing.documents.show', $document)->with('success', 'Payment recorded.');
+        $emailSent = app(BillingReceiptService::class)->emailReceipt($payment);
+
+        return redirect()
+            ->route('billing.documents.show', $document)
+            ->with($emailSent ? 'success' : 'info', $emailSent
+                ? 'Payment recorded and the receipt was emailed to the customer.'
+                : 'Payment recorded, but the receipt could not be emailed. It is still available to view and print.');
     }
 
     public function void(BillingDocument $document, Request $request, InventoryStock $stock): RedirectResponse
@@ -968,7 +977,7 @@ class BillingController extends Controller
             ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
     }
 
-    public function receiptPdf(Request $request, BillingPayment $payment)
+    public function receiptPdf(Request $request, BillingPayment $payment, BillingReceiptService $receipts)
     {
         $document = BillingDocument::withoutGlobalScope('customer-recipient')
             ->findOrFail($payment->billing_document_id);
@@ -977,19 +986,7 @@ class BillingController extends Controller
         $payment->setRelation('document', $document);
         $payment->load('user');
 
-        $companyProfile = CompanyProfile::current();
-        $tempDirectory = storage_path('app/mpdf-tmp');
-        File::ensureDirectoryExists($tempDirectory);
-        $logoPath = public_path('assets/img/omg/logoex2.png');
-        $logoData = is_file($logoPath) ? base64_encode((string) file_get_contents($logoPath)) : null;
-        $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
-        $mpdf->WriteHTML(view('billing.receipt-pdf', compact(
-            'payment',
-            'companyProfile',
-            'logoData',
-        ))->render());
-
-        return response($mpdf->Output(strtolower($payment->receipt_number).'.pdf', 'S'))
+        return response($receipts->renderPdf($payment))
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="'.strtolower($payment->receipt_number).'.pdf"');
     }

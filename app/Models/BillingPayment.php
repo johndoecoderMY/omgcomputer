@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 class BillingPayment extends Model
 {
     protected $fillable = [
-        'billing_document_id', 'user_id', 'amount', 'method', 'reference', 'paid_at', 'notes',
+        'billing_document_id', 'user_id', 'amount', 'method', 'reference', 'paid_at', 'notes', 'receipt_emailed_at',
     ];
 
     protected function casts(): array
@@ -17,6 +17,7 @@ class BillingPayment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'receipt_emailed_at' => 'datetime',
         ];
     }
 

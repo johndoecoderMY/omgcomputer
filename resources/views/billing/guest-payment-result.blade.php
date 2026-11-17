@@ -14,6 +14,11 @@
                         <span class="bi bi-check-circle-fill text-success display-5" aria-hidden="true"></span>
                         <h1 class="h3 mt-3">Payment confirmed</h1>
                         <p class="mb-0">CHIP confirmed payment for invoice {{ $attempt->document->number }}. Amount received: RM {{ number_format($attempt->amount, 2) }}.</p>
+                        @if ($receiptEmailed)
+                            <p class="small text-body-secondary mt-3 mb-0">A PDF receipt was emailed to the address on your invoice.</p>
+                        @else
+                            <p class="small text-body-secondary mt-3 mb-0">We could not email the receipt. Please contact OMG Computer to arrange a copy.</p>
+                        @endif
                     @else
                         <span class="bi bi-hourglass-split text-warning display-5" aria-hidden="true"></span>
                         <h1 class="h3 mt-3">Payment not confirmed yet</h1>
