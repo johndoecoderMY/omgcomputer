@@ -403,6 +403,118 @@ class BillingInventoryReportsTest extends TestCase
             && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
     }
 
+    public function test_staff_can_start_chip_checkout_for_a_counter_invoice(): void
+    {
+        $staff = $this->adminUser();
+        ChipSetting::setTestMode(true);
+        config([
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.test_brand_id' => 'test-brand',
+            'services.chip.enabled' => true,
+        ]);
+        Http::fake([
+            'gate.chip-in.asia/api/v1/purchases/' => Http::response([
+                'id' => 'chip-counter-purchase',
+                'checkout_url' => 'https://gate.chip-in.asia/checkout/counter',
+            ], 201),
+        ]);
+        $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Counter payment']), 75);
+
+        $this->actingAs($staff)
+            ->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Take payment at the counter with CHIP')
+            ->assertSee('Share a guest payment link');
+
+        $this->actingAs($staff)
+            ->post(route('billing.chip.counter', $document))
+            ->assertRedirect('https://gate.chip-in.asia/checkout/counter');
+
+        $attempt = BillingPaymentAttempt::query()->firstOrFail();
+        $this->assertSame($staff->id, $attempt->user_id);
+        $this->assertSame($document->id, $attempt->billing_document_id);
+        $this->assertSame(75.0, (float) $attempt->amount);
+        $this->assertSame('pending', $attempt->status);
+    }
+
+    public function test_guest_invoice_link_can_checkout_without_an_account_and_confirm_payment(): void
+    {
+        $admin = $this->adminUser();
+        ChipSetting::setTestMode(true);
+        config([
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.test_brand_id' => 'test-brand',
+            'services.chip.enabled' => true,
+        ]);
+        Http::fake([
+            'gate.chip-in.asia/api/v1/purchases/' => Http::response([
+                'id' => 'chip-guest-purchase',
+                'checkout_url' => 'https://gate.chip-in.asia/checkout/guest',
+            ], 201),
+            'gate.chip-in.asia/api/v1/purchases/chip-guest-purchase/' => Http::response([
+                'id' => 'chip-guest-purchase',
+                'status' => 'paid',
+            ]),
+        ]);
+        $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Guest payment']), 85);
+
+        $linkResponse = $this->actingAs($admin)->post(route('billing.guest-payment-link', $document));
+        $linkResponse->assertRedirect(route('billing.documents.show', $document));
+        $paymentUrl = $linkResponse->getSession()->get('guest_payment_url');
+        $token = basename((string) parse_url($paymentUrl, PHP_URL_PATH));
+
+        $this->get($paymentUrl)
+            ->assertOk()
+            ->assertSee($document->number)
+            ->assertSee('Secure invoice payment')
+            ->assertDontSee($document->customer_email);
+        $this->post(route('billing.guest.chip.checkout', [$document, $token]))
+            ->assertRedirect('https://gate.chip-in.asia/checkout/guest');
+
+        $attempt = BillingPaymentAttempt::query()->firstOrFail();
+        $this->assertNull($attempt->user_id);
+        $this->assertSame('pending', $attempt->status);
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
+            && $request['success_redirect'] === route('billing.guest.chip.return', $attempt->uuid)
+            && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
+
+        $this->get(route('billing.guest.chip.return', $attempt->uuid))
+            ->assertOk()
+            ->assertSee('Payment confirmed');
+        $this->assertSame('paid', $attempt->fresh()->status);
+        $this->assertSame(85.0, (float) $document->fresh()->paid_amount);
+        $this->assertDatabaseCount('billing_payments', 1);
+    }
+
+    public function test_guest_invoice_links_expire_and_replacements_revoke_previous_links(): void
+    {
+        $admin = $this->adminUser();
+        ChipSetting::setTestMode(true);
+        config([
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.test_brand_id' => 'test-brand',
+        ]);
+        $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Expiring guest payment']), 30);
+
+        $firstLinkResponse = $this->actingAs($admin)->post(route('billing.guest-payment-link', $document));
+        $firstUrl = $firstLinkResponse->getSession()->get('guest_payment_url');
+        $firstToken = basename((string) parse_url($firstUrl, PHP_URL_PATH));
+        $document->refresh();
+        $this->assertSame(hash('sha256', $firstToken), $document->guest_payment_token_hash);
+        $this->assertTrue($document->guest_payment_link_expires_at->isFuture());
+        $this->get(route('billing.guest.invoice', [$document, str_repeat('x', 64)]))->assertNotFound();
+
+        $secondLinkResponse = $this->post(route('billing.guest-payment-link', $document));
+        $secondUrl = $secondLinkResponse->getSession()->get('guest_payment_url');
+        $secondToken = basename((string) parse_url($secondUrl, PHP_URL_PATH));
+        $this->assertNotSame($firstToken, $secondToken);
+        $this->get($firstUrl)->assertNotFound();
+        $this->get($secondUrl)->assertOk();
+
+        $document->update(['guest_payment_link_expires_at' => now()->subMinute()]);
+        $this->get($secondUrl)->assertNotFound();
+    }
+
     public function test_customer_account_can_view_billing_documents_for_a_directly_linked_project(): void
     {
         $this->seed(PlannerRoleSeeder::class);

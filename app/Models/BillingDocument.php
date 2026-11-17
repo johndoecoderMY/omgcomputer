@@ -14,6 +14,7 @@ class BillingDocument extends Model
         'repair_ticket_id', 'project_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal',
         'tax_rate', 'tax_amount', 'total', 'paid_amount', 'notes', 'project_scope',
         'included_revision_rounds', 'project_due_date', 'payment_terms',
+        'guest_payment_token_hash', 'guest_payment_link_expires_at',
     ];
 
     protected static function booted(): void
@@ -42,6 +43,7 @@ class BillingDocument extends Model
             'issue_date' => 'date',
             'due_date' => 'date',
             'project_due_date' => 'date',
+            'guest_payment_link_expires_at' => 'datetime',
             'included_revision_rounds' => 'integer',
             'subtotal' => 'decimal:2',
             'tax_rate' => 'decimal:2',

@@ -17,71 +17,58 @@ class ChipPaymentController extends Controller
     public function checkout(BillingDocument $document, Request $request, ChipCollect $chip): RedirectResponse
     {
         $this->authorizeCustomerDocument($request, $document);
-        abort_unless(
-            $chip->isConfigured()
-            && $document->type === 'invoice'
-            && in_array($document->status, ['issued', 'partial', 'part_paid'], true)
-            && $document->balance > 0,
-            422,
-            'This invoice is not eligible for CHIP checkout.',
-        );
         $clientEmail = filter_var($document->customer_email, FILTER_VALIDATE_EMAIL)
             ? $document->customer_email
             : $request->user()->email;
 
-        $testMode = $chip->isTestMode();
-        $attempt = BillingPaymentAttempt::query()->create([
-            'uuid' => (string) Str::uuid(),
-            'billing_document_id' => $document->id,
-            'user_id' => $request->user()->id,
-            'amount' => $document->balance,
-            'chip_test_mode' => $testMode,
-            'status' => 'pending',
-        ]);
+        return $this->startCheckout($document, $chip, $request->user()->id, $clientEmail);
+    }
 
-        try {
-            $response = $chip->createPurchase([
-                'client' => ['email' => $clientEmail],
-                'purchase' => [
-                    'currency' => config('services.chip.currency', 'MYR'),
-                    'products' => [[
-                        'name' => 'Invoice '.$document->number,
-                        'price' => (int) round((float) $attempt->amount * 100),
-                        'quantity' => 1,
-                    ]],
-                ],
-                'brand_id' => $chip->brandId($testMode),
-                'reference' => $document->number.'-'.$attempt->uuid,
-                'success_redirect' => route('billing.chip.return', $attempt->uuid),
-                'failure_redirect' => route('billing.chip.return', $attempt->uuid),
-                'success_callback' => route('webhooks.chip.collect', $attempt->uuid),
-            ], $testMode);
-        } catch (Throwable $exception) {
-            $attempt->update(['status' => 'failed']);
-            throw $exception;
-        }
+    public function counterCheckout(BillingDocument $document, Request $request, ChipCollect $chip): RedirectResponse
+    {
+        abort_unless($request->user() && ! $request->user()->hasRole('customer'), 403);
 
-        $purchaseId = $response['id'] ?? null;
-        $checkoutUrl = $response['checkout_url'] ?? null;
-        $checkoutHost = is_string($checkoutUrl) ? parse_url($checkoutUrl, PHP_URL_HOST) : null;
-        if (! (
-            is_string($purchaseId)
-            && $purchaseId !== ''
-            && is_string($checkoutUrl)
-            && parse_url($checkoutUrl, PHP_URL_SCHEME) === 'https'
-            && is_string($checkoutHost)
-            && $checkoutHost === 'gate.chip-in.asia'
-        )) {
-            $attempt->update(['status' => 'failed']);
-            abort(502, 'CHIP returned an invalid purchase response.');
-        }
+        $clientEmail = filter_var($document->customer_email, FILTER_VALIDATE_EMAIL);
+        abort_unless($clientEmail, 422, 'A valid customer email is required for CHIP checkout.');
 
-        $attempt->update([
-            'provider_purchase_id' => $purchaseId,
-            'checkout_url' => $checkoutUrl,
-        ]);
+        return $this->startCheckout($document, $chip, $request->user()->id, $clientEmail);
+    }
 
-        return redirect()->away($checkoutUrl);
+    public function createGuestPaymentLink(BillingDocument $document, Request $request, ChipCollect $chip): RedirectResponse
+    {
+        abort_unless($request->user()?->hasRole('admin'), 403);
+        abort_unless($this->isPayableInvoice($document) && $chip->isConfigured(), 422, 'This invoice is not eligible for an online payment link.');
+        abort_unless(filter_var($document->customer_email, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required before creating a payment link.');
+
+        $token = Str::random(64);
+        $document->forceFill([
+            'guest_payment_token_hash' => hash('sha256', $token),
+            'guest_payment_link_expires_at' => now()->addDays(7),
+        ])->save();
+
+        return redirect()
+            ->route('billing.documents.show', $document)
+            ->with('guest_payment_url', route('billing.guest.invoice', [$document, $token]));
+    }
+
+    public function guestInvoice(BillingDocument $document, string $token, ChipCollect $chip): Response
+    {
+        $this->authorizeGuestInvoiceLink($document, $token);
+
+        return response()->view('billing.guest-invoice', [
+            'document' => $document->load('items'),
+            'chipEnabled' => $chip->isConfigured(),
+            'hasValidCustomerEmail' => (bool) filter_var($document->customer_email, FILTER_VALIDATE_EMAIL),
+        ])->header('Referrer-Policy', 'no-referrer')
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    public function guestCheckout(BillingDocument $document, string $token, ChipCollect $chip): RedirectResponse
+    {
+        $this->authorizeGuestInvoiceLink($document, $token);
+        abort_unless(filter_var($document->customer_email, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required for CHIP checkout.');
+
+        return $this->startCheckout($document, $chip, null, $document->customer_email, true);
     }
 
     public function callback(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): Response
@@ -112,7 +99,7 @@ class ChipPaymentController extends Controller
     public function return(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): RedirectResponse
     {
         $attempt->load('document');
-        $this->authorizeCustomerDocument($request, $attempt->document);
+        $this->authorizeAttemptReturn($request, $attempt);
 
         if ($attempt->status === 'paid') {
             return redirect()->route('billing.documents.show', $attempt->document)
@@ -132,6 +119,131 @@ class ChipPaymentController extends Controller
 
         return redirect()->route('billing.documents.show', $attempt->document)
             ->with('info', 'CHIP has not confirmed this payment yet. The invoice will update when payment is confirmed.');
+    }
+
+    public function guestReturn(BillingPaymentAttempt $attempt, ChipCollect $chip): Response
+    {
+        abort_unless($attempt->user_id === null, 404);
+        $attempt->load('document');
+
+        if ($attempt->status !== 'paid' && $attempt->provider_purchase_id) {
+            $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
+            abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
+            if (($purchase['status'] ?? null) === 'paid') {
+                $this->recordVerifiedPayment($attempt);
+                $attempt->refresh();
+            }
+        }
+
+        return response()->view('billing.guest-payment-result', [
+            'attempt' => $attempt,
+        ])->header('Referrer-Policy', 'no-referrer')
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    private function startCheckout(
+        BillingDocument $document,
+        ChipCollect $chip,
+        ?int $userId,
+        string $clientEmail,
+        bool $guest = false,
+    ): RedirectResponse {
+        abort_unless($chip->isConfigured() && $this->isPayableInvoice($document), 422, 'This invoice is not eligible for CHIP checkout.');
+        abort_unless(filter_var($clientEmail, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required for CHIP checkout.');
+
+        $testMode = $chip->isTestMode();
+        $attempt = BillingPaymentAttempt::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'billing_document_id' => $document->id,
+            'user_id' => $userId,
+            'amount' => $document->balance,
+            'chip_test_mode' => $testMode,
+            'status' => 'pending',
+        ]);
+
+        try {
+            $response = $chip->createPurchase([
+                'client' => ['email' => $clientEmail],
+                'purchase' => [
+                    'currency' => config('services.chip.currency', 'MYR'),
+                    'products' => [[
+                        'name' => 'Invoice '.$document->number,
+                        'price' => (int) round((float) $attempt->amount * 100),
+                        'quantity' => 1,
+                    ]],
+                ],
+                'brand_id' => $chip->brandId($testMode),
+                'reference' => $document->number.'-'.$attempt->uuid,
+                'success_redirect' => $guest
+                    ? route('billing.guest.chip.return', $attempt->uuid)
+                    : route('billing.chip.return', $attempt->uuid),
+                'failure_redirect' => $guest
+                    ? route('billing.guest.chip.return', $attempt->uuid)
+                    : route('billing.chip.return', $attempt->uuid),
+                'success_callback' => route('webhooks.chip.collect', $attempt->uuid),
+            ], $testMode);
+        } catch (Throwable $exception) {
+            $attempt->update(['status' => 'failed']);
+            throw $exception;
+        }
+
+        $purchaseId = $response['id'] ?? null;
+        $checkoutUrl = $response['checkout_url'] ?? null;
+        $checkoutHost = is_string($checkoutUrl) ? parse_url($checkoutUrl, PHP_URL_HOST) : null;
+        if (! (
+            is_string($purchaseId)
+            && $purchaseId !== ''
+            && is_string($checkoutUrl)
+            && parse_url($checkoutUrl, PHP_URL_SCHEME) === 'https'
+            && is_string($checkoutHost)
+            && $checkoutHost === 'gate.chip-in.asia'
+        )) {
+            $attempt->update(['status' => 'failed']);
+            abort(502, 'CHIP returned an invalid purchase response.');
+        }
+
+        $attempt->update([
+            'provider_purchase_id' => $purchaseId,
+            'checkout_url' => $checkoutUrl,
+        ]);
+
+        return redirect()->away($checkoutUrl);
+    }
+
+    private function isPayableInvoice(BillingDocument $document): bool
+    {
+        return $document->type === 'invoice'
+            && in_array($document->status, ['issued', 'partial', 'part_paid'], true)
+            && $document->balance > 0;
+    }
+
+    private function authorizeGuestInvoiceLink(BillingDocument $document, string $token): void
+    {
+        abort_unless(
+            $this->isPayableInvoice($document)
+            && $document->guest_payment_link_expires_at?->isFuture()
+            && is_string($document->guest_payment_token_hash)
+            && hash_equals($document->guest_payment_token_hash, hash('sha256', $token)),
+            404,
+        );
+    }
+
+    private function authorizeAttemptReturn(Request $request, BillingPaymentAttempt $attempt): void
+    {
+        $user = $request->user();
+        abort_unless($user, 401);
+
+        if ($user->hasRole('admin')) {
+            return;
+        }
+
+        if ($user->hasRole('customer')) {
+            $this->authorizeCustomerDocument($request, $attempt->document);
+
+            return;
+        }
+
+        abort_unless((int) $attempt->user_id === (int) $user->id, 404);
     }
 
     private function recordVerifiedPayment(BillingPaymentAttempt $attempt): void

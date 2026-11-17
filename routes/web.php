@@ -5,12 +5,11 @@ use App\Http\Controllers\AdminBackupController;
 use App\Http\Controllers\AdminMaintenanceController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\BeamsAuthController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTimeSlotController;
-use App\Http\Controllers\BeamsAuthController;
 use App\Http\Controllers\BusinessExpenseController;
-use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\ChipPaymentController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\CustomerController;
@@ -21,6 +20,7 @@ use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\DramaScriptController;
 use App\Http\Controllers\EmailMailboxController;
 use App\Http\Controllers\EmailServerSettingsController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FlowChartController;
 use App\Http\Controllers\IntegrationTestController;
 use App\Http\Controllers\InventoryController;
@@ -171,6 +171,19 @@ Route::post('/webhooks/meta/whatsapp', [WhatsAppWebhookController::class, 'recei
     ->name('webhooks.whatsapp.receive');
 Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::class, 'callback'])
     ->name('webhooks.chip.collect');
+Route::get('/pay/invoice/{document}/{token}', [ChipPaymentController::class, 'guestInvoice'])
+    ->whereNumber('document')
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:30,1')
+    ->name('billing.guest.invoice');
+Route::post('/pay/invoice/{document}/{token}/chip', [ChipPaymentController::class, 'guestCheckout'])
+    ->whereNumber('document')
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware('throttle:8,1')
+    ->name('billing.guest.chip.checkout');
+Route::get('/pay/invoice/payment/{attempt:uuid}', [ChipPaymentController::class, 'guestReturn'])
+    ->middleware('throttle:30,1')
+    ->name('billing.guest.chip.return');
 Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'])
     ->name('webhooks.chip.shop');
 
@@ -405,6 +418,12 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/inventory-parts/search', 'searchInventoryParts')->middleware('not-customer')->name('parts.search');
         Route::post('/', 'store')->name('store');
         Route::post('/{document}/chip-checkout', [ChipPaymentController::class, 'checkout'])->name('chip.checkout');
+        Route::post('/{document}/counter-chip-checkout', [ChipPaymentController::class, 'counterCheckout'])
+            ->middleware('not-customer')
+            ->name('chip.counter');
+        Route::post('/{document}/guest-payment-link', [ChipPaymentController::class, 'createGuestPaymentLink'])
+            ->middleware('role:admin')
+            ->name('guest-payment-link');
         Route::get('/chip-return/{attempt:uuid}', [ChipPaymentController::class, 'return'])->name('chip.return');
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
         Route::put('/{document}', 'update')->name('documents.update');
