@@ -239,6 +239,7 @@ class BillingController extends Controller
 
         $services = ProductService::query()
             ->select(['id', 'name', 'billing_price'])
+            ->where('is_active', true)
             ->where('name', 'like', $likeTerm)
             ->orderBy('name')
             ->limit(20)
@@ -262,9 +263,20 @@ class BillingController extends Controller
             ]])
             : collect();
 
-        return response()->json([
-            'results' => $parts->concat($services)->concat($customLine)->sortBy('text')->take(20)->values(),
-        ]);
+        $results = $parts->concat($services)->concat($customLine)
+            ->sortBy(function (array $result) use ($data): array {
+                $name = strtolower(trim((string) ($result['name'] ?? '')));
+                $term = strtolower(trim($data['q']));
+
+                return [
+                    $name === $term ? 0 : ($name !== '' && str_starts_with($name, $term) ? 1 : 2),
+                    strtolower((string) $result['text']),
+                ];
+            })
+            ->take(20)
+            ->values();
+
+        return response()->json(['results' => $results]);
     }
 
     private function selectedInventoryParts(Collection $partIds): Collection

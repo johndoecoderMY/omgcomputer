@@ -187,6 +187,21 @@ class BillingInventoryReportsTest extends TestCase
             ->assertJsonStructure(['results' => [['id', 'text', 'name', 'price']]]);
     }
 
+    public function test_billing_create_lists_laptop_services_separately(): void
+    {
+        $admin = $this->adminUser();
+
+        $this->actingAs($admin)
+            ->get(route('billing.create'))
+            ->assertOk()
+            ->assertSee('Laptop repair')
+            ->assertSee('Laptop diagnosis')
+            ->assertSee('Laptop screen replacement')
+            ->assertSee('Laptop format')
+            ->assertSee('Upgrade RAM')
+            ->assertSee('Laptop cleaning');
+    }
+
     public function test_billing_search_includes_catalog_services_and_manual_line_option(): void
     {
         $admin = $this->adminUser();

@@ -118,6 +118,11 @@
                                         {{ $selectedPart->name }} ({{ $selectedPart->stock_quantity }} available)
                                     </option>
                                 @endif
+                                <optgroup label="Laptop repair & upgrades">
+                                    @foreach ($products->where('category', 'laptop') as $product)
+                                        <option value="service:{{ $product['id'] }}" data-name="{{ $product['name'] }}" data-price="{{ $product['billing_price'] }}" @selected($selectedCatalogValue === 'service:'.$product['id'])>{{ $product['name'] }} · from RM{{ number_format($product['billing_price'], 2) }}</option>
+                                    @endforeach
+                                </optgroup>
                                 <optgroup label="Website services">
                                     @foreach ($products->where('category', 'website') as $product)
                                         <option value="service:{{ $product['id'] }}" data-name="{{ $product['name'] }}" data-price="{{ $product['billing_price'] }}" @selected($selectedCatalogValue === 'service:'.$product['id'])>{{ $product['name'] }} · RM{{ number_format($product['billing_price'], 2) }}</option>
