@@ -29,6 +29,10 @@
                                 <p class="text-700 mb-0">Online shop checkout is handled through CHiP. We receive transaction and payment-status information needed to manage an order; payment processing is also subject to the provider’s terms and privacy practices. We may share relevant information with hosting, email, payment, courier, or other service providers only as needed to operate the website or fulfil a request. Social platforms you choose to connect with are governed by their own privacy policies.</p>
                             </div>
                             <div class="mb-3">
+                                <h2 class="h4 fw-bold text-1000">Devices and customer data</h2>
+                                <p class="text-700 mb-0">Please back up important files before handing over a device for service. We access files only when needed for the requested work and with your permission. Repair work can involve risks to stored data, so we cannot guarantee against data loss.</p>
+                            </div>
+                            <div class="mb-3">
                                 <h2 class="h4 fw-bold text-1000">Website operation and retention</h2>
                                 <p class="text-700 mb-0">The website uses session and account data to provide features such as sign-in, bookings, and shopping carts. We keep information for as long as needed for the service, support, security, and applicable legal or accounting requirements, then delete or de-identify it where appropriate.</p>
                             </div>

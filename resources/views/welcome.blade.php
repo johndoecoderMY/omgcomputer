@@ -195,7 +195,7 @@
                 <div class="col-lg-5">
                     <span class="text-primary fw-bold text-uppercase fs-10">Straightforward support</span>
                     <h2 class="fw-bold text-1000 mt-2">A clearer path to a working computer</h2>
-                    <p class="text-700">Tell us what’s happening, get a diagnosis, and understand your options before moving ahead with a repair.</p>
+                    <p class="text-700">Book or contact us to arrange drop-off. We’ll diagnose the issue, share a written quote, and wait for your approval before carrying out the repair.</p>
                     <div class="d-flex flex-wrap gap-2">
                         <a class="btn btn-primary rounded-pill px-4" href="{{ route('bookings.create') }}">
                             <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
@@ -210,22 +210,22 @@
                     <div class="d-flex mb-4">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">1</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Tell us what’s going on</h5>
-                            <p class="text-700 mb-0">Describe the issue and the device that needs attention.</p>
+                            <h5 class="text-1000 mb-1">Book and drop off</h5>
+                            <p class="text-700 mb-0">Book an appointment or contact us to arrange a drop-off. Tell us the device model and what is happening.</p>
                         </div>
                     </div>
                     <div class="d-flex mb-4">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">2</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Get a diagnosis and options</h5>
-                            <p class="text-700 mb-0">We’ll explain what we find and discuss the next steps with you.</p>
+                            <h5 class="text-1000 mb-1">Review the diagnosis and quote</h5>
+                            <p class="text-700 mb-0">We’ll confirm the diagnostic fee before assessment, explain the findings and price, and get your approval before repairs or extra work.</p>
                         </div>
                     </div>
                     <div class="d-flex">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">3</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Get back to work</h5>
-                            <p class="text-700 mb-0">Follow the repair progress with the service number provided for your device.</p>
+                            <h5 class="text-1000 mb-1">Collect your device</h5>
+                            <p class="text-700 mb-0">We’ll update you when the agreed work is complete and your device is ready for collection. Use your service number to check progress.</p>
                         </div>
                     </div>
                 </div>
@@ -365,7 +365,7 @@
                                 <div class="accordion-body text-700">Yes. We can check for software, storage, or hardware causes and recommend practical ways to improve performance.</div>
                             </div>
                         </div>
-                        <div class="accordion-item border-0 shadow-sm rounded">
+                        <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                             <h3 class="accordion-header" id="landingFaqFourHeading">
                                 <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqFour" aria-expanded="false" aria-controls="landingFaqFour">
                                     Do you support business devices?
@@ -375,6 +375,36 @@
                                 <div class="accordion-body text-700">Yes. We help home and business users with troubleshooting, setup, and recommendations for device reliability and performance.</div>
                             </div>
                         </div>
+                    <div class="accordion-item border-0 shadow-sm mb-3 rounded">
+                        <h3 class="accordion-header" id="landingFaqFiveHeading">
+                            <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqFive" aria-expanded="false" aria-controls="landingFaqFive">
+                                How much will diagnosis and repair cost?
+                            </button>
+                        </h3>
+                        <div id="landingFaqFive" class="accordion-collapse collapse" aria-labelledby="landingFaqFiveHeading" data-bs-parent="#landingFaqAccordion">
+                            <div class="accordion-body text-700">We’ll confirm the diagnostic fee with you before booking or assessment. Any “from” price is a starting estimate; the final written quote depends on the diagnosis. Parts and software are quoted separately where applicable, and we’ll get your approval before proceeding.</div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 shadow-sm mb-3 rounded">
+                        <h3 class="accordion-header" id="landingFaqSixHeading">
+                            <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqSix" aria-expanded="false" aria-controls="landingFaqSix">
+                                Is my repair covered by a warranty?
+                            </button>
+                        </h3>
+                        <div id="landingFaqSix" class="accordion-collapse collapse" aria-labelledby="landingFaqSixHeading" data-bs-parent="#landingFaqAccordion">
+                            <div class="accordion-body text-700">Warranty coverage and duration vary by repair and parts. We’ll state the applicable coverage and period in your written quotation.</div>
+                        </div>
+                    </div>
+                    <div class="accordion-item border-0 shadow-sm rounded">
+                        <h3 class="accordion-header" id="landingFaqSevenHeading">
+                            <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqSeven" aria-expanded="false" aria-controls="landingFaqSeven">
+                                How should I prepare my data before a repair?
+                            </button>
+                        </h3>
+                        <div id="landingFaqSeven" class="accordion-collapse collapse" aria-labelledby="landingFaqSevenHeading" data-bs-parent="#landingFaqAccordion">
+                            <div class="accordion-body text-700">Please back up important data before handing over your device. We access files only when needed and with your permission, but we cannot guarantee against data loss. Read our <a href="{{ route('privacy') }}">Privacy Policy</a> for more information.</div>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
