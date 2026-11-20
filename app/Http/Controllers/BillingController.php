@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BillingReceiptMail;
+use App\Mail\InvoiceMail;
+use App\Mail\QuotationAcceptanceMail;
 use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPayment;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
+use App\Models\CustomerMessageTemplate;
 use App\Models\CustomPcComponent;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
@@ -25,11 +29,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -58,8 +64,16 @@ class BillingController extends Controller
             })
             ->latest('paid_at')
             ->paginate(25);
+        $guestReceiptUrls = [];
+        if (! $request->user()->hasRole('customer')) {
+            $guestReceiptUrls = $payments->getCollection()
+                ->mapWithKeys(fn (BillingPayment $payment): array => [
+                    $payment->id => $this->guestPdfUrls('billing.guest.receipts.pdf', ['payment' => $payment]),
+                ])
+                ->all();
+        }
 
-        return view('billing.receipts', compact('payments'));
+        return view('billing.receipts', compact('payments', 'guestReceiptUrls'));
     }
 
     public function datatable(Request $request)
@@ -733,9 +747,9 @@ class BillingController extends Controller
         );
     }
 
-    public function show(BillingDocument $document, ChipCollect $chip): View
+    public function show(BillingDocument $document, ChipCollect $chip, Request $request): View
     {
-        $this->authorizeCustomerDocument(request(), $document);
+        $this->authorizeCustomerDocument($request, $document);
         $document->load([
             'items.part',
             'payments' => fn ($query) => $query->latest('paid_at'),
@@ -743,6 +757,21 @@ class BillingController extends Controller
             'repairTicket.customer',
             'repairTicket.project.customers',
         ]);
+        $guestDocumentUrls = [];
+        $guestReceiptUrls = [];
+        if (! $request->user()->hasRole('customer')) {
+            if (in_array($document->type, ['quotation', 'invoice'], true)) {
+                $guestDocumentUrls = $this->guestPdfUrls(
+                    'billing.guest.documents.pdf',
+                    ['document' => $document],
+                );
+            }
+            $guestReceiptUrls = $document->payments
+                ->mapWithKeys(fn (BillingPayment $payment): array => [
+                    $payment->id => $this->guestPdfUrls('billing.guest.receipts.pdf', ['payment' => $payment]),
+                ])
+                ->all();
+        }
         $customerRecord = $document->repairTicket?->customer;
         $project = $document->project ?? $document->repairTicket?->project;
         $projectCustomers = $project?->customers ?? collect();
@@ -758,7 +787,40 @@ class BillingController extends Controller
             'document' => $document,
             'customerRecord' => $customerRecord,
             'chipEnabled' => $chip->isConfigured(),
+            'guestDocumentUrls' => $guestDocumentUrls,
+            'guestReceiptUrls' => $guestReceiptUrls,
         ]);
+    }
+
+    public function guestDocumentPdf(Request $request, BillingDocument $document): Response
+    {
+        abort_unless(
+            ($document->type === 'quotation' && in_array($document->status, ['sent', 'accepted', 'rejected'], true))
+                || ($document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid', 'paid'], true)),
+            404,
+        );
+        $document->load(['items', 'payments']);
+
+        return response($this->renderPdf($document, $this->billingLocale($request)))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="'.strtolower($document->number).'.pdf"')
+            ->header('Referrer-Policy', 'no-referrer')
+            ->header('Cache-Control', 'no-store, private');
+    }
+
+    public function guestReceiptPdf(
+        Request $request,
+        BillingPayment $payment,
+        BillingReceiptService $receipts,
+    ): Response {
+        $payment->load('document');
+        abort_unless($payment->document->type === 'invoice', 404);
+
+        return response($receipts->renderPdf($payment, $this->billingLocale($request)))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="'.strtolower($payment->receipt_number).'.pdf"')
+            ->header('Referrer-Policy', 'no-referrer')
+            ->header('Cache-Control', 'no-store, private');
     }
 
     private function authorizeCustomerDocument(Request $request, BillingDocument $document): void
@@ -841,7 +903,7 @@ class BillingController extends Controller
             'delivery' => ['nullable', Rule::in(['in_app', 'whatsapp'])],
         ]);
 
-        DB::transaction(function () use ($document, $data, $user): void {
+        $newlyAccepted = DB::transaction(function () use ($document, $data, $user): bool {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
             abort_unless($locked->type === 'quotation', 404);
             abort_if($locked->status === 'void', 422, 'Voided quotations cannot be changed.');
@@ -857,8 +919,20 @@ class BillingController extends Controller
                 422,
                 'Accepted quotations can only be converted into invoices.',
             );
+            $newlyAccepted = $locked->status !== 'accepted' && $data['status'] === 'accepted';
             $locked->update(['status' => $data['status']]);
+
+            return $newlyAccepted;
         });
+
+        if ($newlyAccepted) {
+            $document->refresh();
+            if (! $this->sendQuotationAcceptanceEmail($document, $document->customer_email)) {
+                return redirect()
+                    ->route('billing.documents.show', $document)
+                    ->with('error', 'Quotation acceptance was recorded, but the confirmation email could not be sent. Check the email server settings or send it manually.');
+            }
+        }
 
         if ($data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app') {
             $email = strtolower(trim((string) $document->customer_email));
@@ -875,7 +949,7 @@ class BillingController extends Controller
             ->with('success', $data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app'
                 ? 'Quotation marked as sent and added to the customer panel.'
                 : ($data['status'] === 'accepted' && ! $user->hasRole('customer')
-                    ? 'Customer acceptance recorded. You can now convert this quotation to an invoice.'
+                    ? 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.'
                     : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.')));
     }
 
@@ -885,33 +959,61 @@ class BillingController extends Controller
         abort_unless(in_array($status, ['accepted', 'rejected'], true), 404);
         abort_unless($document->status === 'sent', 422, 'This quotation has not been sent or has already been responded to.');
         $document->update(['status' => $status]);
+        $acceptanceEmailSent = null;
+        if ($status === 'accepted') {
+            $acceptanceEmailSent = $this->sendQuotationAcceptanceEmail($document, $document->customer_email);
+        }
 
-        return view('billing.quotation-response', compact('document', 'status'));
+        return view('billing.quotation-response', compact('document', 'status', 'acceptanceEmailSent'));
     }
 
-    public function sendQuotation(BillingDocument $document, Request $request): RedirectResponse
+    public function sendQuotationAcceptance(BillingDocument $document, Request $request): RedirectResponse
     {
         abort_unless(! $request->user()->hasRole('customer'), 403);
-        abort_unless($document->type === 'quotation', 404);
-        abort_unless(in_array($document->status, ['draft', 'sent', 'rejected'], true), 422, 'This quotation cannot be sent in its current status.');
+        abort_unless($document->type === 'quotation' && $document->status === 'accepted', 422, 'Only accepted quotations can receive an acceptance confirmation.');
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
         ]);
 
+        if (! $this->sendQuotationAcceptanceEmail($document, $data['email'])) {
+            return back()->with('error', 'The acceptance confirmation email could not be sent. Check the email server settings and try again.');
+        }
+
+        if (strtolower(trim((string) $document->customer_email)) !== strtolower(trim($data['email']))) {
+            $document->update(['customer_email' => $data['email']]);
+        }
+
+        return back()->with('success', 'Quotation acceptance confirmation emailed to '.$data['email'].'.');
+    }
+
+    public function sendDocument(BillingDocument $document, Request $request): RedirectResponse
+    {
+        abort_unless(! $request->user()->hasRole('customer'), 403);
+        abort_unless(in_array($document->type, ['quotation', 'invoice'], true), 404);
+        $allowedStatuses = $document->type === 'quotation'
+            ? ['draft', 'sent', 'rejected']
+            : ['issued', 'partial', 'part_paid', 'paid'];
+        abort_unless(in_array($document->status, $allowedStatuses, true), 422, 'This billing document cannot be sent in its current status.');
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
+        ]);
+        $locale = $data['locale'] ?? 'en';
+
         $emailSent = false;
         try {
             app(MailSettingsService::class)->apply();
             $document->load(['items', 'payments']);
-            $pdf = $this->renderPdf($document);
-            Mail::to($data['email'])->send(new QuotationMail(
-                $document,
-                $pdf,
-                strtolower($document->number).'.pdf',
-            ));
+            $pdf = $this->renderPdf($document, $locale);
+            $mail = $document->type === 'quotation'
+                ? new QuotationMail($document, $pdf, strtolower($document->number).'.pdf', false, $locale)
+                : new InvoiceMail($document, $pdf, strtolower($document->number).'.pdf', false, $locale);
+            Mail::to($data['email'])->send($mail);
             $emailSent = true;
         } catch (Throwable $exception) {
-            Log::warning('Quotation email could not be sent.', [
+            Log::warning('Billing document email could not be sent.', [
                 'document_id' => $document->id,
                 'email' => $data['email'],
                 'exception' => $exception::class,
@@ -919,25 +1021,89 @@ class BillingController extends Controller
             ]);
         }
 
-        $document->update([
-            'customer_email' => $data['email'],
-            'status' => 'sent',
-        ]);
+        if ($document->type === 'quotation') {
+            $document->update([
+                'customer_email' => $data['email'],
+                'status' => 'sent',
+            ]);
 
-        $matchingAccounts = User::role('customer')
-            ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($data['email']))])
-            ->get();
-        $matchingAccounts->each(fn (User $customer) => $customer->notify(new QuotationInAppNotification($document)));
-
-        if (! $emailSent) {
-            return back()->with('error', 'Quotation was added to the customer panel, but the email could not be sent. Check the email server settings and try again.');
+            $matchingAccounts = User::role('customer')
+                ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($data['email']))])
+                ->get();
+            $matchingAccounts->each(fn (User $customer) => $customer->notify(new QuotationInAppNotification($document)));
         }
 
-        $delivery = $matchingAccounts->isEmpty()
-            ? 'Quotation '.$document->number.' was emailed to '.$data['email'].'.'
-            : 'Quotation '.$document->number.' was sent to the customer panel and emailed to '.$data['email'].'.';
+        if (! $emailSent) {
+            return back()->with('error', $document->type === 'quotation'
+                ? 'Quotation was added to the customer panel, but the email could not be sent. Check the email server settings and try again.'
+                : 'Invoice email could not be sent. Check the email server settings and try again.');
+        }
+
+        $delivery = ucfirst($document->type).' '.$document->number.' was emailed to '.$data['email'].'.';
+        if ($document->type === 'quotation' && $matchingAccounts->isNotEmpty()) {
+            $delivery = 'Quotation '.$document->number.' was sent to the customer panel and emailed to '.$data['email'].'.';
+        }
 
         return back()->with('success', $delivery);
+    }
+
+    public function previewDocumentEmail(BillingDocument $document, Request $request): Response
+    {
+        abort_unless(! $request->user()->hasRole('customer'), 403);
+        abort_unless(in_array($document->type, ['quotation', 'invoice'], true), 404);
+
+        $locale = $this->billingLocale($request);
+        $document->load(['items', 'payments']);
+        $mail = $document->type === 'quotation'
+            ? new QuotationMail($document, '', strtolower($document->number).'.pdf', true, $locale)
+            : new InvoiceMail($document, '', strtolower($document->number).'.pdf', true, $locale);
+
+        return response($mail->render(), 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ]);
+    }
+
+    public function previewReceiptEmail(BillingPayment $payment, Request $request): Response
+    {
+        abort_unless(! $request->user()->hasRole('customer'), 403);
+        $payment->load('document');
+        abort_unless($payment->document->type === 'invoice', 404);
+
+        $mail = new BillingReceiptMail(
+            $payment,
+            '',
+            true,
+            $this->billingLocale($request),
+        );
+
+        return response($mail->render(), 200, [
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ]);
+    }
+
+    public function sendReceiptEmail(BillingPayment $payment, Request $request, BillingReceiptService $receipts): RedirectResponse
+    {
+        abort_unless(! $request->user()->hasRole('customer'), 403);
+        $payment->load('document');
+        abort_unless($payment->document->type === 'invoice', 404);
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
+        ]);
+
+        $sent = $receipts->emailReceipt(
+            $payment,
+            locale: $data['locale'] ?? 'en',
+            recipientEmail: $data['email'],
+            resend: true,
+        );
+        if (! $sent) {
+            return back()->with('error', 'The receipt could not be emailed. Check the email server settings and try again.');
+        }
+
+        return back()->with('success', 'Receipt '.$payment->receipt_number.' was emailed to '.$data['email'].'.');
     }
 
     public function storePayment(BillingDocument $document, Request $request): RedirectResponse
@@ -951,6 +1117,8 @@ class BillingController extends Controller
             'paid_at' => ['nullable', 'date', 'required_without:received_at'],
             'received_at' => ['nullable', 'date', 'required_without:paid_at'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'receipt_locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
+            'receipt_delivery' => ['nullable', Rule::in(['send', 'preview'])],
         ]);
 
         $payment = DB::transaction(function () use ($document, $request, $data): BillingPayment {
@@ -977,7 +1145,16 @@ class BillingController extends Controller
             return $payment;
         });
 
-        $emailSent = app(BillingReceiptService::class)->emailReceipt($payment);
+        if (($data['receipt_delivery'] ?? 'send') === 'preview') {
+            return redirect()
+                ->route('billing.documents.show', $document)
+                ->with('success', 'Payment recorded. Preview and send the receipt from payment history.');
+        }
+
+        $emailSent = app(BillingReceiptService::class)->emailReceipt(
+            $payment,
+            locale: $data['receipt_locale'] ?? app()->getLocale(),
+        );
 
         return redirect()
             ->route('billing.documents.show', $document)
@@ -1011,10 +1188,11 @@ class BillingController extends Controller
         $this->authorizeCustomerDocument($request, $document);
         $document->load(['items', 'payments']);
         $filename = strtolower($document->number).'.pdf';
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
-        return response($this->renderPdf($document))
+        return response($this->renderPdf($document, $this->billingLocale($request)))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="'.$filename.'"');
+            ->header('Content-Disposition', $disposition.'; filename="'.$filename.'"');
     }
 
     public function receiptPdf(Request $request, BillingPayment $payment, BillingReceiptService $receipts)
@@ -1025,23 +1203,89 @@ class BillingController extends Controller
         $this->authorizeCustomerDocument($request, $document);
         $payment->setRelation('document', $document);
         $payment->load('user');
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
 
-        return response($receipts->renderPdf($payment))
+        return response($receipts->renderPdf($payment, $this->billingLocale($request)))
             ->header('Content-Type', 'application/pdf')
-            ->header('Content-Disposition', 'inline; filename="'.strtolower($payment->receipt_number).'.pdf"');
+            ->header('Content-Disposition', $disposition.'; filename="'.strtolower($payment->receipt_number).'.pdf"');
     }
 
-    private function renderPdf(BillingDocument $document): string
+    private function renderPdf(BillingDocument $document, ?string $locale = null): string
     {
+        $locale = $locale && isset(CustomerMessageTemplate::LANGUAGES[$locale]) ? $locale : 'en';
         $tempDirectory = storage_path('app/mpdf-tmp');
         File::ensureDirectoryExists($tempDirectory);
         $logoPath = public_path('assets/img/omg/logoex2.png');
         $logoData = is_file($logoPath) ? base64_encode((string) file_get_contents($logoPath)) : null;
         $companyProfile = CompanyProfile::current();
-        $mpdf = new Mpdf(['tempDir' => $tempDirectory]);
-        $mpdf->WriteHTML(view('billing.pdf', compact('document', 'logoData', 'companyProfile'))->render());
+        $originalLocale = app()->getLocale();
+        app()->setLocale($locale);
+        try {
+            $html = view('billing.pdf', compact('document', 'logoData', 'companyProfile'))->render();
+        } finally {
+            app()->setLocale($originalLocale);
+        }
+        $mpdf = new Mpdf([
+            'tempDir' => $tempDirectory,
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+        ]);
+        $mpdf->WriteHTML($html);
 
         return $mpdf->Output(strtolower($document->number).'.pdf', 'S');
+    }
+
+    private function billingLocale(Request $request): string
+    {
+        $data = $request->validate([
+            'locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
+        ]);
+        $locale = $data['locale'] ?? app()->getLocale();
+
+        return isset(CustomerMessageTemplate::LANGUAGES[$locale]) ? $locale : 'en';
+    }
+
+    private function guestPdfUrls(string $routeName, array $routeParameters): array
+    {
+        $expiresAt = now()->addDays(7);
+        $urls = [];
+        foreach (CustomerMessageTemplate::LANGUAGES as $locale => $label) {
+            $urls[$locale] = URL::temporarySignedRoute(
+                $routeName,
+                $expiresAt,
+                array_merge($routeParameters, ['locale' => $locale]),
+            );
+        }
+
+        return $urls;
+    }
+
+    private function sendQuotationAcceptanceEmail(BillingDocument $document, ?string $email): bool
+    {
+        $recipient = filter_var(trim((string) $email), FILTER_VALIDATE_EMAIL);
+        if (! $recipient) {
+            Log::warning('Quotation acceptance email could not be sent because no valid customer email is available.', [
+                'document_id' => $document->id,
+            ]);
+
+            return false;
+        }
+
+        try {
+            app(MailSettingsService::class)->apply();
+            Mail::to($recipient)->send(new QuotationAcceptanceMail($document));
+
+            return true;
+        } catch (Throwable $exception) {
+            Log::warning('Quotation acceptance email could not be sent.', [
+                'document_id' => $document->id,
+                'email' => $recipient,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function validateLineItems(array $items): void

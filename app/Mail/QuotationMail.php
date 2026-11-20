@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Lang;
 
 class QuotationMail extends Mailable
 {
@@ -18,11 +19,19 @@ class QuotationMail extends Mailable
         public BillingDocument $document,
         public string $pdfContent,
         public string $pdfFilename,
-    ) {}
+        public bool $preview = false,
+        string $locale = 'en',
+    ) {
+        $this->locale($locale);
+    }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Quotation '.$this->document->number.' from OMG Computer');
+        return new Envelope(subject: Lang::get(
+            'billing.email.quotation_subject',
+            ['number' => $this->document->number],
+            $this->locale,
+        ));
     }
 
     public function content(): Content

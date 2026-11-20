@@ -164,11 +164,15 @@
                                                                 <button class="btn btn-outline-primary" type="button"
                                                                     data-booking-location-mode="dropoff" aria-pressed="false">{{ __('Set drop-off pin') }}</button>
                                                             </div>
-                                                            <div class="d-flex justify-content-end mb-2">
+                                                            <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
+                                                                <button class="btn btn-sm btn-outline-primary" id="booking-find-address" type="button" disabled>
+                                                                    <span class="bi bi-search me-1" aria-hidden="true"></span>{{ __('Fill address from pin') }}
+                                                                </button>
                                                                 <button class="btn btn-sm btn-outline-secondary" id="booking-use-location" type="button">
                                                                     <span class="bi bi-crosshair me-1" aria-hidden="true"></span>{{ __('Use my current location') }}
                                                                 </button>
                                                             </div>
+                                                            <p class="form-text">{{ __('Address lookup is optional. When you select it, the pin coordinates are sent to OpenStreetMap to find a nearby address.') }}</p>
                                                             <div id="booking-location-map" role="application"
                                                                 aria-label="{{ __('Map for selecting a pickup or drop-off location') }}"></div>
                                                             <p class="form-text mb-0 mt-2" id="booking-location-status" role="status" aria-live="polite">
@@ -283,6 +287,7 @@
                     const locationStatus = document.getElementById("booking-location-status");
                     const locationModeButtons = document.querySelectorAll("[data-booking-location-mode]");
                     const useLocationButton = document.getElementById("booking-use-location");
+                    const findAddressButton = document.getElementById("booking-find-address");
                     const requestNotes = document.getElementById("request-notes");
                     const availabilityMessage = document.getElementById("availability-message");
                     const availableTimes = document.getElementById("available-times");
@@ -298,6 +303,11 @@
                         locationDenied: @json(__('Your location could not be accessed. Allow location access or tap the map to set a pin.'), JSON_UNESCAPED_UNICODE),
                         locationUnsupported: @json(__('Your browser does not support location access.'), JSON_UNESCAPED_UNICODE),
                         mapUnavailable: @json(__('Map data could not be loaded. You can still type the address above.'), JSON_UNESCAPED_UNICODE),
+                        addressLookupPending: @json(__('Finding the address for this pin...'), JSON_UNESCAPED_UNICODE),
+                        addressLookupFailed: @json(__('Could not find an address for this pin. Please enter it manually.'), JSON_UNESCAPED_UNICODE),
+                        addressLookupUnavailable: @json(__('Address lookup is temporarily unavailable. Please enter the address manually.'), JSON_UNESCAPED_UNICODE),
+                        addressLookupRateLimited: @json(__('Please wait a moment before looking up another address.'), JSON_UNESCAPED_UNICODE),
+                        addressLookupSuccess: @json(__('Address filled from the selected pin.'), JSON_UNESCAPED_UNICODE),
                     };
                     let availabilityRequest = 0;
                     let selectedAppointmentDate = bookingDate.value || null;
@@ -334,6 +344,7 @@
 
                         locationInputs[locationMode].latitude.value = latitude.toFixed(7);
                         locationInputs[locationMode].longitude.value = longitude.toFixed(7);
+                        findAddressButton.disabled = false;
                         locationStatus.textContent = `${locationMode === "pickup" ? locationMessages.pickupSet : locationMessages.dropoffSet}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
                     }
 
@@ -349,6 +360,7 @@
                         }
 
                         const coordinates = getLocationCoordinates(locationMode);
+                        findAddressButton.disabled = !coordinates;
                         if (coordinates) {
                             if (!locationMarker) {
                                 locationMarker = window.L.marker(coordinates, { draggable: true, icon: locationPinIcon }).addTo(locationMap);
@@ -428,6 +440,46 @@
                         }, function () {
                             locationStatus.textContent = locationMessages.locationDenied;
                         }, { enableHighAccuracy: true, timeout: 10000 });
+                    });
+
+                    findAddressButton.addEventListener("click", async function () {
+                        const mode = locationMode;
+                        const coordinates = getLocationCoordinates(mode);
+                        if (!coordinates) {
+                            locationStatus.textContent = locationMessages.addressLookupFailed;
+                            return;
+                        }
+
+                        findAddressButton.disabled = true;
+                        locationStatus.textContent = locationMessages.addressLookupPending;
+                        try {
+                            const response = await fetch(@json(route('bookings.reverse-geocode')), {
+                                method: "POST",
+                                headers: {
+                                    "Accept": "application/json",
+                                    "Content-Type": "application/json",
+                                    "X-CSRF-TOKEN": bookingForm.querySelector('input[name="_token"]').value,
+                                },
+                                body: JSON.stringify({ latitude: coordinates[0], longitude: coordinates[1] }),
+                            });
+                            const result = await response.json();
+                            if (!response.ok) {
+                                locationStatus.textContent = response.status === 429
+                                    ? locationMessages.addressLookupRateLimited
+                                    : response.status === 503
+                                        ? locationMessages.addressLookupUnavailable
+                                        : locationMessages.addressLookupFailed;
+                                return;
+                            }
+
+                            (mode === "pickup" ? pickupAddress : dropoffAddress).value = result.address;
+                            locationStatus.textContent = locationMessages.addressLookupSuccess;
+                        } catch (error) {
+                            console.error("Could not look up the address for a booking pin.", error);
+                            locationStatus.textContent = locationMessages.addressLookupUnavailable;
+                        } finally {
+                            findAddressButton.disabled = !getLocationCoordinates(locationMode);
+                        }
                     });
 
                     function updateDeviceDetails() {

@@ -98,6 +98,8 @@ class AttachmentController extends Controller
 
     public function storeTicket(Request $request, RepairTicket $ticket, AttachmentStorage $storage): RedirectResponse
     {
+        abort_if($ticket->status === 'closed', 409, 'Closed repair tickets can only have their status changed.');
+
         $data = $request->validate(AttachmentStorage::validationRules());
         $storage->store($ticket->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
 
@@ -107,6 +109,8 @@ class AttachmentController extends Controller
     public function storeTicketUpdate(Request $request, RepairTicket $ticket, RepairTicketUpdate $update, AttachmentStorage $storage): RedirectResponse|JsonResponse
     {
         abort_unless($update->repair_ticket_id === $ticket->id, 404);
+        abort_if($ticket->status === 'closed', 409, 'Closed repair tickets can only have their status changed.');
+
         $photos = $request->file('photos', []);
         $photoCount = is_array($photos) ? count($photos) : 0;
         $data = $request->validate([

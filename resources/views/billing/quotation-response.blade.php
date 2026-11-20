@@ -12,6 +12,9 @@
                         <div class="display-5 text-success mb-3"><span class="bi bi-check-circle"></span></div>
                         <h1 class="h3">{{ __('Quotation accepted') }}</h1>
                         <p class="text-body-secondary">{{ __('Thank you. We have recorded your acceptance of quotation :number.', ['number' => $document->number]) }}</p>
+                        @if ($acceptanceEmailSent === false)
+                            <p class="alert alert-warning mb-0">{{ __('Your response was recorded, but we could not send the confirmation email. Please contact OMG Computer if you need a copy.') }}</p>
+                        @endif
                     @else
                         <div class="display-5 text-danger mb-3"><span class="bi bi-x-circle"></span></div>
                         <h1 class="h3">{{ __('Quotation rejected') }}</h1>

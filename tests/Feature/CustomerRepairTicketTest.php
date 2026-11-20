@@ -215,6 +215,64 @@ class CustomerRepairTicketTest extends TestCase
         $this->assertSame('waiting_parts', $ticket->fresh()->status);
     }
 
+    public function test_closed_ticket_only_allows_status_change_for_warranty_follow_up(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Warranty Customer',
+            'email' => 'warranty@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-WARRANTY-001',
+            'customer_id' => $customer->id,
+            'issue_description' => 'The laptop shuts down unexpectedly.',
+            'diagnosis' => 'Replaced the cooling fan.',
+            'status' => 'closed',
+            'priority' => 'normal',
+            'received_at' => now()->subWeeks(2),
+        ]);
+
+        $this->actingAs($staff)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Update closed ticket status')
+            ->assertSee('If the same issue returns under warranty')
+            ->assertDontSee('id="ticket-step-modal"', false)
+            ->assertDontSee('id="workflow-diagnosis"', false);
+
+        $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
+            'status' => 'diagnosing',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
+            'status' => 'in_repair',
+            'diagnosis' => 'Changed through a closed ticket request.',
+            'priority' => 'urgent',
+        ])->assertOk()
+            ->assertJsonPath('status', 'in_repair')
+            ->assertJsonPath('message', 'Ticket reopened for warranty follow-up.');
+
+        $this->assertSame('in_repair', $ticket->fresh()->status);
+        $this->assertSame('Replaced the cooling fan.', $ticket->fresh()->diagnosis);
+        $this->assertSame('normal', $ticket->fresh()->priority);
+        $this->assertSame(
+            'Warranty follow-up: status changed to In repair',
+            $ticket->updates()->latest('id')->firstOrFail()->title,
+        );
+
+        $ticket->fresh()->update(['status' => 'closed']);
+        $this->assertSame('closed', $ticket->fresh()->status);
+        $this->postJson(route('tickets.steps.store', $ticket), [
+            'title' => 'Attempted post-closure edit',
+            'status' => 'in_repair',
+        ])->assertStatus(409);
+        $this->postJson(route('tickets.attachments.store', $ticket), [
+            'photos' => [UploadedFile::fake()->image('after-close.png')],
+        ])->assertStatus(409);
+    }
+
     public function test_customer_ticket_page_keeps_the_app_footer_and_hides_staff_actions(): void
     {
         $this->seed(PlannerRoleSeeder::class);

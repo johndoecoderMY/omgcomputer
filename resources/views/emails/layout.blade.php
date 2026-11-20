@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -63,8 +63,8 @@
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;">
                     <tr>
                         <td align="center" style="padding:20px 12px;color:#94a3b8;font-size:12px;line-height:18px;">
-                            This email was sent by OMG Computer.<br>
-                            Please do not share links or account-verification codes from this email.
+                            {{ __('billing.email.sent_by') }}<br>
+                            {{ __('billing.email.do_not_share') }}
                         </td>
                     </tr>
                 </table>

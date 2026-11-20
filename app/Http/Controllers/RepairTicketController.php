@@ -455,6 +455,10 @@ class RepairTicketController extends Controller
 
     public function update(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
+        if ($ticket->status === 'closed') {
+            return $this->updateClosedTicketStatus($request, $ticket, $notifier);
+        }
+
         $ticket->loadMissing(['creator', 'assignees']);
         $existingAssigneeIds = $ticket->assignees->modelKeys();
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
@@ -548,6 +552,55 @@ class RepairTicketController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket updated.');
     }
 
+    private function updateClosedTicketStatus(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['closed', 'in_repair'])],
+        ]);
+        $statusChanged = $ticket->status !== $data['status'];
+
+        if ($statusChanged) {
+            DB::transaction(function () use ($ticket, $data, $request): void {
+                $ticket->update(['status' => $data['status']]);
+                $ticket->updates()->create([
+                    'user_id' => $request->user()->id,
+                    'title' => 'Warranty follow-up: status changed to '.RepairTicket::STATUSES[$data['status']],
+                    'status' => $data['status'],
+                ]);
+            });
+
+            $ticket->load(['creator', 'assignees']);
+            $notifier->notifyUsers(
+                collect([$ticket->creator])->merge($ticket->assignees),
+                $request->user(),
+                'Warranty repair status updated',
+                sprintf('Repair ticket %s was reopened for warranty follow-up.', $ticket->ticket_number),
+                route('tickets.show', $ticket),
+            );
+        }
+
+        if ($request->expectsJson()) {
+            $ticket->load(['assignees', 'updates.user', 'updates.attachments.uploader']);
+
+            return response()->json([
+                'message' => $statusChanged ? 'Ticket reopened for warranty follow-up.' : 'Ticket remains closed.',
+                'reload' => $statusChanged,
+                'status' => $ticket->status,
+                'status_html' => view('tickets.partials.status-badge', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+                'updates_html' => view('tickets.partials.update-list', [
+                    'ticket' => $ticket,
+                    'statuses' => RepairTicket::STATUSES,
+                ])->render(),
+            ]);
+        }
+
+        return redirect()->route('tickets.show', $ticket)
+            ->with('success', $statusChanged ? 'Ticket reopened for warranty follow-up.' : 'Ticket remains closed.');
+    }
+
     private function assigneeIds(Request $request, array $data): array
     {
         $ids = $request->exists('assignees_present')
@@ -561,6 +614,8 @@ class RepairTicketController extends Controller
 
     public function storeUpdate(Request $request, RepairTicket $ticket, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
+        abort_if($ticket->status === 'closed', 409, 'Closed repair tickets can only have their status changed.');
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:180'],
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],

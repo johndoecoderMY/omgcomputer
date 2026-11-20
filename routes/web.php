@@ -187,6 +187,7 @@ Route::prefix('book')->name('bookings.')->middleware(SetPublicLocale::class)->co
     Route::get('/', 'create')->name('create');
     Route::get('/events', 'events')->name('events');
     Route::get('/availability', 'availability')->name('availability');
+    Route::post('/reverse-geocode', 'reverseGeocode')->middleware('throttle:10,1')->name('reverse-geocode');
     Route::post('/', 'store')->name('store');
     Route::get('/confirmation/{reference}', 'confirmation')->name('confirmation');
 });
@@ -221,6 +222,14 @@ Route::get('/quotations/{document}/respond/{status}', [BillingController::class,
     ->middleware('signed')
     ->middleware(SetPublicLocale::class)
     ->name('billing.quotations.respond');
+Route::get('/shared/billing/{document}/pdf', [BillingController::class, 'guestDocumentPdf'])
+    ->middleware('signed')
+    ->middleware('throttle:30,1')
+    ->name('billing.guest.documents.pdf');
+Route::get('/shared/receipts/{payment}/pdf', [BillingController::class, 'guestReceiptPdf'])
+    ->middleware('signed')
+    ->middleware('throttle:30,1')
+    ->name('billing.guest.receipts.pdf');
 
 Route::middleware(SetPublicLocale::class)->controller(ShopController::class)->group(function (): void {
     Route::get('/shop', 'publicProductsGrid')->name('shop.public');
@@ -462,8 +471,12 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/{document}/edit', 'edit')->name('documents.edit');
         Route::put('/{document}', 'update')->name('documents.update');
         Route::post('/{document}/quotation-status', 'updateQuotationStatus')->name('documents.quotation-status');
-        Route::post('/{document}/send', 'sendQuotation')->name('documents.send');
+        Route::get('/{document}/email-preview', 'previewDocumentEmail')->name('documents.email-preview');
+        Route::post('/{document}/send', 'sendDocument')->name('documents.send');
+        Route::post('/{document}/send-acceptance-email', 'sendQuotationAcceptance')->name('documents.send-acceptance');
         Route::get('/receipts', 'receipts')->name('receipts.index');
+        Route::get('/receipts/{payment}/email-preview', 'previewReceiptEmail')->name('receipts.email-preview');
+        Route::post('/receipts/{payment}/send', 'sendReceiptEmail')->name('receipts.send');
         Route::get('/receipts/{payment}/pdf', 'receiptPdf')->name('receipts.pdf');
         Route::get('/{document}', 'show')->name('documents.show');
         Route::post('/{document}/issue', 'issue')->name('documents.convert');

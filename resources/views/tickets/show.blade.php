@@ -20,11 +20,14 @@
                         <span class="bi bi-person me-2" aria-hidden="true"></span>Customer profile
                     </a>
                     <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-workflow-modal">
-                        <span class="bi bi-sliders me-2" aria-hidden="true"></span>Edit workflow
+                        <span class="bi bi-sliders me-2" aria-hidden="true"></span>
+                        {{ $ticket->status === 'closed' ? 'Update status' : 'Edit workflow' }}
                     </button>
-                    <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-step-modal">
-                        <span class="bi bi-plus me-2" aria-hidden="true"></span>Add repair step
-                    </button>
+                    @if ($ticket->status !== 'closed')
+                        <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-step-modal">
+                            <span class="bi bi-plus me-2" aria-hidden="true"></span>Add repair step
+                        </button>
+                    @endif
                 </x-slot>
             @endunless
         </x-page-header>
@@ -226,20 +229,35 @@
                         @csrf
                         @method('PUT')
                         <div class="modal-header">
-                            <h2 class="modal-title fs-5" id="ticket-workflow-title">Edit ticket details</h2>
+                            <h2 class="modal-title fs-5" id="ticket-workflow-title">
+                                {{ $ticket->status === 'closed' ? 'Update closed ticket status' : 'Edit ticket details' }}
+                            </h2>
                             <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
                             <div class="row g-3">
+                                @if ($ticket->status === 'closed')
+                                    <div class="col-12">
+                                        <div class="alert alert-info mb-0" role="status">
+                                            Ticket details are locked. If the same issue returns under warranty, change the status to In repair.
+                                        </div>
+                                    </div>
+                                @endif
                                 <div class="col-md-6">
                                     <label class="form-label" for="workflow-status">Status</label>
                                     <select class="form-select" id="workflow-status" name="status" required>
-                                        @foreach ($statuses as $value => $label)
-                                            <option value="{{ $value }}" @selected($ticket->status === $value)>{{ $label }}</option>
-                                        @endforeach
+                                        @if ($ticket->status === 'closed')
+                                            <option value="closed" selected>Closed</option>
+                                            <option value="in_repair">In repair</option>
+                                        @else
+                                            @foreach ($statuses as $value => $label)
+                                                <option value="{{ $value }}" @selected($ticket->status === $value)>{{ $label }}</option>
+                                            @endforeach
+                                        @endif
                                     </select>
                                 </div>
+                                @if ($ticket->status !== 'closed')
                                 <div class="col-md-6">
                                     <label class="form-label" for="workflow-priority">Priority</label>
                                     <select class="form-select" id="workflow-priority" name="priority" required>
@@ -292,17 +310,21 @@
                                     <textarea class="form-control" id="workflow-diagnosis" name="diagnosis" rows="5"
                                         maxlength="5000">{{ $ticket->diagnosis }}</textarea>
                                 </div>
+                                @endif
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                            <button class="btn btn-primary" type="submit">Save workflow</button>
+                            <button class="btn btn-primary" type="submit">
+                                {{ $ticket->status === 'closed' ? 'Update status' : 'Save workflow' }}
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
+        @if ($ticket->status !== 'closed')
         <div class="modal fade" id="ticket-step-modal" tabindex="-1" aria-labelledby="ticket-step-title" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
                 <form id="ticket-step-form" class="modal-content" method="POST"
@@ -353,6 +375,7 @@
                 </form>
             </div>
         </div>
+        @endif
 
         <div class="modal fade" id="ticket-step-photo-caption-modal" tabindex="-1"
             aria-labelledby="ticket-step-photo-caption-title" aria-hidden="true">
@@ -959,6 +982,7 @@
                             if (stepStatus) stepStatus.value = result.status || stepStatus.value;
                         }
                         showToast(result.message || 'Ticket updated.');
+                        if (result.reload) window.location.reload();
                     } catch (error) {
                         const message = error.message || 'Could not save changes. Please try again.';
                         if (errorBox) {

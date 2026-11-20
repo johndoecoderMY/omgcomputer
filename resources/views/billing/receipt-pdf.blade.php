@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <style>
@@ -31,9 +31,9 @@
                 @if ($companyProfile->sst_registration_number)<br>SST registration no.: {{ $companyProfile->sst_registration_number }}@endif
             </td>
             <td class="right">
-                <h1>Payment receipt</h1>
+                <h1>{{ __('billing.pdf.payment_receipt') }}</h1>
                 <div class="muted">{{ $payment->receipt_number }}</div>
-                <div style="margin-top:12px">{{ $payment->paid_at->format('F j, Y g:i A') }}</div>
+                <div style="margin-top:12px">{{ $payment->paid_at->locale(app()->getLocale())->translatedFormat('F j, Y g:i A') }}</div>
             </td>
         </tr>
     </table>
@@ -41,14 +41,14 @@
     <table width="100%">
         <tr>
             <td width="55%" valign="top">
-                <div class="muted">RECEIVED FROM</div>
+                <div class="muted">{{ __('billing.pdf.received_from') }}</div>
                 <strong>{{ $payment->document->customer_name }}</strong>
                 @if ($payment->document->customer_email)<br>{{ $payment->document->customer_email }}@endif
                 @if ($payment->document->customer_phone)<br>{{ $payment->document->customer_phone }}@endif
                 @if ($payment->document->customer_address)<br>{!! nl2br(e($payment->document->customer_address)) !!}@endif
             </td>
             <td class="right" valign="top">
-                <div class="muted">AMOUNT RECEIVED</div>
+                <div class="muted">{{ __('billing.pdf.amount_received') }}</div>
                 <div class="amount">RM {{ number_format((float) $payment->amount, 2) }}</div>
             </td>
         </tr>
@@ -56,21 +56,21 @@
 
     <table class="details">
         <tbody>
-            <tr><th>Invoice</th><td>{{ $payment->document->number }}</td></tr>
-            <tr><th>Payment method</th><td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td></tr>
-            <tr><th>Payment reference</th><td>{{ $payment->reference ?: '—' }}</td></tr>
-            <tr><th>Payment date</th><td>{{ $payment->paid_at->format('F j, Y g:i A') }}</td></tr>
-            <tr><th>Invoice subtotal</th><td>RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
+            <tr><th>{{ __('billing.pdf.invoice') }}</th><td>{{ $payment->document->number }}</td></tr>
+            <tr><th>{{ __('billing.pdf.payment_method') }}</th><td>{{ __('billing.pdf.payment_method_'.$payment->method) }}</td></tr>
+            <tr><th>{{ __('billing.pdf.payment_reference') }}</th><td>{{ $payment->reference ?: '—' }}</td></tr>
+            <tr><th>{{ __('billing.pdf.payment_date') }}</th><td>{{ $payment->paid_at->locale(app()->getLocale())->translatedFormat('F j, Y g:i A') }}</td></tr>
+            <tr><th>{{ __('billing.pdf.invoice_subtotal') }}</th><td>RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
             @if ((float) $payment->document->discount_amount > 0)
-                <tr><th>Discount</th><td>- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
+                <tr><th>{{ __('billing.pdf.discount') }}</th><td>- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
             @endif
             @if ((float) $payment->document->tax_amount > 0)
-                <tr><th>Tax ({{ number_format((float) $payment->document->tax_rate, 2) }}%)</th><td>RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td></tr>
+                <tr><th>{{ __('billing.pdf.tax_rate', ['rate' => number_format((float) $payment->document->tax_rate, 2)]) }}</th><td>RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td></tr>
             @endif
-            <tr><th>Invoice total</th><td>RM {{ number_format((float) $payment->document->total, 2) }}</td></tr>
+            <tr><th>{{ __('billing.pdf.invoice_total') }}</th><td>RM {{ number_format((float) $payment->document->total, 2) }}</td></tr>
         </tbody>
     </table>
 
-    <div class="footer muted">This receipt confirms the payment recorded against the invoice above. This is a computer-generated receipt.</div>
+    <div class="footer muted">{{ __('billing.pdf.computer_generated_receipt') }}</div>
 </body>
 </html>

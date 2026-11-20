@@ -3,103 +3,128 @@
 @section('title', $document->number)
 
 @section('content')
-@php
-    $whatsappNumber = preg_replace('/\D+/', '', (string) $document->customer_phone);
-    if (str_starts_with($whatsappNumber, '0')) {
-        $whatsappNumber = '60'.substr($whatsappNumber, 1);
-    }
-    $quotationWhatsappUrl = $whatsappNumber !== ''
-        ? 'https://wa.me/'.$whatsappNumber.'?text='.rawurlencode('Hi '.$document->customer_name.', here is your quotation '.$document->number.' from OMG Computer (RM '.number_format((float) $document->total, 2).'). Please view or download it here: '.route('billing.documents.show', $document))
-        : '';
-@endphp
 <div class="container-fluid py-3" @if ($document->type === 'quotation') data-project-ajax-root @endif>
     <x-page-header eyebrow="{{ ucfirst($document->type) }}" :title="$document->number" :back-url="route('billing.index')" back-label="Back to billing">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="bi bi-filetype-pdf me-2"></span>PDF</a>
             @if (! auth()->user()->hasRole('customer') && ($document->status === 'draft' || ($document->type === 'quotation' && $document->status === 'rejected')))<a class="btn btn-outline-primary" href="{{ route('billing.documents.edit', $document) }}"><span class="bi bi-pencil me-2"></span>{{ $document->status === 'rejected' ? 'Edit rejected quotation' : 'Edit draft' }}</a>@endif
             @if ($document->repairTicket)<a class="btn btn-outline-secondary" href="{{ route('tickets.show', $document->repairTicket) }}"><span class="bi bi-ticket-perforated me-2"></span>{{ $document->repairTicket->ticket_number }}</a>@endif
-            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'rejected'], true))
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'sent', 'rejected'], true))
                 <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-quotation-modal">
-                    <span class="bi bi-send me-2"></span>{{ $document->status === 'rejected' ? 'Resend quotation' : 'Mark as sent' }}
+                    <span class="bi bi-send me-2"></span>{{ $document->status === 'draft' ? 'Send quotation' : 'Resend quotation' }}
                 </button>
-                @if ($document->status === 'draft')
-                    <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">
-                        @csrf
-                        <input type="hidden" name="status" value="accepted">
-                        <button class="btn btn-success" onclick="return confirm('Record that the customer accepted this quotation outside the website?')">
-                            <span class="bi bi-check-circle me-2"></span>Record customer accepted
-                        </button>
-                    </form>
-                @endif
-            @elseif (auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
+            @endif
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'draft')
+                <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">
+                    @csrf
+                    <input type="hidden" name="status" value="accepted">
+                    <button class="btn btn-success" onclick="return confirm('Record that the customer accepted this quotation outside the website?')">
+                        <span class="bi bi-check-circle me-2"></span>Record customer accepted
+                    </button>
+                </form>
+            @endif
+            @if (auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success"><span class="bi bi-check-circle me-2"></span>Accept quotation</button></form>
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}" class="d-inline">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger"><span class="bi bi-x-circle me-2"></span>Reject quotation</button></form>
-            @elseif (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
+            @endif
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'sent')
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="accepted"><button class="btn btn-success">Mark accepted</button></form>
                 <form method="POST" action="{{ route('billing.documents.quotation-status', $document) }}">@csrf<input type="hidden" name="status" value="rejected"><button class="btn btn-outline-danger">Mark rejected</button></form>
+            @endif
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid', 'paid'], true))
+                <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-invoice-modal">
+                    <span class="bi bi-send me-2" aria-hidden="true"></span>Email invoice
+                </button>
+            @endif
+            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')
+                <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-acceptance-modal">
+                    <span class="bi bi-envelope me-2" aria-hidden="true"></span>Email acceptance
+                </button>
             @endif
             @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')<form method="POST" action="{{ route('billing.documents.convert', $document) }}">@csrf<button class="btn btn-primary" onclick="return confirm('Issue this invoice and deduct listed stock?')">Convert to invoice</button></form>@endif
             @if (! auth()->user()->hasRole('customer') && ! in_array($document->status, ['void', 'paid'], true) && (float) $document->paid_amount === 0.0)<form method="POST" action="{{ route('billing.documents.void', $document) }}">@csrf<button class="btn btn-outline-danger" onclick="return confirm('Void this document?')">Void</button></form>@endif
         </x-slot>
     </x-page-header>
 
-    @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'rejected'], true))
-        <div class="modal fade" id="send-quotation-modal" tabindex="-1" aria-labelledby="send-quotation-modal-label" aria-hidden="true">
+    @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && in_array($document->status, ['draft', 'sent', 'rejected'], true))
+        @include('billing._send-modal', ['sendModal' => [
+            'id' => 'send-quotation-modal',
+            'title' => $document->status === 'draft' ? 'Send quotation' : 'Resend quotation',
+            'description' => 'Send the quotation PDF by email or WhatsApp. The private WhatsApp PDF link works for guests without an account and expires after 7 days.',
+            'action' => route('billing.documents.send', $document),
+            'email' => $document->customer_email,
+            'email_preview_url' => route('billing.documents.email-preview', $document),
+            'pdf_preview_url' => route('billing.documents.pdf', $document),
+            'phone' => $document->customer_phone,
+            'whatsapp_key' => 'billing.whatsapp.quotation',
+            'whatsapp_replacements' => [
+                'name' => $document->customer_name,
+                'number' => $document->number,
+                'total' => number_format((float) $document->total, 2),
+            ],
+            'whatsapp_urls' => $guestDocumentUrls,
+            'filename' => $document->number,
+            'submit_label' => 'Send quotation',
+            'mark_sent_url' => route('billing.documents.quotation-status', $document),
+        ]])
+    @endif
+    @if (! auth()->user()->hasRole('customer') && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid', 'paid'], true))
+        @include('billing._send-modal', ['sendModal' => [
+            'id' => 'send-invoice-modal',
+            'title' => 'Email invoice',
+            'description' => 'Email the invoice PDF or share its private WhatsApp PDF link. The link works for guests without an account and expires after 7 days.',
+            'action' => route('billing.documents.send', $document),
+            'email' => $document->customer_email,
+            'email_preview_url' => route('billing.documents.email-preview', $document),
+            'pdf_preview_url' => route('billing.documents.pdf', $document),
+            'phone' => $document->customer_phone,
+            'whatsapp_key' => 'billing.whatsapp.invoice',
+            'whatsapp_replacements' => [
+                'name' => $document->customer_name,
+                'number' => $document->number,
+                'total' => number_format((float) $document->total, 2),
+                'balance' => number_format((float) $document->balance, 2),
+            ],
+            'whatsapp_urls' => $guestDocumentUrls,
+            'filename' => $document->number,
+            'submit_label' => 'Email invoice',
+            'mark_sent_url' => null,
+        ]])
+    @endif
+
+    @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')
+        <div class="modal fade" id="send-acceptance-modal" tabindex="-1" aria-labelledby="send-acceptance-modal-label" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="send-quotation-modal-label">{{ $document->status === 'rejected' ? 'Resend quotation' : 'Send quotation' }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-body-secondary mb-3">Send the quotation PDF by email, and automatically add it to the customer panel when the customer has an account.</p>
-                        <div class="d-grid gap-3">
-                            <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="border rounded p-3"
-                                data-quotation-send-ajax>
-                                @csrf
-                                <label class="form-label fw-semibold" for="quotation-send-email"><span class="bi bi-envelope me-2"></span>Email quotation PDF</label>
-                                <div class="small text-body-secondary mb-2">Also appears in the customer panel when this email belongs to a registered account.</div>
-                                <input class="form-control mb-3" id="quotation-send-email" type="email" name="email" value="{{ old('email', $document->customer_email) }}" placeholder="Customer email" required>
-                                <button class="btn btn-primary w-100" type="submit">Send quotation</button>
-                            </form>
-                            @if ($quotationWhatsappUrl !== '')
-                                <div class="border rounded p-3">
-                                    <div class="fw-semibold mb-1"><span class="bi bi-whatsapp me-2"></span>WhatsApp</div>
-                                    <div class="small text-body-secondary mb-3">Open a WhatsApp message containing the quotation details and customer-panel link.</div>
-                                    <a class="btn btn-success w-100 quotation-whatsapp-link" href="{{ $quotationWhatsappUrl }}" target="_blank" rel="noopener" data-status-url="{{ route('billing.documents.quotation-status', $document) }}" data-csrf="{{ csrf_token() }}">Open WhatsApp draft</a>
-                                </div>
-                            @else
-                                <div class="alert alert-secondary mb-0">Add a customer phone number to create a WhatsApp quotation link.</div>
-                            @endif
+                    <form method="POST" action="{{ route('billing.documents.send-acceptance', $document) }}">
+                        @csrf
+                        <div class="modal-header">
+                            <h2 class="modal-title fs-5" id="send-acceptance-modal-label">Email acceptance confirmation</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                    </div>
+                        <div class="modal-body">
+                            <p class="text-body-secondary">Send a confirmation that this quotation was accepted. This does not issue the invoice.</p>
+                            <label class="form-label" for="acceptance-email">Customer email</label>
+                            <input class="form-control" id="acceptance-email" name="email" type="email" value="{{ old('email', $document->customer_email) }}" required>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-primary" type="submit"><span class="bi bi-send me-2" aria-hidden="true"></span>Send confirmation</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     @endif
 
-    @push('scripts')
-    <script>
-    document.querySelectorAll('.quotation-whatsapp-link').forEach((link) => {
-        link.addEventListener('click', () => {
-            fetch(link.dataset.statusUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRF-TOKEN': link.dataset.csrf,
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: new URLSearchParams({ status: 'sent', delivery: 'whatsapp' }),
-            });
-        });
-    });
-    </script>
-    @endpush
-
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif
+    @if (session('error'))<div class="alert alert-danger" role="alert">{{ session('error') }}</div>@endif
     @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'draft')
         <div class="alert alert-info">Sending this quotation through the website is optional. If the customer already accepted it by phone, in person, or through another form, use <strong>Record customer accepted</strong> to continue to the invoice.</div>
+    @endif
+    @if ($document->type === 'quotation' && $document->status === 'accepted')
+        <div class="alert alert-info">This quotation has been accepted. An acceptance confirmation is sent automatically when the status changes to accepted. Staff can manually resend it if needed.</div>
     @endif
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
 
@@ -182,11 +207,101 @@
                     </div>
                 </div>
             @endif
-            @if (auth()->user()->hasRole('admin') && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true))<div class="card"><div class="card-header fw-semibold">Record full payment</div><form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">@csrf<div class="card-body"><label class="form-label" for="amount">Outstanding balance (RM)</label><input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01" max="{{ $document->balance }}" step="0.01" value="{{ number_format($document->balance, 2, '.', '') }}" readonly required><div class="form-text mb-3">Partial payments are not currently supported. Record the full outstanding balance.</div><label class="form-label" for="method">Method</label><select class="form-select mb-3" id="method" name="method" required>@foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)<option value="{{ $method }}">{{ str_replace('_', ' ', ucfirst($method)) }}</option>@endforeach</select><label class="form-label" for="reference">Reference</label><input class="form-control" id="reference" name="reference" maxlength="255"></div><div class="card-footer"><button class="btn btn-primary w-100">Record full payment</button></div></form></div>@endif
+            @if (auth()->user()->hasRole('admin') && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true))
+                <div class="card">
+                    <div class="card-header fw-semibold">Record full payment</div>
+                    <form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">
+                        @csrf
+                        <div class="card-body">
+                            <label class="form-label" for="amount">Outstanding balance (RM)</label>
+                            <input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01"
+                                max="{{ $document->balance }}" step="0.01"
+                                value="{{ number_format($document->balance, 2, '.', '') }}" readonly required>
+                            <div class="form-text mb-3">Partial payments are not currently supported. Record the full outstanding balance.</div>
+                            <label class="form-label" for="method">Method</label>
+                            <select class="form-select mb-3" id="method" name="method" required>
+                                @foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)
+                                    <option value="{{ $method }}">{{ str_replace('_', ' ', ucfirst($method)) }}</option>
+                                @endforeach
+                            </select>
+                            <label class="form-label" for="reference">Reference</label>
+                            <input class="form-control mb-3" id="reference" name="reference" maxlength="255">
+                            <label class="form-label" for="receipt-delivery">Receipt email</label>
+                            <select class="form-select mb-3" id="receipt-delivery" name="receipt_delivery">
+                                <option value="send" selected>Email automatically after recording</option>
+                                <option value="preview">Record payment, then preview before sending</option>
+                            </select>
+                            <label class="form-label" for="receipt-locale">Receipt email and PDF language</label>
+                            <select class="form-select" id="receipt-locale" name="receipt_locale">
+                                @foreach (\App\Models\CustomerMessageTemplate::LANGUAGES as $locale => $label)
+                                    <option value="{{ $locale }}" @selected(app()->getLocale() === $locale)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary w-100">Record full payment</button>
+                        </div>
+                    </form>
+                </div>
+            @endif
         </div>
     </div>
     @if ($document->type === 'invoice')
-        <div class="card"><div class="card-header fw-semibold">Payment history</div><div class="table-responsive"><table class="table mb-0 table-bordered"><thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Receipt</th></tr></thead><tbody>@forelse ($document->payments as $payment)<tr><td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td><td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td><td>{{ $payment->reference ?: '—' }}</td><td class="text-end">RM {{ number_format($payment->amount, 2) }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ route('billing.receipts.pdf', $payment) }}" target="_blank" rel="noopener"><span class="bi bi-filetype-pdf me-1" aria-hidden="true"></span>{{ $payment->receipt_number }}</a></td></tr>@empty<tr><td class="text-center text-body-secondary py-4" colspan="5">No payments recorded.</td></tr>@endforelse</tbody></table></div></div>
+        <div class="card">
+            <div class="card-header fw-semibold">Payment history</div>
+            <div class="table-responsive">
+                <table class="table mb-0 table-bordered">
+                    <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Receipt</th></tr></thead>
+                    <tbody>
+                        @forelse ($document->payments as $payment)
+                            <tr>
+                                <td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td>
+                                <td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td>
+                                <td>{{ $payment->reference ?: '—' }}</td>
+                                <td class="text-end">RM {{ number_format($payment->amount, 2) }}</td>
+                                <td>
+                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.receipts.pdf', $payment) }}" target="_blank" rel="noopener">
+                                        <span class="bi bi-filetype-pdf me-1" aria-hidden="true"></span>{{ $payment->receipt_number }}
+                                    </a>
+                                    @unless (auth()->user()->hasRole('customer'))
+                                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="modal" data-bs-target="#send-receipt-modal-{{ $payment->id }}">
+                                            <span class="bi bi-envelope me-1" aria-hidden="true"></span>Send receipt
+                                        </button>
+                                    @endunless
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td class="text-center text-body-secondary py-4" colspan="5">No payments recorded.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        @unless (auth()->user()->hasRole('customer'))
+            @foreach ($document->payments as $payment)
+                @include('billing._send-modal', ['sendModal' => [
+                    'id' => 'send-receipt-modal-'.$payment->id,
+                    'title' => $payment->receipt_emailed_at ? 'Resend receipt' : 'Send receipt',
+                    'description' => 'Email the receipt PDF or share its private WhatsApp PDF link. The link works for guests without an account and expires after 7 days.',
+                    'action' => route('billing.receipts.send', $payment),
+                    'email' => $document->customer_email,
+                    'email_preview_url' => route('billing.receipts.email-preview', $payment),
+                    'pdf_preview_url' => route('billing.receipts.pdf', $payment),
+                    'phone' => $document->customer_phone,
+                    'whatsapp_key' => 'billing.whatsapp.receipt',
+                    'whatsapp_replacements' => [
+                        'name' => $document->customer_name,
+                        'amount' => number_format((float) $payment->amount, 2),
+                        'invoice' => $document->number,
+                    ],
+                    'whatsapp_urls' => $guestReceiptUrls[$payment->id] ?? [],
+                    'filename' => $payment->receipt_number,
+                    'submit_label' => 'Send receipt',
+                    'mark_sent_url' => null,
+                ]])
+            @endforeach
+        @endunless
     @endif
 </div>
 @push('scripts')

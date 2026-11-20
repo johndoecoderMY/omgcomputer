@@ -6,11 +6,14 @@ use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\BookingTimeSlot;
 use App\Models\Customer;
+use App\Models\ProductService;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -150,6 +153,8 @@ class BookingTest extends TestCase
 
     public function test_public_booking_lists_only_the_two_enabled_customer_services(): void
     {
+        ProductService::query()->whereKey('laptop-cleaning')->update(['is_active' => true]);
+
         $this->get(route('bookings.create'))
             ->assertOk()
             ->assertSee('booking-help-section', false)
@@ -163,10 +168,52 @@ class BookingTest extends TestCase
             ->assertSee('Computer/PC Troubleshooting')
             ->assertSee('FYP Consultation')
             ->assertDontSee('Laptop cleaning')
+            ->assertSee('Fill address from pin')
+            ->assertSee('pin coordinates are sent to OpenStreetMap')
             ->assertViewHas('services', fn ($services): bool => $services->pluck('id')->all() === [
                 'basic-troubleshooting',
                 'fyp-consultation',
             ]);
+    }
+
+    public function test_booking_rejects_services_outside_the_two_customer_booking_options(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->from(route('bookings.create'))
+            ->post(route('bookings.store'), [
+                'customer_name' => 'Booking customer',
+                'customer_email' => 'booking@example.test',
+                'customer_phone' => '+60112223333',
+                'service_id' => 'laptop-cleaning',
+                'booking_date' => $date->toDateString(),
+            ])
+            ->assertRedirect(route('bookings.create'))
+            ->assertSessionHasErrors('service_id');
+    }
+
+    public function test_booking_pin_address_lookup_only_runs_when_requested(): void
+    {
+        Cache::forget('booking.reverse-geocode.request-lock');
+        Http::fake([
+            'nominatim.openstreetmap.org/reverse*' => Http::response([
+                'display_name' => 'Kampar, Perak, Malaysia',
+            ]),
+        ]);
+
+        $this->postJson(route('bookings.reverse-geocode'), [
+            'latitude' => 4.326,
+            'longitude' => 101.15,
+        ])->assertOk()
+            ->assertJsonPath('address', 'Kampar, Perak, Malaysia');
+
+        Http::assertSent(fn (\Illuminate\Http\Client\Request $request): bool => str_contains(
+            $request->url(),
+            'nominatim.openstreetmap.org/reverse',
+        ) && $request->hasHeader('User-Agent'));
     }
 
     public function test_booking_page_and_calendar_messages_follow_the_selected_public_language(): void

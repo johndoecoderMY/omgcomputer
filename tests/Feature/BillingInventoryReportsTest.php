@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\BillingReceiptMail;
+use App\Mail\InvoiceMail;
+use App\Mail\QuotationMail;
+use App\Mail\QuotationAcceptanceMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPaymentAttempt;
 use App\Models\ChipSetting;
@@ -18,6 +21,7 @@ use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -128,13 +132,16 @@ class BillingInventoryReportsTest extends TestCase
                 'amount' => 42,
                 'method' => 'bank_transfer',
                 'paid_at' => now()->toDateString(),
+                'receipt_locale' => 'ms',
             ])
             ->assertRedirect(route('billing.documents.show', $document))
             ->assertSessionHas('success', 'Payment recorded and the receipt was emailed to the customer.');
 
         Mail::assertSent(
             BillingReceiptMail::class,
-            fn (BillingReceiptMail $mail): bool => $mail->hasTo($document->customer_email),
+            fn (BillingReceiptMail $mail): bool => $mail->hasTo($document->customer_email)
+                && $mail->locale === 'ms'
+                && str_contains($mail->render(), 'Pembayaran anda disahkan'),
         );
         $payment = $document->payments()->firstOrFail();
         $this->assertNotNull($payment->receipt_emailed_at);
@@ -142,6 +149,252 @@ class BillingInventoryReportsTest extends TestCase
             ->get(route('billing.receipts.pdf', $payment))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_staff_can_send_and_preview_invoice_in_selected_language(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Localized invoice project']),
+            125,
+        );
+
+        $this->actingAs($staff)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Email invoice')
+            ->assertSee('English')
+            ->assertSee('Bahasa Melayu')
+            ->assertSee('Mandarin')
+            ->assertSee(route('billing.documents.email-preview', $document), false)
+            ->assertSee('name="receipt_locale"', false);
+        $this->actingAs($staff)->get(route('billing.documents.email-preview', [
+            'document' => $document,
+            'locale' => 'ms',
+        ]))->assertOk()
+            ->assertSee('lang="ms"', false)
+            ->assertSee('Invois anda sedia');
+        $this->actingAs($staff)->get(route('billing.documents.pdf', [
+            'document' => $document,
+            'locale' => 'zh_CN',
+        ]))->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($staff)->from(route('billing.documents.show', $document))
+            ->post(route('billing.documents.send', $document), [
+            'email' => 'alternate-invoice@example.test',
+            'locale' => 'zh_CN',
+        ])->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Invoice '.$document->number.' was emailed to alternate-invoice@example.test.');
+
+        Mail::assertSent(
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo('alternate-invoice@example.test')
+                && $mail->locale === 'zh_CN'
+                && str_contains($mail->render(), '您的发票已准备好'),
+        );
+        $this->assertSame('issued', $document->fresh()->status);
+    }
+
+    public function test_staff_can_send_and_preview_quotation_in_selected_language(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createDraftQuotation(
+            Project::query()->create(['name' => 'Localized quotation project']),
+            'quotation-language@example.test',
+        );
+
+        $this->actingAs($staff)->get(route('billing.documents.email-preview', [
+            'document' => $document,
+            'locale' => 'zh_CN',
+        ]))->assertOk()
+            ->assertSee('lang="zh-CN"', false)
+            ->assertSee('您的报价单已准备好')
+            ->assertSee('aria-disabled="true"', false);
+
+        $this->actingAs($staff)->from(route('billing.documents.show', $document))
+            ->post(route('billing.documents.send', $document), [
+            'email' => $document->customer_email,
+            'locale' => 'ms',
+        ])->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success');
+
+        Mail::assertSent(
+            QuotationMail::class,
+            fn (QuotationMail $mail): bool => $mail->hasTo($document->customer_email)
+                && $mail->locale === 'ms'
+                && str_contains($mail->render(), 'Sebut harga anda sedia'),
+        );
+        $this->assertSame('sent', $document->fresh()->status);
+    }
+
+    public function test_whatsapp_quotation_link_is_guest_accessible_and_expires(): void
+    {
+        $staff = $this->adminUser();
+        $document = $this->createDraftQuotation(
+            Project::query()->create(['name' => 'Guest quotation project']),
+            'guest-quotation@example.test',
+        );
+        $document->update(['status' => 'sent']);
+
+        $response = $this->actingAs($staff)->get(route('billing.documents.show', $document))->assertOk();
+        preg_match('/data-whatsapp-message-en="([^"]+)"/', $response->getContent(), $messageMatch);
+        $message = html_entity_decode($messageMatch[1] ?? '', ENT_QUOTES | ENT_HTML5);
+        preg_match('/https?:\/\/\S+/', $message, $urlMatch);
+        $guestUrl = $urlMatch[0] ?? '';
+
+        $this->assertStringContainsString('/shared/billing/'.$document->id.'/pdf?', $guestUrl);
+        $this->assertSame('/shared/billing/'.$document->id.'/pdf', parse_url($guestUrl, PHP_URL_PATH));
+        auth()->logout();
+
+        $this->get($guestUrl)
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('cache-control', 'no-store, private')
+            ->assertHeader('referrer-policy', 'no-referrer');
+
+        $expiredUrl = URL::temporarySignedRoute(
+            'billing.guest.documents.pdf',
+            now()->subMinute(),
+            ['document' => $document, 'locale' => 'en'],
+        );
+        $this->get($expiredUrl)->assertForbidden();
+    }
+
+    public function test_whatsapp_invoice_and_receipt_links_work_for_guests_without_an_account(): void
+    {
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Guest invoice project']),
+            90,
+            customerEmail: 'guest-invoice@example.test',
+        );
+        $document->update(['customer_phone' => '0123456789']);
+        $payment = $document->payments()->create([
+            'user_id' => $staff->id,
+            'amount' => 25,
+            'method' => 'cash',
+            'paid_at' => now(),
+        ]);
+
+        $invoiceResponse = $this->actingAs($staff)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Share PDF attachment')
+            ->assertSee('Download PDF to attach');
+        preg_match('/data-whatsapp-message-en="([^"]+)"/', $invoiceResponse->getContent(), $invoiceMessageMatch);
+        $invoiceMessage = html_entity_decode($invoiceMessageMatch[1] ?? '', ENT_QUOTES | ENT_HTML5);
+        preg_match('/https?:\/\/\S+/', $invoiceMessage, $invoiceUrlMatch);
+        $invoiceUrl = $invoiceUrlMatch[0] ?? '';
+
+        $this->assertStringContainsString('/shared/billing/'.$document->id.'/pdf?', $invoiceUrl);
+        auth()->logout();
+        $this->get($invoiceUrl)->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($staff)->get(route('billing.documents.pdf', [
+            'document' => $document,
+            'download' => 1,
+        ]))->assertHeader('content-disposition', 'attachment; filename="'.strtolower($document->number).'.pdf"');
+
+        $receiptResponse = $this->actingAs($staff)->get(route('billing.receipts.index'))
+            ->assertOk()
+            ->assertSee('Share PDF attachment')
+            ->assertSee('Download PDF to attach');
+        preg_match('/data-whatsapp-message-en="([^"]+)"/', $receiptResponse->getContent(), $receiptMessageMatch);
+        $receiptMessage = html_entity_decode($receiptMessageMatch[1] ?? '', ENT_QUOTES | ENT_HTML5);
+        preg_match('/https?:\/\/\S+/', $receiptMessage, $receiptUrlMatch);
+        $receiptUrl = $receiptUrlMatch[0] ?? '';
+
+        $this->assertStringContainsString('/shared/receipts/'.$payment->id.'/pdf?', $receiptUrl);
+        auth()->logout();
+        $this->get($receiptUrl)->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->actingAs($staff)->get(route('billing.receipts.pdf', [
+            'payment' => $payment,
+            'download' => 1,
+        ]))->assertHeader('content-disposition', 'attachment; filename="'.strtolower($payment->receipt_number).'.pdf"');
+    }
+
+    public function test_staff_can_resend_a_receipt_with_a_selected_language(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Localized receipt project']),
+            75,
+            customerEmail: 'receipt-language@example.test',
+        );
+        $payment = $document->payments()->create([
+            'user_id' => $staff->id,
+            'amount' => 75,
+            'method' => 'cash',
+            'paid_at' => now(),
+            'receipt_emailed_at' => now(),
+        ]);
+
+        $this->actingAs($staff)->get(route('billing.receipts.index'))
+            ->assertOk()
+            ->assertSee('Resend email')
+            ->assertSee(route('billing.receipts.email-preview', $payment), false);
+        $this->actingAs($staff)->get(route('billing.receipts.email-preview', [
+            'payment' => $payment,
+            'locale' => 'zh_CN',
+        ]))->assertOk()
+            ->assertSee('lang="zh-CN"', false)
+            ->assertSee('您的付款已确认');
+
+        $this->actingAs($staff)->post(route('billing.receipts.send', $payment), [
+            'email' => 'receipt-copy@example.test',
+            'locale' => 'zh_CN',
+        ])->assertRedirect()
+            ->assertSessionHas('success', 'Receipt '.$payment->receipt_number.' was emailed to receipt-copy@example.test.');
+
+        Mail::assertSent(
+            BillingReceiptMail::class,
+            fn (BillingReceiptMail $mail): bool => $mail->hasTo('receipt-copy@example.test')
+                && $mail->locale === 'zh_CN'
+                && str_contains($mail->render(), '您的付款已确认'),
+        );
+    }
+
+    public function test_staff_can_record_payment_and_preview_receipt_before_sending(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Preview receipt project']),
+            55,
+            customerEmail: 'preview-receipt@example.test',
+        );
+
+        $this->actingAs($staff)->post(route('billing.documents.payments.store', $document), [
+            'amount' => 55,
+            'method' => 'cash',
+            'paid_at' => now()->toDateString(),
+            'receipt_locale' => 'ms',
+            'receipt_delivery' => 'preview',
+        ])->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Payment recorded. Preview and send the receipt from payment history.');
+
+        $payment = $document->payments()->firstOrFail();
+        $this->assertNull($payment->receipt_emailed_at);
+        Mail::assertNothingSent();
+
+        $this->actingAs($staff)->get(route('billing.receipts.email-preview', [
+            'payment' => $payment,
+            'locale' => 'ms',
+        ]))->assertOk()
+            ->assertSee('Pembayaran anda disahkan');
+
+        $this->actingAs($staff)->post(route('billing.receipts.send', $payment), [
+            'email' => $document->customer_email,
+            'locale' => 'ms',
+        ])->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(
+            BillingReceiptMail::class,
+            fn (BillingReceiptMail $mail): bool => $mail->locale === 'ms'
+                && str_contains($mail->render(), 'Pembayaran anda disahkan'),
+        );
     }
 
     public function test_project_inventory_search_returns_a_limited_result_set(): void
@@ -353,6 +606,111 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(0, BillingDocument::query()->count());
     }
 
+    public function test_accepting_a_quotation_emails_confirmation_once_and_staff_can_resend_manually(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Acceptance email project']),
+            125,
+            'quotation',
+            'accepted-customer@example.test',
+            'Accepted customer',
+            'sent',
+        );
+
+        $this->actingAs($staff)
+            ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
+            ->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.');
+
+        Mail::assertSent(
+            QuotationAcceptanceMail::class,
+            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('accepted-customer@example.test')
+                && $mail->document->number === $document->number,
+        );
+
+        $this->actingAs($staff)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Email acceptance')
+            ->assertSee('Email acceptance confirmation');
+
+        $this->actingAs($staff)
+            ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
+            ->assertRedirect(route('billing.documents.show', $document));
+        Mail::assertSentCount(1);
+
+        $this->actingAs($staff)
+            ->post(route('billing.documents.send-acceptance', $document), ['email' => 'alternate@example.test'])
+            ->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Quotation acceptance confirmation emailed to alternate@example.test.');
+        Mail::assertSentCount(2);
+        Mail::assertSent(
+            QuotationAcceptanceMail::class,
+            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('alternate@example.test'),
+        );
+        $this->assertSame('alternate@example.test', $document->fresh()->customer_email);
+    }
+
+    public function test_signed_customer_acceptance_emails_a_confirmation(): void
+    {
+        Mail::fake();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Signed acceptance project']),
+            75,
+            'quotation',
+            'signed-customer@example.test',
+            'Signed customer',
+            'sent',
+        );
+        $url = \Illuminate\Support\Facades\URL::signedRoute('billing.quotations.respond', [
+            'document' => $document,
+            'status' => 'accepted',
+        ]);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertSee('Quotation accepted')
+            ->assertDontSee('could not send the confirmation email');
+
+        $this->assertSame('accepted', $document->fresh()->status);
+        Mail::assertSent(
+            QuotationAcceptanceMail::class,
+            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('signed-customer@example.test'),
+        );
+    }
+
+    public function test_customer_acceptance_from_their_account_emails_a_confirmation(): void
+    {
+        Mail::fake();
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create(['email' => 'account-customer@example.test']);
+        $customer->assignRole('customer');
+        $project = Project::query()->create([
+            'name' => 'Account acceptance project',
+            'customer_user_id' => $customer->id,
+        ]);
+        $document = $this->createIssuedInvoice(
+            $project,
+            55,
+            'quotation',
+            $customer->email,
+            'Account customer',
+            'sent',
+        );
+
+        $this->actingAs($customer)
+            ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
+            ->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Thank you. Your quotation response has been recorded.');
+
+        $this->assertSame('accepted', $document->fresh()->status);
+        Mail::assertSent(
+            QuotationAcceptanceMail::class,
+            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo($customer->email),
+        );
+    }
+
     public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
     {
         $user = $this->adminUser();
@@ -419,7 +777,7 @@ class BillingInventoryReportsTest extends TestCase
         $quote = BillingDocument::query()->firstOrFail();
         $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
-            ->assertSee('Mark as sent')
+            ->assertSee('Send quotation')
             ->assertDontSee('Convert to invoice')
             ->assertDontSee('Payment history')
             ->assertDontSee('Record full payment');
@@ -498,10 +856,13 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee($payment->receipt_number);
     }
 
-    public function test_staff_can_record_external_acceptance_of_draft_quotation_without_sending_it(): void
+    public function test_staff_can_record_external_acceptance_of_draft_quotation_and_email_confirmation(): void
     {
+        Mail::fake();
         $staff = $this->adminUser();
-        $this->actingAs($staff)->post(route('billing.store'), $this->documentData('quotation', null, 1));
+        $data = $this->documentData('quotation', null, 1);
+        $data['customer_email'] = 'external-acceptance@example.test';
+        $this->actingAs($staff)->post(route('billing.store'), $data);
         $quotation = BillingDocument::query()->firstOrFail();
 
         $this->actingAs($staff)->get(route('billing.documents.show', $quotation))
@@ -512,9 +873,13 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($staff)->post(route('billing.documents.quotation-status', $quotation), [
             'status' => 'accepted',
         ])->assertRedirect(route('billing.documents.show', $quotation))
-            ->assertSessionHas('success', 'Customer acceptance recorded. You can now convert this quotation to an invoice.');
+            ->assertSessionHas('success', 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.');
 
         $this->assertSame('accepted', $quotation->fresh()->status);
+        Mail::assertSent(
+            QuotationAcceptanceMail::class,
+            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('external-acceptance@example.test'),
+        );
         $this->actingAs($staff)->post(route('billing.documents.convert', $quotation))
             ->assertRedirect(route('billing.documents.show', $quotation));
         $this->assertSame('invoice', $quotation->fresh()->type);
@@ -1251,7 +1616,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('Revised service', $quotation->items()->firstOrFail()->description);
         $this->actingAs($user)->get(route('billing.documents.show', $quotation))
             ->assertOk()
-            ->assertSee('Mark as sent')
+            ->assertSee('Send quotation')
             ->assertDontSee('Convert to invoice');
         $this->assertDatabaseCount('inventory_movements', 0);
     }

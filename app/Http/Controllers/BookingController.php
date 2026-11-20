@@ -17,10 +17,14 @@ use App\Support\StatusBadge;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -34,6 +38,8 @@ class BookingController extends Controller
 {
     private const TIMEZONE = 'Asia/Kuala_Lumpur';
 
+    private const BOOKABLE_SERVICES = ['basic-troubleshooting', 'fyp-consultation'];
+
     public function create(Request $request): View
     {
         return $this->bookingForm($request, false);
@@ -46,7 +52,11 @@ class BookingController extends Controller
 
     private function bookingForm(Request $request, bool $authenticatedBooking): View
     {
-        $services = ProductService::query()->where('is_active', true)->orderBy('name')->get();
+        $services = ProductService::query()
+            ->where('is_active', true)
+            ->whereIn('id', self::BOOKABLE_SERVICES)
+            ->orderBy('name')
+            ->get();
 
         return view('bookings.create', [
             'services' => $services,
@@ -116,6 +126,52 @@ class BookingController extends Controller
         ]);
     }
 
+    public function reverseGeocode(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+        if (! Cache::add('booking.reverse-geocode.request-lock', true, now()->addSecond())) {
+            return response()->json(['message' => 'Please wait before looking up another address.'], 429);
+        }
+
+        try {
+            $response = Http::acceptJson()
+                ->withUserAgent(config('app.name').' booking address lookup ('.config('app.url').')')
+                ->timeout(5)
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'format' => 'jsonv2',
+                    'lat' => $data['latitude'],
+                    'lon' => $data['longitude'],
+                    'zoom' => 18,
+                    'addressdetails' => 1,
+                ]);
+        } catch (ConnectionException $exception) {
+            Log::warning('Booking pin address lookup could not connect to OpenStreetMap.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Address lookup is temporarily unavailable.'], 503);
+        }
+
+        if (! $response->successful()) {
+            Log::warning('Booking pin address lookup returned an unsuccessful response.', [
+                'status' => $response->status(),
+            ]);
+
+            return response()->json(['message' => 'Address lookup is temporarily unavailable.'], 503);
+        }
+
+        $address = trim((string) $response->json('display_name'));
+        if ($address === '') {
+            return response()->json(['message' => 'No address was found for this pin.'], 404);
+        }
+
+        return response()->json(['address' => $address]);
+    }
+
     public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         $data = $request->validate([
@@ -125,7 +181,9 @@ class BookingController extends Controller
             'service_id' => [
                 'required',
                 'string',
-                Rule::exists('product_services', 'id')->where(fn ($query) => $query->where('is_active', true)),
+                Rule::exists('product_services', 'id')->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereIn('id', self::BOOKABLE_SERVICES)),
             ],
             'device_model' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:255'],
             'request_notes' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:3000'],
