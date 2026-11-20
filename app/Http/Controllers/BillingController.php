@@ -813,7 +813,7 @@ class BillingController extends Controller
         BillingPayment $payment,
         BillingReceiptService $receipts,
     ): Response {
-        $payment->load('document');
+        $payment->load('document.items');
         abort_unless($payment->document->type === 'invoice', 404);
 
         return response($receipts->renderPdf($payment, $this->billingLocale($request)))
@@ -1067,7 +1067,7 @@ class BillingController extends Controller
     public function previewReceiptEmail(BillingPayment $payment, Request $request): Response
     {
         abort_unless(! $request->user()->hasRole('customer'), 403);
-        $payment->load('document');
+        $payment->load('document.items');
         abort_unless($payment->document->type === 'invoice', 404);
 
         $mail = new BillingReceiptMail(

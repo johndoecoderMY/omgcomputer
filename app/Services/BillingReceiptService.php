@@ -21,7 +21,7 @@ class BillingReceiptService
         bool $resend = false,
     ): bool
     {
-        $payment->loadMissing(['document', 'user']);
+        $payment->loadMissing(['document.items', 'user']);
         if ($payment->receipt_emailed_at && ! $resend) {
             return true;
         }
@@ -68,7 +68,7 @@ class BillingReceiptService
 
     public function renderPdf(BillingPayment $payment, ?string $locale = null): string
     {
-        $payment->loadMissing('document');
+        $payment->loadMissing('document.items');
         $locale = $this->supportedLocale($locale);
         $companyProfile = CompanyProfile::current();
         $tempDirectory = storage_path('app/mpdf-tmp');

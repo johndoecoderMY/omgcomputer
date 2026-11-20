@@ -63,6 +63,7 @@ return [
         'payment_method' => 'Payment method',
         'payment_reference' => 'Payment reference',
         'payment_date' => 'Payment date',
+        'invoice_items' => 'Invoice items',
         'invoice_subtotal' => 'Invoice subtotal',
         'invoice_total' => 'Invoice total',
         'computer_generated_receipt' => 'This receipt confirms the payment recorded against the invoice above. This is a computer-generated receipt.',

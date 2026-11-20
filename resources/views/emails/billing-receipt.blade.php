@@ -34,6 +34,49 @@
                 </td>
             </tr>
         </table>
+        <h2 style="margin:24px 0 10px;font-size:18px;color:#12263f;">{{ __('billing.pdf.invoice_items') }}</h2>
+        <table role="table" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;font-size:14px;">
+            <thead>
+                <tr style="background:#f1f5f9;color:#475569;text-align:left;">
+                    <th scope="col" style="padding:10px 8px;">{{ __('billing.pdf.description') }}</th>
+                    <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.quantity') }}</th>
+                    <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.unit_price') }}</th>
+                    <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.amount') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($payment->document->items as $item)
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px 8px;color:#12263f;">{{ $item->description }}</td>
+                        <td style="padding:10px 8px;text-align:right;color:#12263f;">{{ $item->quantity }}</td>
+                        <td style="padding:10px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $item->unit_price, 2) }}</td>
+                        <td style="padding:10px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $item->line_total, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14px;font-size:14px;">
+            <tr>
+                <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.subtotal') }}</td>
+                <td style="padding:5px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $payment->document->subtotal, 2) }}</td>
+            </tr>
+            @if ((float) $payment->document->discount_amount > 0)
+                <tr>
+                    <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.discount') }}</td>
+                    <td style="padding:5px 8px;text-align:right;color:#12263f;">- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td>
+                </tr>
+            @endif
+            @if ((float) $payment->document->tax_amount > 0)
+                <tr>
+                    <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.tax_rate', ['rate' => number_format((float) $payment->document->tax_rate, 2)]) }}</td>
+                    <td style="padding:5px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td>
+                </tr>
+            @endif
+            <tr>
+                <td style="padding:9px 8px;border-top:1px solid #cbd5e1;font-weight:bold;color:#12263f;">{{ __('billing.pdf.invoice_total') }}</td>
+                <td style="padding:9px 8px;border-top:1px solid #cbd5e1;text-align:right;font-weight:bold;color:#12263f;">RM {{ number_format((float) $payment->document->total, 2) }}</td>
+            </tr>
+        </table>
     </td>
 </tr>
 @endsection

@@ -63,6 +63,7 @@ return [
         'payment_method' => '付款方式',
         'payment_reference' => '付款参考号',
         'payment_date' => '付款日期',
+        'invoice_items' => '发票项目',
         'invoice_subtotal' => '发票小计',
         'invoice_total' => '发票总额',
         'computer_generated_receipt' => '此收据确认已记录上述发票的付款。这是一份由电脑生成的收据。',

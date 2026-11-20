@@ -355,6 +355,56 @@ class BillingInventoryReportsTest extends TestCase
         );
     }
 
+    public function test_receipt_email_preview_and_pdf_include_invoice_items_and_keep_payment_amount_distinct(): void
+    {
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Itemized receipt project']),
+            75,
+        );
+        $document->items()->create([
+            'description' => 'Laptop setup',
+            'quantity' => 1,
+            'unit_price' => 50,
+            'line_total' => 50,
+        ]);
+        $document->items()->create([
+            'description' => 'RAM upgrade',
+            'quantity' => 1,
+            'unit_price' => 25,
+            'line_total' => 25,
+        ]);
+        $payment = $document->payments()->create([
+            'user_id' => $staff->id,
+            'amount' => 20,
+            'method' => 'cash',
+            'paid_at' => now(),
+        ]);
+
+        $this->actingAs($staff)->get(route('billing.receipts.email-preview', $payment))
+            ->assertOk()
+            ->assertSee('Laptop setup')
+            ->assertSee('RAM upgrade')
+            ->assertSee('RM 50.00')
+            ->assertSee('RM 25.00')
+            ->assertSee('RM 75.00')
+            ->assertSee('RM 20.00');
+
+        $this->get(route('billing.receipts.pdf', $payment))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $receiptHtml = view('billing.receipt-pdf', [
+            'payment' => $payment->load('document.items'),
+            'companyProfile' => \App\Models\CompanyProfile::current(),
+            'logoData' => null,
+        ])->render();
+        $this->assertStringContainsString('Laptop setup', $receiptHtml);
+        $this->assertStringContainsString('RAM upgrade', $receiptHtml);
+        $this->assertStringContainsString('RM 75.00', $receiptHtml);
+        $this->assertStringContainsString('RM 20.00', $receiptHtml);
+    }
+
     public function test_staff_can_record_payment_and_preview_receipt_before_sending(): void
     {
         Mail::fake();

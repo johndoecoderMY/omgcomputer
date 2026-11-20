@@ -12,6 +12,12 @@
         .details{width:100%;border-collapse:collapse;margin-top:24px}
         .details th{background:#edf3f5;text-align:left}
         .details th,.details td{padding:10px;border:1px solid #d9e1e5}
+        .items{width:100%;border-collapse:collapse;margin-top:24px}
+        .items th{background:#edf3f5;text-align:left}
+        .items th,.items td{padding:9px;border-bottom:1px solid #d9e1e5}
+        .totals{width:48%;margin:16px 0 0 auto;border-collapse:collapse}
+        .totals td{padding:6px}
+        .grand{font-weight:bold;border-top:1px solid #80919a}
         .amount{font-size:17pt;font-weight:bold;color:#145b73}
         .footer{margin-top:30px;padding-top:12px;border-top:1px solid #d9e1e5}
     </style>
@@ -54,20 +60,47 @@
         </tr>
     </table>
 
+    <h2 style="font-size:13pt;margin:24px 0 8px;color:#145b73">{{ __('billing.pdf.invoice_items') }}</h2>
+    <table class="items">
+        <thead>
+            <tr>
+                <th>{{ __('billing.pdf.description') }}</th>
+                <th class="right">{{ __('billing.pdf.quantity') }}</th>
+                <th class="right">{{ __('billing.pdf.unit_price') }}</th>
+                <th class="right">{{ __('billing.pdf.amount') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($payment->document->items as $item)
+                <tr>
+                    <td>{{ $item->description }}</td>
+                    <td class="right">{{ $item->quantity }}</td>
+                    <td class="right">RM {{ number_format((float) $item->unit_price, 2) }}</td>
+                    <td class="right">RM {{ number_format((float) $item->line_total, 2) }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <table class="totals">
+        <tbody>
+            <tr><td>{{ __('billing.pdf.subtotal') }}</td><td class="right">RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
+            @if ((float) $payment->document->discount_amount > 0)
+                <tr><td>{{ __('billing.pdf.discount') }}</td><td class="right">- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
+            @endif
+            @if ((float) $payment->document->tax_amount > 0)
+                <tr><td>{{ __('billing.pdf.tax_rate', ['rate' => number_format((float) $payment->document->tax_rate, 2)]) }}</td><td class="right">RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td></tr>
+            @endif
+            <tr class="grand"><td>{{ __('billing.pdf.invoice_total') }}</td><td class="right">RM {{ number_format((float) $payment->document->total, 2) }}</td></tr>
+        </tbody>
+    </table>
+
     <table class="details">
         <tbody>
             <tr><th>{{ __('billing.pdf.invoice') }}</th><td>{{ $payment->document->number }}</td></tr>
             <tr><th>{{ __('billing.pdf.payment_method') }}</th><td>{{ __('billing.pdf.payment_method_'.$payment->method) }}</td></tr>
             <tr><th>{{ __('billing.pdf.payment_reference') }}</th><td>{{ $payment->reference ?: '—' }}</td></tr>
             <tr><th>{{ __('billing.pdf.payment_date') }}</th><td>{{ $payment->paid_at->locale(app()->getLocale())->translatedFormat('F j, Y g:i A') }}</td></tr>
-            <tr><th>{{ __('billing.pdf.invoice_subtotal') }}</th><td>RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
-            @if ((float) $payment->document->discount_amount > 0)
-                <tr><th>{{ __('billing.pdf.discount') }}</th><td>- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
-            @endif
-            @if ((float) $payment->document->tax_amount > 0)
-                <tr><th>{{ __('billing.pdf.tax_rate', ['rate' => number_format((float) $payment->document->tax_rate, 2)]) }}</th><td>RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td></tr>
-            @endif
-            <tr><th>{{ __('billing.pdf.invoice_total') }}</th><td>RM {{ number_format((float) $payment->document->total, 2) }}</td></tr>
         </tbody>
     </table>
 
