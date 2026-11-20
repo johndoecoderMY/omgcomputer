@@ -5,7 +5,7 @@
 @section('content')
     <div class="container-fluid py-3">
         <x-page-header eyebrow="Bookings" title="Book Calendar"
-            :description="$customerView ? 'View your scheduled appointments.' : 'Review customer appointments and their current status.'"
+            :description="$customerView ? 'View your scheduled appointments. All times are shown in Malaysia Time (MYT).' : 'Review customer appointments and their current status. All times are shown in Malaysia Time (MYT).'"
             :back-url="route('bookings.index')" back-label="Customer bookings">
         </x-page-header>
 
@@ -33,8 +33,8 @@
                         <dt class="col-sm-4">Phone</dt><dd class="col-sm-8" data-booking-phone></dd>
                         <dt class="col-sm-4">Service</dt><dd class="col-sm-8" data-booking-service></dd>
                         <dt class="col-sm-4">Device</dt><dd class="col-sm-8" data-booking-device></dd>
-                        <dt class="col-sm-4">Starts</dt><dd class="col-sm-8" data-booking-start></dd>
-                        <dt class="col-sm-4">Ends</dt><dd class="col-sm-8" data-booking-end></dd>
+                        <dt class="col-sm-4">Starts (MYT)</dt><dd class="col-sm-8" data-booking-start></dd>
+                        <dt class="col-sm-4">Ends (MYT)</dt><dd class="col-sm-8" data-booking-end></dd>
                         <dt class="col-sm-4">Request notes</dt>
                         <dd class="col-sm-8" data-booking-notes style="white-space: pre-wrap"></dd>
                         <dt class="col-sm-4 d-none" data-booking-customer-link-label>Customer record</dt>
@@ -60,6 +60,8 @@
             if (!calendarElement || !window.FullCalendar) return;
 
             const calendar = new FullCalendar.Calendar(calendarElement, {
+                timeZone: 'UTC',
+                now: @json($calendarNow),
                 initialView: 'dayGridMonth',
                 height: 'auto',
                 nowIndicator: true,
@@ -112,12 +114,18 @@
                     setText('[data-booking-phone]', details.phone);
                     setText('[data-booking-service]', details.service);
                     setText('[data-booking-device]', details.device);
-                    setText('[data-booking-start]', event.start
-                        ? FullCalendar.formatDate(event.start, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-                        : null);
-                    setText('[data-booking-end]', event.end
-                        ? FullCalendar.formatDate(event.end, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-                        : null);
+                    const formatMalaysiaDateTime = (date) => date
+                        ? new Intl.DateTimeFormat(@json(app()->getLocale() === 'zh_CN' ? 'zh-CN' : (app()->getLocale() === 'ms' ? 'ms' : 'en')), {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            timeZone: 'UTC',
+                        }).format(date) + ' MYT'
+                        : null;
+                    setText('[data-booking-start]', formatMalaysiaDateTime(event.start));
+                    setText('[data-booking-end]', formatMalaysiaDateTime(event.end));
                     setText('[data-booking-notes]', details.notes);
                     const customerLink = modal.querySelector('[data-booking-customer-link]');
                     const customerLinkLabel = modal.querySelector('[data-booking-customer-link-label]');

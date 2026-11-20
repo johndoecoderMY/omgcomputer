@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Bookings / Available times" :title="$dayLabel.' at '.date('g:i A', strtotime($slot->start_time))" :back-url="route('booking-time-slots.index')" back-label="All available times">
+    <x-page-header eyebrow="Bookings / Available times" :title="$dayLabel.' at '.date('g:i A', strtotime($slot->start_time)).' MYT'" :back-url="route('booking-time-slots.index')" back-label="All available times">
         <x-slot:actions><a class="btn btn-outline-primary" href="{{ route('booking-time-slots.edit', $slot) }}">Edit</a><a class="btn btn-outline-danger" href="{{ route('booking-time-slots.delete', $slot) }}">Delete</a></x-slot:actions>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif

@@ -60,7 +60,7 @@
                             <div class="d-flex justify-content-between align-items-start gap-3">
                                 <div>
                                     <h3 class="h6 mb-1">{{ $booking->service_name }}</h3>
-                                    <p class="small text-body-secondary mb-0">{{ $booking->starts_at->format('M j, Y · g:i A') }}</p>
+                                    <p class="small text-body-secondary mb-0">{{ $booking->starts_at->copy()->setTimezone('Asia/Kuala_Lumpur')->format('M j, Y · g:i A') }} MYT</p>
                                 </div>
                                 <span class="badge text-bg-{{ $booking->status === 'confirmed' ? 'success' : 'warning' }}">{{ \App\Models\Booking::STATUSES[$booking->status] ?? ucfirst($booking->status) }}</span>
                             </div>

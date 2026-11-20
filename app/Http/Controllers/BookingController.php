@@ -62,6 +62,8 @@ class BookingController extends Controller
             'services' => $services,
             'authenticatedBooking' => $authenticatedBooking,
             'deviceDetailsServiceId' => 'basic-troubleshooting',
+            // FullCalendar runs in UTC mode so these wall-clock values stay in MYT without a timezone plugin.
+            'calendarNow' => Carbon::now(self::TIMEZONE)->format('Y-m-d\TH:i:s\Z'),
         ]);
     }
 
@@ -71,8 +73,8 @@ class BookingController extends Controller
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after:start'],
         ]);
-        $start = Carbon::parse($data['start'])->setTimezone(self::TIMEZONE)->startOfDay();
-        $end = Carbon::parse($data['end'])->setTimezone(self::TIMEZONE)->startOfDay()->subDay();
+        $start = Carbon::createFromFormat('Y-m-d', substr($data['start'], 0, 10), self::TIMEZONE)->startOfDay();
+        $end = Carbon::createFromFormat('Y-m-d', substr($data['end'], 0, 10), self::TIMEZONE)->startOfDay()->subDay();
         $startUtc = $start->copy()->setTimezone('UTC');
         $endUtc = $end->copy()->endOfDay()->setTimezone('UTC');
         $bookedSlots = Booking::query()
@@ -100,11 +102,10 @@ class BookingController extends Controller
 
             if ($hasAvailability) {
                 $events[] = [
-                    'title' => 'Available',
                     'start' => $dateString,
                     'allDay' => true,
                     'display' => 'background',
-                    'color' => '#d9f8eb',
+                    'color' => '#dcfce7',
                     'extendedProps' => ['available' => true],
                 ];
             }
@@ -193,12 +194,16 @@ class BookingController extends Controller
             'pickup_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
             'dropoff_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
             'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
-            'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'booking_date' => ['required', 'date_format:Y-m-d'],
         ]);
+        $bookingDate = Carbon::createFromFormat('Y-m-d', $data['booking_date'], self::TIMEZONE)->startOfDay();
+        if ($bookingDate->lt(Carbon::today(self::TIMEZONE))) {
+            throw ValidationException::withMessages(['booking_date' => 'Choose a future appointment date.']);
+        }
         $time = $request->validate([
             'start_time' => [
                 'required',
-                Rule::in($this->availableSlots(Carbon::createFromFormat('Y-m-d', $data['booking_date'], self::TIMEZONE))),
+                Rule::in($this->availableSlots($bookingDate)),
             ],
         ]);
         $data = [...$data, ...$time];
@@ -263,7 +268,7 @@ class BookingController extends Controller
         $notifier->notifyAdmins(
             null,
             'New booking received',
-            sprintf('%s booked %s for %s.', $booking->customer_name, $booking->service_name, $booking->starts_at->setTimezone(self::TIMEZONE)->format('M j, Y g:i A')),
+            sprintf('%s booked %s for %s MYT.', $booking->customer_name, $booking->service_name, $booking->starts_at->setTimezone(self::TIMEZONE)->format('M j, Y g:i A')),
             route('bookings.index'),
         );
 
@@ -311,6 +316,7 @@ class BookingController extends Controller
     {
         return view('bookings.calendar', [
             'customerView' => $request->user()->hasRole('customer'),
+            'calendarNow' => Carbon::now(self::TIMEZONE)->format('Y-m-d\TH:i:s\Z'),
         ]);
     }
 
@@ -333,8 +339,8 @@ class BookingController extends Controller
             'start' => ['required', 'date'],
             'end' => ['required', 'date', 'after:start'],
         ]);
-        $start = Carbon::parse($data['start'])->setTimezone('UTC');
-        $end = Carbon::parse($data['end'])->setTimezone('UTC');
+        $start = Carbon::createFromFormat('Y-m-d', substr($data['start'], 0, 10), self::TIMEZONE)->startOfDay()->setTimezone('UTC');
+        $end = Carbon::createFromFormat('Y-m-d', substr($data['end'], 0, 10), self::TIMEZONE)->startOfDay()->setTimezone('UTC');
         $query = Booking::query()
             ->with('customer')
             ->where('starts_at', '<', $end)
@@ -346,31 +352,36 @@ class BookingController extends Controller
             $query->whereRaw('LOWER(TRIM(customer_email)) = ?', [strtolower(trim($request->user()->email))]);
         }
 
-        $events = $query->get()->map(fn (Booking $booking): array => [
-            'id' => $booking->id,
-            'title' => $booking->customer_name.' · '.$booking->service_name,
-            'start' => $booking->starts_at->copy()->setTimezone('UTC')->toIso8601String(),
-            'end' => $booking->starts_at->copy()->setTimezone('UTC')->addMinutes($booking->duration_minutes)->toIso8601String(),
-            'backgroundColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
-            'borderColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
-            'textColor' => Booking::CALENDAR_COLORS[$booking->status]['text'] ?? Booking::CALENDAR_COLORS['pending']['text'],
-            'url' => $request->user()->hasRole('customer') ? null : route('bookings.index'),
-            'extendedProps' => [
-                'kind' => 'booking',
-                'reference' => $booking->reference,
-                'status' => Booking::STATUSES[$booking->status] ?? $booking->status,
-                'customer' => $booking->customer_name,
-                'email' => $booking->customer_email,
-                'phone' => $booking->customer_phone,
-                'service' => $booking->service_name,
-                'device' => $booking->device_model,
-                'notes' => $booking->request_notes,
-                'booking_url' => route('bookings.show', $booking),
-                'customer_url' => ! $request->user()->hasRole('customer') && $booking->customer
-                    ? route('customers.show', $booking->customer)
-                    : null,
-            ],
-        ]);
+        $events = $query->get()->map(function (Booking $booking) use ($request): array {
+            $localStart = $booking->starts_at->copy()->setTimezone(self::TIMEZONE);
+
+            return [
+                'id' => $booking->id,
+                'title' => $booking->customer_name.' · '.$booking->service_name,
+                // Encode Malaysia wall time as UTC for FullCalendar's fixed UTC display mode.
+                'start' => $localStart->format('Y-m-d\TH:i:s\Z'),
+                'end' => $localStart->copy()->addMinutes($booking->duration_minutes)->format('Y-m-d\TH:i:s\Z'),
+                'backgroundColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
+                'borderColor' => Booking::CALENDAR_COLORS[$booking->status]['background'] ?? Booking::CALENDAR_COLORS['pending']['background'],
+                'textColor' => Booking::CALENDAR_COLORS[$booking->status]['text'] ?? Booking::CALENDAR_COLORS['pending']['text'],
+                'url' => $request->user()->hasRole('customer') ? null : route('bookings.index'),
+                'extendedProps' => [
+                    'kind' => 'booking',
+                    'reference' => $booking->reference,
+                    'status' => Booking::STATUSES[$booking->status] ?? $booking->status,
+                    'customer' => $booking->customer_name,
+                    'email' => $booking->customer_email,
+                    'phone' => $booking->customer_phone,
+                    'service' => $booking->service_name,
+                    'device' => $booking->device_model,
+                    'notes' => $booking->request_notes,
+                    'booking_url' => route('bookings.show', $booking),
+                    'customer_url' => ! $request->user()->hasRole('customer') && $booking->customer
+                        ? route('customers.show', $booking->customer)
+                        : null,
+                ],
+            ];
+        });
 
         return response()->json($events);
     }
@@ -432,7 +443,7 @@ class BookingController extends Controller
                 }
             }, true)
             ->editColumn('starts_at', fn (Booking $booking): string => $booking->starts_at
-                ->setTimezone(self::TIMEZONE)->format('M j, Y g:i A'))
+                ->setTimezone(self::TIMEZONE)->format('M j, Y g:i A').' MYT')
             ->addColumn('customer_contact', function (Booking $booking) use ($request): string {
                 $customerName = e($booking->customer_name);
                 if (! $request->user()->hasRole('customer') && $booking->customer) {

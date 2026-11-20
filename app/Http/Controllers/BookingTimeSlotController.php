@@ -26,6 +26,7 @@ class BookingTimeSlotController extends Controller
         return view('booking-time-slots.index', [
             'events' => $events,
             'days' => BookingTimeSlot::DAYS,
+            'calendarNow' => now('Asia/Kuala_Lumpur')->format('Y-m-d\TH:i:s\Z'),
         ]);
     }
 
@@ -36,7 +37,7 @@ class BookingTimeSlotController extends Controller
             'start_time' => AllowedFilter::partial('start_time'),
         ]))
             ->addColumn('day_label', fn (BookingTimeSlot $slot): string => BookingTimeSlot::DAYS[$slot->day_of_week])
-            ->editColumn('start_time', fn (BookingTimeSlot $slot): string => date('g:i A', strtotime($slot->start_time)))
+            ->editColumn('start_time', fn (BookingTimeSlot $slot): string => date('g:i A', strtotime($slot->start_time)).' MYT')
             ->addColumn('actions', fn (BookingTimeSlot $slot): string => sprintf(
                 '<a class="btn btn-sm btn-outline-primary" href="%s">View</a>',
                 e(route('booking-time-slots.show', $slot)),

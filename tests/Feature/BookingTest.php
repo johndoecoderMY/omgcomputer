@@ -666,7 +666,8 @@ class BookingTest extends TestCase
         ]));
         $datatableResponse->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
-            ->assertJsonPath('data.0.reference', 'BK-FILTER-1');
+            ->assertJsonPath('data.0.reference', 'BK-FILTER-1')
+            ->assertJsonPath('data.0.starts_at', $date->format('M j, Y g:i A').' MYT');
         $management = $datatableResponse->json('data.0.management');
         $this->assertStringContainsString('data-booking-update', $management);
         $this->assertStringContainsString('data-bs-toggle="modal"', $management);
@@ -728,18 +729,21 @@ class BookingTest extends TestCase
 
         $this->actingAs($customer)->get(route('bookings.calendar'))
             ->assertOk()
-            ->assertSee('Book Calendar');
+            ->assertSee('Book Calendar')
+            ->assertSee("timeZone: 'UTC'", false);
         $this->get(route('bookings.show', $createdBookings[1]))->assertNotFound();
         $this->get(route('bookings.show', $createdBookings[0]))
             ->assertOk()
             ->assertSee('BK-CUSTOMER-1');
+        $localStart = $startsAt->copy()->setTimezone('Asia/Kuala_Lumpur');
         $this->getJson(route('bookings.calendar.events', [
-            'start' => $startsAt->copy()->subHour()->toIso8601String(),
-            'end' => $startsAt->copy()->addHours(2)->toIso8601String(),
+            'start' => $localStart->copy()->startOfDay()->format('Y-m-d\T00:00:00\Z'),
+            'end' => $localStart->copy()->addDay()->startOfDay()->format('Y-m-d\T00:00:00\Z'),
         ]))
             ->assertOk()
             ->assertJsonCount(1)
-            ->assertJsonPath('0.extendedProps.reference', 'BK-CUSTOMER-1');
+            ->assertJsonPath('0.extendedProps.reference', 'BK-CUSTOMER-1')
+            ->assertJsonPath('0.start', $localStart->format('Y-m-d\TH:i:s\Z'));
     }
 
     public function test_booking_calendar_is_basic_and_availability_comes_from_the_database(): void
@@ -749,10 +753,15 @@ class BookingTest extends TestCase
             ->assertSee('id="calendar"', false)
             ->assertDontSee('window.location.href =')
             ->assertSee('new FullCalendar.Calendar(calendarEl, {', false)
+            ->assertSee('timeZone: "UTC"', false)
             ->assertSee('initialView: "dayGridMonth"', false)
             ->assertSee('events: availabilityEventsUrl', false)
             ->assertSee('eventsSet:', false)
             ->assertSee('dayCellClassNames:', false)
+            ->assertSee('booking-date-available', false)
+            ->assertSee('#dcfce7', false)
+            ->assertSee('.fc-day-today', false)
+            ->assertSee('#ffb51b', false)
             ->assertSee('booking-date-unavailable', false)
             ->assertSee('if (!availableAppointmentDates.has(info.dateStr))', false)
             ->assertSee('booking-date-selected', false)
@@ -787,10 +796,12 @@ class BookingTest extends TestCase
             ->assertJsonPath('slots.8', '17:00');
 
         $this->getJson(route('bookings.events', [
-            'start' => $date->toDateString(),
-            'end' => $date->copy()->addWeek()->toDateString(),
+            'start' => $date->format('Y-m-d\T00:00:00\Z'),
+            'end' => $date->copy()->addWeek()->format('Y-m-d\T00:00:00\Z'),
         ]))->assertOk()
             ->assertJsonFragment(['start' => $date->toDateString(), 'available' => true])
+            ->assertJsonPath('0.color', '#dcfce7')
+            ->assertJsonMissing(['title' => 'Available'])
             ->assertJsonMissing(['start' => $date->copy()->next(Carbon::SUNDAY)->toDateString()]);
     }
 

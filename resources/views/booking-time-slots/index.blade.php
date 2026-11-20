@@ -222,6 +222,8 @@
         });
 
         const calendar = new FullCalendar.Calendar(calendarElement, {
+            timeZone: 'UTC',
+            now: @json($calendarNow),
             initialView: 'timeGridWeek',
             height: 'auto',
             nowIndicator: true,

@@ -23,8 +23,15 @@
         #calendar .booking-date-unavailable { cursor: not-allowed; }
         #calendar .booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; color: #858b92; }
         #calendar .booking-date-unavailable .fc-daygrid-day-number { color: #858b92; }
+        #calendar .booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
+        #calendar .booking-date-available .fc-daygrid-day-number { color: #166534; font-weight: 600; }
         #calendar .booking-date-selected .fc-daygrid-day-frame { background: rgba(255, 75, 11, .12); box-shadow: inset 0 0 0 2px #ff4b0b; border-radius: .5rem; }
         #calendar .booking-date-selected .fc-daygrid-day-number { color: #fff !important; background: #ff4b0b; font-weight: 700; }
+        #calendar .fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b; border-radius: .5rem; }
+        #calendar .fc-day-today.booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
+        #calendar .fc-day-today.booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; }
+        #calendar .fc-day-today .fc-daygrid-day-number { color: #493500 !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
+        #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
         #booking-location-map { min-height: 280px; border-radius: .5rem; z-index: 0; }
         .booking-location-pin { color: var(--bs-primary); font-size: 2rem; text-shadow: 0 1px 3px #fff; }
     </style>
@@ -85,7 +92,7 @@
                                                         <div class="booking-selection-card" id="booking-time-card">
                                                             <span class="booking-selection-icon bi bi-clock" aria-hidden="true"></span>
                                                             <div class="booking-selection-value flex-grow-1">
-                                                                <div class="small text-body-secondary">{{ __('Appointment time') }}</div>
+                                                                <div class="small text-body-secondary">{{ __('Appointment time') }} (MYT)</div>
                                                                 <div class="fw-semibold" id="booking-time-summary" role="status" aria-live="polite">{{ __('Select a date first') }}</div>
                                                             </div>
                                                             <button class="btn btn-sm btn-outline-primary text-nowrap" id="booking-change-time" type="button" disabled>{{ __('Choose a time') }}</button>
@@ -532,7 +539,7 @@
                     };
                     const calendarMessages = {
                         loading: @json(__('Checking appointment availability...'), JSON_UNESCAPED_UNICODE),
-                        ready: @json(__('Greyed-out dates have no available appointment times.'), JSON_UNESCAPED_UNICODE),
+                        ready: "",
                         error: @json(__('Could not check appointment availability. Please refresh the page.'), JSON_UNESCAPED_UNICODE),
                     };
                     const appointmentMessages = {
@@ -544,19 +551,23 @@
                     };
 
                     function formatAppointmentDate(date) {
+                        const [year, month, day] = date.split("-").map(Number);
                         return new Intl.DateTimeFormat(calendarLocale, {
                             weekday: "long",
                             year: "numeric",
                             month: "long",
                             day: "numeric",
-                        }).format(new Date(date + "T12:00:00"));
+                            timeZone: "UTC",
+                        }).format(new Date(Date.UTC(year, month - 1, day, 12)));
                     }
 
                     function formatAppointmentTime(time) {
-                        return new Date("1970-01-01T" + time + ":00").toLocaleTimeString(calendarLocale, {
+                        const [hour, minute] = time.split(":").map(Number);
+                        return new Intl.DateTimeFormat(calendarLocale, {
                             hour: "numeric",
                             minute: "2-digit",
-                        });
+                            timeZone: "UTC",
+                        }).format(new Date(Date.UTC(1970, 0, 1, hour, minute))) + " MYT";
                     }
 
                     function updateAppointmentSummary() {
@@ -580,6 +591,8 @@
                     let calendarAvailabilityFailed = false;
                     const calendar = new FullCalendar.Calendar(calendarEl, {
                         locale: calendarLocale,
+                        timeZone: "UTC",
+                        now: @json($calendarNow),
                         initialView: "dayGridMonth",
                         events: availabilityEventsUrl,
                         loading: function (isLoading) {
@@ -604,6 +617,7 @@
                                 }));
                             calendarEl.querySelectorAll(".fc-daygrid-day[data-date]").forEach(function (cell) {
                                 const isAvailable = availableAppointmentDates.has(cell.dataset.date);
+                                cell.classList.toggle("booking-date-available", isAvailable);
                                 cell.classList.toggle("booking-date-unavailable", !isAvailable);
                                 cell.setAttribute("aria-disabled", String(!isAvailable));
                             });
@@ -619,6 +633,8 @@
 
                             if (!availableAppointmentDates.has(cellDate)) {
                                 classNames.push("booking-date-unavailable");
+                            } else {
+                                classNames.push("booking-date-available");
                             }
                             if (cellDate === selectedAppointmentDate) {
                                 classNames.push("booking-date-selected");
