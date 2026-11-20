@@ -845,10 +845,14 @@ class BookingTest extends TestCase
             ->assertOk()
             ->assertSee('id="booking-confirmation-modal"', false)
             ->assertSee('id="booking-confirmation-details"', false)
+            ->assertSee('id="booking-confirmation-map"', false)
+            ->assertSee('id="booking-confirmation-location-section"', false)
+            ->assertSee('Map preview')
             ->assertSee('Confirm your booking')
             ->assertSee('Edit details')
             ->assertSee('Confirm booking')
             ->assertSee('bookingConfirmationModal.show()', false)
+            ->assertSee('confirmationMap.fitBounds', false)
             ->assertSee('bookingForm.requestSubmit()', false);
     }
 

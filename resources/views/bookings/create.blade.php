@@ -25,6 +25,8 @@
         .booking-location-card .card-body { padding: .65rem; }
         .booking-location-card.is-active { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem rgba(var(--bs-primary-rgb), .12); }
         .booking-location-preview { overflow-wrap: anywhere; min-height: 1.5rem; }
+        #booking-confirmation-map { height: 260px; border-radius: .75rem; background: var(--bs-tertiary-bg); z-index: 0; }
+        .booking-confirmation-map-legend { width: .75rem; height: .75rem; border-radius: 50%; }
         #booking-location-map { min-height: 320px; height: min(62vh, 620px); border-radius: .5rem; z-index: 0; }
         #calendar .booking-date-unavailable { cursor: not-allowed; }
         #calendar .booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; color: #858b92; }
@@ -226,7 +228,7 @@
 
                                 <div class="modal fade" id="booking-confirmation-modal" tabindex="-1"
                                     aria-labelledby="booking-confirmation-title" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-sm-down">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h2 class="modal-title h5" id="booking-confirmation-title">{{ __('Confirm your booking') }}</h2>
@@ -234,8 +236,76 @@
                                                     aria-label="{{ __('Close') }}"></button>
                                             </div>
                                             <div class="modal-body">
-                                                <p>{{ __('Review the details below before confirming.') }}</p>
-                                                <dl class="row mb-0" id="booking-confirmation-details"></dl>
+                                                <p class="text-body-secondary mb-3">{{ __('Review the details below before confirming.') }}</p>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-sm-6">
+                                                        <div class="card bg-body-tertiary border-0 h-100">
+                                                            <div class="card-body p-3">
+                                                                <div class="small text-body-secondary">{{ __('Appointment date') }}</div>
+                                                                <div class="fw-semibold" id="booking-confirmation-date"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <div class="card bg-body-tertiary border-0 h-100">
+                                                            <div class="card-body p-3">
+                                                                <div class="small text-body-secondary">{{ __('Appointment time') }} (MYT)</div>
+                                                                <div class="fw-semibold" id="booking-confirmation-time"></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <section class="card mb-3" aria-labelledby="booking-confirmation-details-title">
+                                                    <div class="card-header bg-body-tertiary fw-semibold" id="booking-confirmation-details-title">{{ __('Booking details') }}</div>
+                                                    <div class="card-body">
+                                                        <dl class="row mb-0" id="booking-confirmation-details"></dl>
+                                                    </div>
+                                                </section>
+                                                <section id="booking-confirmation-location-section" hidden aria-labelledby="booking-confirmation-location-title">
+                                                    <h3 class="h6 mb-2" id="booking-confirmation-location-title">{{ __('Pickup and drop-off') }}</h3>
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-md-6">
+                                                            <div class="card bg-body-tertiary border-0 h-100">
+                                                                <div class="card-body p-3">
+                                                                    <div class="small text-body-secondary">{{ __('Pickup address') }}</div>
+                                                                    <div class="fw-semibold text-break" id="booking-confirmation-pickup-address"></div>
+                                                                    <div class="small text-body-secondary mt-1" id="booking-confirmation-pickup-pin"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="card bg-body-tertiary border-0 h-100">
+                                                                <div class="card-body p-3">
+                                                                    <div class="small text-body-secondary">{{ __('Drop-off address') }}</div>
+                                                                    <div class="fw-semibold text-break" id="booking-confirmation-dropoff-address"></div>
+                                                                    <div class="small text-body-secondary mt-1" id="booking-confirmation-dropoff-pin"></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                        <h4 class="h6 mb-0">{{ __('Map preview') }}</h4>
+                                                        <div class="d-flex flex-wrap gap-3 small text-body-secondary">
+                                                            <span class="d-inline-flex align-items-center gap-1">
+                                                                <span class="booking-confirmation-map-legend bg-primary" aria-hidden="true"></span>{{ __('Pickup') }}
+                                                            </span>
+                                                            <span class="d-inline-flex align-items-center gap-1">
+                                                                <span class="booking-confirmation-map-legend bg-success" aria-hidden="true"></span>{{ __('Drop-off') }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div id="booking-confirmation-map-wrapper" hidden>
+                                                        <div id="booking-confirmation-map" role="application"
+                                                            aria-label="{{ __('Map preview of pickup and drop-off locations') }}"></div>
+                                                    </div>
+                                                    <div class="alert alert-light border mb-0" id="booking-confirmation-map-empty">
+                                                        <p class="mb-2">{{ __('No location pins have been set yet. Add a pin to preview the location on the map.') }}</p>
+                                                        <button class="btn btn-sm btn-outline-primary" type="button" id="booking-confirmation-set-pickup-pin">
+                                                            <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set pickup pin') }}
+                                                        </button>
+                                                    </div>
+                                                    <p class="small text-body-secondary mt-2 mb-0" id="booking-confirmation-map-status" role="status" aria-live="polite"></p>
+                                                </section>
                                             </div>
                                             <div class="modal-footer">
                                                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{{ __('Edit details') }}</button>
@@ -421,6 +491,18 @@
                     const bookingConfirmationModalElement = document.getElementById("booking-confirmation-modal");
                     const bookingConfirmationDetails = document.getElementById("booking-confirmation-details");
                     const confirmBookingButton = document.getElementById("booking-confirm-button");
+                    const bookingConfirmationDate = document.getElementById("booking-confirmation-date");
+                    const bookingConfirmationTime = document.getElementById("booking-confirmation-time");
+                    const bookingConfirmationLocationSection = document.getElementById("booking-confirmation-location-section");
+                    const bookingConfirmationPickupAddress = document.getElementById("booking-confirmation-pickup-address");
+                    const bookingConfirmationPickupPin = document.getElementById("booking-confirmation-pickup-pin");
+                    const bookingConfirmationDropoffAddress = document.getElementById("booking-confirmation-dropoff-address");
+                    const bookingConfirmationDropoffPin = document.getElementById("booking-confirmation-dropoff-pin");
+                    const bookingConfirmationMapWrapper = document.getElementById("booking-confirmation-map-wrapper");
+                    const bookingConfirmationMapEmpty = document.getElementById("booking-confirmation-map-empty");
+                    const bookingConfirmationMapElement = document.getElementById("booking-confirmation-map");
+                    const bookingConfirmationMapStatus = document.getElementById("booking-confirmation-map-status");
+                    const bookingConfirmationSetPickupPin = document.getElementById("booking-confirmation-set-pickup-pin");
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
                     const locationPickerModal = bootstrap.Modal.getOrCreateInstance(locationPickerModalElement);
                     const locationHelpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-out-of-area-modal"));
@@ -434,16 +516,13 @@
                         email: @json(__('Email'), JSON_UNESCAPED_UNICODE),
                         phone: @json(__('Phone'), JSON_UNESCAPED_UNICODE),
                         service: @json(__('Service'), JSON_UNESCAPED_UNICODE),
-                        appointmentDate: @json(__('Appointment date'), JSON_UNESCAPED_UNICODE),
-                        appointmentTime: @json(__('Appointment time (MYT)'), JSON_UNESCAPED_UNICODE),
                         deviceModel: @json(__('Device model'), JSON_UNESCAPED_UNICODE),
                         pickupAddress: @json(__('Pickup address'), JSON_UNESCAPED_UNICODE),
                         dropoffAddress: @json(__('Drop-off address'), JSON_UNESCAPED_UNICODE),
-                        pickupPin: @json(__('Pickup pin'), JSON_UNESCAPED_UNICODE),
-                        dropoffPin: @json(__('Drop-off pin'), JSON_UNESCAPED_UNICODE),
                         requestNotes: @json(__('What do you need help with?'), JSON_UNESCAPED_UNICODE),
                         notProvided: @json(__('Not provided'), JSON_UNESCAPED_UNICODE),
                         sameAsPickup: @json(__('Same as pickup address'), JSON_UNESCAPED_UNICODE),
+                        mapUnavailable: @json(__('The map preview could not be loaded. Please check the address and pin details.'), JSON_UNESCAPED_UNICODE),
                     };
                     const locationMessages = {
                         pickupSet: @json(__('Pickup pin set'), JSON_UNESCAPED_UNICODE),
@@ -469,6 +548,9 @@
                     let selectedAppointmentDate = bookingDate.value || null;
                     let locationMap = null;
                     let locationMarker = null;
+                    let confirmationMap = null;
+                    let confirmationMapMarkerLayer = null;
+                    let confirmationMapLocations = { pickup: null, dropoff: null };
                     let locationMode = "pickup";
                     let deviceDetailsEnabled = false;
                     const defaultMapCenter = @json($serviceAreaCenter);
@@ -692,6 +774,15 @@
                     locationPickerModalElement.addEventListener("shown.bs.modal", function () {
                         initializeLocationMap();
                     });
+                    bookingConfirmationModalElement.addEventListener("shown.bs.modal", renderBookingConfirmationMap);
+                    bookingConfirmationSetPickupPin.addEventListener("click", function () {
+                        bookingConfirmationModalElement.addEventListener("hidden.bs.modal", function () {
+                            locationMode = "pickup";
+                            showLocationForMode();
+                            locationPickerModal.show();
+                        }, { once: true });
+                        bookingConfirmationModal.hide();
+                    });
                     pickupAddress.addEventListener("input", updateLocationSummaries);
                     dropoffAddress.addEventListener("input", updateLocationSummaries);
                     dropoffSameAsPickup.addEventListener("change", updateDropoffSameAsPickup);
@@ -870,6 +961,8 @@
 
                     function updateBookingConfirmation() {
                         bookingConfirmationDetails.replaceChildren();
+                        bookingConfirmationDate.textContent = bookingDateSummary.textContent;
+                        bookingConfirmationTime.textContent = bookingTimeSummary.textContent;
                         addConfirmationDetail(confirmationLabels.fullName, document.getElementById("customer-name").value.trim());
                         addConfirmationDetail(confirmationLabels.email, document.getElementById("customer-email").value.trim());
                         addConfirmationDetail(confirmationLabels.phone, document.getElementById("customer-phone").value.trim());
@@ -877,8 +970,6 @@
                             confirmationLabels.service,
                             serviceSelect.options[serviceSelect.selectedIndex].textContent.trim(),
                         );
-                        addConfirmationDetail(confirmationLabels.appointmentDate, bookingDateSummary.textContent);
-                        addConfirmationDetail(confirmationLabels.appointmentTime, bookingTimeSummary.textContent);
 
                         if (serviceSelect.value === deviceDetailsServiceId) {
                             const pickupCoordinates = getLocationCoordinates("pickup");
@@ -891,17 +982,112 @@
                             if (deviceModel.value.trim()) {
                                 addConfirmationDetail(confirmationLabels.deviceModel, deviceModel.value.trim());
                             }
-                            addConfirmationDetail(confirmationLabels.pickupAddress, pickupAddressValue);
-                            if (pickupCoordinates) {
-                                addConfirmationDetail(confirmationLabels.pickupPin, pickupCoordinates.map((value) => value.toFixed(5)).join(", "));
-                            }
-                            addConfirmationDetail(confirmationLabels.dropoffAddress, dropoffAddressValue);
-                            if (dropoffCoordinates) {
-                                addConfirmationDetail(confirmationLabels.dropoffPin, dropoffCoordinates.map((value) => value.toFixed(5)).join(", "));
-                            }
+                            bookingConfirmationPickupAddress.textContent = pickupAddressValue;
+                            bookingConfirmationPickupPin.textContent = pickupCoordinates
+                                ? `${locationMessages.pinCoordinates}: ${pickupCoordinates.map((value) => value.toFixed(5)).join(", ")}`
+                                : locationMessages.pinNotSet;
+                            bookingConfirmationDropoffAddress.textContent = dropoffAddressValue;
+                            bookingConfirmationDropoffPin.textContent = dropoffCoordinates
+                                ? `${locationMessages.pinCoordinates}: ${dropoffCoordinates.map((value) => value.toFixed(5)).join(", ")}`
+                                : locationMessages.pinNotSet;
+                            confirmationMapLocations = {
+                                pickup: pickupCoordinates,
+                                dropoff: dropoffCoordinates,
+                            };
+                            const hasLocationPin = Boolean(pickupCoordinates || dropoffCoordinates);
+                            bookingConfirmationLocationSection.hidden = false;
+                            bookingConfirmationMapWrapper.hidden = !hasLocationPin;
+                            bookingConfirmationMapEmpty.hidden = hasLocationPin;
                             if (requestNotes.value.trim()) {
                                 addConfirmationDetail(confirmationLabels.requestNotes, requestNotes.value.trim());
                             }
+                        } else {
+                            bookingConfirmationLocationSection.hidden = true;
+                            bookingConfirmationMapWrapper.hidden = true;
+                            bookingConfirmationMapEmpty.hidden = true;
+                            confirmationMapLocations = { pickup: null, dropoff: null };
+                        }
+                    }
+
+                    function renderBookingConfirmationMap() {
+                        if (!confirmationMapLocations.pickup && !confirmationMapLocations.dropoff) {
+                            return;
+                        }
+                        if (!window.L) {
+                            bookingConfirmationMapStatus.textContent = confirmationLabels.mapUnavailable;
+                            return;
+                        }
+
+                        try {
+                            if (!confirmationMap) {
+                                confirmationMap = window.L.map(bookingConfirmationMapElement, {
+                                    scrollWheelZoom: false,
+                                }).setView(defaultMapCenter, 12);
+                                window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                                    maxZoom: 19,
+                                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+                                }).addTo(confirmationMap);
+                                confirmationMapMarkerLayer = window.L.layerGroup().addTo(confirmationMap);
+                            }
+
+                            confirmationMapMarkerLayer.clearLayers();
+                            const pickupCoordinates = confirmationMapLocations.pickup;
+                            const dropoffCoordinates = confirmationMapLocations.dropoff;
+                            const coordinatesMatch = pickupCoordinates && dropoffCoordinates
+                                && pickupCoordinates[0] === dropoffCoordinates[0]
+                                && pickupCoordinates[1] === dropoffCoordinates[1];
+
+                            if (coordinatesMatch) {
+                                window.L.circleMarker(pickupCoordinates, {
+                                    radius: 9,
+                                    color: "#fff",
+                                    weight: 2,
+                                    fillColor: "#0d6efd",
+                                    fillOpacity: 1,
+                                }).bindTooltip(`${confirmationLabels.pickupAddress} & ${confirmationLabels.dropoffAddress}`, {
+                                    permanent: true,
+                                    direction: "top",
+                                }).addTo(confirmationMapMarkerLayer);
+                                confirmationMap.setView(pickupCoordinates, 15);
+                            } else {
+                                const markerPoints = [];
+                                if (pickupCoordinates) {
+                                    window.L.circleMarker(pickupCoordinates, {
+                                        radius: 9,
+                                        color: "#fff",
+                                        weight: 2,
+                                        fillColor: "#0d6efd",
+                                        fillOpacity: 1,
+                                    }).bindTooltip(confirmationLabels.pickupAddress, {
+                                        permanent: true,
+                                        direction: "top",
+                                    }).addTo(confirmationMapMarkerLayer);
+                                    markerPoints.push(pickupCoordinates);
+                                }
+                                if (dropoffCoordinates) {
+                                    window.L.circleMarker(dropoffCoordinates, {
+                                        radius: 9,
+                                        color: "#fff",
+                                        weight: 2,
+                                        fillColor: "#198754",
+                                        fillOpacity: 1,
+                                    }).bindTooltip(confirmationLabels.dropoffAddress, {
+                                        permanent: true,
+                                        direction: "top",
+                                    }).addTo(confirmationMapMarkerLayer);
+                                    markerPoints.push(dropoffCoordinates);
+                                }
+                                if (markerPoints.length > 1) {
+                                    confirmationMap.fitBounds(window.L.latLngBounds(markerPoints), { padding: [36, 36], maxZoom: 15 });
+                                } else {
+                                    confirmationMap.setView(markerPoints[0], 15);
+                                }
+                            }
+                            bookingConfirmationMapStatus.textContent = "";
+                            window.setTimeout(function () { confirmationMap.invalidateSize(); }, 100);
+                        } catch (error) {
+                            console.error("Could not initialize the booking confirmation map.", error);
+                            bookingConfirmationMapStatus.textContent = confirmationLabels.mapUnavailable;
                         }
                     }
 
