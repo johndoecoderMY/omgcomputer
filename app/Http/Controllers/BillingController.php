@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Mail\BillingReceiptMail;
 use App\Mail\InvoiceMail;
-use App\Mail\QuotationAcceptanceMail;
 use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPayment;
@@ -20,6 +19,7 @@ use App\Models\User;
 use App\Notifications\QuotationInAppNotification;
 use App\Services\BillingReceiptService;
 use App\Services\ChipCollect;
+use App\Services\GuestInvoicePaymentLinkService;
 use App\Services\InventoryStock;
 use App\Services\MailSettingsService;
 use App\Support\DataTableQueryBuilder;
@@ -177,7 +177,7 @@ class BillingController extends Controller
                 'customer_email' => $customer?->email,
                 'customer_phone' => $customer?->phone,
                 'customer_address' => $customer?->address,
-                'issue_date' => now()->toDateString(),
+                'issue_date' => now('Asia/Kuala_Lumpur')->toDateString(),
                 'tax_rate' => config('billing.tax_rate', 6),
                 'included_revision_rounds' => 3,
                 'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticketIssueSummary}" : null,
@@ -547,7 +547,7 @@ class BillingController extends Controller
         }
 
         $type = $data['type'] === 'quote' ? 'quotation' : $data['type'];
-        $issueDate = $data['issue_date'] ?? $data['issued_at'] ?? now()->toDateString();
+        $issueDate = $data['issue_date'] ?? $data['issued_at'] ?? now('Asia/Kuala_Lumpur')->toDateString();
         $isProjectQuotation = $type === 'quotation' && ! empty($data['project_id']);
         if (! empty($data['due_date']) && $data['due_date'] < $issueDate) {
             throw ValidationException::withMessages(['due_date' => 'The due date must be on or after the issue date.']);
@@ -747,7 +747,12 @@ class BillingController extends Controller
         );
     }
 
-    public function show(BillingDocument $document, ChipCollect $chip, Request $request): View
+    public function show(
+        BillingDocument $document,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+        Request $request,
+    ): View
     {
         $this->authorizeCustomerDocument($request, $document);
         $document->load([
@@ -759,6 +764,7 @@ class BillingController extends Controller
         ]);
         $guestDocumentUrls = [];
         $guestReceiptUrls = [];
+        $whatsappActionUrls = [];
         if (! $request->user()->hasRole('customer')) {
             if (in_array($document->type, ['quotation', 'invoice'], true)) {
                 $guestDocumentUrls = $this->guestPdfUrls(
@@ -771,7 +777,27 @@ class BillingController extends Controller
                     $payment->id => $this->guestPdfUrls('billing.guest.receipts.pdf', ['payment' => $payment]),
                 ])
                 ->all();
+            if ($document->type === 'quotation') {
+                foreach (CustomerMessageTemplate::LANGUAGES as $locale => $label) {
+                    $whatsappActionUrls[$locale] = [
+                        'accept_url' => URL::signedRoute('billing.quotations.respond', [
+                            'document' => $document,
+                            'status' => 'accepted',
+                            'locale' => $locale,
+                        ]),
+                        'reject_url' => URL::signedRoute('billing.quotations.respond', [
+                            'document' => $document,
+                            'status' => 'rejected',
+                            'locale' => $locale,
+                        ]),
+                    ];
+                }
+            }
         }
+        $canSharePaymentLink = ! $request->user()->hasRole('customer')
+            && $chip->isConfigured()
+            && $paymentLinks->isPayableInvoice($document)
+            && (bool) filter_var($document->customer_email, FILTER_VALIDATE_EMAIL);
         $customerRecord = $document->repairTicket?->customer;
         $project = $document->project ?? $document->repairTicket?->project;
         $projectCustomers = $project?->customers ?? collect();
@@ -789,6 +815,8 @@ class BillingController extends Controller
             'chipEnabled' => $chip->isConfigured(),
             'guestDocumentUrls' => $guestDocumentUrls,
             'guestReceiptUrls' => $guestReceiptUrls,
+            'whatsappActionUrls' => $whatsappActionUrls,
+            'canSharePaymentLink' => $canSharePaymentLink,
         ]);
     }
 
@@ -864,33 +892,33 @@ class BillingController extends Controller
             });
     }
 
-    public function issue(BillingDocument $document, Request $request, InventoryStock $stock): RedirectResponse
+    public function issue(
+        BillingDocument $document,
+        Request $request,
+        InventoryStock $stock,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): RedirectResponse
     {
-        DB::transaction(function () use ($document, $request, $stock): void {
-            $document = BillingDocument::query()->with('items')->lockForUpdate()->findOrFail($document->id);
-            abort_unless(
-                $document->type === 'quotation' && $document->status === 'accepted',
-                422,
-                'Only accepted quotations can be converted to invoices.',
-            );
-            $document->type = 'invoice';
-            $document->number = str_replace('QUO-', 'INV-', $document->number);
+        $invoice = $this->issueAcceptedQuotation($document, $request->user(), $stock);
+        $emailSent = $this->sendBillingDocumentEmail(
+            $invoice,
+            $invoice->customer_email,
+            $this->billingLocale($request),
+            $chip,
+            $paymentLinks,
+        );
 
-            foreach ($document->items as $item) {
-                if ($item->inventory_part_id) {
-                    $stock->useForSale($item->part, $request->user(), $item->quantity, $document->number);
-                }
-            }
-
-            $document->status = 'issued';
-            $document->save();
-        });
-
-        return redirect()->route('billing.documents.show', $document)->with('success', 'Document issued; inventory was updated.');
+        return $this->invoiceEmailRedirect($invoice, $emailSent);
     }
 
-    public function updateQuotationStatus(BillingDocument $document, Request $request): RedirectResponse
-    {
+    public function updateQuotationStatus(
+        BillingDocument $document,
+        Request $request,
+        InventoryStock $stock,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): RedirectResponse {
         $user = $request->user();
         if ($user->hasRole('customer')) {
             abort_unless(in_array($dataStatus = $request->input('status'), ['accepted', 'rejected'], true), 403);
@@ -903,7 +931,7 @@ class BillingController extends Controller
             'delivery' => ['nullable', Rule::in(['in_app', 'whatsapp'])],
         ]);
 
-        $newlyAccepted = DB::transaction(function () use ($document, $data, $user): bool {
+        $invoice = DB::transaction(function () use ($document, $data, $user, $stock): ?BillingDocument {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
             abort_unless($locked->type === 'quotation', 404);
             abort_if($locked->status === 'void', 422, 'Voided quotations cannot be changed.');
@@ -919,19 +947,27 @@ class BillingController extends Controller
                 422,
                 'Accepted quotations can only be converted into invoices.',
             );
-            $newlyAccepted = $locked->status !== 'accepted' && $data['status'] === 'accepted';
             $locked->update(['status' => $data['status']]);
 
-            return $newlyAccepted;
+            if ($data['status'] !== 'accepted') {
+                return null;
+            }
+
+            $actor = $user->hasRole('customer') ? $locked->user : $user;
+
+            return $this->issueAcceptedQuotation($locked, $actor, $stock);
         });
 
-        if ($newlyAccepted) {
-            $document->refresh();
-            if (! $this->sendQuotationAcceptanceEmail($document, $document->customer_email)) {
-                return redirect()
-                    ->route('billing.documents.show', $document)
-                    ->with('error', 'Quotation acceptance was recorded, but the confirmation email could not be sent. Check the email server settings or send it manually.');
-            }
+        if ($invoice !== null) {
+            $emailSent = $this->sendBillingDocumentEmail(
+                $invoice,
+                $invoice->customer_email,
+                $this->billingLocale($request),
+                $chip,
+                $paymentLinks,
+            );
+
+            return $this->invoiceEmailRedirect($invoice, $emailSent);
         }
 
         if ($data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app') {
@@ -948,46 +984,63 @@ class BillingController extends Controller
             ->route('billing.documents.show', $document)
             ->with('success', $data['status'] === 'sent' && ($data['delivery'] ?? null) === 'in_app'
                 ? 'Quotation marked as sent and added to the customer panel.'
-                : ($data['status'] === 'accepted' && ! $user->hasRole('customer')
-                    ? 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.'
-                    : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.')));
+                : ($user->hasRole('customer') ? 'Thank you. Your quotation response has been recorded.' : 'Quotation status updated.'));
     }
 
-    public function respondToQuotationFromEmail(Request $request, BillingDocument $document, string $status): View
-    {
+    public function respondToQuotationFromEmail(
+        Request $request,
+        BillingDocument $document,
+        string $status,
+        InventoryStock $stock,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): View {
         abort_unless($document->type === 'quotation', 404);
         abort_unless(in_array($status, ['accepted', 'rejected'], true), 404);
         abort_unless($document->status === 'sent', 422, 'This quotation has not been sent or has already been responded to.');
-        $document->update(['status' => $status]);
-        $acceptanceEmailSent = null;
+
         if ($status === 'accepted') {
-            $acceptanceEmailSent = $this->sendQuotationAcceptanceEmail($document, $document->customer_email);
+            $invoice = DB::transaction(function () use ($document, $stock): BillingDocument {
+                $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
+                abort_unless(
+                    $locked->type === 'quotation' && $locked->status === 'sent',
+                    422,
+                    'This quotation has not been sent or has already been responded to.',
+                );
+                $locked->update(['status' => 'accepted']);
+
+                return $this->issueAcceptedQuotation($locked, $locked->user, $stock);
+            });
+            $invoiceEmailSent = $this->sendBillingDocumentEmail(
+                $invoice,
+                $invoice->customer_email,
+                $this->billingLocale($request),
+                $chip,
+                $paymentLinks,
+            );
+
+            return view('billing.quotation-response', [
+                'document' => $invoice,
+                'status' => $status,
+                'invoiceEmailSent' => $invoiceEmailSent,
+            ]);
         }
 
-        return view('billing.quotation-response', compact('document', 'status', 'acceptanceEmailSent'));
-    }
+        $document->update(['status' => $status]);
 
-    public function sendQuotationAcceptance(BillingDocument $document, Request $request): RedirectResponse
-    {
-        abort_unless(! $request->user()->hasRole('customer'), 403);
-        abort_unless($document->type === 'quotation' && $document->status === 'accepted', 422, 'Only accepted quotations can receive an acceptance confirmation.');
-
-        $data = $request->validate([
-            'email' => ['required', 'email', 'max:255'],
+        return view('billing.quotation-response', [
+            'document' => $document,
+            'status' => $status,
+            'invoiceEmailSent' => null,
         ]);
-
-        if (! $this->sendQuotationAcceptanceEmail($document, $data['email'])) {
-            return back()->with('error', 'The acceptance confirmation email could not be sent. Check the email server settings and try again.');
-        }
-
-        if (strtolower(trim((string) $document->customer_email)) !== strtolower(trim($data['email']))) {
-            $document->update(['customer_email' => $data['email']]);
-        }
-
-        return back()->with('success', 'Quotation acceptance confirmation emailed to '.$data['email'].'.');
     }
 
-    public function sendDocument(BillingDocument $document, Request $request): RedirectResponse
+    public function sendDocument(
+        BillingDocument $document,
+        Request $request,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): RedirectResponse
     {
         abort_unless(! $request->user()->hasRole('customer'), 403);
         abort_unless(in_array($document->type, ['quotation', 'invoice'], true), 404);
@@ -1001,25 +1054,13 @@ class BillingController extends Controller
             'locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
         ]);
         $locale = $data['locale'] ?? 'en';
-
-        $emailSent = false;
-        try {
-            app(MailSettingsService::class)->apply();
-            $document->load(['items', 'payments']);
-            $pdf = $this->renderPdf($document, $locale);
-            $mail = $document->type === 'quotation'
-                ? new QuotationMail($document, $pdf, strtolower($document->number).'.pdf', false, $locale)
-                : new InvoiceMail($document, $pdf, strtolower($document->number).'.pdf', false, $locale);
-            Mail::to($data['email'])->send($mail);
-            $emailSent = true;
-        } catch (Throwable $exception) {
-            Log::warning('Billing document email could not be sent.', [
-                'document_id' => $document->id,
-                'email' => $data['email'],
-                'exception' => $exception::class,
-                'message' => $exception->getMessage(),
-            ]);
-        }
+        $emailSent = $this->sendBillingDocumentEmail(
+            $document,
+            $data['email'],
+            $locale,
+            $chip,
+            $paymentLinks,
+        );
 
         if ($document->type === 'quotation') {
             $document->update([
@@ -1047,16 +1088,34 @@ class BillingController extends Controller
         return back()->with('success', $delivery);
     }
 
-    public function previewDocumentEmail(BillingDocument $document, Request $request): Response
+    public function previewDocumentEmail(
+        BillingDocument $document,
+        Request $request,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): Response
     {
         abort_unless(! $request->user()->hasRole('customer'), 403);
         abort_unless(in_array($document->type, ['quotation', 'invoice'], true), 404);
 
         $locale = $this->billingLocale($request);
         $document->load(['items', 'payments']);
+        $paymentLinkAvailable = $document->type === 'invoice'
+            && $chip->isConfigured()
+            && $paymentLinks->isPayableInvoice($document)
+            && (bool) filter_var($document->customer_email, FILTER_VALIDATE_EMAIL);
+        $paymentUrl = $paymentLinkAvailable ? $paymentLinks->activeUrl($document, $locale) : null;
         $mail = $document->type === 'quotation'
             ? new QuotationMail($document, '', strtolower($document->number).'.pdf', true, $locale)
-            : new InvoiceMail($document, '', strtolower($document->number).'.pdf', true, $locale);
+            : new InvoiceMail(
+                $document,
+                '',
+                strtolower($document->number).'.pdf',
+                true,
+                $locale,
+                $paymentUrl,
+                $paymentLinkAvailable,
+            );
 
         return response($mail->render(), 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
@@ -1260,11 +1319,45 @@ class BillingController extends Controller
         return $urls;
     }
 
-    private function sendQuotationAcceptanceEmail(BillingDocument $document, ?string $email): bool
-    {
+    private function issueAcceptedQuotation(
+        BillingDocument $document,
+        ?User $actor,
+        InventoryStock $stock,
+    ): BillingDocument {
+        return DB::transaction(function () use ($document, $actor, $stock): BillingDocument {
+            $locked = BillingDocument::query()->with('items')->lockForUpdate()->findOrFail($document->id);
+            abort_unless(
+                $locked->type === 'quotation' && $locked->status === 'accepted',
+                422,
+                'Only accepted quotations can be converted to invoices.',
+            );
+            $locked->type = 'invoice';
+            $locked->number = str_replace('QUO-', 'INV-', $locked->number);
+
+            foreach ($locked->items as $item) {
+                if ($item->inventory_part_id) {
+                    abort_unless($actor !== null, 422, 'A staff account is required to deduct inventory for this invoice.');
+                    $stock->useForSale($item->part, $actor, $item->quantity, $locked->number);
+                }
+            }
+
+            $locked->status = 'issued';
+            $locked->save();
+
+            return $locked->load('payments');
+        });
+    }
+
+    private function sendBillingDocumentEmail(
+        BillingDocument $document,
+        ?string $email,
+        string $locale,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): bool {
         $recipient = filter_var(trim((string) $email), FILTER_VALIDATE_EMAIL);
         if (! $recipient) {
-            Log::warning('Quotation acceptance email could not be sent because no valid customer email is available.', [
+            Log::warning('Billing document email could not be sent because no valid recipient is available.', [
                 'document_id' => $document->id,
             ]);
 
@@ -1272,12 +1365,33 @@ class BillingController extends Controller
         }
 
         try {
+            $paymentUrl = null;
+            if ($document->type === 'invoice'
+                && $chip->isConfigured()
+                && $paymentLinks->isPayableInvoice($document)
+                && filter_var($document->customer_email, FILTER_VALIDATE_EMAIL)) {
+                $paymentUrl = $paymentLinks->getOrCreate($document, $locale);
+            }
+
             app(MailSettingsService::class)->apply();
-            Mail::to($recipient)->send(new QuotationAcceptanceMail($document));
+            $document->load(['items', 'payments']);
+            $pdf = $this->renderPdf($document, $locale);
+            $mail = $document->type === 'quotation'
+                ? new QuotationMail($document, $pdf, strtolower($document->number).'.pdf', false, $locale)
+                : new InvoiceMail(
+                    $document,
+                    $pdf,
+                    strtolower($document->number).'.pdf',
+                    false,
+                    $locale,
+                    $paymentUrl,
+                    $paymentUrl !== null,
+                );
+            Mail::to($recipient)->send($mail);
 
             return true;
         } catch (Throwable $exception) {
-            Log::warning('Quotation acceptance email could not be sent.', [
+            Log::warning('Billing document email could not be sent.', [
                 'document_id' => $document->id,
                 'email' => $recipient,
                 'exception' => $exception::class,
@@ -1286,6 +1400,19 @@ class BillingController extends Controller
 
             return false;
         }
+    }
+
+    private function invoiceEmailRedirect(BillingDocument $invoice, bool $emailSent): RedirectResponse
+    {
+        if ($emailSent) {
+            return redirect()
+                ->route('billing.documents.show', $invoice)
+                ->with('success', 'Invoice '.$invoice->number.' was created and emailed to '.$invoice->customer_email.'.');
+        }
+
+        return redirect()
+            ->route('billing.documents.show', $invoice)
+            ->with('error', 'Invoice '.$invoice->number.' was created, but the email could not be sent. Check the email settings or use WhatsApp to share it.');
     }
 
     private function validateLineItems(array $items): void

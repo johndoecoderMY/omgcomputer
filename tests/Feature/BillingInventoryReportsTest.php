@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Mail\BillingReceiptMail;
 use App\Mail\InvoiceMail;
 use App\Mail\QuotationMail;
-use App\Mail\QuotationAcceptanceMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPaymentAttempt;
 use App\Models\ChipSetting;
@@ -19,6 +18,7 @@ use App\Models\User;
 use App\Services\ChipCollect;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -231,6 +231,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_whatsapp_quotation_link_is_guest_accessible_and_expires(): void
     {
+        Mail::fake();
         $staff = $this->adminUser();
         $document = $this->createDraftQuotation(
             Project::query()->create(['name' => 'Guest quotation project']),
@@ -243,9 +244,17 @@ class BillingInventoryReportsTest extends TestCase
         $message = html_entity_decode($messageMatch[1] ?? '', ENT_QUOTES | ENT_HTML5);
         preg_match('/https?:\/\/\S+/', $message, $urlMatch);
         $guestUrl = $urlMatch[0] ?? '';
+        preg_match('/To accept this quotation, open: (https?:\/\/\S+)/', $message, $acceptMatch);
+        preg_match('/To reject this quotation, open: (https?:\/\/\S+)/', $message, $rejectMatch);
+        $acceptUrl = $acceptMatch[1] ?? '';
+        $rejectUrl = $rejectMatch[1] ?? '';
 
         $this->assertStringContainsString('/shared/billing/'.$document->id.'/pdf?', $guestUrl);
         $this->assertSame('/shared/billing/'.$document->id.'/pdf', parse_url($guestUrl, PHP_URL_PATH));
+        $this->assertSame('/quotations/'.$document->id.'/respond/accepted', parse_url($acceptUrl, PHP_URL_PATH));
+        $this->assertSame('/quotations/'.$document->id.'/respond/rejected', parse_url($rejectUrl, PHP_URL_PATH));
+        $this->assertStringContainsString('signature=', $acceptUrl);
+        $this->assertStringContainsString('signature=', $rejectUrl);
         auth()->logout();
 
         $this->get($guestUrl)
@@ -253,6 +262,32 @@ class BillingInventoryReportsTest extends TestCase
             ->assertHeader('content-type', 'application/pdf')
             ->assertHeader('cache-control', 'no-store, private')
             ->assertHeader('referrer-policy', 'no-referrer');
+        $this->get($acceptUrl)
+            ->assertOk()
+            ->assertSee('Quotation accepted')
+            ->assertSee('Invoice INV-'.substr($document->number, 4).' was created and emailed to you.');
+        $invoice = $document->fresh();
+        $this->assertSame('invoice', $invoice->type);
+        $this->assertSame('issued', $invoice->status);
+        Mail::assertSent(
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo($invoice->customer_email)
+                && $mail->document->number === $invoice->number,
+        );
+
+        $rejectedDocument = $this->createDraftQuotation(
+            Project::query()->create(['name' => 'WhatsApp rejection project']),
+            'reject-quotation@example.test',
+        );
+        $rejectedDocument->update(['status' => 'sent']);
+        $rejectedResponse = $this->actingAs($staff)->get(route('billing.documents.show', $rejectedDocument))->assertOk();
+        preg_match('/data-whatsapp-message-en="([^"]+)"/', $rejectedResponse->getContent(), $rejectedMessageMatch);
+        $rejectedMessage = html_entity_decode($rejectedMessageMatch[1] ?? '', ENT_QUOTES | ENT_HTML5);
+        preg_match('/To reject this quotation, open: (https?:\/\/\S+)/', $rejectedMessage, $rejectedUrlMatch);
+        $this->assertNotEmpty($rejectedUrlMatch[1] ?? null);
+        auth()->logout();
+        $this->get($rejectedUrlMatch[1])->assertOk()->assertSee('Quotation rejected');
+        $this->assertSame('rejected', $rejectedDocument->fresh()->status);
 
         $expiredUrl = URL::temporarySignedRoute(
             'billing.guest.documents.pdf',
@@ -260,6 +295,63 @@ class BillingInventoryReportsTest extends TestCase
             ['document' => $document, 'locale' => 'en'],
         );
         $this->get($expiredUrl)->assertForbidden();
+    }
+
+    public function test_invoice_email_and_whatsapp_share_the_same_guest_payment_link(): void
+    {
+        Mail::fake();
+        ChipSetting::setTestMode(true);
+        config([
+            'services.chip.test_secret_key' => 'test-secret',
+            'services.chip.test_brand_id' => 'test-brand',
+        ]);
+        $admin = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Invoice payment link sharing']),
+            85,
+        );
+
+        $this->actingAs($admin)->get(route('billing.documents.email-preview', [
+            'document' => $document,
+            'locale' => 'ms',
+        ]))->assertOk()
+            ->assertSee('Pautan pembayaran peribadi 7 hari akan disertakan apabila e-mel ini dihantar.');
+
+        $this->actingAs($admin)->from(route('billing.documents.show', $document))
+            ->post(route('billing.documents.send', $document), [
+            'email' => $document->customer_email,
+            'locale' => 'ms',
+        ])->assertRedirect(route('billing.documents.show', $document));
+
+        $document->refresh();
+        $token = $document->guest_payment_token_encrypted;
+        $this->assertNotEmpty($token);
+        $this->assertSame(hash('sha256', $token), $document->guest_payment_token_hash);
+        $this->assertNotSame($token, $document->getRawOriginal('guest_payment_token_encrypted'));
+        $paymentUrl = route('billing.guest.invoice', [
+            'document' => $document,
+            'token' => $token,
+            'locale' => 'ms',
+        ]);
+        $this->get($paymentUrl)->assertOk()->assertSee($document->number);
+        Mail::assertSent(
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo($document->customer_email)
+                && $mail->paymentUrl === $paymentUrl
+                && str_contains($mail->render(), $paymentUrl)
+                && str_contains($mail->render(), 'Bayar dengan selamat dalam talian'),
+        );
+
+        $this->actingAs($admin)->postJson(route('billing.guest-payment-link', $document), [
+            'locale' => 'ms',
+        ])->assertOk()->assertJsonPath('url', $paymentUrl);
+
+        $this->actingAs($admin)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee(route('billing.guest-payment-link', $document), false)
+            ->assertSee('__GUEST_PAYMENT_URL__')
+            ->assertSee('Pay the outstanding balance securely here:')
+            ->assertSee('Pautan pembayaran peribadi 7 hari akan dijana apabila anda membuka draf WhatsApp ini.');
     }
 
     public function test_whatsapp_invoice_and_receipt_links_work_for_guests_without_an_account(): void
@@ -505,6 +597,52 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee('Laptop cleaning');
     }
 
+    public function test_billing_issue_date_defaults_to_malaysia_local_date(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-20 23:16:14', 'UTC'));
+
+        try {
+            Mail::fake();
+            $admin = $this->adminUser();
+
+            $this->actingAs($admin)
+                ->get(route('billing.create', ['type' => 'quotation']))
+                ->assertOk()
+                ->assertSee('value="2026-11-21"', false);
+
+            $data = $this->documentData('quotation', null, 1);
+            $data['customer_email'] = 'local-date@example.test';
+            unset($data['issued_at']);
+
+            $this->actingAs($admin)
+                ->post(route('billing.store'), $data)
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame(
+                '2026-11-21',
+                BillingDocument::query()->firstOrFail()->issue_date->format('Y-m-d'),
+            );
+
+            $document = BillingDocument::query()->firstOrFail();
+            $this->actingAs($admin)
+                ->from(route('billing.documents.show', $document))
+                ->post(route('billing.documents.send', $document), [
+                    'email' => $document->customer_email,
+                    'locale' => 'en',
+                ])
+                ->assertRedirect(route('billing.documents.show', $document))
+                ->assertSessionHas('success');
+
+            Mail::assertSent(
+                QuotationMail::class,
+                fn (QuotationMail $mail): bool => $mail->hasTo($document->customer_email)
+                    && str_contains($mail->render(), '21 Nov 2026'),
+            );
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_billing_search_includes_catalog_services_and_manual_line_option(): void
     {
         $admin = $this->adminUser();
@@ -605,7 +743,6 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(18.02, (float) $document->total);
 
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
-        $this->actingAs($user)->post(route('billing.documents.convert', $document));
         $document->refresh();
         $this->assertSame('invoice', $document->type);
         $this->assertSame(3.0, (float) $document->discount_amount);
@@ -656,7 +793,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(0, BillingDocument::query()->count());
     }
 
-    public function test_accepting_a_quotation_emails_confirmation_once_and_staff_can_resend_manually(): void
+    public function test_accepting_a_quotation_automatically_creates_and_emails_an_invoice(): void
     {
         Mail::fake();
         $staff = $this->adminUser();
@@ -672,37 +809,25 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($staff)
             ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
             ->assertRedirect(route('billing.documents.show', $document))
-            ->assertSessionHas('success', 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.');
+            ->assertSessionHas('success', 'Invoice INV-'.substr($document->number, 4).' was created and emailed to accepted-customer@example.test.');
 
+        $invoice = $document->fresh();
+        $this->assertSame('invoice', $invoice->type);
+        $this->assertSame('issued', $invoice->status);
         Mail::assertSent(
-            QuotationAcceptanceMail::class,
-            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('accepted-customer@example.test')
-                && $mail->document->number === $document->number,
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo('accepted-customer@example.test')
+                && $mail->document->number === $invoice->number,
         );
 
         $this->actingAs($staff)->get(route('billing.documents.show', $document))
             ->assertOk()
-            ->assertSee('Email acceptance')
-            ->assertSee('Email acceptance confirmation');
-
-        $this->actingAs($staff)
-            ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
-            ->assertRedirect(route('billing.documents.show', $document));
+            ->assertDontSee('Email acceptance')
+            ->assertSee('WhatsApp preview');
         Mail::assertSentCount(1);
-
-        $this->actingAs($staff)
-            ->post(route('billing.documents.send-acceptance', $document), ['email' => 'alternate@example.test'])
-            ->assertRedirect(route('billing.documents.show', $document))
-            ->assertSessionHas('success', 'Quotation acceptance confirmation emailed to alternate@example.test.');
-        Mail::assertSentCount(2);
-        Mail::assertSent(
-            QuotationAcceptanceMail::class,
-            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('alternate@example.test'),
-        );
-        $this->assertSame('alternate@example.test', $document->fresh()->customer_email);
     }
 
-    public function test_signed_customer_acceptance_emails_a_confirmation(): void
+    public function test_signed_customer_acceptance_automatically_creates_and_emails_an_invoice(): void
     {
         Mail::fake();
         $document = $this->createIssuedInvoice(
@@ -721,16 +846,18 @@ class BillingInventoryReportsTest extends TestCase
         $this->get($url)
             ->assertOk()
             ->assertSee('Quotation accepted')
-            ->assertDontSee('could not send the confirmation email');
+            ->assertSee('Invoice INV-'.substr($document->number, 4).' was created and emailed to you.');
 
-        $this->assertSame('accepted', $document->fresh()->status);
+        $invoice = $document->fresh();
+        $this->assertSame('invoice', $invoice->type);
+        $this->assertSame('issued', $invoice->status);
         Mail::assertSent(
-            QuotationAcceptanceMail::class,
-            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('signed-customer@example.test'),
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo($invoice->customer_email),
         );
     }
 
-    public function test_customer_acceptance_from_their_account_emails_a_confirmation(): void
+    public function test_customer_acceptance_from_their_account_automatically_creates_and_emails_an_invoice(): void
     {
         Mail::fake();
         $this->seed(PlannerRoleSeeder::class);
@@ -752,28 +879,33 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($customer)
             ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted'])
             ->assertRedirect(route('billing.documents.show', $document))
-            ->assertSessionHas('success', 'Thank you. Your quotation response has been recorded.');
+            ->assertSessionHas('success', 'Invoice INV-'.substr($document->number, 4).' was created and emailed to account-customer@example.test.');
 
-        $this->assertSame('accepted', $document->fresh()->status);
+        $invoice = $document->fresh();
+        $this->assertSame('invoice', $invoice->type);
+        $this->assertSame('issued', $invoice->status);
         Mail::assertSent(
-            QuotationAcceptanceMail::class,
-            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo($customer->email),
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo($customer->email),
         );
     }
 
-    public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
+    public function test_accepting_a_quotation_issues_an_invoice_and_deducts_linked_stock(): void
     {
+        Mail::fake();
         $user = $this->adminUser();
         $part = $this->createPart($user, 5);
 
-        $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', $part, 2));
+        $data = $this->documentData('quotation', $part, 2);
+        $data['customer_email'] = 'stock-invoice@example.test';
+        $this->actingAs($user)->post(route('billing.store'), $data);
         $document = BillingDocument::query()->firstOrFail();
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
-        $response = $this->actingAs($user)->post(route('billing.documents.convert', $document));
         $document->refresh();
 
-        $response->assertRedirect(route('billing.documents.show', $document));
+        $this->assertSame('invoice', $document->type);
+        $this->assertSame('issued', $document->status);
         $this->assertSame(3, $part->fresh()->stock_quantity);
         $this->assertDatabaseHas('inventory_movements', [
             'inventory_part_id' => $part->id,
@@ -783,6 +915,10 @@ class BillingInventoryReportsTest extends TestCase
             'reference' => $document->number,
         ]);
         $this->assertSame(20.0, (float) $document->total);
+        Mail::assertSent(
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo('stock-invoice@example.test'),
+        );
         $this->actingAs($user)->get(route('billing.index'))
             ->assertOk()
             ->assertSee('data-datatable', false);
@@ -800,27 +936,28 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_failed_invoice_stock_deduction_rolls_back_the_document_and_stock_changes(): void
     {
+        Mail::fake();
         $user = $this->adminUser();
         $part = $this->createPart($user, 1);
         $this->actingAs($user)->post(route('billing.store'), $this->documentData('quotation', $part, 2));
         $document = BillingDocument::query()->firstOrFail();
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
-        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
-
         $response = $this->actingAs($user)
             ->from(route('billing.documents.show', $document))
-            ->post(route('billing.documents.convert', $document));
+            ->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
 
         $response->assertRedirect(route('billing.documents.show', $document))
             ->assertSessionHasErrors('quantity');
         $this->assertSame('quotation', $document->fresh()->type);
-        $this->assertSame('accepted', $document->fresh()->status);
+        $this->assertSame('sent', $document->fresh()->status);
         $this->assertSame(1, $part->fresh()->stock_quantity);
         $this->assertDatabaseCount('inventory_movements', 0);
+        Mail::assertNothingSent();
     }
 
     public function test_quote_conversion_deducts_stock_and_payments_update_invoice_balance(): void
     {
+        Mail::fake();
         $user = $this->adminUser();
         $part = $this->createPart($user, 5);
         $this->actingAs($user)->post(route('billing.store'), $this->documentData('quote', $part, 2));
@@ -856,33 +993,23 @@ class BillingInventoryReportsTest extends TestCase
             ->assertRedirect(route('billing.documents.show', $quote));
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $quote), ['status' => 'accepted'])
             ->assertRedirect(route('billing.documents.show', $quote));
-        $this->assertSame('accepted', $quote->fresh()->status);
+        $quote->refresh();
+        $this->assertSame('invoice', $quote->type);
+        $this->assertSame('issued', $quote->status);
+        Mail::assertNothingSent();
 
         $paymentData = [
             'amount' => 20,
             'method' => 'cash',
             'received_at' => now()->toDateString(),
         ];
-        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
-            ->assertUnprocessable();
-        $this->assertSame(0, $quote->payments()->count());
-        $this->assertSame(0.0, (float) $quote->fresh()->paid_amount);
-        $this->actingAs($user)->get(route('billing.documents.show', $quote))
-            ->assertOk()
-            ->assertDontSee('Payment history')
-            ->assertDontSee('Record full payment');
-
-        $this->actingAs($user)->post(route('billing.documents.convert', $quote))
-            ->assertRedirect(route('billing.documents.show', $quote));
-        $quote->refresh();
-        $this->assertSame('invoice', $quote->type);
-        $this->assertSame('issued', $quote->status);
-        $this->assertSame(3, $part->fresh()->stock_quantity);
-        $this->actingAs($user)->get(route('billing.documents.show', $quote))
+        $invoicePage = $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
             ->assertSee('Record full payment')
             ->assertSee('Payment history')
             ->assertSee('Partial payments are not currently supported.');
+        $this->assertSame(2, substr_count($invoicePage->getContent(), 'class="col-lg-6"'));
+        $this->assertSame(3, $part->fresh()->stock_quantity);
 
         $paymentData['amount'] = 10;
         $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
@@ -906,7 +1033,7 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee($payment->receipt_number);
     }
 
-    public function test_staff_can_record_external_acceptance_of_draft_quotation_and_email_confirmation(): void
+    public function test_staff_can_record_external_acceptance_of_draft_quotation_and_email_invoice(): void
     {
         Mail::fake();
         $staff = $this->adminUser();
@@ -923,17 +1050,15 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($staff)->post(route('billing.documents.quotation-status', $quotation), [
             'status' => 'accepted',
         ])->assertRedirect(route('billing.documents.show', $quotation))
-            ->assertSessionHas('success', 'Customer acceptance recorded and a confirmation email was sent. You can now convert this quotation to an invoice.');
+            ->assertSessionHas('success', 'Invoice INV-'.substr($quotation->number, 4).' was created and emailed to external-acceptance@example.test.');
 
-        $this->assertSame('accepted', $quotation->fresh()->status);
+        $invoice = $quotation->fresh();
+        $this->assertSame('invoice', $invoice->type);
+        $this->assertSame('issued', $invoice->status);
         Mail::assertSent(
-            QuotationAcceptanceMail::class,
-            fn (QuotationAcceptanceMail $mail): bool => $mail->hasTo('external-acceptance@example.test'),
+            InvoiceMail::class,
+            fn (InvoiceMail $mail): bool => $mail->hasTo('external-acceptance@example.test'),
         );
-        $this->actingAs($staff)->post(route('billing.documents.convert', $quotation))
-            ->assertRedirect(route('billing.documents.show', $quotation));
-        $this->assertSame('invoice', $quotation->fresh()->type);
-        $this->assertSame('issued', $quotation->fresh()->status);
     }
 
     public function test_customer_can_start_chip_checkout_for_their_invoice(): void
@@ -1298,6 +1423,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_project_can_have_customer_visible_invoices_and_quotations(): void
     {
+        Mail::fake();
         $admin = $this->adminUser();
         $project = Project::query()->create(['name' => 'Website redesign']);
         Customer::query()->create([
@@ -1348,7 +1474,6 @@ class BillingInventoryReportsTest extends TestCase
         $acceptedQuote = BillingDocument::query()->where('type', 'quotation')->orderByDesc('id')->firstOrFail();
         $this->actingAs($admin)->post(route('billing.documents.quotation-status', $acceptedQuote), ['status' => 'sent']);
         $this->actingAs($admin)->post(route('billing.documents.quotation-status', $acceptedQuote), ['status' => 'accepted']);
-        $this->actingAs($admin)->post(route('billing.documents.convert', $acceptedQuote));
         $this->actingAs($admin)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'sent']);
         $this->assertSame('Five responsive pages with a contact form.', $quotation->project_scope);
         $this->assertSame(3, $quotation->included_revision_rounds);
@@ -1590,7 +1715,6 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(1, BillingDocument::query()->count());
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'sent']);
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $quotation), ['status' => 'accepted']);
-        $this->actingAs($user)->post(route('billing.documents.convert', $quotation));
         $invoice = $quotation->fresh();
         $this->assertSame('invoice', $invoice->type);
         $this->assertSame('issued', $invoice->status);
@@ -1673,6 +1797,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_invoice_pdf_and_date_filtered_reports_are_available(): void
     {
+        Mail::fake();
         $user = $this->adminUser();
         $data = $this->documentData('quotation', null, 1);
         $data['customer_name'] = '=HYPERLINK("https://example.test","open")';
@@ -1680,7 +1805,6 @@ class BillingInventoryReportsTest extends TestCase
         $document = BillingDocument::query()->firstOrFail();
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'sent']);
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
-        $this->actingAs($user)->post(route('billing.documents.convert', $document));
         $document->refresh();
         $period = [
             'from' => now()->startOfMonth()->toDateString(),

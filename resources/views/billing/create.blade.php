@@ -70,7 +70,7 @@
             <div class="col-md-3"><label class="form-label" for="customer_email">Email</label><input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email', $document->customer_email) }}"></div>
             <div class="col-md-3"><label class="form-label" for="customer_phone">Phone</label><input class="form-control" id="customer_phone" name="customer_phone" value="{{ old('customer_phone', $document->customer_phone) }}"></div>
             <div class="col-md-6"><label class="form-label" for="customer_address">Billing address</label><textarea class="form-control" id="customer_address" name="customer_address" rows="2">{{ old('customer_address', $document->customer_address) }}</textarea></div>
-            <div class="col-md-3"><label class="form-label" for="issue_date">Issue date</label><input class="form-control" id="issue_date" name="issue_date" type="date" value="{{ old('issue_date', $document->issue_date?->format('Y-m-d') ?? now()->toDateString()) }}" required></div>
+            <div class="col-md-3"><label class="form-label" for="issue_date">Issue date</label><input class="form-control" id="issue_date" name="issue_date" type="date" value="{{ old('issue_date', $document->issue_date?->format('Y-m-d') ?? now('Asia/Kuala_Lumpur')->toDateString()) }}" required></div>
             <div class="col-md-3"><label class="form-label" for="due_date">Due date</label><input class="form-control" id="due_date" name="due_date" type="date" value="{{ old('due_date', $document->due_date?->format('Y-m-d')) }}">@if ($project && $type !== 'invoice')<div class="form-text">Quotation/payment date, separate from the project target date.</div>@endif</div>
         </div></div>
         @if ($project && $type !== 'invoice')

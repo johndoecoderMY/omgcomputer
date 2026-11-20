@@ -91,15 +91,44 @@ class BookingTest extends TestCase
         ]);
 
         $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
-            'status' => 'completed',
+            'status' => 'cancelled',
             'assigned_to' => $staff->id,
         ])->assertOk()->assertJson(['message' => 'Booking updated.']);
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
-            'status' => 'completed',
+            'status' => 'cancelled',
             'assigned_to' => $staff->id,
         ]);
+
+        $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
+            'status' => 'completed',
+            'assigned_to' => $staff->id,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_staff_booking_update_modal_offers_pending_confirmed_and_cancelled(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        $response = $this->actingAs($staff)->get(route('bookings.index'))
+            ->assertOk()
+            ->assertSee('<select class="form-select" id="booking-status-value" name="status" required>', false)
+            ->assertSee('<option value="cancelled">Cancelled</option>', false);
+
+        $document = new \DOMDocument();
+        $previousLibxmlErrorSetting = libxml_use_internal_errors(true);
+        $document->loadHTML($response->getContent());
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxmlErrorSetting);
+        $statusOptions = (new \DOMXPath($document))->query('//*[@id="booking-status-value"]/option');
+        $this->assertSame(
+            ['pending', 'confirmed', 'cancelled'],
+            array_map(fn (\DOMElement $option): string => $option->getAttribute('value'), iterator_to_array($statusOptions)),
+        );
     }
 
     public function test_staff_booking_list_renders_the_status_update_modal(): void
@@ -269,6 +298,8 @@ class BookingTest extends TestCase
             ->assertSee('FYP Consultation')
             ->assertDontSee('Laptop cleaning')
             ->assertSee('id="device-details"', false)
+            ->assertSee('name="customer_dropoff_at_shop"', false)
+            ->assertSee('I will drop off and collect the device at the shop.')
             ->assertSee('id="pickup-address"', false)
             ->assertSee('id="dropoff-address"', false)
             ->assertSee('hidden', false);
@@ -280,7 +311,11 @@ class BookingTest extends TestCase
             'service_id' => 'basic-troubleshooting',
             'device_model' => 'Dell XPS 13',
             'pickup_address' => '12 Jalan Test, Kampar',
+            'pickup_latitude' => '4.326',
+            'pickup_longitude' => '101.150',
             'dropoff_address' => 'Unit 4, Example Apartments, Kampar',
+            'dropoff_latitude' => '4.327',
+            'dropoff_longitude' => '101.151',
             'request_notes' => 'Fan is noisy.',
             'booking_date' => $dateString,
             'start_time' => '11:00',
@@ -425,6 +460,7 @@ class BookingTest extends TestCase
         }
 
         foreach ([
+            ['pickup', '4.4', '101.15'],
             ['pickup', '4.5', '101.15'],
             ['dropoff', '-4.326', '-78.85'],
         ] as [$location, $latitude, $longitude]) {
@@ -476,6 +512,8 @@ class BookingTest extends TestCase
             ->assertSee('Choose a pin button to open the map and set that location.', false)
             ->assertSee('booking-out-of-area-modal', false)
             ->assertSee('maxBoundsViscosity: 1', false)
+            ->assertSee('const serviceAreaRadiusKm = 7;', false)
+            ->assertSee('within 7 km of Kampar')
             ->assertSee('serviceAreaRadiusKm * 1000', false)
             ->assertSee('<svg viewBox="0 0 28 40"', false)
             ->assertDontSee('bi-geo-alt-fill')
@@ -698,6 +736,65 @@ class BookingTest extends TestCase
             ->assertSee('Unit 4, Example Apartments')
             ->assertSee('View pickup pin')
             ->assertSee('View drop-off pin');
+    }
+
+    public function test_customer_can_choose_shop_dropoff_without_sending_addresses_and_staff_can_see_it_on_ticket(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'Shop Drop-off Customer',
+            'customer_email' => 'shop-dropoff@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'customer_dropoff_at_shop' => '1',
+            'device_model' => 'Dell XPS 13',
+            'pickup_address' => 'A stale pickup address',
+            'dropoff_address' => 'A stale drop-off address',
+            'pickup_latitude' => '999',
+            'pickup_longitude' => '999',
+            'dropoff_same_as_pickup' => '1',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertTrue($booking->customer_dropoff_at_shop);
+        $this->assertNull($booking->pickup_address);
+        $this->assertNull($booking->dropoff_address);
+        $this->assertNull($booking->pickup_latitude);
+        $this->assertNull($booking->pickup_longitude);
+        $this->get(route('bookings.confirmation', $booking->reference))
+            ->assertOk()
+            ->assertSee('Drop-off and collection')
+            ->assertSee('I will drop off and collect the device at the shop.')
+            ->assertDontSee('A stale pickup address');
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $this->actingAs($staff);
+        $this->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('I will drop off and collect the device at the shop.')
+            ->assertDontSee('Pickup address');
+
+        $this->post(route('tickets.store'), [
+            'booking_id' => $booking->id,
+            'device_type' => 'Computer',
+            'device_model' => 'Dell XPS 13',
+            'issue_description' => 'Computer/PC Troubleshooting',
+            'priority' => 'normal',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = $booking->fresh()->repairTicket;
+        $this->assertNotNull($ticket);
+        $this->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Drop-off and collection')
+            ->assertSee('I will drop off and collect the device at the shop.');
     }
 
     public function test_booking_datatable_filters_by_service_customer_and_appointment_datetime(): void

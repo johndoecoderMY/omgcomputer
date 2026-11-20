@@ -42,7 +42,7 @@ class BookingController extends Controller
 
     private const KAMPAR_CENTER = [4.326, 101.15];
 
-    private const KAMPAR_SERVICE_RADIUS_KM = 15;
+    private const KAMPAR_SERVICE_RADIUS_KM = 7;
 
     public function create(Request $request): View
     {
@@ -194,21 +194,24 @@ class BookingController extends Controller
             ],
             'device_model' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:255'],
             'request_notes' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:3000'],
-            'pickup_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
-            'dropoff_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
-            'dropoff_same_as_pickup' => ['exclude_unless:service_id,basic-troubleshooting', 'sometimes', 'boolean'],
-            'pickup_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
-            'pickup_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
-            'dropoff_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
-            'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
+            'customer_dropoff_at_shop' => ['exclude_unless:service_id,basic-troubleshooting', 'sometimes', 'boolean'],
+            'pickup_address' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'string', 'max:1000'],
+            'dropoff_address' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'string', 'max:1000'],
+            'dropoff_same_as_pickup' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'sometimes', 'boolean'],
+            'pickup_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
+            'dropoff_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
+            'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'exclude_if:customer_dropoff_at_shop,1', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
             'booking_date' => ['required', 'date_format:Y-m-d'],
         ]);
-        if ($data['service_id'] === 'basic-troubleshooting' && ($data['dropoff_same_as_pickup'] ?? false)) {
+        $customerDropoffAtShop = $data['service_id'] === 'basic-troubleshooting'
+            && ($data['customer_dropoff_at_shop'] ?? false);
+        if (! $customerDropoffAtShop && $data['service_id'] === 'basic-troubleshooting' && ($data['dropoff_same_as_pickup'] ?? false)) {
             $data['dropoff_address'] = $data['pickup_address'] ?? null;
             $data['dropoff_latitude'] = $data['pickup_latitude'] ?? null;
             $data['dropoff_longitude'] = $data['pickup_longitude'] ?? null;
         }
-        if ($data['service_id'] === 'basic-troubleshooting') {
+        if (! $customerDropoffAtShop && $data['service_id'] === 'basic-troubleshooting') {
             foreach (['pickup', 'dropoff'] as $location) {
                 $latitude = $data[$location.'_latitude'] ?? null;
                 $longitude = $data[$location.'_longitude'] ?? null;
@@ -258,7 +261,7 @@ class BookingController extends Controller
             ->findOrFail($data['service_id']);
 
         try {
-            $booking = DB::transaction(function () use ($data, $service, $start): Booking {
+            $booking = DB::transaction(function () use ($data, $service, $start, $customerDropoffAtShop): Booking {
                 $customer = Customer::query()
                     ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($data['customer_email']))])
                     ->orderBy('id')
@@ -281,6 +284,7 @@ class BookingController extends Controller
                     'service_name' => $service['name'],
                     'device_model' => $data['device_model'] ?? null,
                     'request_notes' => $data['request_notes'] ?? null,
+                    'customer_dropoff_at_shop' => $customerDropoffAtShop,
                     'pickup_address' => $data['pickup_address'] ?? null,
                     'dropoff_address' => $data['dropoff_address'] ?? null,
                     'pickup_latitude' => $data['pickup_latitude'] ?? null,
@@ -338,6 +342,7 @@ class BookingController extends Controller
 
         return view('bookings.index', [
             'statuses' => Booking::STATUSES,
+            'editableStatuses' => Booking::EDITABLE_STATUSES,
             'customerView' => request()->user()->hasRole('customer'),
             'services' => $services,
             'users' => $request->user()->hasRole('admin')
@@ -379,7 +384,7 @@ class BookingController extends Controller
             ->with('customer')
             ->where('starts_at', '<', $end)
             ->where('starts_at', '>=', $start)
-            ->whereIn('status', ['pending', 'confirmed', 'completed'])
+            ->whereIn('status', ['pending', 'confirmed', 'completed', 'cancelled'])
             ->orderBy('starts_at');
 
         if ($request->user()->hasRole('customer')) {
@@ -533,7 +538,7 @@ class BookingController extends Controller
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to']);
 
         $data = $request->validate([
-            'status' => ['required', Rule::in(array_keys(Booking::STATUSES))],
+            'status' => ['required', Rule::in(array_keys(Booking::EDITABLE_STATUSES))],
             'assigned_to' => ['nullable', 'integer', new AssignableUser],
         ]);
         $previousAssigneeId = $booking->assigned_to;

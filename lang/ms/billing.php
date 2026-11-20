@@ -22,6 +22,9 @@ return [
         'due_date' => 'Tarikh akhir',
         'invoice_total' => 'Jumlah invois',
         'balance_due' => 'Baki perlu dibayar',
+        'payment_link_title' => 'Bayar dengan selamat dalam talian',
+        'payment_link_note' => 'Gunakan pautan selamat di bawah untuk membayar baki tertunggak. Pautan ini tamat tempoh selepas 7 hari.',
+        'payment_link_preview_note' => 'Pautan pembayaran peribadi 7 hari akan disertakan apabila e-mel ini dihantar.',
         'invoice_pdf_note' => 'Butiran penuh invois disertakan dalam PDF yang dilampirkan.',
         'receipt_subject' => 'Resit pembayaran :number daripada OMG Computer',
         'receipt_title' => 'Pembayaran anda disahkan',
@@ -34,8 +37,16 @@ return [
         'signature_title' => 'Jualan & Sokongan Pelanggan',
     ],
     'whatsapp' => [
-        'quotation' => 'Salam :name, ini sebut harga :number daripada OMG Computer (RM :total). Sila lihat atau muat turun di sini: :url',
+        'quotation' => 'Salam :name, ini sebut harga :number daripada OMG Computer (RM :total). Sila lihat atau muat turun di sini: :url'
+            . "\n\nUntuk menerima sebut harga ini, buka: :accept_url\nUntuk menolak sebut harga ini, buka: :reject_url",
         'invoice' => 'Salam :name, jumlah invois :number daripada OMG Computer ialah RM :total, dengan baki RM :balance. Lihat atau muat turun PDF invois di sini: :url',
+        'invoice_with_payment_link' => 'Salam :name, jumlah invois :number daripada OMG Computer ialah RM :total, dengan baki RM :balance. Lihat atau muat turun PDF invois di sini: :url'
+            . "\n\nBayar baki tertunggak dengan selamat di sini: :payment_url",
+        'payment_link_generating' => 'Sedang menjana pautan pembayaran yang selamat...',
+        'payment_link_pending' => 'Pautan pembayaran peribadi 7 hari akan dijana apabila anda membuka draf WhatsApp ini.',
+        'payment_link_error' => 'Pautan pembayaran tidak dapat dijana. Sila cuba lagi.',
+        'send_pending' => 'Sedang menyediakan draf WhatsApp...',
+        'send_error' => 'Draf WhatsApp tidak dapat disediakan. Sila cuba lagi.',
         'receipt' => 'Salam :name, pembayaran RM :amount untuk invois :invoice telah disahkan. Lihat atau muat turun resit anda di sini: :url',
     ],
     'pdf' => [

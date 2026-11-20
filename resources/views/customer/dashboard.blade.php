@@ -62,7 +62,7 @@
                                     <h3 class="h6 mb-1">{{ $booking->service_name }}</h3>
                                     <p class="small text-body-secondary mb-0">{{ $booking->starts_at->copy()->setTimezone('Asia/Kuala_Lumpur')->format('M j, Y · g:i A') }} MYT</p>
                                 </div>
-                                <span class="badge text-bg-{{ $booking->status === 'confirmed' ? 'success' : 'warning' }}">{{ \App\Models\Booking::STATUSES[$booking->status] ?? ucfirst($booking->status) }}</span>
+                                <span class="badge text-bg-{{ $booking->status === 'confirmed' ? 'success' : ($booking->status === 'cancelled' ? 'danger' : 'warning') }}">{{ \App\Models\Booking::STATUSES[$booking->status] ?? ucfirst($booking->status) }}</span>
                             </div>
                         </a>
                     @empty

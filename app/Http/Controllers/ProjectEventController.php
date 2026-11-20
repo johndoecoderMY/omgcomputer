@@ -193,7 +193,7 @@ class ProjectEventController extends Controller
         if (! $project) {
             $bookings = Booking::query()
                 ->with('customer')
-                ->whereIn('status', ['pending', 'confirmed', 'completed'])
+                ->whereIn('status', ['pending', 'confirmed', 'completed', 'cancelled'])
                 ->where('starts_at', '<', $end)
                 ->where('starts_at', '>=', $start->copy()->subDays(46))
                 ->orderBy('starts_at')

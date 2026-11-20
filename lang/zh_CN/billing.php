@@ -22,6 +22,9 @@ return [
         'due_date' => '到期日',
         'invoice_total' => '发票总额',
         'balance_due' => '待付余额',
+        'payment_link_title' => '安全在线付款',
+        'payment_link_note' => '请使用下方安全链接支付未付款项。链接将在 7 天后失效。',
+        'payment_link_preview_note' => '发送此邮件时会附上一个有效期为 7 天的私人付款链接。',
         'invoice_pdf_note' => '完整发票详情请见附件中的 PDF。',
         'receipt_subject' => 'OMG Computer 付款收据 :number',
         'receipt_title' => '您的付款已确认',
@@ -34,8 +37,16 @@ return [
         'signature_title' => '销售与客户支持',
     ],
     'whatsapp' => [
-        'quotation' => '您好，:name，这是 OMG Computer 的报价单 :number（RM :total）。请在此查看或下载：:url',
+        'quotation' => '您好，:name，这是 OMG Computer 的报价单 :number（RM :total）。请在此查看或下载：:url'
+            . "\n\n接受此报价单，请打开：:accept_url\n拒绝此报价单，请打开：:reject_url",
         'invoice' => '您好，:name，OMG Computer 发票 :number 总额为 RM :total，尚欠 RM :balance。请在此查看或下载发票 PDF：:url',
+        'invoice_with_payment_link' => '您好，:name，OMG Computer 发票 :number 总额为 RM :total，尚欠 RM :balance。请在此查看或下载发票 PDF：:url'
+            . "\n\n请在此安全支付未付款项：:payment_url",
+        'payment_link_generating' => '正在生成安全付款链接...',
+        'payment_link_pending' => '打开此 WhatsApp 草稿时，将自动生成一个有效期为 7 天的私人付款链接。',
+        'payment_link_error' => '无法生成付款链接，请重试。',
+        'send_pending' => '正在准备 WhatsApp 草稿...',
+        'send_error' => '无法准备 WhatsApp 草稿，请重试。',
         'receipt' => '您好，:name，发票 :invoice 的付款 RM :amount 已确认。请在此查看或下载收据：:url',
     ],
     'pdf' => [

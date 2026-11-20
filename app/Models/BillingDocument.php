@@ -43,6 +43,7 @@ class BillingDocument extends Model
             'issue_date' => 'date',
             'due_date' => 'date',
             'project_due_date' => 'date',
+            'guest_payment_token_encrypted' => 'encrypted',
             'guest_payment_link_expires_at' => 'datetime',
             'included_revision_rounds' => 'integer',
             'subtotal' => 'decimal:2',

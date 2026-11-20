@@ -154,6 +154,15 @@
                                                             <input class="form-control" id="device-model" name="device_model"
                                                                 value="{{ old('device_model') }}" autocomplete="off">
                                                         </div>
+                                                        <div class="form-check form-switch mb-3">
+                                                            <input class="form-check-input" id="customer-dropoff-at-shop"
+                                                                name="customer_dropoff_at_shop" type="checkbox" value="1"
+                                                                @checked(old('customer_dropoff_at_shop'))>
+                                                            <label class="form-check-label" for="customer-dropoff-at-shop">
+                                                                {{ __('I will drop off and collect the device at the shop.') }}
+                                                            </label>
+                                                        </div>
+                                                        <div id="booking-location-fields" @if (old('customer_dropoff_at_shop')) hidden @endif>
                                                         <div class="row g-2 mb-2">
                                                             <div class="col-12">
                                                                 <section class="card booking-location-card" id="pickup-location-card" aria-labelledby="pickup-location-title">
@@ -208,6 +217,7 @@
                                                         <input type="hidden" id="dropoff-longitude" name="dropoff_longitude" value="{{ old('dropoff_longitude') }}">
                                                         <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
                                                         <p class="form-text">{{ __('Choose a pin button to open the map and set that location.') }}</p>
+                                                        </div>
                                                         <div class="mb-3">
                                                             <label class="form-label" for="request-notes">{{ __('What do you need help with?') }}</label>
                                                             <textarea class="form-control" id="request-notes"
@@ -263,6 +273,10 @@
                                                 </section>
                                                 <section id="booking-confirmation-location-section" hidden aria-labelledby="booking-confirmation-location-title">
                                                     <h3 class="h6 mb-2" id="booking-confirmation-location-title">{{ __('Pickup and drop-off') }}</h3>
+                                                    <div class="alert alert-info" id="booking-confirmation-shop-dropoff" hidden>
+                                                        {{ __('I will drop off and collect the device at the shop.') }}
+                                                    </div>
+                                                    <div id="booking-confirmation-address-details">
                                                     <div class="row g-2 mb-3">
                                                         <div class="col-md-6">
                                                             <div class="card bg-body-tertiary border-0 h-100">
@@ -305,6 +319,7 @@
                                                         </button>
                                                     </div>
                                                     <p class="small text-body-secondary mt-2 mb-0" id="booking-confirmation-map-status" role="status" aria-live="polite"></p>
+                                                    </div>
                                                 </section>
                                             </div>
                                             <div class="modal-footer">
@@ -449,6 +464,8 @@
                     const serviceSelect = document.getElementById("service-id");
                     const deviceDetails = document.getElementById("device-details");
                     const deviceModel = document.getElementById("device-model");
+                    const customerDropoffAtShop = document.getElementById("customer-dropoff-at-shop");
+                    const bookingLocationFields = document.getElementById("booking-location-fields");
                     const pickupAddress = document.getElementById("pickup-address");
                     const dropoffAddress = document.getElementById("dropoff-address");
                     const dropoffSameAsPickup = document.getElementById("dropoff-same-as-pickup");
@@ -494,6 +511,9 @@
                     const bookingConfirmationDate = document.getElementById("booking-confirmation-date");
                     const bookingConfirmationTime = document.getElementById("booking-confirmation-time");
                     const bookingConfirmationLocationSection = document.getElementById("booking-confirmation-location-section");
+                    const bookingConfirmationLocationTitle = document.getElementById("booking-confirmation-location-title");
+                    const bookingConfirmationShopDropoff = document.getElementById("booking-confirmation-shop-dropoff");
+                    const bookingConfirmationAddressDetails = document.getElementById("booking-confirmation-address-details");
                     const bookingConfirmationPickupAddress = document.getElementById("booking-confirmation-pickup-address");
                     const bookingConfirmationPickupPin = document.getElementById("booking-confirmation-pickup-pin");
                     const bookingConfirmationDropoffAddress = document.getElementById("booking-confirmation-dropoff-address");
@@ -517,6 +537,7 @@
                         phone: @json(__('Phone'), JSON_UNESCAPED_UNICODE),
                         service: @json(__('Service'), JSON_UNESCAPED_UNICODE),
                         deviceModel: @json(__('Device model'), JSON_UNESCAPED_UNICODE),
+                        dropoffAndCollection: @json(__('Drop-off and collection'), JSON_UNESCAPED_UNICODE),
                         pickupAddress: @json(__('Pickup address'), JSON_UNESCAPED_UNICODE),
                         dropoffAddress: @json(__('Drop-off address'), JSON_UNESCAPED_UNICODE),
                         requestNotes: @json(__('What do you need help with?'), JSON_UNESCAPED_UNICODE),
@@ -852,23 +873,49 @@
 
                     function updateDeviceDetails() {
                         const showDeviceDetails = serviceSelect.value === deviceDetailsServiceId;
+                        const shopDropoffSelected = showDeviceDetails && customerDropoffAtShop.checked;
                         deviceDetailsEnabled = showDeviceDetails;
                         deviceDetails.hidden = !showDeviceDetails;
                         deviceModel.disabled = !showDeviceDetails;
-                        pickupAddress.disabled = !showDeviceDetails;
-                        dropoffSameAsPickup.disabled = !showDeviceDetails;
-                        dropoffAddress.disabled = !showDeviceDetails || dropoffSameAsPickup.checked;
-                        dropoffPinButton.disabled = !showDeviceDetails || dropoffSameAsPickup.checked;
+                        customerDropoffAtShop.disabled = !showDeviceDetails;
+                        bookingLocationFields.hidden = shopDropoffSelected;
+                        pickupAddress.disabled = !showDeviceDetails || shopDropoffSelected;
+                        dropoffSameAsPickup.disabled = !showDeviceDetails || shopDropoffSelected;
+                        dropoffAddress.disabled = !showDeviceDetails || shopDropoffSelected || dropoffSameAsPickup.checked;
+                        dropoffPinButton.disabled = !showDeviceDetails || shopDropoffSelected || dropoffSameAsPickup.checked;
                         Object.values(locationInputs).forEach(function (inputs) {
-                            inputs.latitude.disabled = !showDeviceDetails;
-                            inputs.longitude.disabled = !showDeviceDetails;
+                            inputs.latitude.disabled = !showDeviceDetails || shopDropoffSelected;
+                            inputs.longitude.disabled = !showDeviceDetails || shopDropoffSelected;
+                        });
+                        locationModeButtons.forEach(function (button) {
+                            if (button.dataset.bookingLocationMode === "pickup") {
+                                button.disabled = !showDeviceDetails || shopDropoffSelected;
+                            }
                         });
                         requestNotes.disabled = !showDeviceDetails;
                         updateLocationSummaries();
                     }
 
+                    function updateCustomerDropoffAtShop() {
+                        if (customerDropoffAtShop.checked) {
+                            pickupAddress.value = "";
+                            dropoffAddress.value = "";
+                            dropoffSameAsPickup.checked = false;
+                            Object.values(locationInputs).forEach(function (inputs) {
+                                inputs.latitude.value = "";
+                                inputs.longitude.value = "";
+                            });
+                            if (locationMarker && locationMap) {
+                                locationMap.removeLayer(locationMarker);
+                                locationMarker = null;
+                            }
+                        }
+                        updateDeviceDetails();
+                    }
+
                     serviceSelect.addEventListener("change", updateDeviceDetails);
-                    updateDeviceDetails();
+                    customerDropoffAtShop.addEventListener("change", updateCustomerDropoffAtShop);
+                    updateCustomerDropoffAtShop();
 
                     function renderTimes(slots) {
                         availableTimes.replaceChildren();
@@ -972,8 +1019,9 @@
                         );
 
                         if (serviceSelect.value === deviceDetailsServiceId) {
-                            const pickupCoordinates = getLocationCoordinates("pickup");
-                            const dropoffCoordinates = getLocationCoordinates("dropoff");
+                            const customerDropoffAtShopSelected = customerDropoffAtShop.checked;
+                            const pickupCoordinates = customerDropoffAtShopSelected ? null : getLocationCoordinates("pickup");
+                            const dropoffCoordinates = customerDropoffAtShopSelected ? null : getLocationCoordinates("dropoff");
                             const pickupAddressValue = pickupAddress.value.trim() || confirmationLabels.notProvided;
                             const dropoffAddressValue = dropoffSameAsPickup.checked
                                 ? `${confirmationLabels.sameAsPickup}: ${pickupAddressValue}`
@@ -996,8 +1044,13 @@
                             };
                             const hasLocationPin = Boolean(pickupCoordinates || dropoffCoordinates);
                             bookingConfirmationLocationSection.hidden = false;
-                            bookingConfirmationMapWrapper.hidden = !hasLocationPin;
-                            bookingConfirmationMapEmpty.hidden = hasLocationPin;
+                            bookingConfirmationLocationTitle.textContent = customerDropoffAtShopSelected
+                                ? confirmationLabels.dropoffAndCollection
+                                : @json(__('Pickup and drop-off'), JSON_UNESCAPED_UNICODE);
+                            bookingConfirmationShopDropoff.hidden = !customerDropoffAtShopSelected;
+                            bookingConfirmationAddressDetails.hidden = customerDropoffAtShopSelected;
+                            bookingConfirmationMapWrapper.hidden = customerDropoffAtShopSelected || !hasLocationPin;
+                            bookingConfirmationMapEmpty.hidden = customerDropoffAtShopSelected || hasLocationPin;
                             if (requestNotes.value.trim()) {
                                 addConfirmationDetail(confirmationLabels.requestNotes, requestNotes.value.trim());
                             }

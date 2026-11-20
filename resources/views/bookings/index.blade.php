@@ -133,7 +133,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="booking-status-value">Status</label>
                             <select class="form-select" id="booking-status-value" name="status" required>
-                                @foreach ($statuses as $value => $label)
+                                @foreach ($editableStatuses as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>

@@ -43,6 +43,16 @@
 @endsection
 
 @section('email-footer')
+@if ($paymentUrl)
+<p style="margin:0 0 8px;font-size:14px;line-height:22px;color:#475569;">{{ __('billing.email.payment_link_note') }}</p>
+<p style="margin:0 0 20px;">
+    <a href="{{ $paymentUrl }}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#0d6efd;color:#fff;text-decoration:none;font-weight:bold;">
+        {{ __('billing.email.payment_link_title') }}
+    </a>
+</p>
+@elseif ($preview && $paymentLinkAvailable)
+<p style="margin:0 0 20px;font-size:14px;line-height:22px;color:#475569;">{{ __('billing.email.payment_link_preview_note') }}</p>
+@endif
 <p style="margin:0 0 8px;font-size:14px;line-height:22px;color:#475569;">{{ __('billing.email.invoice_pdf_note') }}</p>
 <p style="margin:0;font-size:14px;line-height:22px;color:#475569;">{{ __('billing.email.reply_for_help') }}</p>
 <p style="margin:18px 0 0;font-size:14px;color:#12263f;"><strong>OMG Computer</strong><br><span style="color:#64748b;">{{ __('billing.email.signature_title') }}</span></p>

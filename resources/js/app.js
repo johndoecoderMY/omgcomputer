@@ -178,6 +178,165 @@ const beamsAuthUrl = page.dataset.beamsAuthUrl;
 const beamsPushEnabled = page.dataset.beamsPushEnabled === 'true';
 const needsServiceWorker = userId && (beamsInstanceId || page.dataset.staffPwa === 'true');
 const serviceWorkerPath = beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js';
+const notificationSoundStorageKey = userId ? `omg-notification-sounds:${userId}` : null;
+let notificationAudioContext = null;
+let notificationAudioUnlocked = false;
+let notificationSoundErrorLogged = false;
+const notificationSoundTabId = `${Date.now()}-${Math.random()}`;
+const logNotificationSoundError = (error) => {
+    if (notificationSoundErrorLogged) {
+        return;
+    }
+
+    notificationSoundErrorLogged = true;
+    console.error('Could not play or coordinate notification sound.', error);
+};
+const prepareNotificationAudio = async () => {
+    if (!window.AudioContext) {
+        logNotificationSoundError(new Error('Web Audio is not supported in this browser.'));
+        return null;
+    }
+
+    if (!notificationAudioUnlocked) {
+        return null;
+    }
+
+    try {
+        notificationAudioContext ||= new window.AudioContext();
+        if (notificationAudioContext.state !== 'running') {
+            await notificationAudioContext.resume();
+        }
+
+        return notificationAudioContext.state === 'running' ? notificationAudioContext : null;
+    } catch (error) {
+        logNotificationSoundError(error);
+        return null;
+    }
+};
+const playNotificationChime = async () => {
+    const audioContext = await prepareNotificationAudio();
+    if (!audioContext) {
+        return false;
+    }
+
+    return new Promise((resolve) => {
+        try {
+            const startAt = audioContext.currentTime + 0.01;
+            const oscillator = audioContext.createOscillator();
+            const volume = audioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, startAt);
+            oscillator.frequency.setValueAtTime(1174, startAt + 0.12);
+            volume.gain.setValueAtTime(0.0001, startAt);
+            volume.gain.exponentialRampToValueAtTime(0.08, startAt + 0.02);
+            volume.gain.setValueAtTime(0.08, startAt + 0.12);
+            volume.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.29);
+            oscillator.connect(volume);
+            volume.connect(audioContext.destination);
+            oscillator.addEventListener('ended', () => resolve(true), { once: true });
+            oscillator.start(startAt);
+            oscillator.stop(startAt + 0.3);
+        } catch (error) {
+            logNotificationSoundError(error);
+            resolve(false);
+        }
+    });
+};
+if (userId) {
+    const unlockNotificationAudio = () => {
+        if (!window.AudioContext) {
+            logNotificationSoundError(new Error('Web Audio is not supported in this browser.'));
+            return;
+        }
+
+        try {
+            notificationAudioContext ||= new window.AudioContext();
+            notificationAudioContext.resume()
+                .then(() => {
+                    notificationAudioUnlocked = notificationAudioContext?.state === 'running';
+                })
+                .catch((error) => {
+                    logNotificationSoundError(error);
+                });
+        } catch (error) {
+            logNotificationSoundError(error);
+        }
+    };
+    document.addEventListener('pointerdown', unlockNotificationAudio, { once: true, passive: true });
+    document.addEventListener('keydown', unlockNotificationAudio, { once: true });
+}
+const readPlayedNotificationIds = () => {
+    try {
+        const storedIds = JSON.parse(localStorage.getItem(notificationSoundStorageKey) || '[]');
+        return Array.isArray(storedIds) ? storedIds.filter((id) => typeof id === 'string').slice(-50) : [];
+    } catch (error) {
+        logNotificationSoundError(error);
+        return null;
+    }
+};
+const playNotificationSoundOnce = async (notificationId) => {
+    const id = typeof notificationId === 'string' ? notificationId : '';
+    if (!notificationSoundStorageKey || !id) {
+        return;
+    }
+
+    const playIfNew = async () => {
+        const playedIds = readPlayedNotificationIds();
+        if (!playedIds || playedIds.includes(id)) {
+            return;
+        }
+
+        if (await playNotificationChime()) {
+            try {
+                localStorage.setItem(
+                    notificationSoundStorageKey,
+                    JSON.stringify([...playedIds, id].slice(-50)),
+                );
+            } catch (error) {
+                logNotificationSoundError(error);
+            }
+        }
+    };
+
+    if (navigator.locks?.request) {
+        try {
+            await navigator.locks.request(`omg-notification-sound:${userId}`, playIfNew);
+        } catch (error) {
+            logNotificationSoundError(error);
+        }
+
+        return;
+    }
+
+    const lockKey = `${notificationSoundStorageKey}:lock`;
+    try {
+        const currentLock = JSON.parse(localStorage.getItem(lockKey) || 'null');
+        if (currentLock?.expiresAt > Date.now()) {
+            return;
+        }
+
+        localStorage.setItem(lockKey, JSON.stringify({
+            owner: notificationSoundTabId,
+            expiresAt: Date.now() + 1500,
+        }));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        const acquiredLock = JSON.parse(localStorage.getItem(lockKey) || 'null');
+        if (acquiredLock?.owner !== notificationSoundTabId) {
+            return;
+        }
+
+        try {
+            await playIfNew();
+        } finally {
+            const latestLock = JSON.parse(localStorage.getItem(lockKey) || 'null');
+            if (latestLock?.owner === notificationSoundTabId) {
+                localStorage.removeItem(lockKey);
+            }
+        }
+    } catch (error) {
+        logNotificationSoundError(error);
+    }
+};
 const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
     ? navigator.serviceWorker.register(serviceWorkerPath, { scope: '/', updateViaCache: 'none' })
         .catch((error) => {
@@ -519,6 +678,10 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
         console.error('Pusher notification channel subscription failed.', error);
     });
     notificationsChannel.notification((notification) => {
+        if (notification.title === 'New booking received') {
+            void playNotificationSoundOnce(notification.id);
+        }
+
         const list = document.getElementById('navbar-notifications-list');
         const count = document.getElementById('unread-notifications-count');
 

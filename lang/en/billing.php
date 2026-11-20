@@ -22,6 +22,9 @@ return [
         'due_date' => 'Due date',
         'invoice_total' => 'Invoice total',
         'balance_due' => 'Balance due',
+        'payment_link_title' => 'Pay securely online',
+        'payment_link_note' => 'Use the secure link below to pay the outstanding balance. It expires after 7 days.',
+        'payment_link_preview_note' => 'A private 7-day payment link will be included when this email is sent.',
         'invoice_pdf_note' => 'The full invoice details are included in the attached PDF.',
         'receipt_subject' => 'Payment receipt :number from OMG Computer',
         'receipt_title' => 'Your payment is confirmed',
@@ -34,8 +37,16 @@ return [
         'signature_title' => 'Sales & Customer Support',
     ],
     'whatsapp' => [
-        'quotation' => 'Hi :name, here is your quotation :number from OMG Computer (RM :total). Please view or download it here: :url',
+        'quotation' => 'Hi :name, here is your quotation :number from OMG Computer (RM :total). Please view or download it here: :url'
+            . "\n\nTo accept this quotation, open: :accept_url\nTo reject this quotation, open: :reject_url",
         'invoice' => 'Hi :name, your invoice :number from OMG Computer totals RM :total, with RM :balance due. View or download the invoice PDF here: :url',
+        'invoice_with_payment_link' => 'Hi :name, your invoice :number from OMG Computer totals RM :total, with RM :balance due. View or download the invoice PDF here: :url'
+            . "\n\nPay the outstanding balance securely here: :payment_url",
+        'payment_link_generating' => 'Creating a secure payment link...',
+        'payment_link_pending' => 'A private 7-day payment link will be generated when you open this WhatsApp draft.',
+        'payment_link_error' => 'Could not create the payment link. Please try again.',
+        'send_pending' => 'Preparing the WhatsApp draft...',
+        'send_error' => 'Could not prepare the WhatsApp draft. Please try again.',
         'receipt' => 'Hi :name, payment of RM :amount for invoice :invoice is confirmed. View or download your receipt here: :url',
     ],
     'pdf' => [

@@ -13,11 +13,13 @@ class RepairTicket extends Model
 {
     public const STATUSES = [
         'new' => 'New',
+        'picking_up' => 'Picking up',
         'diagnosing' => 'Diagnosing',
         'waiting_customer' => 'Awaiting customer',
         'waiting_parts' => 'Waiting for parts',
         'in_repair' => 'In repair',
         'ready_for_pickup' => 'Ready for pickup',
+        'ready_to_drop_off' => 'Ready to drop off',
         'closed' => 'Closed',
         'cancelled' => 'Cancelled',
     ];

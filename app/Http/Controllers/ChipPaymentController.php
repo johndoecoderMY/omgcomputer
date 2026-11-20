@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\BillingDocument;
 use App\Models\BillingPayment;
 use App\Models\BillingPaymentAttempt;
-use App\Services\ChipCollect;
+use App\Models\CustomerMessageTemplate;
 use App\Services\BillingReceiptService;
+use App\Services\ChipCollect;
+use App\Services\GuestInvoicePaymentLinkService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -36,21 +40,31 @@ class ChipPaymentController extends Controller
         return $this->startCheckout($document, $chip, $request->user()->id, $clientEmail);
     }
 
-    public function createGuestPaymentLink(BillingDocument $document, Request $request, ChipCollect $chip): RedirectResponse
+    public function createGuestPaymentLink(
+        BillingDocument $document,
+        Request $request,
+        ChipCollect $chip,
+        GuestInvoicePaymentLinkService $paymentLinks,
+    ): RedirectResponse|JsonResponse
     {
         abort_unless($request->user()?->hasRole('admin'), 403);
         abort_unless($this->isPayableInvoice($document) && $chip->isConfigured(), 422, 'This invoice is not eligible for an online payment link.');
         abort_unless(filter_var($document->customer_email, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required before creating a payment link.');
 
-        $token = Str::random(64);
-        $document->forceFill([
-            'guest_payment_token_hash' => hash('sha256', $token),
-            'guest_payment_link_expires_at' => now()->addDays(7),
-        ])->save();
+        $data = $request->validate([
+            'locale' => ['nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
+        ]);
+        $url = $request->expectsJson()
+            ? $paymentLinks->getOrCreate($document, $data['locale'] ?? null)
+            : $paymentLinks->replace($document);
+
+        if ($request->expectsJson()) {
+            return response()->json(['url' => $url]);
+        }
 
         return redirect()
             ->route('billing.documents.show', $document)
-            ->with('guest_payment_url', route('billing.guest.invoice', [$document, $token]));
+            ->with('guest_payment_url', $url);
     }
 
     public function guestInvoice(BillingDocument $document, string $token, ChipCollect $chip): Response

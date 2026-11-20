@@ -43,6 +43,10 @@ class CustomerRepairTicketTest extends TestCase
             ->assertOk()
             ->assertSee('data-bs-target="#ticket-workflow-modal"', false)
             ->assertSee('data-bs-target="#ticket-step-modal"', false)
+            ->assertSee('value="picking_up"', false)
+            ->assertSee('>Picking up</option>', false)
+            ->assertSee('value="ready_to_drop_off"', false)
+            ->assertSee('>Ready to drop off</option>', false)
             ->assertSee('id="ticket-workflow-modal"', false)
             ->assertSee('id="ticket-step-modal"', false)
             ->assertSee('id="workflow-device-model"', false)
@@ -70,7 +74,11 @@ class CustomerRepairTicketTest extends TestCase
             $xpath->query('//*[@data-page-header]//button[@aria-label="Page actions"]')->length,
         );
         $this->assertSame(1, $xpath->query('//button[@data-bs-target="#ticket-workflow-modal"]')->length);
-        $this->assertSame(1, $xpath->query('//button[@data-bs-target="#ticket-step-modal"]')->length);
+        $this->assertSame(2, $xpath->query('//button[@data-bs-target="#ticket-step-modal"]')->length);
+        $this->assertSame(
+            1,
+            $xpath->query('//*[@id="ticket-updates-display"]/preceding-sibling::div[contains(@class, "card-header")]//button[@data-bs-target="#ticket-step-modal"]')->length,
+        );
         $this->assertSame(
             1,
             $xpath->query('//*[@data-page-header]//a[normalize-space(.)="All tickets"]')->length,
@@ -213,6 +221,18 @@ class CustomerRepairTicketTest extends TestCase
             $update->attachments()->reorder('id')->pluck('caption')->all(),
         );
         $this->assertSame('waiting_parts', $ticket->fresh()->status);
+
+        foreach ([
+            ['Picking up the laptop', 'picking_up'],
+            ['Ready to return the laptop', 'ready_to_drop_off'],
+        ] as [$title, $status]) {
+            $this->postJson(route('tickets.steps.store', $ticket), [
+                'title' => $title,
+                'status' => $status,
+            ])->assertOk()
+                ->assertJsonPath('status', $status);
+        }
+        $this->assertSame('ready_to_drop_off', $ticket->fresh()->status);
     }
 
     public function test_closed_ticket_only_allows_status_change_for_warranty_follow_up(): void

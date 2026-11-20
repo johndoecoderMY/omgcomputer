@@ -36,11 +36,6 @@
                     <span class="bi bi-send me-2" aria-hidden="true"></span>Email invoice
                 </button>
             @endif
-            @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')
-                <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#send-acceptance-modal">
-                    <span class="bi bi-envelope me-2" aria-hidden="true"></span>Email acceptance
-                </button>
-            @endif
             @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')<form method="POST" action="{{ route('billing.documents.convert', $document) }}">@csrf<button class="btn btn-primary" onclick="return confirm('Issue this invoice and deduct listed stock?')">Convert to invoice</button></form>@endif
             @if (! auth()->user()->hasRole('customer') && ! in_array($document->status, ['void', 'paid'], true) && (float) $document->paid_amount === 0.0)<form method="POST" action="{{ route('billing.documents.void', $document) }}">@csrf<button class="btn btn-outline-danger" onclick="return confirm('Void this document?')">Void</button></form>@endif
         </x-slot>
@@ -63,6 +58,7 @@
                 'total' => number_format((float) $document->total, 2),
             ],
             'whatsapp_urls' => $guestDocumentUrls,
+            'whatsapp_action_urls' => $whatsappActionUrls,
             'filename' => $document->number,
             'submit_label' => 'Send quotation',
             'mark_sent_url' => route('billing.documents.quotation-status', $document),
@@ -72,59 +68,39 @@
         @include('billing._send-modal', ['sendModal' => [
             'id' => 'send-invoice-modal',
             'title' => 'Email invoice',
-            'description' => 'Email the invoice PDF or share its private WhatsApp PDF link. The link works for guests without an account and expires after 7 days.',
+            'description' => $canSharePaymentLink
+                ? 'Email the invoice PDF or share its private WhatsApp PDF and payment links. The payment link works for guests without an account and expires after 7 days.'
+                : 'Email the invoice PDF or share its private WhatsApp PDF link. The link works for guests without an account and expires after 7 days.',
             'action' => route('billing.documents.send', $document),
             'email' => $document->customer_email,
             'email_preview_url' => route('billing.documents.email-preview', $document),
             'pdf_preview_url' => route('billing.documents.pdf', $document),
             'phone' => $document->customer_phone,
-            'whatsapp_key' => 'billing.whatsapp.invoice',
+            'whatsapp_key' => $canSharePaymentLink ? 'billing.whatsapp.invoice_with_payment_link' : 'billing.whatsapp.invoice',
             'whatsapp_replacements' => [
                 'name' => $document->customer_name,
                 'number' => $document->number,
                 'total' => number_format((float) $document->total, 2),
                 'balance' => number_format((float) $document->balance, 2),
+                'payment_url' => '__GUEST_PAYMENT_URL__',
             ],
             'whatsapp_urls' => $guestDocumentUrls,
+            'payment_url_placeholder' => '__GUEST_PAYMENT_URL__',
+            'payment_link_url' => $canSharePaymentLink ? route('billing.guest-payment-link', $document) : null,
             'filename' => $document->number,
             'submit_label' => 'Email invoice',
             'mark_sent_url' => null,
         ]])
     @endif
 
-    @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'accepted')
-        <div class="modal fade" id="send-acceptance-modal" tabindex="-1" aria-labelledby="send-acceptance-modal-label" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <form method="POST" action="{{ route('billing.documents.send-acceptance', $document) }}">
-                        @csrf
-                        <div class="modal-header">
-                            <h2 class="modal-title fs-5" id="send-acceptance-modal-label">Email acceptance confirmation</h2>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="text-body-secondary">Send a confirmation that this quotation was accepted. This does not issue the invoice.</p>
-                            <label class="form-label" for="acceptance-email">Customer email</label>
-                            <input class="form-control" id="acceptance-email" name="email" type="email" value="{{ old('email', $document->customer_email) }}" required>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
-                            <button class="btn btn-primary" type="submit"><span class="bi bi-send me-2" aria-hidden="true"></span>Send confirmation</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    @endif
-
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif
     @if (session('error'))<div class="alert alert-danger" role="alert">{{ session('error') }}</div>@endif
     @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'draft')
-        <div class="alert alert-info">Sending this quotation through the website is optional. If the customer already accepted it by phone, in person, or through another form, use <strong>Record customer accepted</strong> to continue to the invoice.</div>
+        <div class="alert alert-info">Sending this quotation through the website is optional. If the customer already accepted it by phone, in person, or through another form, use <strong>Record customer accepted</strong> to automatically issue and email the invoice.</div>
     @endif
     @if ($document->type === 'quotation' && $document->status === 'accepted')
-        <div class="alert alert-info">This quotation has been accepted. An acceptance confirmation is sent automatically when the status changes to accepted. Staff can manually resend it if needed.</div>
+        <div class="alert alert-info">This accepted quotation has not yet been issued as an invoice. Use <strong>Convert to invoice</strong> to issue it and email the invoice.</div>
     @endif
     @if ($errors->any())<div class="alert alert-danger">@foreach ($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
 
@@ -158,8 +134,13 @@
                 </div>
             </div>
         </div>
-            @if (auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)<div class="card mb-3"><div class="card-header fw-semibold">Pay securely with CHIP</div><form method="POST" action="{{ route('billing.chip.checkout', $document) }}">@csrf<div class="card-body"><p>Pay the full outstanding balance of <strong>RM {{ number_format($document->balance, 2) }}</strong>.</p><div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available payment options"><span class="badge text-bg-light border"><span class="bi bi-qr-code-scan me-1" aria-hidden="true"></span>QR pay</span><span class="badge text-bg-light border">DuitNow</span><span class="badge text-bg-light border">Online banking</span><span class="badge text-bg-light border">Card</span></div><small class="text-body-secondary d-block">Available QR, DuitNow and online methods depend on the payment channels enabled for this CHIP merchant account. Partial payments are not currently supported.</small></div><div class="card-footer"><button class="btn btn-primary w-100"><span class="bi bi-shield-check me-2" aria-hidden="true"></span>Continue to CHIP checkout</button></div></form></div>@endif
+            @if (auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
+                <div class="col-lg-4">
+                    <div class="card mb-3"><div class="card-header fw-semibold">Pay securely with CHIP</div><form method="POST" action="{{ route('billing.chip.checkout', $document) }}">@csrf<div class="card-body"><p>Pay the full outstanding balance of <strong>RM {{ number_format($document->balance, 2) }}</strong>.</p><div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available payment options"><span class="badge text-bg-light border"><span class="bi bi-qr-code-scan me-1" aria-hidden="true"></span>QR pay</span><span class="badge text-bg-light border">DuitNow</span><span class="badge text-bg-light border">Online banking</span><span class="badge text-bg-light border">Card</span></div><small class="text-body-secondary d-block">Available QR, DuitNow and online methods depend on the payment channels enabled for this CHIP merchant account. Partial payments are not currently supported.</small></div><div class="card-footer"><button class="btn btn-primary w-100"><span class="bi bi-shield-check me-2" aria-hidden="true"></span>Continue to CHIP checkout</button></div></form></div>
+                </div>
+            @endif
             @if (! auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
+                <div class="col-lg-4">
                 <div class="card mb-3">
                     <div class="card-header fw-semibold">Take payment at the counter with CHIP</div>
                     <form method="POST" action="{{ route('billing.chip.counter', $document) }}">
@@ -178,8 +159,10 @@
                         </div>
                     </form>
                 </div>
+                </div>
             @endif
             @if (auth()->user()->hasRole('admin') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
+                <div class="col-lg-4">
                 <div class="card mb-3">
                     <div class="card-header fw-semibold">Share a guest payment link</div>
                     <div class="card-body">
@@ -206,76 +189,83 @@
                         @endif
                     </div>
                 </div>
-            @endif
-            @if (auth()->user()->hasRole('admin') && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true))
-                <div class="card">
-                    <div class="card-header fw-semibold">Record full payment</div>
-                    <form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">
-                        @csrf
-                        <div class="card-body">
-                            <label class="form-label" for="amount">Outstanding balance (RM)</label>
-                            <input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01"
-                                max="{{ $document->balance }}" step="0.01"
-                                value="{{ number_format($document->balance, 2, '.', '') }}" readonly required>
-                            <div class="form-text mb-3">Partial payments are not currently supported. Record the full outstanding balance.</div>
-                            <label class="form-label" for="method">Method</label>
-                            <select class="form-select mb-3" id="method" name="method" required>
-                                @foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)
-                                    <option value="{{ $method }}">{{ str_replace('_', ' ', ucfirst($method)) }}</option>
-                                @endforeach
-                            </select>
-                            <label class="form-label" for="reference">Reference</label>
-                            <input class="form-control mb-3" id="reference" name="reference" maxlength="255">
-                            <label class="form-label" for="receipt-delivery">Receipt email</label>
-                            <select class="form-select mb-3" id="receipt-delivery" name="receipt_delivery">
-                                <option value="send" selected>Email automatically after recording</option>
-                                <option value="preview">Record payment, then preview before sending</option>
-                            </select>
-                            <label class="form-label" for="receipt-locale">Receipt email and PDF language</label>
-                            <select class="form-select" id="receipt-locale" name="receipt_locale">
-                                @foreach (\App\Models\CustomerMessageTemplate::LANGUAGES as $locale => $label)
-                                    <option value="{{ $locale }}" @selected(app()->getLocale() === $locale)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="card-footer">
-                            <button class="btn btn-primary w-100">Record full payment</button>
-                        </div>
-                    </form>
                 </div>
             @endif
         </div>
     </div>
     @if ($document->type === 'invoice')
-        <div class="card">
-            <div class="card-header fw-semibold">Payment history</div>
-            <div class="table-responsive">
-                <table class="table mb-0 table-bordered">
-                    <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Receipt</th></tr></thead>
-                    <tbody>
-                        @forelse ($document->payments as $payment)
-                            <tr>
-                                <td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td>
-                                <td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td>
-                                <td>{{ $payment->reference ?: '—' }}</td>
-                                <td class="text-end">RM {{ number_format($payment->amount, 2) }}</td>
-                                <td>
-                                    <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.receipts.pdf', $payment) }}" target="_blank" rel="noopener">
-                                        <span class="bi bi-filetype-pdf me-1" aria-hidden="true"></span>{{ $payment->receipt_number }}
-                                    </a>
-                                    @unless (auth()->user()->hasRole('customer'))
-                                        <button class="btn btn-sm btn-outline-secondary" type="button"
-                                            data-bs-toggle="modal" data-bs-target="#send-receipt-modal-{{ $payment->id }}">
-                                            <span class="bi bi-envelope me-1" aria-hidden="true"></span>Send receipt
-                                        </button>
-                                    @endunless
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td class="text-center text-body-secondary py-4" colspan="5">No payments recorded.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+        <div class="row g-3 mb-3">
+            @if (auth()->user()->hasRole('admin') && in_array($document->status, ['issued', 'partial', 'part_paid'], true))
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Record full payment</div>
+                        <form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">
+                            @csrf
+                            <div class="card-body">
+                                <label class="form-label" for="amount">Outstanding balance (RM)</label>
+                                <input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01"
+                                    max="{{ $document->balance }}" step="0.01"
+                                    value="{{ number_format($document->balance, 2, '.', '') }}" readonly required>
+                                <div class="form-text mb-3">Partial payments are not currently supported. Record the full outstanding balance.</div>
+                                <label class="form-label" for="method">Method</label>
+                                <select class="form-select mb-3" id="method" name="method" required>
+                                    @foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)
+                                        <option value="{{ $method }}">{{ str_replace('_', ' ', ucfirst($method)) }}</option>
+                                    @endforeach
+                                </select>
+                                <label class="form-label" for="reference">Reference</label>
+                                <input class="form-control mb-3" id="reference" name="reference" maxlength="255">
+                                <label class="form-label" for="receipt-delivery">Receipt email</label>
+                                <select class="form-select mb-3" id="receipt-delivery" name="receipt_delivery">
+                                    <option value="send" selected>Email automatically after recording</option>
+                                    <option value="preview">Record payment, then preview before sending</option>
+                                </select>
+                                <label class="form-label" for="receipt-locale">Receipt email and PDF language</label>
+                                <select class="form-select" id="receipt-locale" name="receipt_locale">
+                                    @foreach (\App\Models\CustomerMessageTemplate::LANGUAGES as $locale => $label)
+                                        <option value="{{ $locale }}" @selected(app()->getLocale() === $locale)>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="card-footer">
+                                <button class="btn btn-primary w-100">Record full payment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endif
+            <div class="{{ auth()->user()->hasRole('admin') && in_array($document->status, ['issued', 'partial', 'part_paid'], true) ? 'col-lg-6' : 'col-12' }}">
+                <div class="card h-100">
+                    <div class="card-header fw-semibold">Payment history</div>
+                    <div class="table-responsive">
+                        <table class="table mb-0 table-bordered">
+                            <thead><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th><th>Receipt</th></tr></thead>
+                            <tbody>
+                                @forelse ($document->payments as $payment)
+                                    <tr>
+                                        <td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td>
+                                        <td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td>
+                                        <td>{{ $payment->reference ?: '—' }}</td>
+                                        <td class="text-end">RM {{ number_format($payment->amount, 2) }}</td>
+                                        <td>
+                                            <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.receipts.pdf', $payment) }}" target="_blank" rel="noopener">
+                                                <span class="bi bi-filetype-pdf me-1" aria-hidden="true"></span>{{ $payment->receipt_number }}
+                                            </a>
+                                            @unless (auth()->user()->hasRole('customer'))
+                                                <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                    data-bs-toggle="modal" data-bs-target="#send-receipt-modal-{{ $payment->id }}">
+                                                    <span class="bi bi-envelope me-1" aria-hidden="true"></span>Send receipt
+                                                </button>
+                                            @endunless
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td class="text-center text-body-secondary py-4" colspan="5">No payments recorded.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         @unless (auth()->user()->hasRole('customer'))

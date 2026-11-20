@@ -473,7 +473,6 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/{document}/quotation-status', 'updateQuotationStatus')->name('documents.quotation-status');
         Route::get('/{document}/email-preview', 'previewDocumentEmail')->name('documents.email-preview');
         Route::post('/{document}/send', 'sendDocument')->name('documents.send');
-        Route::post('/{document}/send-acceptance-email', 'sendQuotationAcceptance')->name('documents.send-acceptance');
         Route::get('/receipts', 'receipts')->name('receipts.index');
         Route::get('/receipts/{payment}/email-preview', 'previewReceiptEmail')->name('receipts.email-preview');
         Route::post('/receipts/{payment}/send', 'sendReceiptEmail')->name('receipts.send');

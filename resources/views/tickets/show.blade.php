@@ -113,10 +113,16 @@
                 @php
                     $pickupAddress = $ticket->pickup_address ?? $ticket->booking?->pickup_address;
                     $dropoffAddress = $ticket->dropoff_address ?? $ticket->booking?->dropoff_address;
+                    $customerDropoffAtShop = (bool) $ticket->booking?->customer_dropoff_at_shop;
                 @endphp
-                @if (! auth()->user()->hasRole('customer') || $pickupAddress || $dropoffAddress || $ticket->booking?->pickup_latitude !== null || $ticket->booking?->dropoff_latitude !== null)
-                    <div class="card mb-3 @if (! $pickupAddress && ! $dropoffAddress && $ticket->booking?->pickup_latitude === null && $ticket->booking?->dropoff_latitude === null) d-none @endif" id="ticket-location-card">
-                        <div class="card-header fw-semibold">Pickup and drop-off</div>
+                @if (! auth()->user()->hasRole('customer') || $customerDropoffAtShop || $pickupAddress || $dropoffAddress || $ticket->booking?->pickup_latitude !== null || $ticket->booking?->dropoff_latitude !== null)
+                    <div class="card mb-3 @if (! $customerDropoffAtShop && ! $pickupAddress && ! $dropoffAddress && $ticket->booking?->pickup_latitude === null && $ticket->booking?->dropoff_latitude === null) d-none @endif" id="ticket-location-card">
+                        <div class="card-header fw-semibold">{{ $customerDropoffAtShop ? __('Drop-off and collection') : __('Pickup and drop-off') }}</div>
+                        @if ($customerDropoffAtShop)
+                            <div class="card-body">
+                                <div class="alert alert-info mb-0">{{ __('I will drop off and collect the device at the shop.') }}</div>
+                            </div>
+                        @else
                         <div class="card-body row g-3">
                             <div class="col-md-6">
                                 <div class="small text-body-secondary">Pickup address</div>
@@ -133,11 +139,22 @@
                                 @endif
                             </div>
                         </div>
+                        @endif
                     </div>
                 @endif
 
                 <div class="card mb-3">
-                    <div class="card-header fw-semibold">Repair steps and SOP log</div>
+                    <div class="card-header d-flex justify-content-between align-items-center gap-2">
+                        <span class="fw-semibold">Repair steps and SOP log</span>
+                        @unless (auth()->user()->hasRole('customer'))
+                            @if ($ticket->status !== 'closed')
+                                <button class="btn btn-sm btn-primary text-nowrap" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#ticket-step-modal">
+                                    <span class="bi bi-plus me-1" aria-hidden="true"></span>Add repair step
+                                </button>
+                            @endif
+                        @endunless
+                    </div>
                     <div id="ticket-updates-display">
                         @include('tickets.partials.update-list', ['ticket' => $ticket, 'statuses' => $statuses])
                     </div>

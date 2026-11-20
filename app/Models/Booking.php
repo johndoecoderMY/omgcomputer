@@ -20,12 +20,23 @@ class Booking extends Model
             'background' => '#d9f8eb',
             'text' => '#00a884',
         ],
+        'cancelled' => [
+            'background' => '#fde2e2',
+            'text' => '#b42318',
+        ],
     ];
 
     public const STATUSES = [
         'pending' => 'Pending',
         'confirmed' => 'Confirmed',
+        'cancelled' => 'Cancelled',
         'completed' => 'Completed',
+    ];
+
+    public const EDITABLE_STATUSES = [
+        'pending' => 'Pending',
+        'confirmed' => 'Confirmed',
+        'cancelled' => 'Cancelled',
     ];
 
     protected $fillable = [
@@ -40,6 +51,7 @@ class Booking extends Model
         'service_name',
         'device_model',
         'request_notes',
+        'customer_dropoff_at_shop',
         'pickup_address',
         'dropoff_address',
         'pickup_latitude',
@@ -55,6 +67,7 @@ class Booking extends Model
     {
         return [
             'starts_at' => 'datetime',
+            'customer_dropoff_at_shop' => 'boolean',
         ];
     }
 

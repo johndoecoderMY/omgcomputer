@@ -21,6 +21,8 @@ class InvoiceMail extends Mailable
         public string $pdfFilename,
         public bool $preview = false,
         string $locale = 'en',
+        public ?string $paymentUrl = null,
+        public bool $paymentLinkAvailable = false,
     ) {
         $this->locale($locale);
     }

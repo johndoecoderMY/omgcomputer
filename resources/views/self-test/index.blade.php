@@ -190,11 +190,11 @@
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="project-online-accept">
-                    <span><strong>Online / acceptance:</strong> As the customer, accept a sent quotation. Verify a draft/sent quotation cannot be converted, but an accepted quotation can. Convert it and verify an invoice is issued and visible to the linked customer.</span>
+                    <span><strong>Online / acceptance:</strong> As the customer, accept a sent quotation. Verify acceptance automatically issues and emails the invoice, which is visible to the linked customer. Confirm staff can still share it manually through WhatsApp.</span>
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="project-face-to-face">
-                    <span><strong>Face-to-face / acceptance:</strong> Create a quotation and do not send it. Record the customer’s in-person acceptance from the quotation page, convert to invoice, and verify the quote-first process succeeds without website delivery.</span>
+                    <span><strong>Face-to-face / acceptance:</strong> Create a quotation and do not send it. Record the customer’s in-person acceptance from the quotation page and verify an invoice is issued and emailed without website delivery.</span>
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="project-payment">
