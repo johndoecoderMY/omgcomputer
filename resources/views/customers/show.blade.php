@@ -15,6 +15,12 @@
         </x-slot:actions>
     </x-page-header>
     @if (session('success'))<div class="alert alert-success" role="status">{{ session('success') }}</div>@endif
+    @if ($customer->warning)
+        <div class="alert alert-warning" role="alert">
+            <div class="fw-semibold"><span class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></span>Important customer warning</div>
+            <div class="text-pre-line mt-1">{{ $customer->warning }}</div>
+        </div>
+    @endif
     <div class="row g-3 mb-3">
         <div class="col-lg-5">
             <div class="card h-100">
@@ -36,8 +42,8 @@
                     </dl>
                     @if ($customer->notes)
                         <hr>
-                        <div class="small text-body-secondary">Profile notes</div>
-                        <p class="mb-0">{{ $customer->notes }}</p>
+                        <div class="small text-body-secondary">Internal notes (staff only)</div>
+                        <p class="text-pre-line mb-0">{{ $customer->notes }}</p>
                     @endif
                 </div>
             </div>

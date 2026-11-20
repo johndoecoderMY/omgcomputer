@@ -34,6 +34,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectEventController;
 use App\Http\Controllers\ProjectExportController;
+use App\Http\Controllers\ProjectLogoController;
 use App\Http\Controllers\ProjectPlanningController;
 use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
@@ -47,39 +48,65 @@ use App\Http\Controllers\TeamController;
 use App\Http\Controllers\WebsitePreviewController;
 use App\Http\Controllers\WhatsAppInboxController;
 use App\Http\Controllers\WhatsAppWebhookController;
+use App\Http\Middleware\SetPublicLocale;
 use App\Models\InventoryPart;
 use App\Models\WebsitePreview;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 
-Route::get('/', fn () => view('welcome'));
-Route::get('/website-previews', [WebsitePreviewController::class, 'index'])->name('website-previews.index');
+Route::get('/', fn () => view('welcome'))->middleware(SetPublicLocale::class);
+Route::post('/language', function (Request $request) {
+    $validated = $request->validate([
+        'locale' => ['required', Rule::in(['en', 'ms', 'zh_CN'])],
+    ]);
+
+    $request->session()->put('public_locale', $validated['locale']);
+
+    return redirect()->back();
+})->name('language.update');
+Route::view('/custom-pc', 'pages.custom-pc-builder')
+    ->middleware(SetPublicLocale::class)
+    ->name('custom-pc-builder.public');
+Route::redirect('/custom-pc-builder', '/custom-pc', 301)->name('custom-pc-builder.legacy');
+Route::get('/website-previews', [WebsitePreviewController::class, 'index'])
+    ->middleware(SetPublicLocale::class)
+    ->name('website-previews.index');
 Route::get('/website-previews/concepts/{concept}', [WebsitePreviewController::class, 'concept'])
     ->whereIn('concept', ['landing-page', 'dashboard', 'pos-catalogue'])
+    ->middleware(SetPublicLocale::class)
     ->name('website-previews.concepts.show');
 Route::get('/track-repair', [RepairTicketController::class, 'trackingForm'])
+    ->middleware(SetPublicLocale::class)
     ->name('repairs.track.form');
 Route::get('/track-repair/photos/{attachment}', [RepairTicketController::class, 'trackingPhoto'])
+    ->middleware(SetPublicLocale::class)
     ->middleware('signed')
     ->name('repairs.track.photo');
 Route::get('/track-repair/{ticketNumber}', [RepairTicketController::class, 'trackByNumber'])
     ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:repair-tracking')
     ->name('repairs.track.show');
 Route::post('/track-repair/{ticketNumber}/billing-code', [RepairTicketController::class, 'sendBillingVerificationCode'])
     ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:repair-billing-code-send')
     ->name('repairs.track.billing-code');
 Route::post('/track-repair/{ticketNumber}/billing-code/verify', [RepairTicketController::class, 'verifyBillingCode'])
     ->where('ticketNumber', '[^/]{1,64}')
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:repair-billing-code-verify')
     ->name('repairs.track.billing-code.verify');
 Route::post('/track-repair', [RepairTicketController::class, 'track'])
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:repair-tracking-lookup')
     ->name('repairs.track');
 Route::get('/sitemap.xml', function () {
     $urls = collect([
         ['loc' => url('/')],
         ['loc' => route('shop.public')],
+        ['loc' => route('custom-pc-builder.public')],
         ['loc' => route('website-previews.index')],
         ['loc' => route('privacy')],
         ['loc' => route('refund-policy')],
@@ -117,18 +144,19 @@ Route::get('/sitemap.xml', function () {
 Route::redirect('/about', '/#about')->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
-Route::view('/privacy', 'pages.privacy')->name('privacy');
-Route::view('/refund-policy', 'pages.refund-policy')->name('refund-policy');
-Route::view('/shipping-policy', 'pages.shipping-policy')->name('shipping-policy');
-Route::view('/data-deletion', 'pages.data-deletion')->name('data-deletion.instructions');
+Route::view('/privacy', 'pages.privacy')->middleware(SetPublicLocale::class)->name('privacy');
+Route::view('/refund-policy', 'pages.refund-policy')->middleware(SetPublicLocale::class)->name('refund-policy');
+Route::view('/shipping-policy', 'pages.shipping-policy')->middleware(SetPublicLocale::class)->name('shipping-policy');
+Route::view('/data-deletion', 'pages.data-deletion')->middleware(SetPublicLocale::class)->name('data-deletion.instructions');
 Route::post('/webhooks/meta/data-deletion', [MetaDataDeletionController::class, 'callback'])
     ->middleware('throttle:30,1')
     ->name('data-deletion.callback');
 Route::get('/data-deletion/status/{confirmationCode}', [MetaDataDeletionController::class, 'status'])
     ->where('confirmationCode', '[A-Za-z0-9]{48}')
+    ->middleware(SetPublicLocale::class)
     ->name('data-deletion.status');
-Route::view('/toc', 'pages.toc')->name('toc');
-Route::view('/terms', 'pages.toc')->name('terms');
+Route::view('/toc', 'pages.toc')->middleware(SetPublicLocale::class)->name('toc');
+Route::view('/terms', 'pages.toc')->middleware(SetPublicLocale::class)->name('terms');
 Route::redirect('/faq', '/#faq')->name('faq');
 Route::redirect('/qna', '/#faq')->name('qna');
 Route::redirect('/qa', '/#faq')->name('qa');
@@ -155,7 +183,7 @@ Route::get('/error-pages/{code}', function (string $code) {
     return response()->view("errors.{$code}", [], (int) $code);
 })->middleware(['auth', 'password.changed', 'verified', 'not-customer'])->name('error-pages.preview');
 
-Route::prefix('book')->name('bookings.')->controller(BookingController::class)->group(function (): void {
+Route::prefix('book')->name('bookings.')->middleware(SetPublicLocale::class)->controller(BookingController::class)->group(function (): void {
     Route::get('/', 'create')->name('create');
     Route::get('/events', 'events')->name('events');
     Route::get('/availability', 'availability')->name('availability');
@@ -174,6 +202,7 @@ Route::post('/webhooks/chip/collect/{attempt:uuid}', [ChipPaymentController::cla
 Route::get('/pay/invoice/{document}/{token}', [ChipPaymentController::class, 'guestInvoice'])
     ->whereNumber('document')
     ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:30,1')
     ->name('billing.guest.invoice');
 Route::post('/pay/invoice/{document}/{token}/chip', [ChipPaymentController::class, 'guestCheckout'])
@@ -182,6 +211,7 @@ Route::post('/pay/invoice/{document}/{token}/chip', [ChipPaymentController::clas
     ->middleware('throttle:8,1')
     ->name('billing.guest.chip.checkout');
 Route::get('/pay/invoice/payment/{attempt:uuid}', [ChipPaymentController::class, 'guestReturn'])
+    ->middleware(SetPublicLocale::class)
     ->middleware('throttle:30,1')
     ->name('billing.guest.chip.return');
 Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'])
@@ -189,9 +219,10 @@ Route::post('/webhooks/chip/shop/{uuid}', [ShopController::class, 'chipCallback'
 
 Route::get('/quotations/{document}/respond/{status}', [BillingController::class, 'respondToQuotationFromEmail'])
     ->middleware('signed')
+    ->middleware(SetPublicLocale::class)
     ->name('billing.quotations.respond');
 
-Route::controller(ShopController::class)->group(function (): void {
+Route::middleware(SetPublicLocale::class)->controller(ShopController::class)->group(function (): void {
     Route::get('/shop', 'publicProductsGrid')->name('shop.public');
     Route::get('/shop/item/{product}', 'publicProductDetails')->name('shop.public.products.show');
 });
@@ -247,6 +278,9 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/', 'edit')->name('edit');
         Route::put('/', 'update')->name('update');
     });
+    Route::view('/admin/merchant-document-checklist', 'admin.merchant-document-checklist')
+        ->middleware('role:admin')
+        ->name('admin.merchant-document-checklist');
     Route::prefix('admin/access')->name('admin.access.')->middleware('role:admin')->controller(AdminAccessController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/roles', 'storeRole')->name('roles.store');
@@ -609,6 +643,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
 
     Route::prefix('projects')->name('projects.')->group(function (): void {
         Route::get('/datatable', [ProjectController::class, 'datatable'])->name('datatable');
+        Route::get('/{project}/logo', [ProjectLogoController::class, 'show'])->name('logo');
         Route::middleware('not-customer')->group(function (): void {
             Route::get('/{project}/planning', [ProjectPlanningController::class, 'show'])->name('planning');
             Route::put('/{project}/planning/overview', [ProjectPlanningController::class, 'updateOverview'])->name('planning.overview.update');
@@ -639,6 +674,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::middleware('not-customer')->group(function (): void {
             Route::post('/{project}/attachments', [AttachmentController::class, 'storeProject'])->name('attachments.store');
             Route::patch('/{project}/attachments/{attachment}/caption', [AttachmentController::class, 'updateProjectCaption'])->name('attachments.caption');
+            Route::post('/{project}/logo', [ProjectLogoController::class, 'store'])->name('logo.store');
+            Route::delete('/{project}/logo', [ProjectLogoController::class, 'destroy'])->name('logo.destroy');
             Route::post('/{project}/export', [ProjectExportController::class, 'export'])->name('export');
             Route::post('/{project}/technology-stack', [ProjectTechnologyController::class, 'store'])->name('technology-stack.store');
             Route::put('/{project}/technology-stack/{technology}', [ProjectTechnologyController::class, 'update'])->name('technology-stack.update');

@@ -125,6 +125,7 @@ class CustomerMessageTemplateSeeder extends Seeder
         ];
 
         foreach ($templates as $template) {
+            $template['language'] = str_ends_with($template['slug'], '-ms') ? 'ms' : 'en';
             CustomerMessageTemplate::query()->firstOrCreate(
                 ['slug' => $template['slug']],
                 [...$template, 'is_active' => true],

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-bs-theme="light" lang="en-US" dir="ltr">
+<html data-bs-theme="light" lang="{{ ['en' => 'en', 'ms' => 'ms', 'zh_CN' => 'zh-CN'][app()->getLocale()] ?? 'en' }}" dir="ltr">
 
 
 @include('layouts.guest.head')
@@ -10,7 +10,7 @@
     @unless (request()->getPathInfo() === '/')
         <div class="container" style="padding-top: 5rem; padding-bottom: 1rem;">
             <a class="d-inline-flex align-items-center text-primary text-decoration-none mb-1" href="{{ url('/') }}">
-                <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>Back to OMG Computer
+                <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>{{ __('Back to OMG Computer') }}
             </a>
         </div>
     @endunless

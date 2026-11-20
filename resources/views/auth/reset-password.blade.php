@@ -1,18 +1,18 @@
 @extends('layouts.auth')
 
-@section('title', 'Choose a new password')
+@section('title', __('Choose a new password'))
 
 @section('content')
     <x-auth-card
-        title="Choose a new password"
-        description="Enter the email address for your account and choose a new password."
+        :title="__('Choose a new password')"
+        :description="__('Enter the email address for your account and choose a new password.')"
     >
         <form method="POST" action="{{ route('password.store') }}">
             @csrf
             <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
             <div class="mb-3">
-                <label class="form-label" for="email">Email address</label>
+                <label class="form-label" for="email">{{ __('Email address') }}</label>
                 <input class="form-control @error('email') is-invalid @enderror" id="email" name="email" type="email"
                     value="{{ old('email', $request->email) }}" required autocomplete="username" autofocus>
                 @error('email')
@@ -21,7 +21,7 @@
             </div>
 
             <div class="mb-4">
-                <label class="form-label" for="password">New password</label>
+                <label class="form-label" for="password">{{ __('New password') }}</label>
                 <input class="form-control @error('password') is-invalid @enderror" id="password" name="password"
                     type="password" required autocomplete="new-password">
                 @error('password')
@@ -29,12 +29,12 @@
                 @enderror
             </div>
             <div class="mb-4">
-                <label class="form-label" for="password_confirmation">Confirm new password</label>
+                <label class="form-label" for="password_confirmation">{{ __('Confirm new password') }}</label>
                 <input class="form-control" id="password_confirmation" name="password_confirmation"
                     type="password" required autocomplete="new-password">
             </div>
 
-            <button class="btn btn-primary w-100" type="submit">Reset password</button>
+            <button class="btn btn-primary w-100" type="submit">{{ __('Reset password') }}</button>
         </form>
     </x-auth-card>
 @endsection

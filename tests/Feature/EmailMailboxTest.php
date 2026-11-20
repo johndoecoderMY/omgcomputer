@@ -237,6 +237,8 @@ class EmailMailboxTest extends TestCase
             ->assertOk()
             ->assertSee('New message')
             ->assertSee('Suggest from Copywriting')
+            ->assertSee('email-copywriting-language')
+            ->assertSee('Mandarin')
             ->assertSee('admin@example.test')
             ->assertSee('Attach files');
 

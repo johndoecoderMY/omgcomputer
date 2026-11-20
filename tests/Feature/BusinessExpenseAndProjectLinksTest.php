@@ -145,10 +145,19 @@ class BusinessExpenseAndProjectLinksTest extends TestCase
         $project = Project::query()->create(['name' => 'Project A']);
         $otherProject = Project::query()->create(['name' => 'Project B']);
 
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('data-bs-target="#project-link-create-modal"', false)
+            ->assertSee('id="project-link-create-modal"', false);
         $this->post(route('projects.links.store', $project), [
+            '_project_link_create' => '1',
             'label' => 'GitHub',
             'url' => 'javascript:alert(1)',
         ])->assertSessionHasErrors('url');
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('bootstrap.Modal.getOrCreateInstance(modal).show()', false)
+            ->assertSee('javascript:alert(1)');
         $this->post(route('projects.links.store', $project), [
             'label' => 'GitHub repository',
             'url' => 'https://github.com/example/repo',

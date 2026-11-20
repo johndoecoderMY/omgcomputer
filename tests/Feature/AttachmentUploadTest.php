@@ -47,7 +47,7 @@ class AttachmentUploadTest extends TestCase
 
         $this->postJson(route('tickets.steps.attachments.store', [$ticket, $step]), [
             'photos' => [UploadedFile::fake()->image('camera-photo.jpg', 3072, 4080)],
-            'caption' => 'Camera image',
+            'captions' => ['Camera image'],
         ])->assertOk()
             ->assertJsonPath('message', 'Photo added to repair step.');
 
@@ -113,7 +113,7 @@ class AttachmentUploadTest extends TestCase
         $stepOriginalSize = $stepPhoto->getSize();
         $this->post(route('tickets.steps.attachments.store', [$ticket, $step]), [
             'photos' => [$stepPhoto],
-            'caption' => 'Power input inspection',
+            'captions' => ['Power input inspection'],
         ])->assertRedirect();
 
         $this->post(route('customer-messages.attachments.store', $template), [
@@ -207,15 +207,41 @@ class AttachmentUploadTest extends TestCase
     public function test_project_photos_can_be_captioned_and_included_in_the_project_pdf(): void
     {
         Storage::fake('local');
-        $this->actingAs(User::factory()->create());
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $this->actingAs($user);
         $project = Project::query()->create(['name' => 'Photo-ready project']);
 
+        $this->from(route('projects.show', $project))->post(route('projects.attachments.store', $project), [
+            'photos' => [
+                UploadedFile::fake()->image('architecture-without-caption.png'),
+                UploadedFile::fake()->image('map-without-caption.png'),
+            ],
+            'captions' => ['Only one caption'],
+        ])->assertSessionHasErrors('captions');
+        $this->assertSame(0, $project->attachments()->count());
+
         $this->post(route('projects.attachments.store', $project), [
-            'photos' => [UploadedFile::fake()->image('architecture.png')],
-            'caption' => 'System architecture',
+            'photos' => [
+                UploadedFile::fake()->image('architecture.png'),
+                UploadedFile::fake()->image('network-map.png'),
+            ],
+            'captions' => ['System architecture', 'Network map'],
         ])->assertRedirect();
 
-        $attachment = $project->attachments()->firstOrFail();
+        $attachments = $project->attachments()->orderBy('id')->get();
+        $this->assertSame(['System architecture', 'Network map'], $attachments->pluck('caption')->all());
+        $this->post(route('projects.attachments.store', $project), [
+            'photos' => [UploadedFile::fake()->image('legacy-project-photo.png')],
+            'caption' => 'Legacy shared caption',
+        ])->assertRedirect();
+        $this->assertSame(
+            'Legacy shared caption',
+            $project->attachments()->where('original_name', 'legacy-project-photo.png')->firstOrFail()->caption,
+        );
+
+        $attachment = $attachments->firstOrFail();
         $this->patch(route('projects.attachments.caption', [$project, $attachment]), [
             'caption' => 'Updated architecture',
         ])->assertRedirect();
@@ -224,6 +250,9 @@ class AttachmentUploadTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('data-gallery="project-photos"', false)
+            ->assertSee('data-project-photo-upload-form', false)
+            ->assertSee('data-project-photo-dropzone', false)
+            ->assertSee('Click each photo to add its caption.')
             ->assertSee('Updated architecture');
 
         $projectPdf = $this->post(route('projects.export', $project), [

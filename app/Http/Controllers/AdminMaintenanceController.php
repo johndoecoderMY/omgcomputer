@@ -61,6 +61,11 @@ class AdminMaintenanceController extends Controller
                     'name' => 'SIEM learning project',
                     'description' => 'Adds a sample SIEM project and tasks.',
                 ],
+                [
+                    'class' => \Database\Seeders\CafePosProjectSeeder::class,
+                    'name' => 'Cafe POS project',
+                    'description' => 'Adds a sample cafe POS project brief and business, functional, and non-functional requirements.',
+                ],
             ],
         ],
         [

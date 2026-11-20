@@ -60,6 +60,13 @@
             <tr><th>Payment method</th><td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td></tr>
             <tr><th>Payment reference</th><td>{{ $payment->reference ?: '—' }}</td></tr>
             <tr><th>Payment date</th><td>{{ $payment->paid_at->format('F j, Y g:i A') }}</td></tr>
+            <tr><th>Invoice subtotal</th><td>RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
+            @if ((float) $payment->document->discount_amount > 0)
+                <tr><th>Discount</th><td>- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
+            @endif
+            @if ((float) $payment->document->tax_amount > 0)
+                <tr><th>Tax ({{ number_format((float) $payment->document->tax_rate, 2) }}%)</th><td>RM {{ number_format((float) $payment->document->tax_amount, 2) }}</td></tr>
+            @endif
             <tr><th>Invoice total</th><td>RM {{ number_format((float) $payment->document->total, 2) }}</td></tr>
         </tbody>
     </table>

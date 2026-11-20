@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BookingTimeSlot;
 use App\Support\DataTableQueryBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -19,18 +20,13 @@ class BookingTimeSlotController extends Controller
             ->orderBy('day_of_week')
             ->orderBy('start_time')
             ->get()
-            ->map(fn (BookingTimeSlot $slot): array => [
-                'title' => date('g:i A', strtotime($slot->start_time)),
-                'daysOfWeek' => [(int) $slot->day_of_week],
-                'startTime' => substr($slot->start_time, 0, 5),
-                'url' => route('booking-time-slots.show', $slot),
-                'backgroundColor' => '#d9f8eb',
-                'borderColor' => '#b6efd9',
-                'textColor' => '#00875a',
-            ])
+            ->map(fn (BookingTimeSlot $slot): array => $this->calendarEvent($slot))
             ->all();
 
-        return view('booking-time-slots.index', compact('events'));
+        return view('booking-time-slots.index', [
+            'events' => $events,
+            'days' => BookingTimeSlot::DAYS,
+        ]);
     }
 
     public function datatable(Request $request)
@@ -54,9 +50,16 @@ class BookingTimeSlotController extends Controller
         return view('booking-time-slots.create');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $slot = BookingTimeSlot::query()->create($this->validatedData($request));
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Available time created.',
+                'event' => $this->calendarEvent($slot),
+            ], 201);
+        }
 
         return redirect()->route('booking-time-slots.show', $slot)->with('success', 'Available time created.');
     }
@@ -77,9 +80,16 @@ class BookingTimeSlotController extends Controller
         ]);
     }
 
-    public function update(Request $request, BookingTimeSlot $bookingTimeSlot): RedirectResponse
+    public function update(Request $request, BookingTimeSlot $bookingTimeSlot): JsonResponse|RedirectResponse
     {
         $bookingTimeSlot->update($this->validatedData($request, $bookingTimeSlot));
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Available time updated.',
+                'event' => $this->calendarEvent($bookingTimeSlot),
+            ]);
+        }
 
         return redirect()->route('booking-time-slots.show', $bookingTimeSlot)->with('success', 'Available time updated.');
     }
@@ -89,11 +99,39 @@ class BookingTimeSlotController extends Controller
         return view('booking-time-slots.delete', compact('bookingTimeSlot'));
     }
 
-    public function destroy(BookingTimeSlot $bookingTimeSlot): RedirectResponse
+    public function destroy(Request $request, BookingTimeSlot $bookingTimeSlot): JsonResponse|RedirectResponse
     {
+        $id = (string) $bookingTimeSlot->getKey();
         $bookingTimeSlot->delete();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Available time deleted.',
+                'id' => $id,
+            ]);
+        }
+
         return redirect()->route('booking-time-slots.index')->with('success', 'Available time deleted.');
+    }
+
+    private function calendarEvent(BookingTimeSlot $slot): array
+    {
+        return [
+            'id' => (string) $slot->getKey(),
+            'title' => date('g:i A', strtotime($slot->start_time)),
+            'daysOfWeek' => [(int) $slot->day_of_week],
+            'startTime' => substr($slot->start_time, 0, 5),
+            'url' => route('booking-time-slots.show', $slot),
+            'backgroundColor' => '#d9f8eb',
+            'borderColor' => '#b6efd9',
+            'textColor' => '#00875a',
+            'extendedProps' => [
+                'dayOfWeek' => (string) $slot->day_of_week,
+                'startTime' => substr($slot->start_time, 0, 5),
+                'updateUrl' => route('booking-time-slots.update', $slot),
+                'deleteUrl' => route('booking-time-slots.destroy', $slot),
+            ],
+        ];
     }
 
     private function validatedData(Request $request, ?BookingTimeSlot $slot = null): array

@@ -1,24 +1,24 @@
 @extends('layouts.guest')
 
-@section('title', 'Track a Repair')
+@section('title', __('Track a Repair'))
 
 @section('content')
 @php
     $repairSteps = [
         [
             'image' => 'assets/img/omg/hero-technician.jpg',
-            'title' => 'Drop-off & check-in',
-            'caption' => 'We log the issue, confirm the device details, and assign your repair service number.',
+            'title' => __('Drop-off & check-in'),
+            'caption' => __('We log the issue, confirm the device details, and assign your repair service number.'),
         ],
         [
             'image' => 'assets/img/omg/repair-board-work.jpg',
-            'title' => 'Diagnosis & repair',
-            'caption' => 'Our technician inspects the hardware, software, and parts needed to get it working again.',
+            'title' => __('Diagnosis & repair'),
+            'caption' => __('Our technician inspects the hardware, software, and parts needed to get it working again.'),
         ],
         [
             'image' => 'assets/img/omg/repair-pc-components.jpg',
-            'title' => 'Testing & collection',
-            'caption' => 'We test the final repair, explain the outcome, and let you know when it is ready.',
+            'title' => __('Testing & collection'),
+            'caption' => __('We test the final repair, explain the outcome, and let you know when it is ready.'),
         ],
     ];
 @endphp
@@ -207,10 +207,10 @@
                         <div class="col-lg-7">
                             <div class="p-4 p-md-5">
                                 <span class="d-inline-flex align-items-center px-3 py-2 rounded-pill text-primary fw-bold text-uppercase fs-10 mb-3" style="background: rgba(255,111,66,0.08); border: 1px solid rgba(255,111,66,0.15);">
-                                    <span class="bi bi-search me-2" aria-hidden="true"></span>Guest repair tracking
+                                    <span class="bi bi-search me-2" aria-hidden="true"></span>{{ __('Guest repair tracking') }}
                                 </span>
-                                <h1 class="h2 fw-bold text-1000 mb-3">Track your repair</h1>
-                                <p class="text-700 mb-4">Enter the service number provided by the shop to check repair progress and get a quick update on your device.</p>
+                                <h1 class="h2 fw-bold text-1000 mb-3">{{ __('Track your repair') }}</h1>
+                                <p class="text-700 mb-4">{{ __('Enter the service number provided by the shop to check repair progress and get a quick update on your device.') }}</p>
 
                                 @if ($errors->has('ticket_number'))
                                     <div class="alert alert-danger mb-3" role="alert">
@@ -218,21 +218,21 @@
                                     </div>
                                 @endif
 
-                                <form class="track-repair-form row g-2 align-items-center mb-0" method="POST" action="{{ route('repairs.track') }}" aria-label="Repair tracking lookup">
+                                <form class="track-repair-form row g-2 align-items-center mb-0" method="POST" action="{{ route('repairs.track') }}" aria-label="{{ __('Repair tracking lookup') }}">
                                     @csrf
                                     <div class="col-md-8">
-                                        <label class="visually-hidden" for="service-number">Service number</label>
+                                        <label class="visually-hidden" for="service-number">{{ __('Service number') }}</label>
                                         <input class="form-control" id="service-number" name="ticket_number" type="text"
-                                            value="{{ old('ticket_number', $ticketNumber ?? '') }}" placeholder="Enter your service number" autocomplete="off" required>
+                                            value="{{ old('ticket_number', $ticketNumber ?? '') }}" placeholder="{{ __('Enter your service number') }}" autocomplete="off" required>
                                     </div>
                                     <div class="col-md-4">
-                                        <button class="btn btn-primary w-100" type="submit">Track repair</button>
+                                        <button class="btn btn-primary w-100" type="submit">{{ __('Track repair') }}</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                         <div class="col-lg-5">
-                            <img src="{{ asset('assets/img/omg/hero-technician.jpg') }}" alt="Technician working on a laptop during a repair process" width="900" height="700" loading="eager" decoding="async">
+                            <img src="{{ asset('assets/img/omg/hero-technician.jpg') }}" alt="{{ __('Technician working on a laptop during a repair process') }}" width="900" height="700" loading="eager" decoding="async">
                         </div>
                     </div>
                 </div>
@@ -254,15 +254,15 @@
                     <div class="repair-status-panel p-3 p-md-4 p-lg-5">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                             <div>
-                                <div class="small text-body-secondary mb-1">Repair service number</div>
+                                <div class="small text-body-secondary mb-1">{{ __('Repair service number') }}</div>
                                 <h2 class="h3 mb-0">{{ $trackingTicket->ticket_number }}</h2>
                             </div>
                             <span class="repair-status-badge">
-                                {{ \App\Models\RepairTicket::STATUSES[$trackingTicket->status] ?? ucfirst(str_replace('_', ' ', $trackingTicket->status)) }}
+                                {{ __( \App\Models\RepairTicket::STATUSES[$trackingTicket->status] ?? ucfirst(str_replace('_', ' ', $trackingTicket->status))) }}
                             </span>
                         </div>
 
-                        <h3 class="h5 mb-3">Repair timeline</h3>
+                        <h3 class="h5 mb-3">{{ __('Repair timeline') }}</h3>
                         <ol class="repair-timeline list-unstyled mb-0">
                             @forelse ($trackingTicket->updates as $update)
                                 <li class="repair-timeline-entry">
@@ -271,7 +271,7 @@
                                             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
                                                 <div>
                                                     <span class="badge text-bg-light border text-dark">
-                                                        {{ \App\Models\RepairTicket::STATUSES[$update->status] ?? ucfirst(str_replace('_', ' ', $update->status)) }}
+                                                        {{ __( \App\Models\RepairTicket::STATUSES[$update->status] ?? ucfirst(str_replace('_', ' ', $update->status))) }}
                                                     </span>
                                                     <h4 class="h6 mt-2 mb-0">{{ $update->title }}</h4>
                                                 </div>
@@ -289,7 +289,7 @@
                                                     <div class="carousel-inner rounded border bg-body-tertiary">
                                                         @foreach ($update->attachments->sortBy('id')->values() as $attachment)
                                                             @php
-                                                                $photoCaption = $attachment->caption ?: 'Repair step photo '.$loop->iteration;
+                                                                $photoCaption = $attachment->caption ?: __('Repair step photo :number', ['number' => $loop->iteration]);
                                                                 $photoUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
                                                                     'repairs.track.photo',
                                                                     now()->addDays(7),
@@ -310,7 +310,7 @@
                                                                 <div class="public-repair-step-caption text-center p-2 small">
                                                                     {{ $photoCaption }}
                                                                     @if ($update->attachments->count() > 1)
-                                                                        <span class="d-block text-body-secondary">Photo {{ $loop->iteration }} of {{ $loop->count }}</span>
+                                                                        <span class="d-block text-body-secondary">{{ __('Photo :current of :total', ['current' => $loop->iteration, 'total' => $loop->count]) }}</span>
                                                                     @endif
                                                                 </div>
                                                             </div>
@@ -319,15 +319,15 @@
                                                     @if ($update->attachments->count() > 1)
                                                         <button class="carousel-control-prev" type="button"
                                                             data-bs-target="#public-repair-step-photos-{{ $update->id }}"
-                                                            data-bs-slide="prev" aria-label="Previous photo">
+                                                            data-bs-slide="prev" aria-label="{{ __('Previous photo') }}">
                                                             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Previous photo</span>
+                                                            <span class="visually-hidden">{{ __('Previous photo') }}</span>
                                                         </button>
                                                         <button class="carousel-control-next" type="button"
                                                             data-bs-target="#public-repair-step-photos-{{ $update->id }}"
-                                                            data-bs-slide="next" aria-label="Next photo">
+                                                            data-bs-slide="next" aria-label="{{ __('Next photo') }}">
                                                             <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Next photo</span>
+                                                            <span class="visually-hidden">{{ __('Next photo') }}</span>
                                                         </button>
                                                     @endif
                                                 </div>
@@ -339,8 +339,8 @@
                                 <li>
                                     <article class="card border-0 shadow-sm">
                                         <div class="card-body p-3 p-md-4">
-                                            <div class="fw-semibold">Device received</div>
-                                            <div class="small text-body-secondary">Your repair has been received. We’ll add timeline updates as work progresses.</div>
+                                            <div class="fw-semibold">{{ __('Device received') }}</div>
+                                            <div class="small text-body-secondary">{{ __('Your repair has been received. We’ll add timeline updates as work progresses.') }}</div>
                                         </div>
                                     </article>
                                 </li>
@@ -350,70 +350,70 @@
 
                     <section class="card border-0 shadow-sm mt-4" aria-labelledby="repair-billing-title">
                         <div class="card-header bg-body d-flex justify-content-between align-items-center gap-2">
-                            <h3 class="h5 mb-0" id="repair-billing-title">Billing details</h3>
+                            <h3 class="h5 mb-0" id="repair-billing-title">{{ __('Billing details') }}</h3>
                             @if ($billingVerified)
-                                <span class="badge text-bg-success">Verified</span>
+                                <span class="badge text-bg-success">{{ __('Verified') }}</span>
                             @endif
                         </div>
                         <div class="card-body">
                             @if ($billingVerified)
                                 @if (session('billing_verified'))
-                                    <div class="alert alert-success" role="status">Your billing details are verified for this session.</div>
+                                    <div class="alert alert-success" role="status">{{ __('Your billing details are verified for this session.') }}</div>
                                 @endif
                                 <div class="table-responsive">
                                     <table class="table align-middle mb-0">
                                         <thead>
-                                            <tr><th>Document</th><th>Status</th><th class="text-end">Total / balance</th></tr>
+                                            <tr><th>{{ __('Document') }}</th><th>{{ __('Status') }}</th><th class="text-end">{{ __('Total / balance') }}</th></tr>
                                         </thead>
                                         <tbody>
                                             @forelse ($billingDocuments as $billingDocument)
                                                 <tr>
                                                     <td>
                                                         <span class="fw-semibold d-block">{{ $billingDocument->number }}</span>
-                                                        <small class="text-body-secondary">{{ ucfirst($billingDocument->type) }}</small>
+                                                        <small class="text-body-secondary">{{ __(ucfirst($billingDocument->type)) }}</small>
                                                     </td>
-                                                    <td>{{ str_replace('_', ' ', ucfirst($billingDocument->status)) }}</td>
+                                                    <td>{{ __(str_replace('_', ' ', ucfirst($billingDocument->status))) }}</td>
                                                     <td class="text-end">
-                                                        <span class="d-block">Total RM {{ number_format((float) $billingDocument->total, 2) }}</span>
+                                                        <span class="d-block">{{ __('Total') }} RM {{ number_format((float) $billingDocument->total, 2) }}</span>
                                                         @if ($billingDocument->type === 'invoice')
-                                                            <small class="text-body-secondary">Balance RM {{ number_format($billingDocument->balance, 2) }}</small>
+                                                            <small class="text-body-secondary">{{ __('Balance') }} RM {{ number_format($billingDocument->balance, 2) }}</small>
                                                         @endif
                                                     </td>
                                                 </tr>
                                             @empty
-                                                <tr><td class="text-center text-body-secondary py-3" colspan="3">No billing documents are linked to this repair ticket yet.</td></tr>
+                                                <tr><td class="text-center text-body-secondary py-3" colspan="3">{{ __('No billing documents are linked to this repair ticket yet.') }}</td></tr>
                                             @endforelse
                                         </tbody>
                                     </table>
                                 </div>
                             @else
                                 @if (session('billing_code_sent'))
-                                    <div class="alert alert-info" role="status">If a customer email is registered for this repair, a verification code has been sent there.</div>
+                                    <div class="alert alert-info" role="status">{{ __('If a customer email is registered for this repair, a verification code has been sent there.') }}</div>
                                 @endif
                                 @error('billing_verification')
                                     <div class="alert alert-danger" role="alert">{{ $message }}</div>
                                 @enderror
-                                <p class="text-body-secondary">Verify using a one-time code sent to the customer email on file to view linked quotations and invoices. The code expires in 10 minutes.</p>
+                                <p class="text-body-secondary">{{ __('Verify using a one-time code sent to the customer email on file to view linked quotations and invoices. The code expires in 10 minutes.') }}</p>
                                 <form method="POST" action="{{ route('repairs.track.billing-code', $trackingTicket->ticket_number) }}" class="mb-3">
                                     @csrf
                                     <button class="btn btn-outline-primary" type="submit">
-                                        <span class="bi bi-envelope me-2" aria-hidden="true"></span>Send verification code
+                                        <span class="bi bi-envelope me-2" aria-hidden="true"></span>{{ __('Send verification code') }}
                                     </button>
                                 </form>
                                 @if ($billingCodeAvailable)
                                     <form method="POST" action="{{ route('repairs.track.billing-code.verify', $trackingTicket->ticket_number) }}" class="row g-2 align-items-end">
                                         @csrf
                                         <div class="col-sm-7">
-                                            <label class="form-label" for="repair-billing-code">Email verification code</label>
+                                            <label class="form-label" for="repair-billing-code">{{ __('Email verification code') }}</label>
                                             <input class="form-control" id="repair-billing-code" name="code" type="text"
                                                 inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
                                         </div>
                                         <div class="col-sm-5">
-                                            <button class="btn btn-primary w-100" type="submit">Verify and view billing</button>
+                                            <button class="btn btn-primary w-100" type="submit">{{ __('Verify and view billing') }}</button>
                                         </div>
                                     </form>
                                 @endif
-                                <p class="small text-body-secondary mb-0 mt-3">If you cannot access the email on file, please contact the shop for help.</p>
+                                <p class="small text-body-secondary mb-0 mt-3">{{ __('If you cannot access the email on file, please contact the shop for help.') }}</p>
                             @endif
                         </div>
                     </section>

@@ -12,7 +12,7 @@
         ? 'https://wa.me/'.$whatsappNumber.'?text='.rawurlencode('Hi '.$document->customer_name.', here is your quotation '.$document->number.' from OMG Computer (RM '.number_format((float) $document->total, 2).'). Please view or download it here: '.route('billing.documents.show', $document))
         : '';
 @endphp
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" @if ($document->type === 'quotation') data-project-ajax-root @endif>
     <x-page-header eyebrow="{{ ucfirst($document->type) }}" :title="$document->number" :back-url="route('billing.index')" back-label="Back to billing">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('billing.documents.pdf', $document) }}" target="_blank"><span class="bi bi-filetype-pdf me-2"></span>PDF</a>
@@ -54,7 +54,8 @@
                     <div class="modal-body">
                         <p class="text-body-secondary mb-3">Send the quotation PDF by email, and automatically add it to the customer panel when the customer has an account.</p>
                         <div class="d-grid gap-3">
-                            <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="border rounded p-3">
+                            <form method="POST" action="{{ route('billing.documents.send', $document) }}" class="border rounded p-3"
+                                data-quotation-send-ajax>
                                 @csrf
                                 <label class="form-label fw-semibold" for="quotation-send-email"><span class="bi bi-envelope me-2"></span>Email quotation PDF</label>
                                 <div class="small text-body-secondary mb-2">Also appears in the customer panel when this email belongs to a registered account.</div>
@@ -113,7 +114,25 @@
                 </div>
             @endif
         </div></div></div>
-        <div class="col-lg-4"><div class="card mb-3 p-2"><div class="card-body"><div class="d-flex justify-content-between"><span>Subtotal</span><span>RM {{ number_format($document->subtotal, 2) }}</span></div>@if ((float) $document->tax_amount > 0)<div class="d-flex justify-content-between"><span>Tax ({{ number_format($document->tax_rate, 2) }}%)</span><span>RM {{ number_format($document->tax_amount, 2) }}</span></div>@endif<hr><div class="d-flex justify-content-between fw-bold"><span>Total</span><span>RM {{ number_format($document->total, 2) }}</span></div>@if ($document->type === 'invoice')<div class="d-flex justify-content-between mt-2"><span>Paid</span><span>RM {{ number_format($document->paid_amount, 2) }}</span></div><div class="d-flex justify-content-between fw-semibold"><span>Balance</span><span>RM {{ number_format($document->balance, 2) }}</span></div>@endif</div></div>
+        <div class="col-lg-4">
+            <div class="card mb-3 p-2">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between"><span>Subtotal</span><span>RM {{ number_format($document->subtotal, 2) }}</span></div>
+                    @if ((float) $document->discount_amount > 0)
+                        <div class="d-flex justify-content-between text-success"><span>Discount</span><span>- RM {{ number_format($document->discount_amount, 2) }}</span></div>
+                    @endif
+                    @if ((float) $document->tax_amount > 0)
+                        <div class="d-flex justify-content-between"><span>Tax ({{ number_format($document->tax_rate, 2) }}%)</span><span>RM {{ number_format($document->tax_amount, 2) }}</span></div>
+                    @endif
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold"><span>Total</span><span>RM {{ number_format($document->total, 2) }}</span></div>
+                    @if ($document->type === 'invoice')
+                        <div class="d-flex justify-content-between mt-2"><span>Paid</span><span>RM {{ number_format($document->paid_amount, 2) }}</span></div>
+                        <div class="d-flex justify-content-between fw-semibold"><span>Balance</span><span>RM {{ number_format($document->balance, 2) }}</span></div>
+                    @endif
+                </div>
+            </div>
+        </div>
             @if (auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)<div class="card mb-3"><div class="card-header fw-semibold">Pay securely with CHIP</div><form method="POST" action="{{ route('billing.chip.checkout', $document) }}">@csrf<div class="card-body"><p>Pay the full outstanding balance of <strong>RM {{ number_format($document->balance, 2) }}</strong>.</p><div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available payment options"><span class="badge text-bg-light border"><span class="bi bi-qr-code-scan me-1" aria-hidden="true"></span>QR pay</span><span class="badge text-bg-light border">DuitNow</span><span class="badge text-bg-light border">Online banking</span><span class="badge text-bg-light border">Card</span></div><small class="text-body-secondary d-block">Available QR, DuitNow and online methods depend on the payment channels enabled for this CHIP merchant account. Partial payments are not currently supported.</small></div><div class="card-footer"><button class="btn btn-primary w-100"><span class="bi bi-shield-check me-2" aria-hidden="true"></span>Continue to CHIP checkout</button></div></form></div>@endif
             @if (! auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
                 <div class="card mb-3">

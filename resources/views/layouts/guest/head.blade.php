@@ -7,11 +7,12 @@
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
     @php
         $pageTitle = html_entity_decode(trim($__env->yieldContent('title', 'OMG Computer')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $pageTitle = $pageTitle !== '' ? $pageTitle : 'OMG Computer';
-        $metaDescription = trim($__env->yieldContent(
+        $pageTitle = html_entity_decode($pageTitle, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $pageTitle = $pageTitle !== '' ? __($pageTitle) : 'OMG Computer';
+        $metaDescription = __(trim($__env->yieldContent(
             'meta_description',
             'OMG Computer provides computer repair, upgrades, custom PCs, and website design for home and business customers.',
-        ));
+        )));
         $canonicalUrl = trim($__env->yieldContent('canonical_url', url()->current()));
         $socialImage = trim($__env->yieldContent('og_image', asset('assets/img/omg/hero-technician.jpg')));
         $socialImageAlt = trim($__env->yieldContent('og_image_alt', 'OMG Computer providing computer repair and technology support.'));
@@ -37,32 +38,15 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('assets/img/omg/favicon-16x16.png') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('assets/img/omg/favicon.ico') }}">
      <meta name="theme-color" content="#ffffff">
-    <script src="{{ asset('assets/js/config.js') }}"></script>
-    <script src="{{ asset('vendors/simplebar/simplebar.min.js') }}"></script>
-
     <!-- ===============================================--><!--    Stylesheets--><!-- ===============================================-->
-    <link href="{{ asset('vendors/swiper/swiper-bundle.min.css') }}" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,500,600,700%7cPoppins:300,400,500,600,700,800,900&amp;display=swap" rel="stylesheet">
-    <link href="{{ asset('vendors/simplebar/simplebar.min.css') }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/local-fonts.css') }}" rel="stylesheet">
      <link href="{{ asset('assets/css/theme.min.css') }}" rel="stylesheet" id="style-default">
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
-     <link rel="preload" href="{{ Vite::asset('node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
-     @vite('resources/css/icons.css')
+     @if (file_exists(public_path('hot')))
+         @vite('resources/css/icons.css')
+     @else
+         <link href="{{ Vite::asset('resources/css/icons.css') }}" rel="stylesheet" media="print" onload="this.media='all'">
+         <noscript><link href="{{ Vite::asset('resources/css/icons.css') }}" rel="stylesheet"></noscript>
+     @endif
      @stack('styles')
-    <script>
-      var isRTL = JSON.parse(localStorage.getItem('isRTL'));
-      if (isRTL) {
-        var linkDefault = document.getElementById('style-default');
-        var userLinkDefault = document.getElementById('user-style-default');
-        linkDefault.setAttribute('disabled', true);
-        userLinkDefault.setAttribute('disabled', true);
-        document.querySelector('html').setAttribute('dir', 'rtl');
-      } else {
-        var linkRTL = document.getElementById('style-rtl');
-        var userLinkRTL = document.getElementById('user-style-rtl');
-        if (linkRTL) linkRTL.setAttribute('disabled', true);
-        if (userLinkRTL) userLinkRTL.setAttribute('disabled', true);
-      }
-    </script>
   </head>

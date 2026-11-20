@@ -180,7 +180,6 @@
     </div>
 </form>
 
-@push('scripts')
 <style>
 .flow-chart-preview-node{cursor:default}
 .flow-chart-preview-drag-handle{position:absolute;top:.35rem;right:.45rem;z-index:2;border:0;background:transparent;color:var(--falcon-gray-600);cursor:grab;padding:.2rem .35rem;touch-action:none}
@@ -197,7 +196,7 @@
 .flow-chart-preview-port-right{top:50%;right:-.8rem;transform:translateY(-50%)}
 </style>
 <script>
-    (() => {
+    const initializeFlowChartEditor = () => {
         const container = document.getElementById('flow-steps');
         const addButton = document.getElementById('add-flow-step');
         const maxSteps = 30;
@@ -212,6 +211,8 @@
         const cancelConnectionButton = document.querySelector('[data-flow-chart-connection-cancel]');
         const flowChartForm = document.querySelector('[data-flow-chart-form]');
         const saveFeedback = flowChartForm.querySelector('[data-flow-chart-save-feedback]');
+        const projectAjaxModal = flowChartForm.closest('#project-ajax-modal');
+        const projectIdInput = flowChartForm.querySelector('[name="project_id"]');
         let pendingConnection = null;
         const connectionSides = ['top', 'bottom', 'left', 'right'];
         const oppositeSide = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
@@ -270,16 +271,27 @@
                         flowChartForm.append(methodInput);
                     }
                     methodInput.value = 'PUT';
-                    window.history.replaceState({}, '', result.flow_chart.edit_url);
-                    const backLink = document.querySelector('[data-page-header] a[href]');
-                    if (backLink) {
-                        backLink.href = result.flow_chart.show_url;
-                        backLink.textContent = 'View flow chart';
+                    if (projectAjaxModal) {
+                        const modalTitle = projectAjaxModal.querySelector('#project-ajax-modal-title');
+                        if (modalTitle) modalTitle.textContent = `Edit ${result.flow_chart.title}`;
+                    } else {
+                        window.history.replaceState({}, '', result.flow_chart.edit_url);
+                        const editorRoot = flowChartForm.closest('[data-flow-chart-editor-root]') || document;
+                        const backLink = editorRoot.querySelector('[data-page-header] a[href]');
+                        if (backLink) {
+                            backLink.href = result.flow_chart.show_url;
+                            backLink.textContent = 'View flow chart';
+                        }
+                        const pageHeading = editorRoot.querySelector('[data-page-header] h1');
+                        if (pageHeading) pageHeading.textContent = 'Edit flow chart';
+                        document.title = 'Edit Flow Chart';
                     }
-                    const pageHeading = document.querySelector('h1');
-                    if (pageHeading) pageHeading.textContent = 'Edit flow chart';
-                    document.title = 'Edit Flow Chart';
                     submitButton.textContent = 'Save changes';
+                }
+                if (projectAjaxModal && projectIdInput?.value) {
+                    window.dispatchEvent(new CustomEvent('project:flow-chart-saved', {
+                        detail: { projectId: Number(projectIdInput.value) },
+                    }));
                 }
                 showSaveFeedback(result.message || 'Flow chart saved.');
             } catch (error) {
@@ -833,6 +845,12 @@
 
         updateRows();
         syncPurpose();
-    })();
+        projectAjaxModal?.addEventListener('shown.bs.modal', renderPreview, { once: true });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeFlowChartEditor, { once: true });
+    } else {
+        initializeFlowChartEditor();
+    }
 </script>
-@endpush

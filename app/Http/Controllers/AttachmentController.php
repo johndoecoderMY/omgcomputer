@@ -21,8 +21,26 @@ class AttachmentController extends Controller
 {
     public function storeProject(Request $request, Project $project, AttachmentStorage $storage): RedirectResponse
     {
-        $data = $request->validate(AttachmentStorage::validationRules());
-        $storage->store($project->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
+        $photos = $request->file('photos', []);
+        $photoCount = is_array($photos) ? count($photos) : 0;
+        $rules = [
+            'photos' => ['required', 'array', 'min:1', 'max:8'],
+            'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+        ];
+        if ($request->exists('captions')) {
+            $rules['captions'] = ['required', 'array', "size:{$photoCount}"];
+            $rules['captions.*'] = ['required', 'string', 'max:255'];
+        } else {
+            $rules['caption'] = ['nullable', 'string', 'max:255'];
+        }
+
+        $data = $request->validate($rules);
+        $storage->store(
+            $project->attachments(),
+            $data['photos'],
+            $request->user(),
+            $data['captions'] ?? $data['caption'] ?? null,
+        );
 
         return back()->with('success', 'Project photos uploaded.');
     }
@@ -89,12 +107,15 @@ class AttachmentController extends Controller
     public function storeTicketUpdate(Request $request, RepairTicket $ticket, RepairTicketUpdate $update, AttachmentStorage $storage): RedirectResponse|JsonResponse
     {
         abort_unless($update->repair_ticket_id === $ticket->id, 404);
+        $photos = $request->file('photos', []);
+        $photoCount = is_array($photos) ? count($photos) : 0;
         $data = $request->validate([
-            'photos' => ['required', 'array', 'size:1'],
-            'photos.0' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
-            'caption' => ['required', 'string', 'max:255'],
+            'photos' => ['required', 'array', 'min:1', 'max:8'],
+            'photos.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'captions' => ['required', 'array', "size:{$photoCount}"],
+            'captions.*' => ['required', 'string', 'max:255'],
         ]);
-        $storage->store($update->attachments(), $data['photos'], $request->user(), $data['caption'] ?? null);
+        $storage->store($update->attachments(), $data['photos'], $request->user(), $data['captions']);
 
         if ($request->expectsJson()) {
             $ticket->load(['assignees', 'updates.user', 'updates.attachments.uploader']);

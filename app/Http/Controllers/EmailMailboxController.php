@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomerMessageTemplate;
 use App\Models\UserEmailMailbox;
 use App\Services\EmailMailboxService;
 use Illuminate\Http\JsonResponse;
@@ -45,6 +46,7 @@ class EmailMailboxController extends Controller
     {
         return view('email.compose', [
             'mailbox' => $request->user()->emailMailbox,
+            'languages' => CustomerMessageTemplate::LANGUAGES,
         ]);
     }
 

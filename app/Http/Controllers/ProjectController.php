@@ -108,6 +108,14 @@ class ProjectController extends Controller
             $this->syncCustomer($project, $customerIdentity);
             $this->syncRequirements($project, $requirements);
             $project->assignees()->sync($assignees);
+            $activityDetails = [];
+            if ($customerIdentity !== null) {
+                $activityDetails[] = 'Customer linked';
+            }
+            if ($assignees !== []) {
+                $activityDetails[] = count($assignees).' '.Str::plural('team member', count($assignees)).' assigned';
+            }
+            $this->recordActivity($project, $request, 'Project created', $activityDetails);
 
             return $project;
         });
@@ -177,9 +185,16 @@ class ProjectController extends Controller
         $project->loadCount([
             'tasks as completed_tasks_count' => fn ($query) => $query->where('status', 'done'),
         ]);
+        $projectActivities = $project->activities()
+            ->with('user:id,name')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(25)
+            ->get();
 
         return view('projects.show', [
             'project' => $project,
+            'projectActivities' => $projectActivities,
             'canManageProject' => $request->user()->hasRole('admin')
                 || (int) $project->created_by_user_id === (int) $request->user()->id
                 || $project->assignees->contains('id', $request->user()->id),
@@ -299,6 +314,7 @@ class ProjectController extends Controller
             'url_sources' => $urlSources,
             'added_by' => $request->user()->id,
         ]);
+        $this->recordActivity($project, $request, 'Added hardware recommendation');
 
         return redirect()->route('projects.show', $project)->with('success', 'Recommended hardware added to the project.');
     }
@@ -319,14 +335,16 @@ class ProjectController extends Controller
             'price_source' => $data['price_source'],
             'unit_price' => $unitPrice,
         ]);
+        $this->recordActivity($project, $request, 'Updated hardware recommendation');
 
         return redirect()->route('projects.show', $project)->with('success', 'Recommended part price updated.');
     }
 
-    public function destroyRecommendedPart(Project $project, InventoryPart $part): RedirectResponse
+    public function destroyRecommendedPart(Request $request, Project $project, InventoryPart $part): RedirectResponse
     {
         abort_unless($project->inventoryParts()->whereKey($part->id)->exists(), 404);
         $project->inventoryParts()->detach($part->id);
+        $this->recordActivity($project, $request, 'Removed hardware recommendation');
 
         return redirect()->route('projects.show', $project)->with('success', 'Hardware recommendation removed from the project.');
     }
@@ -365,7 +383,7 @@ class ProjectController extends Controller
         ))
             ->addColumn('category_label', fn (FlowChart $flowChart): string => $flowChart->categoryLabel())
             ->addColumn('actions', fn (FlowChart $flowChart): string => sprintf(
-                '<a class="btn btn-sm btn-outline-primary" href="%s">View</a> <form class="d-inline" method="POST" action="%s"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="DELETE"><button class="btn btn-sm btn-outline-danger" type="submit">Unlink</button></form>',
+            '<a class="btn btn-sm btn-outline-primary" href="%s">View</a> <form class="d-inline" method="POST" action="%s" data-project-ajax="off" data-project-flowchart-unlink onsubmit="return confirm(\'Unlink this flow chart from the project?\');"><input type="hidden" name="_token" value="%s"><input type="hidden" name="_method" value="DELETE"><button class="btn btn-sm btn-outline-danger" type="submit">Unlink</button></form>',
                 e(route('development.flowcharts.show', $flowChart)),
                 e(route('projects.flowcharts.destroy', [$project, $flowChart])),
                 e(csrf_token()),
@@ -374,7 +392,7 @@ class ProjectController extends Controller
             ->toJson();
     }
 
-    public function linkFlowCharts(Request $request, Project $project): RedirectResponse
+    public function linkFlowCharts(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'flow_chart_ids' => ['required', 'array', 'min:1'],
@@ -385,12 +403,20 @@ class ProjectController extends Controller
                 'flow_chart_ids' => 'Example flow charts must be duplicated before they can be linked to a project.',
             ]);
         }
-        $project->flowCharts()->syncWithoutDetaching($data['flow_chart_ids']);
+        $changes = $project->flowCharts()->syncWithoutDetaching($data['flow_chart_ids']);
+        if ($changes['attached'] !== []) {
+            $count = count($changes['attached']);
+            $this->recordActivity($project, $request, 'Linked flow charts', [$count.' '.Str::plural('flow chart', $count)]);
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Selected flow charts linked to the project.']);
+        }
 
         return redirect()->route('projects.show', $project)->with('success', 'Selected flow charts linked to the project.');
     }
 
-    public function duplicateFlowCharts(Request $request, Project $project): RedirectResponse
+    public function duplicateFlowCharts(Request $request, Project $project): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'flow_chart_ids' => ['required', 'array', 'min:1'],
@@ -408,13 +434,27 @@ class ProjectController extends Controller
                 $copy->projects()->attach($project->id);
             }
         });
+        $count = $sourceCharts->count();
+        $this->recordActivity($project, $request, 'Duplicated flow charts', [$count.' '.Str::plural('flow chart', $count)]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Selected flow charts duplicated and linked to the project.']);
+        }
 
         return redirect()->route('projects.show', $project)->with('success', 'Selected flow charts duplicated and linked to the project.');
     }
 
-    public function destroyFlowChart(Project $project, FlowChart $flowChart): RedirectResponse
+    public function destroyFlowChart(Request $request, Project $project, FlowChart $flowChart): RedirectResponse|JsonResponse
     {
+        $wasLinked = $project->flowCharts()->whereKey($flowChart->id)->exists();
         $project->flowCharts()->detach($flowChart->id);
+        if ($wasLinked) {
+            $this->recordActivity($project, $request, 'Unlinked flow chart');
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Flow chart unlinked from the project.']);
+        }
 
         return redirect()->route('projects.show', $project)->with('success', 'Flow chart unlinked from the project.');
     }
@@ -492,7 +532,19 @@ class ProjectController extends Controller
             ]);
         }
 
-        $project->flowCharts()->sync($data['flow_chart_ids'] ?? []);
+        $changes = $project->flowCharts()->sync($data['flow_chart_ids'] ?? []);
+        if ($changes['attached'] !== [] || $changes['detached'] !== []) {
+            $details = [];
+            if ($changes['attached'] !== []) {
+                $count = count($changes['attached']);
+                $details[] = 'Linked '.$count.' '.Str::plural('flow chart', $count);
+            }
+            if ($changes['detached'] !== []) {
+                $count = count($changes['detached']);
+                $details[] = 'Unlinked '.$count.' '.Str::plural('flow chart', $count);
+            }
+            $this->recordActivity($project, $request, 'Updated project flow charts', $details);
+        }
 
         return redirect()->route('projects.show', $project)->with('success', 'Project flow charts updated.');
     }
@@ -519,18 +571,48 @@ class ProjectController extends Controller
         $assignees = $request->user()->hasRole('admin') ? ($data['assignees'] ?? []) : [];
         unset($data['customer_id'], $data['customer_identity'], $data['requirements'], $data['assignees'], $data['assignees_present']);
 
+        $previousCustomerIdentity = $this->currentCustomerIdentity($project);
         $assigneesChanged = false;
         $projectChanged = false;
-        DB::transaction(function () use ($project, $data, $customerIdentity, $requirements, $shouldSyncRequirements, $assignees, $shouldSyncAssignees, &$assigneesChanged, &$projectChanged): void {
+        DB::transaction(function () use ($project, $data, $customerIdentity, $previousCustomerIdentity, $requirements, $shouldSyncRequirements, $assignees, $shouldSyncAssignees, $request, &$assigneesChanged, &$projectChanged): void {
             $project->update($data);
+            $changedFields = $this->projectFieldLabels(array_keys($project->getChanges()));
             $projectChanged = $project->wasChanged();
+            if ($changedFields !== []) {
+                $this->recordActivity($project, $request, 'Updated project details', $changedFields);
+            }
+
             $this->syncCustomer($project, $customerIdentity);
+            $currentCustomerIdentity = $this->currentCustomerIdentity($project);
+            $customerIdentityChanged = $previousCustomerIdentity !== $currentCustomerIdentity;
+            if ($customerIdentityChanged) {
+                $summary = match (true) {
+                    $previousCustomerIdentity === null => 'Linked a customer',
+                    $currentCustomerIdentity === null => 'Unlinked the customer',
+                    default => 'Changed the linked customer',
+                };
+                $this->recordActivity($project, $request, $summary);
+                $projectChanged = true;
+            }
+
             if ($shouldSyncRequirements) {
                 $this->syncRequirements($project, $requirements);
             }
             if ($shouldSyncAssignees) {
                 $changes = $project->assignees()->sync($assignees);
                 $assigneesChanged = $changes['attached'] !== [] || $changes['detached'] !== [];
+                if ($assigneesChanged) {
+                    $details = [];
+                    if ($changes['attached'] !== []) {
+                        $count = count($changes['attached']);
+                        $details[] = 'Added '.$count.' '.Str::plural('team member', $count);
+                    }
+                    if ($changes['detached'] !== []) {
+                        $count = count($changes['detached']);
+                        $details[] = 'Removed '.$count.' '.Str::plural('team member', $count);
+                    }
+                    $this->recordActivity($project, $request, 'Updated assigned people', $details);
+                }
             }
         });
         if ($projectChanged || $assigneesChanged) {
@@ -634,6 +716,48 @@ class ProjectController extends Controller
         }
 
         return ! empty($data['customer_id']) ? 'record:'.$data['customer_id'] : null;
+    }
+
+    private function currentCustomerIdentity(Project $project): ?string
+    {
+        if ($project->customer_user_id !== null) {
+            return 'account:'.$project->customer_user_id;
+        }
+
+        $customerId = $project->customers()->orderBy('id')->value('id');
+
+        return $customerId ? 'record:'.$customerId : null;
+    }
+
+    private function projectFieldLabels(array $fields): array
+    {
+        $labels = [
+            'name' => 'Project name',
+            'description' => 'Description',
+            'requirements_notes' => 'Notes',
+            'business_background' => 'Business background',
+            'user_roles' => 'User roles',
+            'objectives' => 'Objectives',
+            'problem_statement' => 'Problem statement',
+            'proposed_solution' => 'Proposed solution',
+            'scope_in' => 'In-scope items',
+            'scope_out' => 'Out-of-scope items',
+            'planning_status' => 'Planning status',
+            'start_date' => 'Start date',
+            'target_end_date' => 'Target end date',
+            'budget' => 'Budget',
+        ];
+
+        return array_values(array_intersect_key($labels, array_flip($fields)));
+    }
+
+    private function recordActivity(Project $project, Request $request, string $summary, array $details = []): void
+    {
+        $project->activities()->create([
+            'user_id' => $request->user()->id,
+            'summary' => $summary,
+            'details' => $details === [] ? null : $details,
+        ]);
     }
 
     private function customerChoices(Project $project): array

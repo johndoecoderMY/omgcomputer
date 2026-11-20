@@ -119,6 +119,12 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-5">
+                            <label class="form-label" for="email-copywriting-language">Language</label>
+                            <select class="form-select mb-3" id="email-copywriting-language">
+                                @foreach ($languages as $value => $label)
+                                    <option value="{{ $value }}" @selected($value === 'en')>{{ $label }}</option>
+                                @endforeach
+                            </select>
                             <div class="list-group" id="email-copywriting-list" aria-label="Email copywriting templates"></div>
                         </div>
                         <div class="col-md-7">
@@ -160,10 +166,11 @@
         const suggestionsStatus = document.getElementById('email-copywriting-status');
         const suggestionsPreview = document.getElementById('email-copywriting-preview');
         const useSuggestion = document.getElementById('email-copywriting-use');
+        const suggestionsLanguage = document.getElementById('email-copywriting-language');
         let suggestions = [];
         let selectedSuggestion = null;
-        let suggestionsLoaded = false;
-        let suggestionsLoading = false;
+        let suggestionsLoadedLanguage = null;
+        let suggestionsRequest = 0;
 
         const recipients = () => [...recipientChips.querySelectorAll('input[name="recipients[]"]')]
             .map((recipient) => recipient.value.trim().toLowerCase());
@@ -267,13 +274,19 @@
             useSuggestion.disabled = false;
         };
 
-        const loadSuggestions = async () => {
-            if (suggestionsLoaded || suggestionsLoading) return;
-            suggestionsLoading = true;
+        const loadSuggestions = async (force = false) => {
+            const language = suggestionsLanguage.value;
+            if (!force && suggestionsLoadedLanguage === language) return;
+            const request = ++suggestionsRequest;
+            selectedSuggestion = null;
+            suggestionsPreview.hidden = true;
+            useSuggestion.disabled = true;
+            suggestionsList.replaceChildren();
             suggestionsStatus.textContent = 'Loading suggestions…';
             try {
                 const url = new URL(suggestionsModal.dataset.suggestionsUrl, window.location.origin);
                 url.searchParams.set('channel', 'email');
+                url.searchParams.set('language', language);
                 const response = await fetch(url, {
                     headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin',
@@ -281,7 +294,8 @@
                 });
                 if (!response.ok) throw new Error('Could not load Copywriting suggestions.');
                 const payload = await response.json();
-                suggestions = payload.templates || [];
+                if (request !== suggestionsRequest) return;
+                suggestions = payload.templates;
                 suggestionsList.replaceChildren();
                 suggestions.forEach((suggestion) => {
                     const button = document.createElement('button');
@@ -299,18 +313,20 @@
                     button.addEventListener('click', () => selectSuggestion(suggestion));
                     suggestionsList.append(button);
                 });
-                suggestionsLoaded = true;
+                suggestionsLoadedLanguage = language;
                 suggestionsStatus.textContent = suggestions.length
                     ? 'Choose a template to preview it.'
                     : 'No active email templates yet. Add one in Copywriting.';
             } catch {
-                suggestionsStatus.textContent = 'Suggestions could not be loaded. Please try again.';
-            } finally {
-                suggestionsLoading = false;
+                if (request === suggestionsRequest) {
+                    suggestionsLoadedLanguage = null;
+                    suggestionsStatus.textContent = 'Suggestions could not be loaded. Please try again.';
+                }
             }
         };
 
         suggestionsModal.addEventListener('show.bs.modal', loadSuggestions);
+        suggestionsLanguage.addEventListener('change', () => loadSuggestions(true));
         useSuggestion.addEventListener('click', () => {
             if (!selectedSuggestion) return;
             if (selectedSuggestion.subject) document.getElementById('email-subject').value = selectedSuggestion.subject;

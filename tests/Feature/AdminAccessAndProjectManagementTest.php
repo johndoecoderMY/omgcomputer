@@ -264,7 +264,11 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('data-datatable', false)
-            ->assertSee('Duplicate selected for project')
+            ->assertSee('data-bs-target="#project-flowcharts-modal"', false)
+            ->assertSee('id="project-flowcharts-modal"', false)
+            ->assertSee('data-project-flowchart-action="link"', false)
+            ->assertSee('data-flowcharts-error', false)
+            ->assertSee('Duplicate for project')
             ->assertSee('Find custom flow charts to link')
             ->assertSee('Find SOP examples to duplicate');
         $this->getJson(route('projects.flowcharts.datatable', [
@@ -281,20 +285,31 @@ class AdminAccessAndProjectManagementTest extends TestCase
             'flow_chart_ids' => [$source->id],
         ])->assertRedirect(route('projects.show', $project));
         $this->assertTrue($project->flowCharts()->whereKey($source->id)->exists());
-        $this->getJson(route('projects.flowcharts.datatable', [
+        $this->postJson(route('projects.flowcharts.link', $project), [
+            'flow_chart_ids' => [$longTitleSource->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Selected flow charts linked to the project.');
+        $flowChartsTable = $this->getJson(route('projects.flowcharts.datatable', [
             'project' => $project->id,
             'draw' => 1,
             'start' => 0,
             'length' => 25,
-        ]))
-            ->assertOk()
-            ->assertJsonPath('recordsTotal', 1)
+        ]));
+        $flowChartsTable->assertOk()
+            ->assertJsonPath('recordsTotal', 2)
             ->assertJsonPath('data.0.title', 'Research review flow')
-            ->assertJsonMissing(['title' => str_repeat('Long title ', 23)]);
+            ->assertJsonPath('data.1.title', $longTitleSource->title);
+        $this->assertStringContainsString('data-project-ajax="off"', $flowChartsTable->json('data.0.actions'));
 
         $this->post(route('projects.flowcharts.duplicate', $project), [
-            'flow_chart_ids' => [$source->id, $longTitleSource->id],
+            'flow_chart_ids' => [$source->id],
         ])->assertRedirect(route('projects.show', $project));
+        $this->postJson(route('projects.flowcharts.duplicate', $project), [
+            'flow_chart_ids' => [$longTitleSource->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Selected flow charts duplicated and linked to the project.');
         $copy = FlowChart::query()->where('title', 'Research review flow — FYP capstone copy')->firstOrFail();
         $this->assertTrue($project->flowCharts()->whereKey($copy->id)->exists());
         $this->assertNotSame($source->id, $copy->id);
@@ -302,9 +317,13 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->assertLessThanOrEqual(255, mb_strlen($longCopy->title));
         $this->assertTrue($project->flowCharts()->whereKey($longCopy->id)->exists());
 
-        $this->delete(route('projects.flowcharts.destroy', [$project, $source]))
-            ->assertRedirect(route('projects.show', $project));
+        $this->deleteJson(route('projects.flowcharts.destroy', [$project, $source]))
+            ->assertOk()
+            ->assertJsonPath('message', 'Flow chart unlinked from the project.');
         $this->assertFalse($project->flowCharts()->whereKey($source->id)->exists());
+        $this->delete(route('projects.flowcharts.destroy', [$project, $longTitleSource]))
+            ->assertRedirect(route('projects.show', $project));
+        $this->assertFalse($project->flowCharts()->whereKey($longTitleSource->id)->exists());
 
         $stepId = (string) Str::uuid();
         $this->get(route('development.flowcharts.create', [
@@ -312,6 +331,8 @@ class AdminAccessAndProjectManagementTest extends TestCase
             'project_id' => $project->id,
         ]))
             ->assertOk()
+            ->assertSee('data-project-ajax-root', false)
+            ->assertSee('data-flow-chart-editor-root', false)
             ->assertSee('name="project_id" value="'.$project->id.'"', false);
         $this->post(route('development.flowcharts.store'), [
             'project_id' => $project->id,

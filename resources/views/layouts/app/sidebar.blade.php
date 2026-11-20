@@ -667,6 +667,12 @@
                                 <span class="nav-link-text ps-1">Company Profile</span>
                             </div>
                         </a>
+                        <a class="nav-link" href="{{ route('admin.merchant-document-checklist') }}">
+                            <div class="d-flex align-items-center">
+                                <span class="nav-link-icon"><span class="bi bi-list-check"></span></span>
+                                <span class="nav-link-text ps-1">Merchant document checklist</span>
+                            </div>
+                        </a>
                         <a class="nav-link" href="{{ route('reports.integrations.tracking') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-truck"></span></span>

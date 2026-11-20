@@ -8,28 +8,29 @@ use App\Models\BillingPayment;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\CustomPcComponent;
-use App\Services\ChipCollect;
-use App\Services\BillingReceiptService;
 use App\Models\InventoryPart;
 use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
 use App\Notifications\QuotationInAppNotification;
+use App\Services\BillingReceiptService;
+use App\Services\ChipCollect;
 use App\Services\InventoryStock;
 use App\Services\MailSettingsService;
 use App\Support\DataTableQueryBuilder;
+use App\Support\RepairTicketIssueSanitizer;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -133,11 +134,14 @@ class BillingController extends Controller
             ->first(fn (array $recipient): bool => strtolower(trim($recipient['email'])) === strtolower(trim((string) $customer?->email)))['key']
             ?? $projectRecipients->first()['key']
             ?? '';
+        $ticketIssueSummary = $ticket
+            ? app(RepairTicketIssueSanitizer::class)->plainText($ticket->issue_description)
+            : null;
         $lines = [[
             'inventory_part_id' => null,
             'custom_pc_component_id' => null,
             'product_id' => null,
-            'description' => $ticket ? 'Repair service: '.$ticket->issue_description : ($project ? 'Project: '.$project->name : ''),
+            'description' => $ticket ? 'Repair service: '.$ticketIssueSummary : ($project ? 'Project: '.$project->name : ''),
             'quantity' => 1,
             'unit_price' => null,
             'unit_cost' => null,
@@ -162,7 +166,7 @@ class BillingController extends Controller
                 'issue_date' => now()->toDateString(),
                 'tax_rate' => config('billing.tax_rate', 6),
                 'included_revision_rounds' => 3,
-                'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticket->issue_description}" : null,
+                'notes' => $ticket ? "Repair ticket {$ticket->ticket_number}: {$ticketIssueSummary}" : null,
             ]),
             'lines' => $lines,
             'type' => $type,
@@ -382,6 +386,7 @@ class BillingController extends Controller
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_email' => ['nullable', 'email', 'max:255'],
             'modal_return_to_ticket' => ['nullable', 'integer', 'exists:repair_tickets,id'],
+            'modal_return_to_project' => ['sometimes', 'boolean'],
             'customer_phone' => ['nullable', 'string', 'max:64'],
             'customer_address' => ['nullable', 'string', 'max:2000'],
             'issue_date' => ['nullable', 'date'],
@@ -392,6 +397,7 @@ class BillingController extends Controller
             'project_due_date' => ['nullable', 'date'],
             'payment_terms' => ['nullable', 'string', 'max:5000'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'custom_pc_build' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
@@ -584,13 +590,21 @@ class BillingController extends Controller
                 ]);
             }
 
-            $taxAmount = round($subtotal * (float) $data['tax_rate'] / 100, 2);
+            $discountAmount = round((float) ($data['discount_amount'] ?? 0), 2);
+            if ($discountAmount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount_amount' => 'The discount cannot be greater than the subtotal.',
+                ]);
+            }
+            $taxableSubtotal = round($subtotal - $discountAmount, 2);
+            $taxAmount = round($taxableSubtotal * (float) $data['tax_rate'] / 100, 2);
             $document->update([
                 'number' => ($type === 'quotation' ? 'QUO-' : 'INV-')
                     .now()->format('Y').'-'.str_pad((string) $document->id, 6, '0', STR_PAD_LEFT),
                 'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
                 'tax_amount' => $taxAmount,
-                'total' => round($subtotal + $taxAmount, 2),
+                'total' => round($taxableSubtotal + $taxAmount, 2),
             ]);
 
             return $document;
@@ -599,6 +613,11 @@ class BillingController extends Controller
         if ((int) ($data['modal_return_to_ticket'] ?? 0) === (int) $document->repair_ticket_id
             && $document->repair_ticket_id) {
             return redirect()->route('tickets.show', $document->repair_ticket_id)
+                ->with('success', 'Quotation saved as a draft.');
+        }
+
+        if (! empty($data['modal_return_to_project']) && $document->project_id) {
+            return redirect()->route('projects.show', $document->project_id)
                 ->with('success', 'Quotation saved as a draft.');
         }
 
@@ -623,6 +642,7 @@ class BillingController extends Controller
             'project_due_date' => ['nullable', 'date'],
             'payment_terms' => ['nullable', 'string', 'max:5000'],
             'tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*.inventory_part_id' => ['nullable', 'integer', 'exists:inventory_parts,id'],
@@ -689,11 +709,19 @@ class BillingController extends Controller
                 ]);
             }
 
-            $taxAmount = round($subtotal * (float) $data['tax_rate'] / 100, 2);
+            $discountAmount = round((float) ($data['discount_amount'] ?? 0), 2);
+            if ($discountAmount > $subtotal) {
+                throw ValidationException::withMessages([
+                    'discount_amount' => 'The discount cannot be greater than the subtotal.',
+                ]);
+            }
+            $taxableSubtotal = round($subtotal - $discountAmount, 2);
+            $taxAmount = round($taxableSubtotal * (float) $data['tax_rate'] / 100, 2);
             $locked->update([
                 'subtotal' => $subtotal,
+                'discount_amount' => $discountAmount,
                 'tax_amount' => $taxAmount,
-                'total' => round($subtotal + $taxAmount, 2),
+                'total' => round($taxableSubtotal + $taxAmount, 2),
             ]);
         });
 

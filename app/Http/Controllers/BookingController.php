@@ -46,12 +46,9 @@ class BookingController extends Controller
 
     private function bookingForm(Request $request, bool $authenticatedBooking): View
     {
-        $selectedDate = Carbon::now(self::TIMEZONE)->toDateString();
-        $selected = Carbon::createFromFormat('Y-m-d', $selectedDate, self::TIMEZONE);
         $services = ProductService::query()->where('is_active', true)->orderBy('name')->get();
 
         return view('bookings.create', [
-            'selectedDate' => $selected,
             'services' => $services,
             'authenticatedBooking' => $authenticatedBooking,
             'deviceDetailsServiceId' => 'basic-troubleshooting',
@@ -132,6 +129,12 @@ class BookingController extends Controller
             ],
             'device_model' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:255'],
             'request_notes' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:3000'],
+            'pickup_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
+            'dropoff_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
+            'pickup_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
+            'dropoff_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
+            'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
             'booking_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
         ]);
         $time = $request->validate([
@@ -181,6 +184,12 @@ class BookingController extends Controller
                     'service_name' => $service['name'],
                     'device_model' => $data['device_model'] ?? null,
                     'request_notes' => $data['request_notes'] ?? null,
+                    'pickup_address' => $data['pickup_address'] ?? null,
+                    'dropoff_address' => $data['dropoff_address'] ?? null,
+                    'pickup_latitude' => $data['pickup_latitude'] ?? null,
+                    'pickup_longitude' => $data['pickup_longitude'] ?? null,
+                    'dropoff_latitude' => $data['dropoff_latitude'] ?? null,
+                    'dropoff_longitude' => $data['dropoff_longitude'] ?? null,
                     'starts_at' => $start->copy()->setTimezone('UTC'),
                     'duration_minutes' => 60,
                     'status' => 'pending',

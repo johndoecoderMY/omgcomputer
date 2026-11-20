@@ -17,15 +17,15 @@
                             </div>
                             <div class="z-1 position-relative">
                                 <a class="link-light mb-4 d-inline-block" href="{{ url('/') }}"
-                                    aria-label="OMG Computer home">
+                                    aria-label="{{ __('OMG Computer home') }}">
                                     <img src="{{ asset('assets/img/omg/logoex2w.png') }}" alt="OMG Computer" width="145">
                                 </a>
                                 <p class="text-uppercase small fw-bold text-white opacity-75 mb-2">
-                                    Computer care made simple
+                                    {{ __('Computer care made simple') }}
                                 </p>
-                                <h2 class="h4 text-white mb-3">Here for your next fix.</h2>
+                                <h2 class="h4 text-white mb-3">{{ __('Here for your next fix.') }}</h2>
                                 <p class="text-white opacity-75 mb-0">
-                                    Keep your repairs, bookings, and project updates in one place.
+                                    {{ __('Keep your repairs, bookings, and project updates in one place.') }}
                                 </p>
                             </div>
                         </div>
@@ -33,20 +33,20 @@
                         <div class="mt-3 mb-4 mt-md-4 mb-md-5 px-4" data-bs-theme="light">
                             @if (Route::is('login'))
                                 <p class="text-white mb-0">
-                                    New to OMG Computer?<br>
+                                    {{ __('New to OMG Computer?') }}<br>
                                     <a class="btn btn-outline-light mt-2 px-4" href="{{ route('register') }}">
-                                        Create an account
+                                        {{ __('Create an account') }}
                                     </a>
                                 </p>
                             @elseif (Route::is('register'))
                                 <p class="text-white mb-0">
-                                    Already have an account?<br>
-                                    <a class="btn btn-outline-light mt-2 px-4" href="{{ route('login') }}">Sign in</a>
+                                    {{ __('Already have an account?') }}<br>
+                                    <a class="btn btn-outline-light mt-2 px-4" href="{{ route('login') }}">{{ __('Sign in') }}</a>
                                 </p>
                             @else
                                 <p class="text-white mb-0">
                                     <a class="text-decoration-underline link-light" href="{{ route('login') }}">
-                                        Back to sign in
+                                        {{ __('Back to sign in') }}
                                     </a>
                                 </p>
                             @endif

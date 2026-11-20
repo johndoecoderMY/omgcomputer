@@ -16,6 +16,7 @@ class Customer extends Model
         'company',
         'address',
         'notes',
+        'warning',
     ];
 
     public function project(): BelongsTo

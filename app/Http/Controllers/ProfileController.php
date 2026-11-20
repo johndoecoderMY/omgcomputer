@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Customer;
 use App\Models\User;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
@@ -35,9 +36,16 @@ class ProfileController extends Controller
         }
 
         $isCustomerAccount = $member->hasRole('customer') && ! $member->hasAnyRole(['admin', 'member']);
+        $customerRecord = $isCustomerAccount
+            ? Customer::query()
+                ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim($member->email))])
+                ->orderBy('id')
+                ->first()
+            : null;
 
         return view('profile.member', [
             'user' => $member->load(['teams.department', 'emailMailbox']),
+            'customerRecord' => $customerRecord,
             'canManageAccount' => auth()->user()->hasRole('admin'),
             'isCustomerAccount' => $isCustomerAccount,
             'cpanelProvisioningEnabled' => (bool) config('services.cpanel.enabled'),

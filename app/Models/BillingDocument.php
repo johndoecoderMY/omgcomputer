@@ -11,7 +11,7 @@ class BillingDocument extends Model
 {
     protected $fillable = [
         'number', 'type', 'status', 'user_id', 'customer_name', 'customer_email',
-        'repair_ticket_id', 'project_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal',
+        'repair_ticket_id', 'project_id', 'customer_phone', 'customer_address', 'issue_date', 'due_date', 'subtotal', 'discount_amount',
         'tax_rate', 'tax_amount', 'total', 'paid_amount', 'notes', 'project_scope',
         'included_revision_rounds', 'project_due_date', 'payment_terms',
         'guest_payment_token_hash', 'guest_payment_link_expires_at',
@@ -46,6 +46,7 @@ class BillingDocument extends Model
             'guest_payment_link_expires_at' => 'datetime',
             'included_revision_rounds' => 'integer',
             'subtotal' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'tax_rate' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'total' => 'decimal:2',

@@ -21,6 +21,40 @@ class RepairTicketTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_staff_can_add_pickup_and_dropoff_addresses_to_a_repair_ticket(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Pickup Customer',
+            'email' => 'pickup-ticket@example.test',
+        ]);
+
+        $this->actingAs($staff)->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('id="pickup_address"', false)
+            ->assertSee('id="dropoff_address"', false);
+
+        $this->post(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'The laptop needs repair.',
+            'priority' => 'normal',
+            'pickup_address' => '12 Jalan Repair, Kampar',
+            'dropoff_address' => '18 Jalan Repair, Kampar',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $this->assertSame('12 Jalan Repair, Kampar', $ticket->pickup_address);
+        $this->assertSame('18 Jalan Repair, Kampar', $ticket->dropoff_address);
+        $this->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Pickup and drop-off')
+            ->assertSee('12 Jalan Repair, Kampar')
+            ->assertSee('18 Jalan Repair, Kampar');
+    }
+
     public function test_user_can_create_and_manage_a_repair_ticket(): void
     {
         $this->seed(PlannerRoleSeeder::class);
@@ -65,6 +99,55 @@ class RepairTicketTest extends TestCase
         $this->assertSame('urgent', $ticket->fresh()->priority);
         $this->assertSame('Needs a replacement cooling fan.', $ticket->fresh()->diagnostic_notes);
         $this->assertSame(120.0, (float) $ticket->fresh()->quoted_amount);
+    }
+
+    public function test_new_ticket_reported_issue_accepts_safe_rich_text(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Rich text customer',
+            'email' => 'rich-text@example.test',
+        ]);
+
+        $this->actingAs($user)->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('contenteditable="true"', false)
+            ->assertSee('data-issue-command="insertUnorderedList"', false);
+
+        $this->actingAs($user)->post(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'issue_description' => '<p>The screen flickers. <strong onclick="alert(1)">After update</strong>.</p><script>alert(1)</script><img src="x" onerror="alert(1)">',
+            'priority' => 'normal',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $this->assertSame(
+            '<p>The screen flickers. <strong>After update</strong>.</p>',
+            $ticket->issue_description,
+        );
+        $this->assertSame('The screen flickers. After update.', $ticket->updates()->firstOrFail()->notes);
+
+        $this->actingAs($user)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('<strong>After update</strong>', false)
+            ->assertDontSee('onclick', false)
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertDontSee('onerror', false);
+
+        $this->actingAs($user)->get(route('billing.create', ['repair_ticket_id' => $ticket->id]))
+            ->assertOk()
+            ->assertSee('Repair service: The screen flickers. After update.')
+            ->assertDontSee('<strong>', false);
+
+        $this->actingAs($user)->post(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'issue_description' => '<p>'.str_repeat('a', 5001).'</p>',
+            'priority' => 'normal',
+        ])->assertSessionHasErrors('issue_description');
+
+        $this->assertSame(1, RepairTicket::query()->count());
     }
 
     public function test_ticket_list_filters_by_status_assignment_and_priority(): void

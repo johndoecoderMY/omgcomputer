@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -33,6 +34,19 @@ class ExampleTest extends TestCase
             ->assertDontSee('Staff sign in')
             ->assertDontSee('Go to workspace')
             ->assertDontSee('<title>Computer Repair, Website Design &amp; Development - OMG Computer</title>', false);
+    }
+
+    public function test_page_titles_decode_html_entities_before_rendering(): void
+    {
+        View::startSection('title', 'Billing &amp; Payments');
+        $appHead = view('layouts.app.head')->render();
+        View::startSection('title', 'Billing &amp; Payments');
+        $guestHead = view('layouts.guest.head')->render();
+
+        foreach ([$appHead, $guestHead] as $html) {
+            $this->assertStringContainsString('<title>Billing &amp; Payments | OMG Computer</title>', $html);
+            $this->assertStringNotContainsString('<title>Billing &amp;amp; Payments', $html);
+        }
     }
 
     public function test_landing_page_shows_the_signed_in_users_account_menu(): void

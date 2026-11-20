@@ -38,6 +38,8 @@ class RepairTicket extends Model
         'device_type',
         'device_model',
         'serial_number',
+        'pickup_address',
+        'dropoff_address',
         'issue_description',
         'diagnosis',
         'status',

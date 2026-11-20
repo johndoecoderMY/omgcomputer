@@ -124,7 +124,10 @@ class StudentFypAndProjectScheduleTest extends TestCase
 
     public function test_project_events_can_be_scheduled_and_are_identifiable_in_the_calendar(): void
     {
-        $this->actingAs(User::factory()->create());
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
         $project = Project::query()->create(['name' => 'FYP Research Project']);
         $otherProject = Project::query()->create(['name' => 'Mobile App FYP']);
         $startsAt = now()->addDays(4)->setTime(10, 30);
@@ -144,6 +147,9 @@ class StudentFypAndProjectScheduleTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('Project schedule')
+            ->assertSee('Schedule a project event')
+            ->assertSee('data-project-event-form', false)
+            ->assertSee('data-event-duration="60"', false)
             ->assertSee('project-mini-calendar')
             ->assertSee(route('projects.calendar', $project), false)
             ->assertSee('Upcoming events')
@@ -166,7 +172,7 @@ class StudentFypAndProjectScheduleTest extends TestCase
         $this->get(route('projects.calendar', $project))
             ->assertOk()
             ->assertSee($project->name.' calendar')
-            ->assertSee(route('projects.calendar.events', $project), false)
+            ->assertSee(str_replace('/', '\\/', parse_url(route('projects.calendar.events', $project), PHP_URL_PATH)), false)
             ->assertSee('data-event-reference-label', false)
             ->assertSee('name="project_id" value="'.$project->id.'"', false);
         $this->getJson(route('calendar.events', [
@@ -198,7 +204,10 @@ class StudentFypAndProjectScheduleTest extends TestCase
 
     public function test_project_event_validation_rejects_an_end_before_the_start(): void
     {
-        $this->actingAs(User::factory()->create());
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
         $project = Project::query()->create(['name' => 'FYP Prototype']);
         $startsAt = now()->addDay()->startOfHour();
 
@@ -214,9 +223,30 @@ class StudentFypAndProjectScheduleTest extends TestCase
         $this->assertDatabaseCount('events', 0);
     }
 
+    public function test_project_event_modal_provides_quick_duration_controls(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+        $project = Project::query()->create(['name' => 'FYP Planning']);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Schedule a project event')
+            ->assertSee('data-project-event-form', false)
+            ->assertSee('data-event-duration="30"', false)
+            ->assertSee('data-event-duration="60"', false)
+            ->assertSee('data-event-duration="120"', false)
+            ->assertSee('data-event-duration="none"', false);
+    }
+
     public function test_calendar_can_create_and_display_events_without_a_project(): void
     {
-        $this->actingAs(User::factory()->create());
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
         $project = Project::query()->create(['name' => 'Optional event project']);
         $startsAt = now()->addDays(2)->setTime(13, 0);
 

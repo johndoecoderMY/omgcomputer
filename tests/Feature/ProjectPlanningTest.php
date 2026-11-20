@@ -26,10 +26,28 @@ class ProjectPlanningTest extends TestCase
 
         $this->get(route('projects.planning', $project))
             ->assertOk()
+            ->assertSee('<li class="breadcrumb-item"><a href="'.route('projects.index').'">Projects</a></li>', false)
+            ->assertSee('<li class="breadcrumb-item"><a href="'.route('projects.show', $project).'">Procurement platform</a></li>', false)
+            ->assertSee('<li class="breadcrumb-item active" aria-current="page">Planning</li>', false)
+            ->assertSee('<form method="POST" action="'.route('projects.export', $project).'" target="_blank">', false)
+            ->assertSee('name="sections[]" value="planning"', false)
+            ->assertSee('Export planning PDF')
+            ->assertSee('href="#planning-requirements-heading"', false)
+            ->assertDontSee('aria-label="Planning sections"', false)
+            ->assertDontSee('<a class="btn btn-outline-primary" href="'.route('projects.tasks.index', $project).'"', false)
             ->assertSee('data-project-ajax-root', false)
             ->assertSee('data-project-ajax-modal-body', false)
             ->assertSee('Project brief')
+            ->assertSee('id="edit-project-brief-modal"', false)
             ->assertSee('Requirements')
+            ->assertSee('data-bs-target="#create-requirement-modal"', false)
+            ->assertSee('id="create-requirement-modal"', false)
+            ->assertSee('id="create-module-modal"', false)
+            ->assertSee('id="create-milestone-modal"', false)
+            ->assertSee('id="create-quality-modal"', false)
+            ->assertSee('No modules yet')
+            ->assertSee('No milestones planned')
+            ->assertSee('No tests or issues yet')
             ->assertSee('Modules and features')
             ->assertSee('Roadmap and milestones')
             ->assertSee('Testing and issues');
@@ -64,6 +82,10 @@ class ProjectPlanningTest extends TestCase
             ->where('project_id', $project->id)
             ->where('requirement_type', 'business')
             ->firstOrFail();
+        $this->get(route('projects.planning', $project))
+            ->assertOk()
+            ->assertSee('id="edit-requirement-modal-'.$businessRequirement->id.'"', false)
+            ->assertSee('name="_method" value="PUT"', false);
 
         $this->post(route('projects.planning.requirements.store', $project), [
             'requirement' => 'Buyers can request quotations.',

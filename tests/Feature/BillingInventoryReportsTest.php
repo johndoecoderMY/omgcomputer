@@ -260,6 +260,99 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(10.6, (float) $document->total);
     }
 
+    public function test_quotation_discount_is_applied_before_tax_and_carries_to_invoice_and_receipt(): void
+    {
+        Mail::fake();
+        $user = $this->adminUser();
+        $data = $this->documentData('quotation', null, 2);
+        $data['customer_email'] = 'discount-customer@example.test';
+        $data['tax_rate'] = 6;
+        $data['discount_amount'] = 5;
+
+        $this->actingAs($user)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('name="discount_amount"', false)
+            ->assertSee('Discount applied');
+        $this->actingAs($user)->get(route('billing.create', ['type' => 'quotation']))
+            ->assertOk()
+            ->assertSee('name="discount_amount"', false)
+            ->assertSee('Deducted from the subtotal before tax.');
+        $this->actingAs($user)->post(route('billing.store'), $data)->assertSessionHasNoErrors();
+        $document = BillingDocument::query()->firstOrFail();
+        $this->assertSame(20.0, (float) $document->subtotal);
+        $this->assertSame(5.0, (float) $document->discount_amount);
+        $this->assertSame(0.9, (float) $document->tax_amount);
+        $this->assertSame(15.9, (float) $document->total);
+
+        $this->actingAs($user)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Discount')
+            ->assertSee('- RM 5.00');
+        $this->actingAs($user)->get(route('billing.documents.pdf', $document))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $data['issue_date'] = now()->toDateString();
+        $data['discount_amount'] = 3;
+        $this->actingAs($user)->put(route('billing.documents.update', $document), $data)
+            ->assertRedirect(route('billing.documents.show', $document));
+        $document->refresh();
+        $this->assertSame(3.0, (float) $document->discount_amount);
+        $this->assertSame(1.02, (float) $document->tax_amount);
+        $this->assertSame(18.02, (float) $document->total);
+
+        $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
+        $this->actingAs($user)->post(route('billing.documents.convert', $document));
+        $document->refresh();
+        $this->assertSame('invoice', $document->type);
+        $this->assertSame(3.0, (float) $document->discount_amount);
+        $this->assertSame(18.02, (float) $document->total);
+        $this->actingAs($user)->get(route('billing.documents.pdf', $document))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $document->guest_payment_link_expires_at = now()->addDay();
+        $guestInvoiceHtml = view('billing.guest-invoice', [
+            'document' => $document,
+            'chipEnabled' => false,
+            'hasValidCustomerEmail' => true,
+        ])->render();
+        $this->assertStringContainsString('Discount', $guestInvoiceHtml);
+        $this->assertStringContainsString('- RM 3.00', $guestInvoiceHtml);
+
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $document), [
+            'amount' => 18.02,
+            'method' => 'cash',
+            'paid_at' => now()->toDateString(),
+        ])->assertRedirect(route('billing.documents.show', $document));
+        $payment = $document->payments()->firstOrFail();
+
+        $this->actingAs($user)->get(route('billing.receipts.pdf', $payment))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+        $receiptHtml = view('billing.receipt-pdf', [
+            'payment' => $payment->load('document'),
+            'companyProfile' => \App\Models\CompanyProfile::current(),
+            'logoData' => null,
+        ])->render();
+        $this->assertStringContainsString('Discount', $receiptHtml);
+        $this->assertStringContainsString('RM 3.00', $receiptHtml);
+        $this->assertStringContainsString('RM 18.02', $receiptHtml);
+    }
+
+    public function test_billing_discount_cannot_exceed_document_subtotal(): void
+    {
+        $user = $this->adminUser();
+        $data = $this->documentData('quotation', null, 1);
+        $data['discount_amount'] = 10.01;
+
+        $this->actingAs($user)->from(route('billing.create', ['type' => 'quotation']))
+            ->post(route('billing.store'), $data)
+            ->assertRedirect(route('billing.create', ['type' => 'quotation']))
+            ->assertSessionHasErrors('discount_amount');
+        $this->assertSame(0, BillingDocument::query()->count());
+    }
+
     public function test_issuing_an_invoice_deducts_linked_stock_and_records_the_movement(): void
     {
         $user = $this->adminUser();
@@ -877,6 +970,59 @@ class BillingInventoryReportsTest extends TestCase
         foreach ($documents as $document) {
             $this->actingAs($otherCustomer)->get(route('billing.documents.show', $document))->assertNotFound();
         }
+    }
+
+    public function test_project_quotation_modal_returns_to_the_project_after_ajax_save(): void
+    {
+        $admin = $this->adminUser();
+        $project = Project::query()->create(['name' => 'Modal quotation project']);
+        $this->actingAs($admin);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee(
+                'href="'.e(route('billing.create', [
+                    'type' => 'quotation',
+                    'project_id' => $project->id,
+                ])).'"',
+                false,
+            )
+            ->assertSee('data-project-ajax-modal', false);
+
+        $this->get(route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]))
+            ->assertOk()
+            ->assertDontSee('name="modal_return_to_project"', false);
+        $this->get(
+            route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]),
+            ['X-Requested-With' => 'XMLHttpRequest'],
+        )
+            ->assertOk()
+            ->assertSee('name="modal_return_to_project" value="1"', false);
+
+        $this->post(route('billing.store'), [
+            'type' => 'quotation',
+            'project_id' => $project->id,
+            'modal_return_to_project' => '1',
+            'customer_name' => 'Modal quotation customer',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'description' => 'Project setup',
+                'quantity' => 1,
+                'unit_price' => 500,
+            ]],
+        ])->assertRedirect(route('projects.show', $project));
+
+        $this->assertDatabaseHas('billing_documents', [
+            'project_id' => $project->id,
+            'type' => 'quotation',
+            'status' => 'draft',
+            'customer_name' => 'Modal quotation customer',
+        ]);
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('Project billing and quotations')
+            ->assertSee('QUO-');
     }
 
     public function test_project_quotation_terms_are_saved_and_included_in_customer_view_and_pdf(): void

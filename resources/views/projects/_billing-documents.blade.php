@@ -6,7 +6,8 @@
         </div>
         @if ($canManageBilling)
             <div class="d-flex flex-wrap gap-2">
-                <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]) }}">
+                <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.create', ['type' => 'quotation', 'project_id' => $project->id]) }}"
+                    data-project-ajax-modal>
                     <i class="bi bi-file-text me-1" aria-hidden="true"></i>Create quotation
                 </a>
             </div>

@@ -47,15 +47,15 @@
 @endphp
 
 @section('title', $product->name.' | OMG Computer')
-@section('meta_description', \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish(strip_tags($product->description ?: 'View '.$product->name.' at the OMG Computer shop. Contact us for product information and availability.')), 155))
+@section('meta_description', \Illuminate\Support\Str::limit(\Illuminate\Support\Str::squish(strip_tags($product->description ?: __('View :name at the OMG Computer shop. Contact us for product information and availability.', ['name' => $product->name]))), 155))
 
 @section('content')
 <section class="pt-7 pt-lg-8 pb-6">
     <div class="container">
-        <nav class="small mb-3" aria-label="Breadcrumb">
+        <nav class="small mb-3" aria-label="{{ __('Breadcrumb') }}">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route($shopListingRoute) }}">Shop</a></li>
-                <li class="breadcrumb-item"><a href="{{ route($shopListingRoute, ['type' => $product->type]) }}">{{ $types[$product->type] ?? $product->type }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route($shopListingRoute) }}">{{ __('Shop') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route($shopListingRoute, ['type' => $product->type]) }}">{{ __($types[$product->type] ?? $product->type) }}</a></li>
                 <li class="breadcrumb-item active" aria-current="page">{{ $product->name }}</li>
             </ol>
         </nav>
@@ -69,30 +69,30 @@
                 </div>
                 <div class="col-lg-6">
                     <div class="card-body p-4 p-lg-5 h-100 d-flex flex-column">
-                        <span class="badge rounded-pill badge-subtle-primary align-self-start mb-3">{{ $types[$product->type] ?? $product->type }}</span>
+                        <span class="badge rounded-pill badge-subtle-primary align-self-start mb-3">{{ __($types[$product->type] ?? $product->type) }}</span>
                         <h1 class="display-6 fw-bold text-1000 mb-3">{{ $product->name }}</h1>
                         <p class="h2 text-primary mb-3">RM {{ number_format((float) $product->selling_price, 2) }}</p>
                         <div class="d-flex align-items-center gap-2 {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }} mb-4">
                             <i class="bi {{ $product->stock_quantity > 0 ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }}" aria-hidden="true"></i>
-                            <span class="fw-semibold">{{ $product->stock_quantity > 0 ? 'In stock' : 'Out of stock' }}</span>
+                            <span class="fw-semibold">{{ $product->stock_quantity > 0 ? __('In stock') : __('Out of stock') }}</span>
                         </div>
-                        <p class="text-700 mb-4 text-pre-line">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
+                        <p class="text-700 mb-4 text-pre-line">{{ $product->description ?: __('Contact us for more information about this product.') }}</p>
 
                         <div class="border-top pt-4 mt-auto">
-                            <p class="small text-body-secondary mb-3">Availability and pricing may change.</p>
+                            <p class="small text-body-secondary mb-3">{{ __('Availability and pricing may change.') }}</p>
                             @guest
-                                <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>Sign in to buy</a>
+                                <a class="btn btn-primary btn-lg rounded-pill w-100" href="{{ route('shop.products.purchase', $product) }}"><i class="bi bi-lock me-2" aria-hidden="true"></i>{{ __('Sign in to buy') }}</a>
                             @elseif (auth()->user()->hasRole('customer'))
                                 <form class="js-add-to-cart mb-2" action="{{ route('shop.cart.add', $product) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="quantity" value="1">
-                                    <button class="btn btn-primary btn-lg rounded-pill w-100" type="submit"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i><span>Add to cart</span></button>
+                                    <button class="btn btn-primary btn-lg rounded-pill w-100" type="submit"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i><span>{{ __('Add to cart') }}</span></button>
                                 </form>
-                                <a class="btn btn-primary rounded-pill w-100" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2" aria-hidden="true"></i>View cart</a>
+                                <a class="btn btn-primary rounded-pill w-100" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2" aria-hidden="true"></i>{{ __('View cart') }}</a>
                             @else
-                                <p class="text-body-secondary">Sign in with a customer account to place an order.</p>
+                                <p class="text-body-secondary">{{ __('Sign in with a customer account to place an order.') }}</p>
                             @endguest
-                            <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route($shopListingRoute, ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>More {{ strtolower($types[$product->type] ?? $product->type) }}</a>
+                            <a class="btn btn-link text-decoration-none w-100 mt-2" href="{{ route($shopListingRoute, ['type' => $product->type]) }}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>{{ __('More :category', ['category' => strtolower(__($types[$product->type] ?? $product->type))]) }}</a>
                         </div>
                     </div>
                 </div>
@@ -105,15 +105,15 @@
             <div class="col-lg-8">
                 <section class="card border-0 shadow-sm h-100" aria-labelledby="product-information-title">
                     <div class="card-body p-4">
-                        <h2 class="h5 text-1000 mb-3" id="product-information-title">Product information</h2>
-                        <p class="text-700 mb-0 text-pre-line">{{ $product->description ?: 'Contact us for more information about this product.' }}</p>
+                        <h2 class="h5 text-1000 mb-3" id="product-information-title">{{ __('Product information') }}</h2>
+                        <p class="text-700 mb-0 text-pre-line">{{ $product->description ?: __('Contact us for more information about this product.') }}</p>
                     </div>
                 </section>
             </div>
             <div class="col-lg-4">
                 <section class="card border-0 shadow-sm h-100" aria-labelledby="product-specifications-title">
                     <div class="card-body p-4">
-                        <h2 class="h5 text-1000 mb-3" id="product-specifications-title">Specifications</h2>
+                        <h2 class="h5 text-1000 mb-3" id="product-specifications-title">{{ __('Specifications') }}</h2>
                         <dl class="mb-0">
                             @foreach ($specifications as $specification)
                                 <div class="d-flex justify-content-between gap-3 py-2 border-bottom">
@@ -122,12 +122,12 @@
                                 </div>
                             @endforeach
                             <div class="d-flex justify-content-between gap-3 py-2 {{ $specifications->isNotEmpty() ? 'border-top mt-2' : '' }}">
-                                <dt class="fw-normal text-body-secondary">Category</dt>
-                                <dd class="mb-0 text-end">{{ $types[$product->type] ?? $product->type }}</dd>
+                                <dt class="fw-normal text-body-secondary">{{ __('Category') }}</dt>
+                                <dd class="mb-0 text-end">{{ __($types[$product->type] ?? $product->type) }}</dd>
                             </div>
                             <div class="d-flex justify-content-between gap-3 py-2">
-                                <dt class="fw-normal text-body-secondary">Availability</dt>
-                                <dd class="mb-0 {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }} fw-semibold">{{ $product->stock_quantity > 0 ? 'In stock' : 'Out of stock' }}</dd>
+                                <dt class="fw-normal text-body-secondary">{{ __('Availability') }}</dt>
+                                <dd class="mb-0 {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }} fw-semibold">{{ $product->stock_quantity > 0 ? __('In stock') : __('Out of stock') }}</dd>
                             </div>
                         </dl>
                     </div>
@@ -138,8 +138,8 @@
         @if ($relatedProducts->isNotEmpty())
             <section class="mt-5" aria-labelledby="related-products-title">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                    <h2 class="h4 text-1000 mb-0" id="related-products-title">You may also like</h2>
-                    <a class="small" href="{{ route($shopListingRoute, ['type' => $product->type]) }}">Browse {{ strtolower($types[$product->type] ?? $product->type) }}</a>
+                    <h2 class="h4 text-1000 mb-0" id="related-products-title">{{ __('You may also like') }}</h2>
+                    <a class="small" href="{{ route($shopListingRoute, ['type' => $product->type]) }}">{{ __('Browse :category', ['category' => strtolower(__($types[$product->type] ?? $product->type))]) }}</a>
                 </div>
                 <div class="row g-3">
                     @foreach ($relatedProducts as $relatedProduct)

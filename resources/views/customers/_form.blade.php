@@ -9,7 +9,13 @@
         <div class="col-md-6"><label class="form-label" for="phone">Phone</label><input class="form-control" id="phone" name="phone" value="{{ old('phone', $customer->phone) }}" maxlength="64"></div>
         <div class="col-md-6"><label class="form-label" for="project_id">Related project</label><select class="form-select js-project-search" id="project_id" name="project_id"><option value="">No project</option>@foreach ($projects as $project)<option value="{{ $project->id }}" @selected((string) old('project_id', $customer->project_id) === (string) $project->id)>{{ $project->name }}</option>@endforeach</select></div>
         <div class="col-md-12"><label class="form-label" for="address">Address</label><textarea class="form-control" id="address" name="address" rows="2" maxlength="3000">{{ old('address', $customer->address) }}</textarea></div>
-        <div class="col-12"><label class="form-label" for="notes">Profile notes</label><textarea class="form-control" id="notes" name="notes" rows="3" maxlength="5000">{{ old('notes', $customer->notes) }}</textarea></div>
+        <div class="col-12">
+            <label class="form-label" for="warning">Important customer warning <span class="text-body-secondary">(staff only)</span></label>
+            <textarea class="form-control" id="warning" name="warning" rows="3" maxlength="5000"
+                placeholder="Add a relevant safety, access, or handling warning for staff.">{{ old('warning', $customer->warning) }}</textarea>
+            <div class="form-text">Shown prominently on this customer profile, bookings, and repair tickets.</div>
+        </div>
+        <div class="col-12"><label class="form-label" for="notes">Internal notes <span class="text-body-secondary">(staff only)</span></label><textarea class="form-control" id="notes" name="notes" rows="3" maxlength="5000">{{ old('notes', $customer->notes) }}</textarea></div>
     </div>
     <div class="card-footer d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ $cancelUrl }}">Cancel</a><button class="btn btn-primary">{{ $buttonLabel }}</button></div>
 </form>

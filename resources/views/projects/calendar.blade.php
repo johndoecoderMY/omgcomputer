@@ -80,7 +80,9 @@
             },
             dateClick: (info) => {
                 const date = info.dateStr.slice(0, 10);
-                document.getElementById('calendar-event-start').value = `${date}T09:00`;
+                const startInput = document.getElementById('calendar-event-start');
+                startInput.value = `${date}T09:00`;
+                startInput.dispatchEvent(new Event('input', { bubbles: true }));
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('create-event-modal')).show();
             },
             events: {

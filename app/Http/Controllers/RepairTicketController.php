@@ -13,6 +13,7 @@ use App\Rules\AssignableUser;
 use App\Services\WorkspaceNotifier;
 use App\Support\AssignmentAccess;
 use App\Support\DataTableQueryBuilder;
+use App\Support\RepairTicketIssueSanitizer;
 use App\Support\StatusBadge;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -286,6 +287,8 @@ class RepairTicketController extends Controller
                 'customer_id' => $customer?->id ?? ($request->integer('customer_id') ?: null),
                 'device_type' => $booking ? 'Computer' : null,
                 'device_model' => $booking?->device_model,
+                'pickup_address' => $booking?->pickup_address,
+                'dropoff_address' => $booking?->dropoff_address,
                 'issue_description' => $booking
                     ? trim($booking->service_name."\n\n".($booking->request_notes ?? ''))
                     : null,
@@ -302,6 +305,15 @@ class RepairTicketController extends Controller
     public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
+        $issueDescription = $request->input('issue_description');
+        if (! is_string($issueDescription) || mb_strlen($issueDescription) > 20000) {
+            throw ValidationException::withMessages([
+                'issue_description' => 'The reported issue may not be greater than 20000 characters.',
+            ]);
+        }
+        $request->merge([
+            'issue_description' => app(RepairTicketIssueSanitizer::class)->sanitize($issueDescription),
+        ]);
 
         $data = $request->validate([
             'customer_id' => ['required_without:booking_id', 'nullable', 'integer', 'exists:customers,id'],
@@ -313,16 +325,29 @@ class RepairTicketController extends Controller
             'device_type' => ['nullable', 'string', 'max:80'],
             'device_model' => ['nullable', 'string', 'max:255'],
             'serial_number' => ['nullable', 'string', 'max:255'],
-            'issue_description' => ['required', 'string', 'max:5000'],
+            'pickup_address' => ['nullable', 'string', 'max:1000'],
+            'dropoff_address' => ['nullable', 'string', 'max:1000'],
+            'issue_description' => ['required', 'string', 'max:20000'],
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'due_at' => ['nullable', 'date'],
         ]);
+        foreach (['pickup_address', 'dropoff_address'] as $addressField) {
+            if ($request->exists($addressField) && $data[$addressField] === null) {
+                $data[$addressField] = '';
+            }
+        }
+        if (mb_strlen(html_entity_decode(strip_tags($data['issue_description']), ENT_QUOTES | ENT_HTML5, 'UTF-8')) > 5000) {
+            throw ValidationException::withMessages([
+                'issue_description' => 'The reported issue may not be greater than 5000 characters.',
+            ]);
+        }
+        $issueDescriptionText = app(RepairTicketIssueSanitizer::class)->plainText($data['issue_description']);
         $bookingId = $data['booking_id'] ?? null;
         unset($data['booking_id']);
         $assignees = $this->assigneeIds($request, $data);
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
 
-        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId): RepairTicket {
+        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId, $issueDescriptionText): RepairTicket {
             $booking = $bookingId
                 ? Booking::query()->with('customer')->lockForUpdate()->findOrFail($bookingId)
                 : null;
@@ -343,6 +368,8 @@ class RepairTicketController extends Controller
                 $booking->update(['customer_id' => $customer->id]);
             }
             $customer ??= Customer::query()->findOrFail($data['customer_id']);
+            $data['pickup_address'] ??= $booking?->pickup_address;
+            $data['dropoff_address'] ??= $booking?->dropoff_address;
             $ticket = RepairTicket::create([
                 ...$data,
                 'customer_id' => $customer->id,
@@ -360,7 +387,7 @@ class RepairTicketController extends Controller
                 'user_id' => $request->user()->id,
                 'title' => 'Device received',
                 'status' => 'new',
-                'notes' => $data['issue_description'],
+                'notes' => $issueDescriptionText,
             ]);
 
             $ticket->assignees()->sync($assignees);
@@ -398,9 +425,10 @@ class RepairTicketController extends Controller
 
         $ticket->load([
             'customer.project',
+            'booking',
             'project',
             'assignees',
-            'billingDocuments',
+            'billingDocuments' => fn ($documents) => $documents->latest('id'),
             'attachments.uploader',
             'updates.user',
             'updates.attachments.uploader',
@@ -413,7 +441,8 @@ class RepairTicketController extends Controller
             $ticket->load(['billingDocuments' => fn ($documents) => $documents
                 ->whereIn('type', ['invoice', 'quotation'])
                 ->where('status', '!=', 'draft')
-                ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$customerEmail])]);
+                ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$customerEmail])
+                ->latest('id')]);
         }
 
         return view('tickets.show', [
@@ -441,7 +470,14 @@ class RepairTicketController extends Controller
             'due_at' => ['nullable', 'date'],
             'device_model' => ['nullable', 'string', 'max:255'],
             'serial_number' => ['nullable', 'string', 'max:255'],
+            'pickup_address' => ['nullable', 'string', 'max:1000'],
+            'dropoff_address' => ['nullable', 'string', 'max:1000'],
         ]);
+        foreach (['pickup_address', 'dropoff_address'] as $addressField) {
+            if ($request->exists($addressField) && $data[$addressField] === null) {
+                $data[$addressField] = '';
+            }
+        }
         $assignees = $request->user()->hasRole('admin')
             ? $this->assigneeIds($request, $data)
             : $existingAssigneeIds;
@@ -502,6 +538,10 @@ class RepairTicketController extends Controller
                 'due_at_value' => $ticket->due_at?->format('Y-m-d') ?? '',
                 'device_model' => $ticket->device_model,
                 'serial_number' => $ticket->serial_number,
+                'pickup_address' => $ticket->pickup_address ?? $ticket->booking?->pickup_address,
+                'dropoff_address' => $ticket->dropoff_address ?? $ticket->booking?->dropoff_address,
+                'has_location_pin' => $ticket->booking?->pickup_latitude !== null
+                    || $ticket->booking?->dropoff_latitude !== null,
             ]);
         }
 

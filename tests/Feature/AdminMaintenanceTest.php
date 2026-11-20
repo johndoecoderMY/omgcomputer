@@ -51,6 +51,7 @@ class AdminMaintenanceTest extends TestCase
             ->assertSee('Optimize clear')
             ->assertSee('Create storage link')
             ->assertSee('Clear repair ticket photos')
+            ->assertSee('Cafe POS project')
             ->assertSee('Install Composer dependencies')
             ->assertSee('Git pull');
     }
@@ -162,16 +163,27 @@ class AdminMaintenanceTest extends TestCase
             ->andReturn(0);
         Artisan::shouldReceive('output')->once()->andReturn('Departments and teams seeded.');
 
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('db:seed', [
+                '--class' => \Database\Seeders\CafePosProjectSeeder::class,
+                '--force' => true,
+            ])
+            ->andReturn(0);
+        Artisan::shouldReceive('output')->once()->andReturn('Cafe POS project seeded.');
+
         $this->actingAs($admin)->post(route('admin.maintenance.seed'), [
             'seeders' => [
                 \Database\Seeders\PlannerRoleSeeder::class,
                 \Database\Seeders\DepartmentTeamSeeder::class,
+                \Database\Seeders\CafePosProjectSeeder::class,
             ],
         ])->assertRedirect(route('admin.maintenance.index'))
-            ->assertSessionHas('maintenance_success', 'Selected seeders completed: Planner roles and permissions, Departments and teams.')
+            ->assertSessionHas('maintenance_success', 'Selected seeders completed: Planner roles and permissions, Departments and teams, Cafe POS project.')
             ->assertSessionHas('maintenance_output', implode("\n\n", [
                 \Database\Seeders\PlannerRoleSeeder::class."\nPlanner roles and permissions seeded.",
                 \Database\Seeders\DepartmentTeamSeeder::class."\nDepartments and teams seeded.",
+                \Database\Seeders\CafePosProjectSeeder::class."\nCafe POS project seeded.",
             ]));
     }
 

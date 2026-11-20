@@ -72,6 +72,14 @@ class ProjectPlanningController extends Controller
             'target_end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'budget' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
         ]));
+        $changedFields = array_values(array_diff(array_keys($project->getChanges()), ['updated_at']));
+        if ($changedFields !== []) {
+            $project->activities()->create([
+                'user_id' => $request->user()->id,
+                'summary' => 'Updated project brief and planning details',
+                'details' => array_map(\Illuminate\Support\Str::headline(...), $changedFields),
+            ]);
+        }
 
         return $this->success($project, 'Project brief and planning details saved.');
     }

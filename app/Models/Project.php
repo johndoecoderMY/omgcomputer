@@ -15,6 +15,7 @@ class Project extends Model
 {
     protected $fillable = [
         'name',
+        'logo_path',
         'created_by_user_id',
         'customer_user_id',
         'description',
@@ -79,6 +80,11 @@ class Project extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ProjectActivity::class);
     }
 
     public function creator(): BelongsTo

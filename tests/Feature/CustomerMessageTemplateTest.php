@@ -19,6 +19,7 @@ class CustomerMessageTemplateTest extends TestCase
             'name' => 'Repair status update',
             'stage' => 'intake',
             'channel' => 'whatsapp',
+            'language' => 'en',
             'subject' => '',
             'body' => 'Hi {{customer_name}}, your device is with us under {{ticket_number}}.',
             'is_active' => '1',
@@ -38,10 +39,12 @@ class CustomerMessageTemplateTest extends TestCase
             'name' => 'Repair update',
             'stage' => 'diagnosis',
             'channel' => 'email',
+            'language' => 'ms',
             'subject' => 'Update for {{ticket_number}}',
             'body' => 'We have completed the diagnosis for {{device_model}}.',
         ])->assertRedirect(route('customer-messages.show', $template));
         $this->assertSame('Repair update', $template->fresh()->name);
+        $this->assertSame('ms', $template->fresh()->language);
         $this->assertFalse($template->fresh()->is_active);
 
         $this->delete(route('customer-messages.destroy', $template))
@@ -56,7 +59,9 @@ class CustomerMessageTemplateTest extends TestCase
 
         $this->get(route('customer-messages.index'))
             ->assertOk()
-            ->assertSee('data-datatable', false);
+            ->assertSee('data-datatable', false)
+            ->assertSee('Filter by language')
+            ->assertSee('Language');
         $this->getJson(route('customer-messages.datatable', [
             'draw' => 1,
             'start' => 0,
@@ -68,6 +73,14 @@ class CustomerMessageTemplateTest extends TestCase
             ->assertSee('Parts delay update')
             ->assertSee('Permintaan janji temu diterima (Bahasa Melayu)')
             ->assertSee('Makluman kelewatan alat ganti (Bahasa Melayu)');
+        $this->getJson(route('customer-messages.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'language' => 'ms',
+        ]))->assertOk()
+            ->assertSee('Bahasa Melayu')
+            ->assertDontSee('Booking request received');
     }
 
     public function test_staff_can_load_active_copywriting_suggestions_by_channel(): void
@@ -79,6 +92,7 @@ class CustomerMessageTemplateTest extends TestCase
             'name' => 'Booking confirmation',
             'stage' => 'booking',
             'channel' => 'email',
+            'language' => 'en',
             'subject' => 'Booking confirmed for {{customer_name}}',
             'body' => 'Hi {{customer_name}}, your appointment is confirmed.',
             'is_active' => true,
@@ -88,7 +102,18 @@ class CustomerMessageTemplateTest extends TestCase
             'name' => 'WhatsApp booking confirmation',
             'stage' => 'booking',
             'channel' => 'whatsapp',
+            'language' => 'en',
             'body' => 'Hi {{customer_name}}, your appointment is confirmed.',
+            'is_active' => true,
+        ]);
+        CustomerMessageTemplate::query()->create([
+            'slug' => 'email-confirmation-ms',
+            'name' => 'Pengesahan tempahan',
+            'stage' => 'booking',
+            'channel' => 'email',
+            'language' => 'ms',
+            'subject' => 'Tempahan disahkan',
+            'body' => 'Hai {{customer_name}}, janji temu anda disahkan.',
             'is_active' => true,
         ]);
         CustomerMessageTemplate::query()->create([
@@ -96,18 +121,28 @@ class CustomerMessageTemplateTest extends TestCase
             'name' => 'Archived email',
             'stage' => 'general',
             'channel' => 'email',
+            'language' => 'en',
             'body' => 'This template is archived.',
             'is_active' => false,
         ]);
 
-        $this->getJson(route('customer-messages.suggestions', ['channel' => 'email']))
+        $this->getJson(route('customer-messages.suggestions', ['channel' => 'email', 'language' => 'en']))
             ->assertOk()
             ->assertHeader('Cache-Control', 'no-store, private')
             ->assertJsonCount(1, 'templates')
             ->assertJsonPath('templates.0.name', 'Booking confirmation')
+            ->assertJsonPath('templates.0.language_label', 'English')
             ->assertJsonPath('templates.0.subject', 'Booking confirmed for Avery')
             ->assertJsonPath('templates.0.body', 'Hi Avery, your appointment is confirmed.');
 
+        $this->getJson(route('customer-messages.suggestions', ['channel' => 'email', 'language' => 'ms']))
+            ->assertOk()
+            ->assertJsonCount(1, 'templates')
+            ->assertJsonPath('templates.0.name', 'Pengesahan tempahan')
+            ->assertJsonPath('templates.0.language_label', 'Bahasa Melayu');
+        $this->getJson(route('customer-messages.suggestions', ['channel' => 'email', 'language' => 'zh_CN']))
+            ->assertOk()
+            ->assertJsonCount(0, 'templates');
         $this->getJson(route('customer-messages.suggestions', ['channel' => 'whatsapp']))
             ->assertOk()
             ->assertJsonCount(1, 'templates')

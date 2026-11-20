@@ -47,6 +47,123 @@ class ProjectDetailsExportTest extends TestCase
             ->assertSee('btn btn-primary', false);
     }
 
+    public function test_project_planning_can_be_exported_as_its_own_pdf(): void
+    {
+        Role::findOrCreate('admin', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        $project = Project::query()->create([
+            'name' => 'Cafe POS planning export',
+            'planning_status' => 'planning',
+            'business_background' => 'Orders and daily reconciliation need one workflow.',
+        ]);
+        $requirement = $project->requirements()->create([
+            'code' => 'FR-01',
+            'requirement' => 'Cashiers can create dine-in orders.',
+            'requirement_type' => 'functional',
+            'priority' => 'must',
+            'status' => 'planned',
+            'acceptance_criteria' => 'Every dine-in order records a table number.',
+        ]);
+        $module = $project->modules()->create([
+            'name' => 'Ordering',
+            'description' => 'Manage cafe orders.',
+        ]);
+        $module->features()->create([
+            'name' => 'Order entry',
+            'description' => 'Add menu items to an order.',
+            'priority' => 'must',
+            'status' => 'planned',
+        ]);
+        $project->milestones()->create([
+            'name' => 'Counter pilot',
+            'description' => 'Test the first release with cafe staff.',
+            'deliverable' => 'Pilot feedback and sign-off.',
+            'status' => 'planned',
+        ]);
+        $project->qualityItems()->create([
+            'project_requirement_id' => $requirement->id,
+            'kind' => 'test_case',
+            'title' => 'Order total validation',
+            'expected_result' => 'The total matches the order calculation.',
+        ]);
+
+        $this->get(route('projects.planning', $project))
+            ->assertOk()
+            ->assertSee('Export planning PDF')
+            ->assertSee('name="sections[]" value="planning"', false)
+            ->assertSee('name="flowchart_mode" value="all"', false);
+
+        $response = $this->post(route('projects.export', $project), [
+            'sections' => ['planning'],
+            'flowchart_mode' => 'all',
+        ]);
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->getContent());
+
+        $project->load([
+            'modules.features',
+            'requirements' => fn ($query) => $query->with('module')->withCount('tasks'),
+            'milestones.dependency',
+            'qualityItems.requirement',
+        ]);
+        $pdfHtml = view('projects.pdf', [
+            'project' => $project,
+            'sections' => ['planning'],
+            'flowCharts' => collect(),
+            'flowChartImages' => collect(),
+            'projectPhotos' => collect(),
+        ])->render();
+        foreach ([
+            'Project planning brief',
+            'Orders and daily reconciliation need one workflow.',
+            'FR-01',
+            'Manage cafe orders.',
+            'Counter pilot',
+            'Order total validation',
+        ] as $content) {
+            $this->assertStringContainsString($content, $pdfHtml);
+        }
+        $this->assertStringNotContainsString('Project links', $pdfHtml);
+    }
+
+    public function test_project_customer_and_assignee_sections_offer_ajax_management_actions(): void
+    {
+        Role::findOrCreate('customer', 'web');
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findOrCreate('admin', 'web'));
+        $this->actingAs($admin);
+        $project = Project::query()->create(['name' => 'Stakeholder controls']);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('id="project-customers"', false)
+            ->assertSee('id="project-assigned-people"', false)
+            ->assertSee('Manage customer')
+            ->assertSee('Manage assignments')
+            ->assertSee('href="'.route('projects.edit', $project).'" data-project-ajax-modal', false);
+
+        $this->get(route('projects.edit', $project))
+            ->assertOk()
+            ->assertSee('name="customer_identity"', false)
+            ->assertSee('name="assignees[]"', false)
+            ->assertSee('No customer linked', false);
+
+        $member = User::factory()->create();
+        $memberProject = Project::query()->create([
+            'name' => 'Member-managed project',
+            'created_by_user_id' => $member->id,
+        ]);
+        $this->actingAs($member)
+            ->get(route('projects.show', $memberProject))
+            ->assertOk()
+            ->assertSee('Manage customer')
+            ->assertSee('Admin-managed')
+            ->assertDontSee('Manage assignments');
+    }
+
     public function test_page_header_breadcrumbs_follow_sidebar_sections(): void
     {
         Role::findOrCreate('admin', 'web');
@@ -78,8 +195,15 @@ class ProjectDetailsExportTest extends TestCase
 
     public function test_project_technology_stack_can_be_created_updated_and_deleted(): void
     {
-        $this->actingAs(User::factory()->create());
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findOrCreate('admin', 'web'));
+        $this->actingAs($admin);
         $project = Project::query()->create(['name' => 'Mobile repair booking']);
+
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('data-bs-target="#project-technology-create-modal"', false)
+            ->assertSee('id="project-technology-create-modal"', false);
 
         $this->post(route('projects.technology-stack.store', $project), [
             'name' => 'PHP',
@@ -89,6 +213,11 @@ class ProjectDetailsExportTest extends TestCase
 
         $technology = ProjectTechnology::query()->firstOrFail();
         $this->assertSame($project->id, $technology->project_id);
+        $this->get(route('projects.show', $project))
+            ->assertOk()
+            ->assertSee('data-bs-target="#project-technology-edit-modal-'.$technology->id.'"', false)
+            ->assertSee('id="project-technology-edit-modal-'.$technology->id.'"', false)
+            ->assertSee('Backend runtime');
 
         $this->put(route('projects.technology-stack.update', [$project, $technology]), [
             'name' => 'FullCalendar',

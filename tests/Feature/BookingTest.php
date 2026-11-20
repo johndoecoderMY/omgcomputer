@@ -169,6 +169,33 @@ class BookingTest extends TestCase
             ]);
     }
 
+    public function test_booking_page_and_calendar_messages_follow_the_selected_public_language(): void
+    {
+        $this->withSession(['public_locale' => 'ms'])
+            ->get(route('bookings.create'))
+            ->assertOk()
+            ->assertSee('Pilih tarikh')
+            ->assertSee('Pilih tarikh pada kalendar')
+            ->assertSee('Pilih tarikh dahulu')
+            ->assertSee('Alamat pengambilan')
+            ->assertSee('Alamat penghantaran semula')
+            ->assertSee('Memuatkan masa yang tersedia...')
+            ->assertSee('Pilih masa yang tersedia.')
+            ->assertSee('Tiada masa tersedia pada tarikh ini.');
+
+        $this->withSession(['public_locale' => 'zh_CN'])
+            ->get(route('bookings.create'))
+            ->assertOk()
+            ->assertSee('选择日期')
+            ->assertSee('请在日历中选择日期')
+            ->assertSee('请先选择日期')
+            ->assertSee('取件地址')
+            ->assertSee('送回地址')
+            ->assertSee('正在加载可预约时间')
+            ->assertSee('请选择可预约时段。')
+            ->assertSee('该日期没有可预约时段。');
+    }
+
     public function test_customer_can_book_a_slot_and_the_same_time_cannot_be_booked_twice(): void
     {
         $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
@@ -195,6 +222,8 @@ class BookingTest extends TestCase
             ->assertSee('FYP Consultation')
             ->assertDontSee('Laptop cleaning')
             ->assertSee('id="device-details"', false)
+            ->assertSee('id="pickup-address"', false)
+            ->assertSee('id="dropoff-address"', false)
             ->assertSee('hidden', false);
 
         $data = [
@@ -203,6 +232,8 @@ class BookingTest extends TestCase
             'customer_phone' => '+60112223333',
             'service_id' => 'basic-troubleshooting',
             'device_model' => 'Dell XPS 13',
+            'pickup_address' => '12 Jalan Test, Kampar',
+            'dropoff_address' => 'Unit 4, Example Apartments, Kampar',
             'request_notes' => 'Fan is noisy.',
             'booking_date' => $dateString,
             'start_time' => '11:00',
@@ -214,10 +245,14 @@ class BookingTest extends TestCase
         $booking = Booking::query()->firstOrFail();
         $this->assertSame('pending', $booking->status);
         $this->assertSame('Morgan Lee', $booking->customer->name);
+        $this->assertSame('12 Jalan Test, Kampar', $booking->pickup_address);
+        $this->assertSame('Unit 4, Example Apartments, Kampar', $booking->dropoff_address);
         $this->get(route('bookings.confirmation', $booking->reference))
             ->assertOk()
             ->assertSee($booking->reference)
             ->assertSee('Computer/PC Troubleshooting')
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments, Kampar')
             ->assertSee('guestNavbar', false)
             ->assertSee('Back to home');
 
@@ -239,6 +274,17 @@ class BookingTest extends TestCase
         $this->assertNotNull($ticket);
         $this->assertSame($ticket->id, $booking->fresh()->repair_ticket_id);
         $this->assertSame($booking->customer_id, $ticket->customer_id);
+        $this->actingAs($staff)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Pickup and drop-off')
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments, Kampar');
+        $this->get(route('bookings.show', $booking->fresh()))
+            ->assertOk()
+            ->assertSee('Pickup address')
+            ->assertSee('Drop-off address')
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments, Kampar');
         $this->assertSame($staff->id, $ticket->assigned_to);
         $this->assertSame(1, $ticket->updates()->count());
 
@@ -331,6 +377,12 @@ class BookingTest extends TestCase
             $date->addDay();
         }
 
+        $this->get(route('bookings.create'))
+            ->assertOk()
+            ->assertSee('booking-location-map')
+            ->assertSee('data-booking-location-mode="pickup"', false)
+            ->assertSee('data-booking-location-mode="dropoff"', false);
+
         $this->post(route('bookings.store'), [
             'customer_name' => 'FYP Customer',
             'customer_email' => 'fyp@example.test',
@@ -338,6 +390,9 @@ class BookingTest extends TestCase
             'service_id' => 'fyp-consultation',
             'device_model' => 'This should be excluded',
             'request_notes' => 'These details are only for PC troubleshooting.',
+            'pickup_address' => 'A stale repair address',
+            'pickup_latitude' => '999',
+            'pickup_longitude' => '999',
             'booking_date' => $date->toDateString(),
             'start_time' => '11:00',
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -346,6 +401,9 @@ class BookingTest extends TestCase
         $this->assertSame('FYP Consultation', $booking->service_name);
         $this->assertNull($booking->device_model);
         $this->assertNull($booking->request_notes);
+        $this->assertNull($booking->pickup_address);
+        $this->assertNull($booking->pickup_latitude);
+        $this->assertNull($booking->pickup_longitude);
     }
 
     public function test_computer_troubleshooting_booking_saves_device_details(): void
@@ -432,6 +490,74 @@ class BookingTest extends TestCase
             ->post(route('tickets.store'), $ticketData)
             ->assertSessionHasErrors('booking_id');
         $this->assertSame(1, RepairTicket::query()->count());
+    }
+
+    public function test_repair_booking_addresses_are_saved_and_displayed_on_its_ticket(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'Pickup Customer',
+            'customer_email' => 'pickup-customer@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'device_model' => 'Dell XPS 13',
+            'pickup_address' => '12 Jalan Test, Kampar',
+            'dropoff_address' => "Unit 4, Example Apartments\nKampar",
+            'pickup_latitude' => '4.3260000',
+            'pickup_longitude' => '101.1500000',
+            'dropoff_latitude' => '4.3270000',
+            'dropoff_longitude' => '101.1510000',
+            'request_notes' => 'Screen flickers.',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertSame('12 Jalan Test, Kampar', $booking->pickup_address);
+        $this->assertSame("Unit 4, Example Apartments\nKampar", $booking->dropoff_address);
+        $this->assertEqualsWithDelta(4.326, (float) $booking->pickup_latitude, 0.0000001);
+        $this->assertEqualsWithDelta(101.15, (float) $booking->pickup_longitude, 0.0000001);
+        $this->get(route('bookings.confirmation', $booking->reference))
+            ->assertOk()
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments')
+            ->assertSee('View pickup pin')
+            ->assertSee('View drop-off pin');
+
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $this->actingAs($staff)->post(route('tickets.store'), [
+            'booking_id' => $booking->id,
+            'device_type' => 'Computer',
+            'device_model' => 'Dell XPS 13',
+            'issue_description' => "Computer/PC Troubleshooting\n\nScreen flickers.",
+            'priority' => 'normal',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = $booking->fresh()->repairTicket;
+        $this->assertNotNull($ticket);
+        $this->assertSame($booking->pickup_address, $ticket->pickup_address);
+        $this->assertSame($booking->dropoff_address, $ticket->dropoff_address);
+        $this->get(route('bookings.show', $booking->fresh()))
+            ->assertOk()
+            ->assertSee('Pickup address')
+            ->assertSee('Drop-off address')
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments')
+            ->assertSee('View pickup pin')
+            ->assertSee('View drop-off pin');
+        $this->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Pickup and drop-off')
+            ->assertSee('12 Jalan Test, Kampar')
+            ->assertSee('Unit 4, Example Apartments')
+            ->assertSee('View pickup pin')
+            ->assertSee('View drop-off pin');
     }
 
     public function test_booking_datatable_filters_by_service_customer_and_appointment_datetime(): void
@@ -577,6 +703,13 @@ class BookingTest extends TestCase
             ->assertDontSee('window.location.href =')
             ->assertSee('new FullCalendar.Calendar(calendarEl, {', false)
             ->assertSee('initialView: "dayGridMonth"', false)
+            ->assertSee('events: availabilityEventsUrl', false)
+            ->assertSee('eventsSet:', false)
+            ->assertSee('dayCellClassNames:', false)
+            ->assertSee('booking-date-unavailable', false)
+            ->assertSee('if (!availableAppointmentDates.has(info.dateStr))', false)
+            ->assertSee('booking-date-selected', false)
+            ->assertSee('info.dayEl.classList.add("booking-date-selected")', false)
             ->assertSee('calendar.select(info.dateStr)', false)
             ->assertSee('bookingDate.value = info.dateStr', false)
             ->assertSee('booking-times-modal', false)
@@ -588,9 +721,16 @@ class BookingTest extends TestCase
             ->assertSee('bookingTime.value = slot', false)
             ->assertSee('id="booking-date"', false)
             ->assertSee('id="booking-time"', false)
-            ->assertSee('readonly required', false)
+            ->assertSee('id="booking-date-summary"', false)
+            ->assertSee('id="booking-time-summary"', false)
+            ->assertSee('type="hidden" id="booking-date"', false)
+            ->assertSee('type="hidden" id="booking-time"', false)
+            ->assertSee('id="booking-change-time"', false)
+            ->assertSee('type="hidden" id="booking-date" name="booking_date" value=""', false)
+            ->assertDontSee('type="date" id="booking-date"', false)
+            ->assertDontSee('type="time" id="booking-time"', false)
             ->assertDontSee('alert(info.dateStr)', false)
-            ->assertDontSee('events:', false);
+            ->assertSee('calendar-availability-status', false);
 
         $date = Carbon::now('Asia/Kuala_Lumpur')->next(Carbon::MONDAY);
         $this->getJson(route('bookings.availability', ['date' => $date->toDateString()]))
@@ -603,7 +743,8 @@ class BookingTest extends TestCase
             'start' => $date->toDateString(),
             'end' => $date->copy()->addWeek()->toDateString(),
         ]))->assertOk()
-            ->assertJsonFragment(['start' => $date->toDateString(), 'available' => true]);
+            ->assertJsonFragment(['start' => $date->toDateString(), 'available' => true])
+            ->assertJsonMissing(['start' => $date->copy()->next(Carbon::SUNDAY)->toDateString()]);
     }
 
     public function test_customer_can_book_from_the_authenticated_page_and_identity_comes_from_the_account(): void
@@ -661,6 +802,10 @@ class BookingTest extends TestCase
             ->assertOk()
             ->assertSee('Available booking times')
             ->assertSee('id="availability-calendar"', false)
+            ->assertSee('id="slot-modal"', false)
+            ->assertSee("fetch(url, {", false)
+            ->assertSee("method: method,", false)
+            ->assertSee("const details = event.extendedProps;", false)
             ->assertSee("initialView: 'timeGridWeek'", false)
             ->assertSee('dayGridMonth,timeGridWeek,timeGridDay,listWeek', false);
         $this->get(route('booking-time-slots.create'))->assertOk();
@@ -696,5 +841,35 @@ class BookingTest extends TestCase
         $this->assertDatabaseMissing('booking_time_slots', ['id' => $slot->id]);
         $this->getJson(route('bookings.availability', ['date' => $sunday->toDateString()]))
             ->assertOk()->assertJsonPath('slots', []);
+    }
+
+    public function test_booking_time_slot_crud_supports_ajax_requests(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('member');
+        $staff->givePermissionTo('booking_availability.manage');
+        $this->actingAs($staff);
+
+        $this->postJson(route('booking-time-slots.store'), [
+            'day_of_week' => Carbon::SUNDAY,
+            'start_time' => '11:30',
+        ])->assertCreated()
+            ->assertJsonPath('message', 'Available time created.')
+            ->assertJsonPath('event.extendedProps.dayOfWeek', (string) Carbon::SUNDAY);
+        $slot = BookingTimeSlot::query()->where('day_of_week', Carbon::SUNDAY)->firstOrFail();
+
+        $this->putJson(route('booking-time-slots.update', $slot), [
+            'day_of_week' => Carbon::SUNDAY,
+            'start_time' => '12:30',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Available time updated.')
+            ->assertJsonPath('event.extendedProps.startTime', '12:30');
+
+        $this->deleteJson(route('booking-time-slots.destroy', $slot))
+            ->assertOk()
+            ->assertJsonPath('message', 'Available time deleted.')
+            ->assertJsonPath('id', (string) $slot->id);
+        $this->assertDatabaseMissing('booking_time_slots', ['id' => $slot->id]);
     }
 }

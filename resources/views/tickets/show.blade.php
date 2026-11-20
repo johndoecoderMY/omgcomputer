@@ -40,6 +40,15 @@
             @endunless
         </div>
 
+        @unless (auth()->user()->hasRole('customer'))
+            @if ($ticket->customer->warning)
+                <div class="alert alert-warning" role="alert">
+                    <div class="fw-semibold"><span class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></span>Important customer warning</div>
+                    <div class="text-pre-line mt-1">{{ $ticket->customer->warning }}</div>
+                </div>
+            @endif
+        @endunless
+
         <div class="row g-3">
             <div class="col-xl-8">
                 <div class="card mb-3">
@@ -80,7 +89,14 @@
                             </div>
                         </div>
                         <div class="small text-body-secondary">Reported issue</div>
-                        <p class="text-pre-line mb-0">{{ $ticket->issue_description }}</p>
+                        <div class="text-pre-line mb-0">{!! app(\App\Support\RepairTicketIssueSanitizer::class)->sanitize($ticket->issue_description) !!}</div>
+                        @unless (auth()->user()->hasRole('customer'))
+                            @if ($ticket->customer->notes)
+                                <hr>
+                                <div class="small text-body-secondary">Internal customer notes</div>
+                                <div class="text-pre-line">{{ $ticket->customer->notes }}</div>
+                            @endif
+                        @endunless
                     </div>
                 </div>
 
@@ -90,6 +106,32 @@
                         {{ $ticket->diagnosis ?: 'No diagnosis or service notes recorded.' }}
                     </div>
                 </div>
+
+                @php
+                    $pickupAddress = $ticket->pickup_address ?? $ticket->booking?->pickup_address;
+                    $dropoffAddress = $ticket->dropoff_address ?? $ticket->booking?->dropoff_address;
+                @endphp
+                @if (! auth()->user()->hasRole('customer') || $pickupAddress || $dropoffAddress || $ticket->booking?->pickup_latitude !== null || $ticket->booking?->dropoff_latitude !== null)
+                    <div class="card mb-3 @if (! $pickupAddress && ! $dropoffAddress && $ticket->booking?->pickup_latitude === null && $ticket->booking?->dropoff_latitude === null) d-none @endif" id="ticket-location-card">
+                        <div class="card-header fw-semibold">Pickup and drop-off</div>
+                        <div class="card-body row g-3">
+                            <div class="col-md-6">
+                                <div class="small text-body-secondary">Pickup address</div>
+                                <div class="text-pre-line" id="ticket-pickup-address">{{ $pickupAddress ?: '—' }}</div>
+                                @if ($ticket->booking?->pickup_latitude !== null && $ticket->booking?->pickup_longitude !== null)
+                                    <a href="https://www.openstreetmap.org/?mlat={{ $ticket->booking->pickup_latitude }}&mlon={{ $ticket->booking->pickup_longitude }}#map=16/{{ $ticket->booking->pickup_latitude }}/{{ $ticket->booking->pickup_longitude }}" target="_blank" rel="noopener noreferrer">{{ __('View pickup pin') }}</a>
+                                @endif
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-body-secondary">Drop-off address</div>
+                                <div class="text-pre-line" id="ticket-dropoff-address">{{ $dropoffAddress ?: ($pickupAddress ? 'Same as pickup address' : '—') }}</div>
+                                @if ($ticket->booking?->dropoff_latitude !== null && $ticket->booking?->dropoff_longitude !== null)
+                                    <a href="https://www.openstreetmap.org/?mlat={{ $ticket->booking->dropoff_latitude }}&mlon={{ $ticket->booking->dropoff_longitude }}#map=16/{{ $ticket->booking->dropoff_latitude }}/{{ $ticket->booking->dropoff_longitude }}" target="_blank" rel="noopener noreferrer">{{ __('View drop-off pin') }}</a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="card mb-3">
                     <div class="card-header fw-semibold">Repair steps and SOP log</div>
@@ -129,7 +171,7 @@
                             </a>
                         @endunless
                     </div>
-                    <div class="list-group list-group-flush">
+                    <div class="list-group list-group-flush" data-ticket-billing-documents aria-live="polite">
                         @forelse ($ticket->billingDocuments as $document)
                             <div class="list-group-item">
                                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
@@ -179,7 +221,8 @@
         <div class="modal fade" id="ticket-workflow-modal" tabindex="-1" aria-labelledby="ticket-workflow-title" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
                 <div class="modal-content">
-                    <form method="POST" action="{{ route('tickets.update', $ticket) }}" data-ticket-ajax-form>
+                    <form method="POST" action="{{ route('tickets.update', $ticket) }}"
+                        data-ticket-ajax-form data-offline-draft="ticket-workflow">
                         @csrf
                         @method('PUT')
                         <div class="modal-header">
@@ -214,6 +257,16 @@
                                     <label class="form-label" for="workflow-serial-number">Serial number</label>
                                     <input class="form-control" id="workflow-serial-number" name="serial_number"
                                         maxlength="255" value="{{ $ticket->serial_number }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="workflow-pickup-address">Pickup address</label>
+                                    <textarea class="form-control" id="workflow-pickup-address" name="pickup_address"
+                                        rows="2" maxlength="1000">{{ $ticket->pickup_address ?? $ticket->booking?->pickup_address }}</textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="workflow-dropoff-address">Drop-off address</label>
+                                    <textarea class="form-control" id="workflow-dropoff-address" name="dropoff_address"
+                                        rows="2" maxlength="1000">{{ $ticket->dropoff_address ?? $ticket->booking?->dropoff_address }}</textarea>
                                 </div>
                                 @role('admin')
                                     <div class="col-12">
@@ -254,7 +307,7 @@
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
                 <form id="ticket-step-form" class="modal-content" method="POST"
                     action="{{ route('tickets.steps.store', $ticket) }}" enctype="multipart/form-data"
-                    data-ticket-ajax-form>
+                    data-ticket-ajax-form data-offline-draft="ticket-step">
                     @csrf
                     <div class="modal-header">
                         <h2 class="modal-title fs-5" id="ticket-step-title">Add repair step</h2>
@@ -300,6 +353,36 @@
                 </form>
             </div>
         </div>
+
+        <div class="modal fade" id="ticket-step-photo-caption-modal" tabindex="-1"
+            aria-labelledby="ticket-step-photo-caption-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title fs-5" id="ticket-step-photo-caption-title">Add photo caption</h2>
+                            <div class="small text-body-secondary" data-ticket-photo-caption-filename></div>
+                        </div>
+                        <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <img class="ticket-step-photo-caption-modal-image mb-3"
+                            data-ticket-photo-caption-image alt="">
+                        <label class="form-label" for="ticket-step-photo-caption-input">Caption</label>
+                        <input class="form-control" id="ticket-step-photo-caption-input"
+                            data-ticket-photo-caption-input maxlength="255" autocomplete="off"
+                            aria-describedby="ticket-step-photo-caption-error">
+                        <div class="invalid-feedback" id="ticket-step-photo-caption-error">
+                            Enter a caption for this photo.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                        <button class="btn btn-primary" type="button" data-ticket-photo-caption-save>Save caption</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endunless
     </div>
 @endsection
@@ -335,60 +418,411 @@
                 modal.addEventListener('hidden.bs.modal', resolve, { once: true });
                 bootstrap.Modal.getOrCreateInstance(modal).hide();
             });
+            const photoCaptionModal = document.getElementById('ticket-step-photo-caption-modal');
+            const photoCaptionInput = photoCaptionModal?.querySelector('[data-ticket-photo-caption-input]');
+            const photoCaptionImage = photoCaptionModal?.querySelector('[data-ticket-photo-caption-image]');
+            const photoCaptionFilename = photoCaptionModal?.querySelector('[data-ticket-photo-caption-filename]');
+            let photoCaptionEditorState = null;
+            const openPhotoCaptionEditor = async (form, index) => {
+                if (!photoCaptionModal || !photoCaptionInput || photoCaptionEditorState) return;
+
+                const input = form.querySelector('input[type="file"][name="photos[]"]');
+                const file = input?.files?.[index];
+                const card = form.querySelectorAll('.ticket-step-photo-preview-card')[index];
+                const uploadModal = form.closest('.modal');
+                if (!(input instanceof HTMLInputElement) || !file || !card || !uploadModal) return;
+
+                photoCaptionEditorState = { form, input, index, uploadModal };
+                const captions = stepPhotoCaptions.get(input) || [];
+                const previewImage = card.querySelector('img');
+                if (photoCaptionImage) {
+                    photoCaptionImage.src = previewImage?.src || '';
+                    photoCaptionImage.alt = `Preview of ${file.name}`;
+                }
+                if (photoCaptionFilename) photoCaptionFilename.textContent = file.name;
+                photoCaptionInput.value = captions[index] || '';
+                photoCaptionInput.classList.remove('is-invalid');
+
+                await hideModal(uploadModal);
+                bootstrap.Modal.getOrCreateInstance(photoCaptionModal).show();
+            };
+            const requestPhotoCaptionEditor = (form, index) => {
+                openPhotoCaptionEditor(form, index).catch((error) => {
+                    photoCaptionEditorState = null;
+                    console.error('Could not open the repair photo caption editor.', error);
+                    showToast('Could not open the caption editor. Please try again.', 'danger');
+                });
+            };
+            photoCaptionModal?.addEventListener('shown.bs.modal', () => photoCaptionInput?.focus());
+            photoCaptionModal?.addEventListener('hidden.bs.modal', () => {
+                const state = photoCaptionEditorState;
+                photoCaptionEditorState = null;
+                if (state?.form.isConnected && state.uploadModal.isConnected) {
+                    bootstrap.Modal.getOrCreateInstance(state.uploadModal).show();
+                }
+            });
+            photoCaptionInput?.addEventListener('input', () => photoCaptionInput.classList.remove('is-invalid'));
+            photoCaptionModal?.querySelector('[data-ticket-photo-caption-save]')?.addEventListener('click', () => {
+                const state = photoCaptionEditorState;
+                const caption = photoCaptionInput?.value.trim();
+                if (!state || !photoCaptionInput || !caption) {
+                    photoCaptionInput?.classList.add('is-invalid');
+                    photoCaptionInput?.focus();
+                    return;
+                }
+
+                const captions = [...(stepPhotoCaptions.get(state.input) || [])];
+                captions[state.index] = caption;
+                setStepPhotoFiles(state.form, Array.from(state.input.files || []), captions);
+                const errorBox = state.form.querySelector('[data-ticket-form-error]');
+                if (errorBox) {
+                    errorBox.textContent = '';
+                    errorBox.classList.add('d-none');
+                }
+                bootstrap.Modal.getInstance(photoCaptionModal)?.hide();
+            });
 
             initializeLightbox();
             initializeStepCarousels();
 
-            document.addEventListener('paste', (event) => {
-                if (!(event.target instanceof HTMLTextAreaElement)
-                    || !event.target.matches('[data-ticket-step-photo-paste]')) {
-                    return;
+            const clearStepPhotoPreview = (form) => {
+                const preview = form.querySelector('[data-ticket-step-photo-preview]');
+                if (!preview) return;
+
+                const releaseImageUrl = (image) => {
+                    const objectUrl = image.dataset.objectUrl;
+                    if (!objectUrl) return;
+
+                    delete image.dataset.objectUrl;
+                    const revoke = () => URL.revokeObjectURL(objectUrl);
+                    if (image.complete) {
+                        revoke();
+                    } else {
+                        image.addEventListener('load', revoke, { once: true });
+                        image.addEventListener('error', revoke, { once: true });
+                    }
+                };
+                preview.querySelectorAll('img[data-object-url]').forEach((image) => {
+                    releaseImageUrl(image);
+                });
+                preview.replaceChildren();
+                preview.classList.add('d-none');
+            };
+            const stepPhotoCaptions = new WeakMap();
+            const updateStepPhotoPreview = (input) => {
+                const form = input.closest('form[data-ticket-step-photo-form]');
+                if (!form) return;
+
+                clearStepPhotoPreview(form);
+                const files = Array.from(input.files || []);
+                const preview = form.querySelector('[data-ticket-step-photo-preview]');
+                if (files.length === 0 || !preview) return;
+                const captions = stepPhotoCaptions.get(input) || files.map(() => '');
+                stepPhotoCaptions.set(input, captions);
+
+                files.forEach((file, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'ticket-step-photo-preview-card';
+
+                    const caption = captions[index] || '';
+                    const imageButton = document.createElement('button');
+                    imageButton.className = 'ticket-step-photo-image-button';
+                    imageButton.type = 'button';
+                    imageButton.dataset.ticketStepPhotoCaptionEdit = '';
+                    imageButton.dataset.index = String(index);
+                    imageButton.setAttribute('aria-label', `${caption ? 'Edit' : 'Add'} caption for ${file.name}`);
+                    const image = document.createElement('img');
+                    image.className = 'ticket-step-photo-upload-preview';
+                    image.alt = `Preview of ${file.name}`;
+                    image.dataset.objectUrl = URL.createObjectURL(file);
+                    image.src = image.dataset.objectUrl;
+                    imageButton.append(image);
+
+                    const details = document.createElement('div');
+                    details.className = 'ticket-step-photo-preview-details';
+                    const fileName = document.createElement('span');
+                    fileName.className = 'small text-truncate';
+                    fileName.textContent = file.name;
+                    const removeButton = document.createElement('button');
+                    removeButton.className = 'btn btn-sm btn-outline-secondary';
+                    removeButton.type = 'button';
+                    removeButton.dataset.ticketStepPhotoRemove = '';
+                    removeButton.dataset.index = String(index);
+                    removeButton.setAttribute('aria-label', `Remove ${file.name}`);
+                    const removeIcon = document.createElement('span');
+                    removeIcon.className = 'bi bi-x-lg';
+                    removeIcon.setAttribute('aria-hidden', 'true');
+                    removeButton.append(removeIcon);
+
+                    const captionButton = document.createElement('button');
+                    captionButton.className = 'btn btn-sm btn-outline-secondary ticket-step-photo-caption-button';
+                    captionButton.type = 'button';
+                    captionButton.dataset.ticketStepPhotoCaptionEdit = '';
+                    captionButton.dataset.index = String(index);
+                    captionButton.textContent = caption || 'Add caption';
+                    captionButton.setAttribute('aria-label', `${caption ? 'Edit' : 'Add'} caption for ${file.name}`);
+
+                    const captionField = document.createElement('input');
+                    captionField.type = 'hidden';
+                    captionField.name = 'captions[]';
+                    captionField.value = caption;
+
+                    details.append(fileName, removeButton);
+                    card.append(imageButton, details, captionButton, captionField);
+                    preview.append(card);
+                });
+                preview.classList.remove('d-none');
+            };
+            document.addEventListener('offline-draft:restored', (event) => {
+                const form = event.target instanceof HTMLFormElement ? event.target : null;
+                if (!form?.matches('[data-ticket-step-photo-form]')) return;
+
+                const input = form.querySelector('input[type="file"][name="photos[]"]');
+                if (!(input instanceof HTMLInputElement)) return;
+                stepPhotoCaptions.set(input, Array.from(
+                    form.querySelectorAll('input[name="captions[]"]'),
+                    (caption) => caption.value,
+                ));
+                selectedStepPhotos.set(input, Array.from(input.files || []));
+                updateStepPhotoPreview(input);
+            });
+            const stepPhotoExtensions = {
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/webp': 'webp',
+            };
+            const getStepPhotoErrorBox = (form) => {
+                let errorBox = form.querySelector('[data-ticket-form-error]');
+                if (!errorBox) {
+                    errorBox = document.createElement('div');
+                    errorBox.className = 'alert alert-danger d-none';
+                    errorBox.setAttribute('role', 'alert');
+                    errorBox.dataset.ticketFormError = '';
+                    (form.querySelector('.modal-body') || form).prepend(errorBox);
                 }
 
-                event.preventDefault();
-                const form = event.target.closest('form[data-ticket-step-photo-form]');
-                const input = form?.querySelector('input[type="file"][name="photos[]"]');
-                const errorBox = form?.querySelector('[data-ticket-form-error]');
-                if (!(input instanceof HTMLInputElement) || !errorBox) return;
-
-                const clipboardItems = Array.from(event.clipboardData?.items || []);
-                const imageItem = clipboardItems.find((item) => item.kind === 'file' && item.type.startsWith('image/'));
-                const clipboardFiles = Array.from(event.clipboardData?.files || []);
-                const sourceFile = imageItem?.getAsFile()
-                    || clipboardFiles.find((file) => file.type.startsWith('image/'));
-
-                const extensions = {
-                    'image/jpeg': 'jpg',
-                    'image/png': 'png',
-                    'image/webp': 'webp',
-                };
-                const extension = sourceFile ? extensions[sourceFile.type] : null;
-                if (!sourceFile || !extension) {
-                    errorBox.textContent = sourceFile
-                        ? 'Only JPEG, PNG, and WebP images can be pasted. Choose a supported photo file instead.'
-                        : 'The clipboard does not contain an image. Copy a photo or choose a file.';
-                    errorBox.classList.remove('d-none');
+                return errorBox;
+            };
+            const showStepPhotoError = (form, message) => {
+                const errorBox = getStepPhotoErrorBox(form);
+                errorBox.textContent = message;
+                errorBox.classList.remove('d-none');
+            };
+            const maxStepPhotos = 8;
+            const selectedStepPhotos = new WeakMap();
+            const programmaticStepPhotoChanges = new WeakSet();
+            const getStepPhotoKey = (file) => `${file.name}\0${file.size}\0${file.lastModified}`;
+            const setStepPhotoFiles = (form, files, captions = null) => {
+                const input = form.querySelector('input[type="file"][name="photos[]"]');
+                if (!(input instanceof HTMLInputElement)) return;
+                if (files.length > maxStepPhotos) {
+                    showStepPhotoError(form, `Choose up to ${maxStepPhotos} photos per upload.`);
+                    return;
+                }
+                if (files.some((file) => !stepPhotoExtensions[file.type])) {
+                    showStepPhotoError(form, 'Only JPEG, PNG, and WebP images can be added.');
                     return;
                 }
 
                 try {
                     const transfer = new DataTransfer();
-                    transfer.items.add(new File([sourceFile], `pasted-repair-photo.${extension}`, {
-                        type: sourceFile.type,
-                        lastModified: Date.now(),
-                    }));
+                    files.forEach((file) => transfer.items.add(file));
                     input.files = transfer.files;
                 } catch (error) {
-                    console.error('Could not attach the pasted repair-step photo.', error);
-                    errorBox.textContent = 'Could not attach the pasted photo. Choose a file from your device instead.';
-                    errorBox.classList.remove('d-none');
+                    console.error('Could not attach the repair-step photos.', error);
+                    showStepPhotoError(form, 'Could not attach the photos. Choose files from your device instead.');
                     return;
                 }
 
-                errorBox.textContent = '';
-                errorBox.classList.add('d-none');
+                const currentCaptions = captions || stepPhotoCaptions.get(input) || [];
+                stepPhotoCaptions.set(input, files.map((_, index) => currentCaptions[index] || ''));
+                programmaticStepPhotoChanges.add(input);
                 input.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            document.addEventListener('change', (event) => {
+                const input = event.target instanceof HTMLInputElement ? event.target : null;
+                if (!input?.matches('input[type="file"][name="photos[]"]')) return;
+                const form = input.closest('form[data-ticket-step-photo-form]');
+                if (!form) return;
+
+                const currentFiles = Array.from(input.files || []);
+                if (programmaticStepPhotoChanges.has(input)) {
+                    programmaticStepPhotoChanges.delete(input);
+                    selectedStepPhotos.set(input, currentFiles);
+                } else {
+                    const previousFiles = selectedStepPhotos.get(input) || [];
+                    const previousCaptions = stepPhotoCaptions.get(input) || [];
+                    const mergedFiles = [...previousFiles];
+                    const mergedCaptions = previousFiles.map((_, index) => previousCaptions[index] || '');
+                    currentFiles.forEach((file) => {
+                        if (!mergedFiles.some((existing) => getStepPhotoKey(existing) === getStepPhotoKey(file))) {
+                            mergedFiles.push(file);
+                            mergedCaptions.push('');
+                        }
+                    });
+                    if (mergedFiles.length > maxStepPhotos) {
+                        setStepPhotoFiles(form, previousFiles, previousCaptions);
+                        showStepPhotoError(form, `Choose up to ${maxStepPhotos} photos per upload.`);
+                        return;
+                    }
+                    const filesChanged = mergedFiles.length !== currentFiles.length
+                        || mergedFiles.some((file, index) => getStepPhotoKey(file) !== getStepPhotoKey(currentFiles[index]));
+                    if (previousFiles.length && filesChanged) {
+                        setStepPhotoFiles(form, mergedFiles, mergedCaptions);
+                        return;
+                    }
+                    selectedStepPhotos.set(input, mergedFiles);
+                    stepPhotoCaptions.set(input, mergedCaptions);
+                }
+
+                const errorBox = form?.querySelector('[data-ticket-form-error]');
+                if (currentFiles.length && errorBox) {
+                    errorBox.textContent = '';
+                    errorBox.classList.add('d-none');
+                }
+                updateStepPhotoPreview(input);
             });
+
+            document.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const captionEditButton = target?.closest('[data-ticket-step-photo-caption-edit]');
+                if (captionEditButton) {
+                    const form = captionEditButton.closest('form[data-ticket-step-photo-form]');
+                    const index = Number(captionEditButton.dataset.index);
+                    if (form && Number.isInteger(index)) requestPhotoCaptionEditor(form, index);
+                    return;
+                }
+
+                const removeButton = target?.closest('[data-ticket-step-photo-remove]');
+                if (removeButton) {
+                    const form = removeButton.closest('form[data-ticket-step-photo-form]');
+                    const input = form?.querySelector('input[type="file"][name="photos[]"]');
+                    if (input instanceof HTMLInputElement) {
+                        const files = Array.from(input.files || []);
+                        const index = Number(removeButton.dataset.index);
+                        const captions = [...(stepPhotoCaptions.get(input) || [])];
+                        files.splice(index, 1);
+                        captions.splice(index, 1);
+                        setStepPhotoFiles(form, files, captions);
+                    }
+                    return;
+                }
+
+                const dropzone = target?.closest('[data-ticket-step-photo-dropzone]');
+                if (!dropzone || target?.closest('button, label, textarea, input')) return;
+                dropzone.querySelector('[data-ticket-step-photo-paste]')?.focus();
+            });
+
+            document.addEventListener('dragover', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const dropzone = target?.closest('[data-ticket-step-photo-dropzone]');
+                if (!dropzone) return;
+
+                event.preventDefault();
+                dropzone.classList.add('is-dragging');
+            });
+            document.addEventListener('dragleave', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const dropzone = target?.closest('[data-ticket-step-photo-dropzone]');
+                if (!dropzone || (event.relatedTarget instanceof Node && dropzone.contains(event.relatedTarget))) return;
+                dropzone.classList.remove('is-dragging');
+            });
+            document.addEventListener('drop', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const dropzone = target?.closest('[data-ticket-step-photo-dropzone]');
+                if (!dropzone) return;
+
+                event.preventDefault();
+                dropzone.classList.remove('is-dragging');
+                const files = Array.from(event.dataTransfer?.files || []);
+                const form = dropzone.closest('form[data-ticket-step-photo-form]');
+                if (!form || files.length === 0) return;
+                const input = form.querySelector('input[type="file"][name="photos[]"]');
+                if (!(input instanceof HTMLInputElement)) return;
+                const currentFiles = Array.from(input.files || []);
+                const captions = [...(stepPhotoCaptions.get(input) || []), ...files.map(() => '')];
+                setStepPhotoFiles(form, [...currentFiles, ...files], captions);
+            });
+
+            document.addEventListener('paste', (event) => {
+                const pasteTarget = event.target instanceof Element ? event.target : null;
+                const pasteField = Boolean(pasteTarget?.closest('[data-ticket-step-photo-paste]'));
+                const form = pasteTarget?.closest('form[data-ticket-step-photo-form]');
+                if (!form) return;
+
+                const clipboardItems = Array.from(event.clipboardData?.items || []);
+                const clipboardFiles = Array.from(event.clipboardData?.files || []);
+                const imageFiles = [
+                    ...clipboardItems
+                        .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+                        .map((item) => item.getAsFile())
+                        .filter((file) => file instanceof File),
+                    ...clipboardFiles.filter((file) => file.type.startsWith('image/')),
+                ];
+
+                const sourceFile = imageFiles.find((file) => stepPhotoExtensions[file.type]) || imageFiles[0];
+                if (!sourceFile && !pasteField) return;
+
+                event.preventDefault();
+                const attachPastedPhoto = (file) => {
+                    const extension = stepPhotoExtensions[file.type];
+                    if (!extension) {
+                        showStepPhotoError(form, 'Only JPEG, PNG, and WebP images can be pasted.');
+                        return;
+                    }
+
+                    const input = form.querySelector('input[type="file"][name="photos[]"]');
+                    if (!(input instanceof HTMLInputElement)) return;
+                    const currentFiles = Array.from(input.files || []);
+                    const captions = [...(stepPhotoCaptions.get(input) || []), ''];
+                    setStepPhotoFiles(form, [...currentFiles, new File([file], `pasted-repair-photo.${extension}`, {
+                            type: file.type,
+                            lastModified: Date.now(),
+                        })], captions);
+                };
+
+                const extension = sourceFile ? stepPhotoExtensions[sourceFile.type] : null;
+                if (sourceFile && extension) {
+                    attachPastedPhoto(sourceFile);
+                    return;
+                }
+
+                if (sourceFile) {
+                    showStepPhotoError(form, 'Only JPEG, PNG, and WebP images can be pasted.');
+                    return;
+                }
+
+                if (typeof navigator.clipboard?.read !== 'function') {
+                    showStepPhotoError(form, 'The clipboard does not contain an image. Copy a photo or choose a file.');
+                    return;
+                }
+
+                navigator.clipboard.read().then(async (clipboardData) => {
+                    for (const clipboardItem of clipboardData) {
+                        const imageType = Object.keys(stepPhotoExtensions)
+                            .find((type) => clipboardItem.types.includes(type));
+                        if (imageType) {
+                            const file = new File(
+                                [await clipboardItem.getType(imageType)],
+                                `pasted-repair-photo.${stepPhotoExtensions[imageType]}`,
+                                { type: imageType, lastModified: Date.now() },
+                            );
+                            const input = form.querySelector('input[type="file"][name="photos[]"]');
+                            if (!(input instanceof HTMLInputElement)) return;
+                            const currentFiles = Array.from(input.files || []);
+                            const captions = [...(stepPhotoCaptions.get(input) || []), ''];
+                            setStepPhotoFiles(form, [...currentFiles, file], captions);
+                            return;
+                        }
+                    }
+
+                    showStepPhotoError(form, 'The clipboard does not contain a JPEG, PNG, or WebP image. Copy a photo or choose a file.');
+                }).catch((error) => {
+                    console.error('Could not read an image from the clipboard.', error);
+                    showStepPhotoError(form, 'Could not read an image from the clipboard. Choose a file from your device instead.');
+                });
+            }, true);
 
             document.addEventListener('submit', async (event) => {
                     const form = event.target;
@@ -401,6 +835,15 @@
                     event.preventDefault();
                     const errorBox = form.querySelector('[data-ticket-form-error]')
                         || form.closest('.modal')?.querySelector('[data-ticket-form-error]');
+                    if (form.matches('[data-ticket-step-photo-form]')) {
+                        const captionInputs = Array.from(form.querySelectorAll('input[name="captions[]"]'));
+                        const missingCaptionIndex = captionInputs.findIndex((caption) => !caption.value.trim());
+                        if (missingCaptionIndex !== -1) {
+                            showStepPhotoError(form, 'Add a caption to each photo before uploading.');
+                            requestPhotoCaptionEditor(form, missingCaptionIndex);
+                            return;
+                        }
+                    }
                     const submitter = event.submitter instanceof HTMLButtonElement
                         || event.submitter instanceof HTMLInputElement
                         ? event.submitter
@@ -431,6 +874,17 @@
                             const validationErrors = Object.values(result.errors || {}).flat().join(' ');
                             throw new Error(validationErrors || result.message || `Could not save changes (HTTP ${response.status}).`);
                         }
+                        if (window.offlineDrafts) {
+                            await window.offlineDrafts.clear(form).catch((error) => {
+                                console.error('The online save succeeded, but its local draft could not be cleared.', error);
+                                window.offlineDrafts.setStatus(
+                                    form,
+                                    'Saved online, but the local copy could not be cleared. Clear it manually if needed.',
+                                    'warning',
+                                    true,
+                                );
+                            });
+                        }
 
                         const page = form.closest('[data-ticket-page]');
                         const statusDisplay = page.querySelector('#ticket-status-display');
@@ -448,6 +902,7 @@
                             form.querySelectorAll('[data-image-upload-selection]').forEach((selection) => {
                                 selection.textContent = '';
                             });
+                            clearStepPhotoPreview(form);
                         }
                         statusDisplay.innerHTML = result.status_html;
                         updatesDisplay.querySelectorAll('[data-ticket-step-carousel]').forEach((carousel) => {
@@ -467,8 +922,23 @@
                             page.querySelector('#workflow-diagnosis').value = result.diagnosis || '';
                             page.querySelector('#workflow-device-model').value = result.device_model || '';
                             page.querySelector('#workflow-serial-number').value = result.serial_number || '';
+                            page.querySelector('#workflow-pickup-address').value = result.pickup_address || '';
+                            page.querySelector('#workflow-dropoff-address').value = result.dropoff_address || '';
                             page.querySelector('#ticket-device-model').textContent = result.device_model || '';
                             page.querySelector('#ticket-serial-number').textContent = result.serial_number || '—';
+                            const pickupAddress = page.querySelector('#ticket-pickup-address');
+                            if (pickupAddress) pickupAddress.textContent = result.pickup_address || '—';
+                            const dropoffAddress = page.querySelector('#ticket-dropoff-address');
+                            if (dropoffAddress) {
+                                dropoffAddress.textContent = result.dropoff_address || (result.pickup_address ? 'Same as pickup address' : '—');
+                            }
+                            const locationCard = page.querySelector('#ticket-location-card');
+                            if (locationCard) {
+                                locationCard.classList.toggle(
+                                    'd-none',
+                                    !result.pickup_address && !result.dropoff_address && !result.has_location_pin,
+                                );
+                            }
                             const workflowAssignees = page.querySelector('#workflow-assignees');
                             if (workflowAssignees) {
                                 workflowAssignees.value = result.assignee_ids.map(String);
@@ -496,6 +966,21 @@
                             errorBox.classList.remove('d-none');
                         } else {
                             showToast(message, 'danger');
+                        }
+                        if (form.matches('[data-offline-draft]')) {
+                            window.offlineDrafts?.save(form).then(() => {
+                                window.offlineDrafts.setStatus(
+                                    form,
+                                    navigator.onLine
+                                        ? 'Could not sync this change. A local copy is still available in this browser.'
+                                        : 'Connection lost. Your local draft is available; reconnect and submit it manually.',
+                                    'warning',
+                                    true,
+                                );
+                            }).catch((saveError) => {
+                                console.error('Could not save a local copy after the ticket request failed.', saveError);
+                                window.offlineDrafts?.setStatus(form, 'The ticket request failed and a local backup could not be saved.', 'danger');
+                            });
                         }
                     } finally {
                         if (submitButton) {

@@ -1,7 +1,10 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top py-1">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="{{ url('/') }}">
-            <img src="{{ asset('assets/img/omg/logoex2w.png') }}" alt="OMG Computer" height="48" class="me-2">
+            <picture>
+                <source type="image/webp" srcset="{{ asset('assets/img/omg/logoex2w-120.webp') }} 1x, {{ asset('assets/img/omg/logoex2w-240.webp') }} 2x">
+                <img src="{{ asset('assets/img/omg/logoex2w.png') }}" alt="OMG Computer" width="91" height="48" class="me-2">
+            </picture>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#guestNavbar" aria-controls="guestNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -10,14 +13,33 @@
             <ul class="navbar-nav ms-auto align-items-lg-center">
                 <li class="nav-item my-2 my-lg-0 ms-lg-2">
                     <a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ auth()->check() && auth()->user()->hasRole('customer') ? route('shop.panel') : route('shop.public') }}">
-                        <span class="bi bi-shop me-1" aria-hidden="true"></span>Shop
+                        <span class="bi bi-shop me-1" aria-hidden="true"></span>{{ __('Shop') }}
                     </a>
                 </li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#services">Services</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#website-pricing">Website</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#faq">Q&amp;A</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">Contact Us</a></li>
-                <li class="nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">Book a service</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#services">{{ __('Services') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#website-pricing">{{ __('Website') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#faq">{{ __('Q&A') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">{{ __('Contact Us') }}</a></li>
+                <li class="nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">{{ __('Book a service') }}</a></li>
+                <li class="nav-item dropdown my-2 my-lg-0 ms-lg-2">
+                    <button class="nav-link dropdown-toggle border-0 bg-transparent" id="language-menu" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="bi bi-translate me-1" aria-hidden="true"></span>{{ ['en' => 'EN', 'ms' => 'BM', 'zh_CN' => '中文'][app()->getLocale()] ?? 'EN' }}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="language-menu">
+                    @foreach (['en' => 'English', 'ms' => 'Bahasa Melayu', 'zh_CN' => '中文'] as $locale => $language)
+                            <form method="POST" action="{{ route('language.update') }}">
+                                @csrf
+                                <input type="hidden" name="locale" value="{{ $locale }}">
+                                <button class="dropdown-item d-flex align-items-center" type="submit" @if (app()->getLocale() === $locale) aria-current="true" @endif>
+                                    {{ $language }}
+                                    @if (app()->getLocale() === $locale)
+                                        <span class="bi bi-check ms-auto" aria-hidden="true"></span>
+                                    @endif
+                                </button>
+                            </form>
+                        @endforeach
+                    </div>
+                </li>
                 @auth
                     @if (auth()->user()->hasRole('customer'))
                         @php($cartItemCount = collect(session('shop_cart', []))->sum())
@@ -73,7 +95,7 @@
                         </div>
                     </li>
                 @else
-                    <li class="nav-item my-2 mx-lg-0 ms-lg-2"><a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ route('login') }}">Sign in</a></li>
+                    <li class="nav-item my-2 mx-lg-0 ms-lg-2"><a class="btn btn-outline-light btn-sm rounded-pill px-3 py-1" href="{{ route('login') }}">{{ __('Sign in') }}</a></li>
                 @endauth
             </ul>
         </div>

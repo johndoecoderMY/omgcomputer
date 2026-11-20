@@ -1,7 +1,7 @@
 @extends('layouts.guest')
 
-@section('title', 'Website Demos & Previews')
-@section('meta_description', 'Explore responsive website demos for cafes, shops, events, and more. Each preview is a sample website, not a completed client project.')
+@section('title', __('Website Demos & Previews'))
+@section('meta_description', __('Explore responsive website demos for cafes, shops, events, and more. Each preview is a sample website, not a completed client project.'))
 
 @section('content')
 @php
@@ -157,28 +157,28 @@
             <div class="row align-items-center g-4 g-lg-5">
                 <div class="col-lg-5">
                     <span class="portfolio-eyebrow badge rounded-pill px-3 py-2 text-uppercase fw-bold">
-                        OMG Computer · Website design
+                        {{ __('OMG Computer · Website design') }}
                     </span>
                     <h1 class="portfolio-title fw-bold mt-4 mb-4">
-                        See what your website could <em>be.</em>
+                        {{ __('See what your website could be.') }}
                     </h1>
                     <p class="portfolio-intro lead mb-4">
-                        Explore responsive website demos for cafes, shops, events, and more. Each preview is a starting point for a website shaped around your business.
+                        {{ __('Explore responsive website demos for cafes, shops, events, and more. Each preview is a starting point for a website shaped around your business.') }}
                     </p>
                     <div class="d-flex flex-wrap gap-2">
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#portfolio">
-                            Explore demos <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
+                            {{ __('Explore demos') }} <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
                         </a>
                         <a class="btn btn-primary btn-lg rounded-pill px-4" href="#contact">
-                            Request a website
+                            {{ __('Request a website') }}
                         </a>
                     </div>
                     <p class="small  mt-3 mb-0">
-                        Demo websites are samples, not completed client projects.
+                        {{ __('Demo websites are samples, not completed client projects.') }}
                     </p>
                 </div>
                 <div class="col-lg-7">
-                    <div class="portfolio-mosaic" role="group" aria-label="Screenshots of OMG Computer website demos">
+                    <div class="portfolio-mosaic" role="group" aria-label="{{ __('Screenshots of OMG Computer website demos') }}">
                         @forelse ($previews->take(3) as $preview)
                             @php($galleryUrls = [Storage::disk('public')->url($preview->image_path), ...collect($preview->gallery_images ?? [])->map(fn (string $path): string => Storage::disk('public')->url($path))->all()])
                             <button class="portfolio-mosaic-card portfolio-mosaic-card-{{ $loop->iteration }}"
@@ -186,8 +186,8 @@
                                 data-gallery="{{ json_encode($galleryUrls, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}"
                                 data-gallery-title="{{ $preview->title }}"
                                 data-preview-url="{{ $preview->preview_url }}"
-                                data-preview-label="{{ $preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'View website') }}"
-                                aria-label="View images for {{ $preview->title }}">
+                                data-preview-label="{{ __($preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'View website')) }}"
+                                aria-label="{{ __('View images for :title', ['title' => $preview->title]) }}">
                                 <img src="{{ Storage::disk('public')->url($preview->image_path) }}"
                                     alt="" fetchpriority="{{ $loop->first ? 'high' : 'auto' }}">
                                 <span>{{ $preview->title }}</span>
@@ -196,7 +196,7 @@
                             <div class="portfolio-mosaic-empty">
                                 <div>
                                     <span class="bi bi-window-stack display-4 d-block mb-3" aria-hidden="true"></span>
-                                    <span>Website demos will appear here.</span>
+                                    <span>{{ __('Website demos will appear here.') }}</span>
                                 </div>
                             </div>
                         @endforelse
@@ -210,13 +210,13 @@
         <div class="container">
             <div class="row align-items-end justify-content-between g-3 mb-4">
                 <div class="col-lg-8">
-                    <span class="text-primary text-uppercase fw-bold small">Ideas to get you started</span>
-                    <h2 class="display-6 fw-bold text-1000 mt-2 mb-2">Explore website previews</h2>
-                    <p class="text-700 mb-0">Browse interactive demos and their screenshots. Each sample can inspire a website shaped around your business.</p>
+                    <span class="text-primary text-uppercase fw-bold small">{{ __('Ideas to get you started') }}</span>
+                    <h2 class="display-6 fw-bold text-1000 mt-2 mb-2">{{ __('Explore website previews') }}</h2>
+                    <p class="text-700 mb-0">{{ __('Browse interactive demos and their screenshots. Each sample can inspire a website shaped around your business.') }}</p>
                 </div>
                 <div class="col-lg-auto">
                     <span class="badge rounded-pill bg-body-tertiary border text-body-secondary px-3 py-2">
-                        {{ $previews->count() }} {{ \Illuminate\Support\Str::plural('website preview', $previews->count()) }}
+                        {{ $previews->count() }} {{ __(\Illuminate\Support\Str::plural('website preview', $previews->count())) }}
                     </span>
                 </div>
             </div>
@@ -232,18 +232,18 @@
                                     data-gallery="{{ json_encode($galleryUrls, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}"
                                     data-gallery-title="{{ $preview->title }}"
                                     data-preview-url="{{ $preview->preview_url }}"
-                                    data-preview-label="{{ $preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'View website') }}"
-                                    aria-label="View images for {{ $preview->title }}">
+                                    data-preview-label="{{ __($preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'View website')) }}"
+                                    aria-label="{{ __('View images for :title', ['title' => $preview->title]) }}">
                                     <img class="w-100" src="{{ Storage::disk('public')->url($preview->image_path) }}"
-                                        alt="Website demo screenshot: {{ $preview->title }}"
+                                        alt="{{ __('Website demo screenshot: :title', ['title' => $preview->title]) }}"
                                         loading="lazy" decoding="async" style="aspect-ratio: 16 / 10; object-fit: cover;">
                                 </button>
                                 <div class="card-body p-4">
                                     <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                         @if ($preview->category)
-                                            <span class="badge text-bg-light border">{{ $preview->category }}</span>
+                                            <span class="badge text-bg-light border">{{ __($preview->category) }}</span>
                                         @endif
-                                        <span class="small text-body-secondary">{{ $preview->category === 'Website demo' ? 'Interactive demo' : 'Design concept' }}</span>
+                                        <span class="small text-body-secondary">{{ __($preview->category === 'Website demo' ? 'Interactive demo' : 'Design concept') }}</span>
                                     </div>
                                     <h2 class="h4 text-1000">{{ $preview->title }}</h2>
                                     @if ($preview->description)
@@ -253,11 +253,11 @@
                                 <div class="card-footer bg-body border-0 px-4 pb-4 d-flex flex-wrap gap-2">
                                     @if ($preview->preview_url)
                                         <a class="btn btn-primary rounded-pill px-4" href="{{ $preview->preview_url }}" target="_blank" rel="noopener noreferrer">
-                                            {{ $preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'Live website') }}
+                                            {{ __($preview->category === 'Concept demo' ? 'View concept' : ($preview->category === 'Website demo' ? 'View demo' : 'Live website')) }}
                                             <span class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></span>
                                         </a>
                                     @endif
-                                    <a class="portfolio-make-button btn rounded-pill px-4" href="#contact">Make one for me</a>
+                                    <a class="portfolio-make-button btn rounded-pill px-4" href="#contact">{{ __('Make one for me') }}</a>
                                 </div>
                             </article>
                         </div>
@@ -267,9 +267,9 @@
                 <div class="card border-0 shadow-sm text-center p-4 p-md-5">
                     <div class="card-body">
                         <span class="bi bi-window-stack display-4 text-primary" aria-hidden="true"></span>
-                        <h3 class="h3 text-1000 mt-3">Portfolio coming soon</h3>
-                        <p class="text-700">We’re preparing website demos to showcase here. Tell us about the website you have in mind.</p>
-                        <a class="btn btn-primary rounded-pill px-4" href="{{ url('/') }}#website-pricing">Explore website packages</a>
+                        <h3 class="h3 text-1000 mt-3">{{ __('Portfolio coming soon') }}</h3>
+                        <p class="text-700">{{ __('We’re preparing website demos to showcase here. Tell us about the website you have in mind.') }}</p>
+                        <a class="btn btn-primary rounded-pill px-4" href="{{ url('/') }}#website-pricing">{{ __('Explore website packages') }}</a>
                     </div>
                 </div>
             @endif
@@ -280,25 +280,25 @@
         <div class="container">
             <div class="row align-items-center g-5">
                 <div class="col-lg-6">
-                    <span class="contact-kicker fw-bold text-uppercase fs-10">Ready for the next step?</span>
-                    <h2 class="h2 fw-bold text-1000 mt-2 mb-3">Let’s get your computer sorted.</h2>
-                    <p class="contact-copy lead text-700 mb-4">Tell us what is happening and what device needs attention. We’ll help you figure out the next step.</p>
+                    <span class="contact-kicker fw-bold text-uppercase fs-10">{{ __('Ready for the next step?') }}</span>
+                    <h2 class="h2 fw-bold text-1000 mt-2 mb-3">{{ __('Let’s get your computer sorted.') }}</h2>
+                    <p class="contact-copy lead text-700 mb-4">{{ __('Tell us what is happening and what device needs attention. We’ll help you figure out the next step.') }}</p>
                     <div class="d-flex flex-wrap gap-2">
                         <a href="{{ route('bookings.create') }}" class="btn btn-primary rounded-pill px-4">Book a service</a>
-                        <a href="{{ url('/') }}" class="btn btn-primary rounded-pill px-4">Go home</a>
+                        <a href="{{ url('/') }}" class="btn btn-primary rounded-pill px-4">{{ __('Go home') }}</a>
                     </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="portfolio-contact-card card border-0 shadow-lg p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="contact-icon bi bi-headset fs-2 mb-3" aria-hidden="true"></span>
-                            <h3 class="h3 fw-bold">Need a hand?</h3>
-                            <p class="mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.</p>
+                            <h3 class="h3 fw-bold">{{ __('Need a hand?') }}</h3>
+                            <p class="mb-0">{{ __('Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.') }}</p>
                             <a class="btn btn-primary rounded-pill px-4 mt-3" href="mailto:{{ $portfolioContactEmail }}">
                                 <span class="bi bi-envelope me-2" aria-hidden="true"></span>{{ $portfolioContactEmail }}
                             </a>
                             <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $portfolioWhatsAppUrl }}" target="_blank" rel="noopener noreferrer">
-                                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp
+                                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
                             </a>
                         </div>
                     </div>
@@ -313,23 +313,23 @@
             <div class="modal-content">
                 <div class="modal-header border-0">
                     <h2 class="modal-title fs-6" id="portfolio-lightbox-title"></h2>
-                    <button class="btn-close portfolio-lightbox-close" type="button" data-bs-dismiss="modal" aria-label="Close image viewer"></button>
+                    <button class="btn-close portfolio-lightbox-close" type="button" data-bs-dismiss="modal" aria-label="{{ __('Close image viewer') }}"></button>
                 </div>
                 <div class="modal-body position-relative p-0">
-                    <button class="portfolio-lightbox-control portfolio-lightbox-previous" type="button" data-lightbox-previous aria-label="Previous image">
+                    <button class="portfolio-lightbox-control portfolio-lightbox-previous" type="button" data-lightbox-previous aria-label="{{ __('Previous image') }}">
                         <span class="bi bi-chevron-left" aria-hidden="true"></span>
                     </button>
                     <div class="portfolio-lightbox-image-wrap">
                         <img class="portfolio-lightbox-image" src="" alt="" data-lightbox-image>
                     </div>
-                    <button class="portfolio-lightbox-control portfolio-lightbox-next" type="button" data-lightbox-next aria-label="Next image">
+                    <button class="portfolio-lightbox-control portfolio-lightbox-next" type="button" data-lightbox-next aria-label="{{ __('Next image') }}">
                         <span class="bi bi-chevron-right" aria-hidden="true"></span>
                     </button>
                 </div>
                 <div class="modal-footer justify-content-between border-0">
                     <span class="small text-white-50" data-lightbox-count></span>
                     <a class="btn btn-primary btn-sm rounded-pill px-3" href="#" target="_blank" rel="noopener noreferrer" data-lightbox-preview hidden>
-                        <span data-lightbox-preview-label>View demo</span>
+                        <span data-lightbox-preview-label>{{ __('View demo') }}</span>
                         <span class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></span>
                     </a>
                 </div>
@@ -350,13 +350,19 @@
         const previewLabel = modalElement.querySelector('[data-lightbox-preview-label]');
         const previous = modalElement.querySelector('[data-lightbox-previous]');
         const next = modalElement.querySelector('[data-lightbox-next]');
+        const imageAltTemplate = @json(__(':title, image :number'));
+        const imageCountTemplate = @json(__(':current of :total'));
         let images = [];
         let activeIndex = 0;
 
         const renderImage = () => {
             image.src = images[activeIndex];
-            image.alt = `${title.textContent}, image ${activeIndex + 1}`;
-            count.textContent = `${activeIndex + 1} of ${images.length}`;
+            image.alt = imageAltTemplate
+                .replace(':title', title.textContent)
+                .replace(':number', activeIndex + 1);
+            count.textContent = imageCountTemplate
+                .replace(':current', activeIndex + 1)
+                .replace(':total', images.length);
             previous.hidden = images.length < 2;
             next.hidden = images.length < 2;
         };
@@ -365,10 +371,10 @@
             trigger.addEventListener('click', () => {
                 images = JSON.parse(trigger.dataset.gallery);
                 activeIndex = 0;
-                title.textContent = trigger.dataset.galleryTitle || 'Website preview';
+                title.textContent = trigger.dataset.galleryTitle || @json(__('Website preview'));
                 previewLink.href = trigger.dataset.previewUrl || '#';
                 previewLink.hidden = !trigger.dataset.previewUrl;
-                previewLabel.textContent = trigger.dataset.previewLabel || 'View website';
+                previewLabel.textContent = trigger.dataset.previewLabel || @json(__('View website'));
                 renderImage();
                 modal.show();
             });

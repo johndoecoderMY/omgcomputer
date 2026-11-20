@@ -1,4 +1,4 @@
-<form method="POST" action="{{ $action }}" class="card p-2">
+<form method="POST" action="{{ $action }}" class="card p-2" data-offline-draft="project">
     @csrf
     @if ($method !== 'POST')
         @method($method)

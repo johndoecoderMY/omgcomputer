@@ -2,6 +2,21 @@
 
 @section('title', 'Custom PC builder')
 
+@push('styles')
+    <style>
+        .performance-estimate {
+            color: #183153;
+            background-color: #eaf3ff;
+            border-color: #bfd7ff !important;
+        }
+
+        .performance-estimate h4,
+        .performance-estimate .text-body-secondary {
+            color: #435f80 !important;
+        }
+    </style>
+@endpush
+
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Shop" title="Custom PC builder"
@@ -23,7 +38,7 @@
                     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div>
                             <h2 class="h5 mb-1">Build components</h2>
-                            <p class="small text-body-secondary mb-0">Create one or more PCs in a single quotation. Search all parts, including catalog items with no stock; enter a manual RM quote price when needed. CPU and motherboard compatibility is checked separately for each PC.</p>
+                            <p class="small text-body-secondary mb-0">Create one or more PCs in a single quotation. Search all parts, including catalog items with no stock; enter a manual RM quote price when needed. Starter profiles suggest targets only and never select parts or set prices. CPU and motherboard compatibility is checked separately for each PC.</p>
                         </div>
                         <button class="btn btn-sm btn-outline-primary" type="button" id="add-pc-build">
                             <i class="bi bi-plus me-1" aria-hidden="true"></i>Add another PC
@@ -39,11 +54,21 @@
                             <section class="pc-build border rounded p-2 mb-3" data-build-index="{{ $loop->iteration }}">
                                 <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                                     <h3 class="h6 mb-0 build-title">PC {{ $loop->iteration }}</h3>
-                                    <div class="d-flex gap-2">
+                                    <div class="d-flex flex-wrap align-items-center gap-2">
+                                        <label class="small text-body-secondary d-flex align-items-center gap-2 mb-0">
+                                            <span>Starter profile</span>
+                                            <select class="form-select form-select-sm w-auto build-template-select" aria-label="Starter profile for PC {{ $loop->iteration }}">
+                                                <option value="">Choose a guide</option>
+                                                <option value="basic">Basic / low-end</option>
+                                                <option value="mid">Mid-range</option>
+                                                <option value="high">High-end</option>
+                                            </select>
+                                        </label>
                                         <button class="btn btn-sm btn-outline-secondary add-component" type="button">Add component</button>
                                         <button class="btn btn-sm btn-outline-danger remove-build" type="button" @disabled($loop->first)>Remove PC</button>
                                     </div>
                                 </div>
+                                <div class="build-template-guidance small text-body-secondary mt-2" role="status" aria-live="polite">Choose a profile to see suggested specs. This guide will not add parts or prices.</div>
                                 <div class="table-responsive">
                                     <table class="table align-middle mb-0">
                                         <thead><tr><th style="width:150px">Section</th><th>Component</th><th style="width:105px">Quantity</th><th style="width:150px">Our unit cost (RM)</th><th style="width:160px">Customer unit price (RM)</th><th style="width:56px"></th></tr></thead>
@@ -96,6 +121,20 @@
                                     </table>
                                 </div>
                                 <div class="small text-body-secondary compatibility-message mt-2" aria-live="polite">Select a motherboard to filter processors by socket. Add a “Socket: …” line to component descriptions to enable compatibility matching.</div>
+                                <div class="performance-estimate alert alert-light border mt-3 mb-0">
+                                    <h4 class="h6 mb-2">Approximate performance</h4>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="small fw-semibold">Gaming</div>
+                                            <div class="small" data-performance-gaming role="status" aria-live="polite">Select a graphics card to estimate gaming performance.</div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="small fw-semibold">Work and multitasking</div>
+                                            <div class="small" data-performance-work role="status" aria-live="polite">Select a CPU and RAM with specifications to estimate work performance.</div>
+                                        </div>
+                                    </div>
+                                    <p class="small text-body-secondary mt-2 mb-0">Rough guidance, not a benchmark or guaranteed FPS. Gaming uses recognized GPU model families; work uses CPU core count and RAM capacity. Actual results vary by exact model, cooling, software, resolution, and settings.</p>
+                                </div>
                             </section>
                         @endforeach
                     </div>
@@ -138,6 +177,12 @@
                     <div class="card-header fw-semibold">Quotation estimate</div>
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span id="build-subtotal">RM 0.00</span></div>
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            <label class="form-label mb-0" for="discount_amount">Discount (RM)</label>
+                            <input class="form-control form-control-sm text-end" id="discount_amount" name="discount_amount" type="number" min="0" step="0.01"
+                                value="{{ old('discount_amount', 0) }}" style="max-width: 10rem">
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-success"><span>Discount applied</span><span id="build-discount">RM 0.00</span></div>
                         <div class="d-flex justify-content-between mb-2"><span>Our total cost</span><span id="build-cost-total">RM 0.00</span></div>
                         <div class="d-flex justify-content-between mb-2"><span>Estimated gross profit</span><span id="build-gross-profit">RM 0.00</span></div>
                         <div class="d-flex justify-content-between mb-2"><span>Tax ({{ number_format((float) old('tax_rate', $taxRate), 2) }}%)</span><span id="build-tax">RM 0.00</span></div>
@@ -213,6 +258,7 @@
                         <button class="btn btn-primary" type="submit">Search parts</button>
                     </div>
                 </form>
+                <div id="component-profile-guidance" class="alert alert-info py-2 px-3 mb-3 d-none" role="status" aria-live="polite"></div>
                 <div id="component-search-status" class="small text-body-secondary mb-2" role="status" aria-live="polite"></div>
                 <div id="component-search-results" class="list-group"></div>
                 <div class="d-flex justify-content-between align-items-center mt-3">
@@ -393,6 +439,175 @@
             other: 'Other',
         };
 
+        const buildTemplates = {
+            basic: {
+                name: 'Basic / low-end',
+                use: 'For office, study, browsing, and light or esports gaming.',
+                targets: [
+                    'CPU: modern 4–6 cores; match the motherboard socket.',
+                    'Graphics: integrated for office use, or an entry-level GPU for 1080p esports and lighter games.',
+                    'Memory: 16 GB dual-channel, compatible with the motherboard.',
+                    'Storage: 500 GB NVMe SSD.',
+                    'Power, case, and cooling: quality 500–650 W PSU sized to the exact GPU, airflow case, and compatible cooler.',
+                ],
+                browseTargets: {
+                    cpu: { text: 'Look for a modern 4–6-core CPU; confirm motherboard socket and BIOS support.', metric: 'cores', min: 4, max: 6 },
+                    gpu: { text: 'For office use, integrated graphics may be enough; for games, look for an entry-level GPU and check the exact model.' },
+                    ram: { text: 'Target 16 GB of compatible dual-channel memory.', metric: 'capacityGb', min: 16, max: 16 },
+                    motherboard: { text: 'Match the selected CPU socket, memory generation, and case form factor.' },
+                    storage: { text: 'Target a 500 GB NVMe SSD.', metric: 'capacityGb', min: 450, max: 750, requiresNvme: true },
+                    power_supply: { text: 'Target a quality 500–650 W PSU; verify the exact GPU power recommendation and connectors.', metric: 'wattage', min: 500, max: 650 },
+                    case: { text: 'Check motherboard form factor, GPU length, and cooler clearance.' },
+                    cooling: { text: 'Check CPU socket support and case clearance; the stock cooler may be enough for some CPUs.' },
+                },
+            },
+            mid: {
+                name: 'Mid-range',
+                use: 'For 1080p gaming, everyday productivity, and mainstream editing.',
+                targets: [
+                    'CPU: modern 6–8 cores; verify socket and BIOS support.',
+                    'Graphics: mainstream GPU; 1080p high or tuned 1440p settings are reasonable starting targets.',
+                    'Memory: 32 GB dual-channel, compatible with the motherboard.',
+                    'Storage: 1 TB NVMe SSD.',
+                    'Power, case, and cooling: quality 650–750 W PSU sized to the exact GPU, with suitable airflow and cooler clearance.',
+                ],
+                browseTargets: {
+                    cpu: { text: 'Look for a modern 6–8-core CPU; confirm motherboard socket and BIOS support.', metric: 'cores', min: 6, max: 8 },
+                    gpu: { text: 'Look for a mainstream GPU suited to 1080p high or tuned 1440p; check the exact model and games.' },
+                    ram: { text: 'Target 32 GB of compatible dual-channel memory.', metric: 'capacityGb', min: 32, max: 32 },
+                    motherboard: { text: 'Match the selected CPU socket, memory generation, and case form factor.' },
+                    storage: { text: 'Target a 1 TB NVMe SSD.', metric: 'capacityGb', min: 900, max: 1200, requiresNvme: true },
+                    power_supply: { text: 'Target a quality 650–750 W PSU; verify the exact GPU power recommendation and connectors.', metric: 'wattage', min: 650, max: 750 },
+                    case: { text: 'Check motherboard form factor, GPU length, and cooler clearance.' },
+                    cooling: { text: 'Check CPU socket support, cooling needs, and case clearance.' },
+                },
+            },
+            high: {
+                name: 'High-end',
+                use: 'For demanding 1440p gaming, heavier editing or 3D work, and multitasking.',
+                targets: [
+                    'CPU: modern 8–12+ cores, chosen for the target applications.',
+                    'Graphics: high-end GPU; 12 GB+ VRAM is a useful target for higher resolutions and larger creative workloads.',
+                    'Memory: 32–64 GB, based on the applications and project sizes.',
+                    'Storage: 2 TB NVMe SSD, with additional drives if large media storage is needed.',
+                    'Power, case, and cooling: quality PSU sized to the GPU manufacturer recommendation, plus verified GPU, cooler, and case clearances.',
+                ],
+                browseTargets: {
+                    cpu: { text: 'Look for a modern 8-core or higher CPU suited to the target applications.', metric: 'cores', min: 8 },
+                    gpu: { text: 'Look for a high-end GPU; 12 GB or more of VRAM is a useful starting target, but check the exact model.', metric: 'vramGb', min: 12 },
+                    ram: { text: 'Target 32–64 GB of compatible memory, based on the applications and project sizes.', metric: 'capacityGb', min: 32, max: 64 },
+                    motherboard: { text: 'Match the selected CPU socket and memory generation; check expansion and storage needs.' },
+                    storage: { text: 'Target a 2 TB or larger NVMe SSD.', metric: 'capacityGb', min: 1800, requiresNvme: true },
+                    power_supply: { text: 'Use the GPU manufacturer’s PSU recommendation; 850 W or higher is a starting point for many high-end builds.', metric: 'wattage', min: 850 },
+                    case: { text: 'Verify motherboard form factor, high-end GPU length, and radiator/cooler clearance.' },
+                    cooling: { text: 'Match cooler capacity and socket support to the CPU, and verify radiator and case clearance.' },
+                },
+            },
+        };
+
+        const getPartSpecification = (part, labels) => {
+            const expectedLabels = new Set(labels.map((label) => label.toLowerCase().replace(/[^a-z0-9]/g, '')));
+            const entry = Object.entries(part.specifications || {}).find(([label]) =>
+                expectedLabels.has(label.toLowerCase().replace(/[^a-z0-9]/g, '')),
+            );
+            return entry ? String(entry[1]) : null;
+        };
+
+        const getNumericPartSpecification = (part, labels) => {
+            const value = getPartSpecification(part, labels);
+            const match = value?.match(/^\s*(\d+(?:\.\d+)?)/);
+            return match ? Number(match[1]) : null;
+        };
+
+        const getCapacityInGb = (value) => {
+            const match = value?.match(/^\s*(\d+(?:\.\d+)?)\s*(TB|GB|MB)\b/i);
+            if (!match) return null;
+            const amount = Number(match[1]);
+            const unit = match[2].toUpperCase();
+            return unit === 'TB' ? amount * 1000 : unit === 'MB' ? amount / 1000 : amount;
+        };
+
+        const matchesProfileTarget = (part, target) => {
+            if (!target?.metric) return false;
+
+            let value = null;
+            if (target.metric === 'cores') {
+                value = getNumericPartSpecification(part, ['Cores', 'Core count']);
+            } else if (target.metric === 'capacityGb') {
+                value = getCapacityInGb(getPartSpecification(part, ['Capacity']));
+            } else if (target.metric === 'wattage') {
+                value = getNumericPartSpecification(part, ['Wattage', 'Watts', 'Power output']);
+            } else if (target.metric === 'vramGb') {
+                value = getCapacityInGb(getPartSpecification(part, ['VRAM']));
+            }
+
+            if (value === null || value < target.min || (target.max !== undefined && value > target.max)) {
+                return false;
+            }
+
+            if (target.requiresNvme) {
+                const specifications = Object.entries(part.specifications || {}).map(([label, spec]) => `${label} ${spec}`).join(' ');
+                if (!/\bnvme\b/i.test(`${specifications} ${part.description || ''}`)) return false;
+            }
+
+            return true;
+        };
+
+        const updateComponentProfileGuidance = () => {
+            const target = document.getElementById('component-profile-guidance');
+            const build = activeRow?.closest('.pc-build');
+            const profileKey = build?.querySelector('.build-template-select')?.value;
+            const profile = buildTemplates[profileKey];
+            const category = document.getElementById('catalog-category').value;
+            const recommendation = profile?.browseTargets[category];
+            target.replaceChildren();
+
+            if (!profile || !recommendation) {
+                target.classList.add('d-none');
+                return null;
+            }
+
+            const heading = document.createElement('strong');
+            heading.textContent = `${profile.name} guide · ${categoryLabels[category] || category}: `;
+            const description = document.createElement('span');
+            description.textContent = recommendation.text;
+            const note = document.createElement('div');
+            note.className = 'small mt-1';
+            note.textContent = 'A “Matches profile spec” badge checks only the listed measurable target. Verify compatibility, exact model, price, and availability before choosing.';
+            target.append(heading, description, note);
+            target.classList.remove('d-none');
+            return { profile, recommendation };
+        };
+
+        const updateBuildTemplateGuidance = (build) => {
+            const target = build.querySelector('.build-template-guidance');
+            const profile = buildTemplates[build.querySelector('.build-template-select').value];
+            target.replaceChildren();
+
+            if (!profile) {
+                target.className = 'build-template-guidance small text-body-secondary mt-2';
+                target.textContent = 'Choose a profile to see suggested specs. This guide will not add parts or prices.';
+                return;
+            }
+
+            target.className = 'build-template-guidance alert alert-info py-2 px-3 mt-2 mb-0';
+            const heading = document.createElement('strong');
+            heading.className = 'd-block mb-1';
+            heading.textContent = `${profile.name}: ${profile.use}`;
+            const note = document.createElement('p');
+            note.className = 'small mb-2';
+            note.textContent = 'To use this guide, select exact catalogue items with Browse parts and set their prices yourself. No parts or prices are added automatically.';
+            const list = document.createElement('ul');
+            list.className = 'small mb-0 ps-3';
+            profile.targets.forEach((item) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = item;
+                list.appendChild(listItem);
+            });
+
+            target.append(heading, note, list);
+        };
+
         const updateComponentSpecifications = (row) => {
             const select = row.querySelector('.component-select');
             const option = select.selectedOptions[0];
@@ -465,6 +680,189 @@
             return incompatibleSelectionChanged;
         };
 
+        const getSelectedParts = (build) => rowsForBuild(build).flatMap((row) => {
+            const option = row.querySelector('.component-select').selectedOptions[0];
+            if (!option?.value) return [];
+
+            return [{
+                type: option.dataset.type || row.querySelector('.component-type').value,
+                name: option.textContent.trim(),
+                specifications: JSON.parse(option.dataset.specifications || '{}'),
+                quantity: Number(row.querySelector('.component-quantity').value),
+            }];
+        });
+
+        const getSpecification = (part, ...labels) => {
+            const entry = Object.entries(part.specifications).find(([label]) => (
+                labels.includes(label.toLowerCase())
+            ));
+            return entry?.[1] || '';
+        };
+
+        const parseNumber = (value) => {
+            const match = String(value ?? '').match(/[\d,.]+/);
+            return match ? Number(match[0].replace(/,/g, '')) : null;
+        };
+
+        const parseMemoryCapacity = (value) => {
+            const text = String(value || '');
+            const kit = text.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+            if (kit) {
+                return Number(kit[1]) * Number(kit[2]) * (kit[3].toUpperCase() === 'TB' ? 1024 : 1);
+            }
+
+            const capacity = text.match(/(\d+(?:\.\d+)?)\s*(TB|GB)\b/i);
+            if (!capacity) return null;
+
+            return Number(capacity[1]) * (capacity[2].toUpperCase() === 'TB' ? 1024 : 1);
+        };
+
+        const classifyGpu = (gpu) => {
+            const details = `${gpu.name} ${Object.values(gpu.specifications).join(' ')}`;
+            let match = details.match(/\bRTX\s*(\d{4})\s*(TI|SUPER)?\b/i);
+
+            if (match) {
+                const model = Number(match[1]);
+                const generation = Math.floor(model / 100);
+                const classNumber = model % 100;
+                if (generation >= 40) {
+                    if (classNumber >= 70) return 'high';
+                    if (classNumber >= 60) return 'mainstream';
+                    return 'entry';
+                }
+                if (generation >= 20) {
+                    if (classNumber >= 80) return 'high';
+                    if (classNumber >= 60) return 'mainstream';
+                    return 'entry';
+                }
+            }
+
+            match = details.match(/\bGTX\s*(\d{4})\b/i);
+            if (match) {
+                const model = Number(match[1]);
+                const generation = Math.floor(model / 100);
+                const classNumber = model % 100;
+                return (generation >= 16 && classNumber >= 60) || (generation >= 10 && classNumber >= 70)
+                    ? 'mainstream'
+                    : 'entry';
+            }
+
+            match = details.match(/\bRX\s*(\d{4})\s*(XTX|XT)?\b/i);
+            if (match) {
+                const model = Number(match[1]);
+                if (model >= 9000) {
+                    if (model >= 9070) return 'high';
+                    if (model >= 9060) return 'mainstream';
+                    return 'entry';
+                }
+                if (model >= 7000) {
+                    if (model >= 7800) return 'high';
+                    if (model >= 7600) return 'mainstream';
+                    return 'entry';
+                }
+                if (model >= 6000) {
+                    if (model >= 6800) return 'high';
+                    if (model >= 6600) return 'mainstream';
+                    return 'entry';
+                }
+                if (model >= 5000) return model >= 5700 ? 'mainstream' : 'entry';
+            }
+
+            match = details.match(/\bARC\s+([AB])\s*(\d{3})\b/i);
+            if (match) {
+                const series = match[1].toUpperCase();
+                const model = Number(match[2]);
+                if (series === 'B') return model >= 580 ? 'mainstream' : 'entry';
+                return model >= 750 ? 'mainstream' : 'entry';
+            }
+
+            return null;
+        };
+
+        const gamingTierDescriptions = {
+            entry: 'Entry GPU class; esports and lighter games at 1080p low-to-medium settings are safer expectations.',
+            mainstream: 'Mainstream GPU class; 1080p high or tuned 1440p settings are reasonable starting points.',
+            high: 'Higher-end GPU class; 1440p is a reasonable target and 4K depends heavily on the game and settings.',
+        };
+
+        const updatePerformanceEstimate = (build) => {
+            const parts = getSelectedParts(build);
+            const cpu = parts.find((part) => part.type === 'cpu');
+            const gpu = parts.find((part) => part.type === 'gpu');
+            const ramParts = parts.filter((part) => part.type === 'ram');
+            const coreCount = cpu
+                ? parseNumber(getSpecification(cpu, 'cores', 'core count'))
+                : null;
+            const ramCapacities = ramParts.map((part) => {
+                const capacity = getSpecification(part, 'capacity', 'memory capacity', 'size') || part.name;
+                return parseMemoryCapacity(capacity);
+            });
+            const ramCapacity = ramCapacities.length && ramCapacities.every((capacity) => capacity !== null)
+                ? ramParts.reduce((total, part, index) => {
+                    const quantity = Number.isFinite(part.quantity) && part.quantity > 0 ? part.quantity : 1;
+                    return total + ramCapacities[index] * quantity;
+                }, 0)
+                : null;
+            const gamingTarget = build.querySelector('[data-performance-gaming]');
+            const workTarget = build.querySelector('[data-performance-work]');
+
+            if (!gpu) {
+                gamingTarget.textContent = 'Select a graphics card with an exact model name. VRAM capacity alone is not enough to estimate gaming performance.';
+            } else {
+                const performanceClass = classifyGpu(gpu);
+                if (performanceClass === null) {
+                    gamingTarget.textContent = 'This GPU model is not recognized. Add its exact model name to the part details for a rough gaming tier.';
+                } else {
+                    const notes = [];
+                    if (!cpu) notes.push('Select a CPU to check for possible CPU limits.');
+                    else if (coreCount !== null && coreCount < 6) notes.push('The selected CPU may limit some games.');
+                    if (ramCapacity === null) notes.push('Add RAM capacity specs to check memory limits.');
+                    else if (ramCapacity < 16) notes.push('Less than 16 GB system RAM may limit newer games.');
+                    gamingTarget.textContent = `${gamingTierDescriptions[performanceClass]} ${notes.join(' ')}`;
+                }
+            }
+
+            if (!cpu) {
+                workTarget.textContent = 'Select a CPU to estimate work and multitasking performance.';
+                return;
+            }
+            if (coreCount === null) {
+                workTarget.textContent = 'Add a “Cores: 6” specification to the CPU part for a work estimate.';
+                return;
+            }
+            if (ramCapacity === null) {
+                workTarget.textContent = 'Select RAM and add its “Capacity: 16 GB” specification for a work estimate.';
+                return;
+            }
+
+            let workEstimate;
+            if (coreCount >= 12 && ramCapacity >= 32) {
+                workEstimate = 'Strong for heavy multitasking, compiling, and larger creative workloads.';
+            } else if (coreCount >= 8 && ramCapacity >= 16) {
+                workEstimate = 'Good for multitasking, development, and mainstream creative work.';
+            } else if (coreCount >= 6 && ramCapacity >= 16) {
+                workEstimate = 'Balanced for office work, coding, and light-to-moderate editing.';
+            } else if (coreCount >= 4 && ramCapacity >= 16) {
+                workEstimate = 'Comfortable for everyday office and study; demanding editing or virtual machines may feel limited.';
+            } else {
+                workEstimate = 'Best for basic office, browsing, and study; heavier multitasking and creative work may be limited.';
+            }
+
+            const storageParts = parts.filter((part) => part.type === 'storage');
+            const hasSolidStateDrive = storageParts.some((part) => (
+                /SSD|NVMe|solid.?state/i.test(`${part.name} ${Object.values(part.specifications).join(' ')}`)
+            ));
+            if (hasSolidStateDrive) {
+                workEstimate += ' An SSD/NVMe is selected for faster boot and app loading.';
+            } else if (storageParts.length) {
+                workEstimate += ' No SSD/NVMe is identified; storage may slow boot and app loading.';
+            } else {
+                workEstimate += ' Select storage to assess boot and app loading.';
+            }
+
+            workTarget.textContent = workEstimate;
+        };
+
         const updateEstimate = () => {
             let subtotal = 0;
             let costTotal = 0;
@@ -479,12 +877,21 @@
                 subtotal += quantity * price;
                 costTotal += quantity * cost;
             });
-            const tax = Math.round(subtotal * taxRate) / 100;
+            const discountInput = form.querySelector('[name="discount_amount"]');
+            const requestedDiscount = Number(discountInput.value) || 0;
+            const discount = Math.min(requestedDiscount, subtotal);
+            const taxableSubtotal = subtotal - discount;
+            discountInput.setCustomValidity(requestedDiscount > subtotal
+                ? 'Discount cannot exceed the subtotal.'
+                : '');
+            const tax = Math.round(taxableSubtotal * taxRate) / 100;
             document.getElementById('build-subtotal').textContent = `RM ${subtotal.toFixed(2)}`;
+            document.getElementById('build-discount').textContent = `- RM ${discount.toFixed(2)}`;
             document.getElementById('build-cost-total').textContent = `RM ${costTotal.toFixed(2)}`;
-            document.getElementById('build-gross-profit').textContent = `RM ${(subtotal - costTotal).toFixed(2)}`;
+            document.getElementById('build-gross-profit').textContent = `RM ${(taxableSubtotal - costTotal).toFixed(2)}`;
             document.getElementById('build-tax').textContent = `RM ${tax.toFixed(2)}`;
-            document.getElementById('build-total').textContent = `RM ${(subtotal + tax).toFixed(2)}`;
+            document.getElementById('build-total').textContent = `RM ${(taxableSubtotal + tax).toFixed(2)}`;
+            builds.querySelectorAll('.pc-build').forEach(updatePerformanceEstimate);
         };
 
         const setNames = () => {
@@ -517,6 +924,7 @@
             params.set('page', String(page));
             searchStatus.textContent = 'Searching parts…';
             searchResults.replaceChildren();
+            const profileGuidance = updateComponentProfileGuidance();
 
             try {
                 const response = await fetch(`${picker.dataset.searchUrl}?${params.toString()}`, {
@@ -528,7 +936,7 @@
                 }
                 if (requestNumber !== searchRequest) return;
 
-                searchStatus.textContent = `${result.meta.total.toLocaleString()} builder catalogue parts found. Prices and price filters are shown in RM.`;
+                searchStatus.textContent = `${result.meta.total.toLocaleString()} catalogue parts found. Customer prices and filters are in RM; source-currency prices are reference only.`;
                 lastPage = result.meta.last_page;
                 pageStatus.textContent = `Page ${result.meta.current_page} of ${lastPage}`;
                 document.getElementById('component-search-previous').disabled = result.meta.current_page <= 1;
@@ -541,31 +949,75 @@
 
                 result.data.forEach((part) => {
                     const item = document.createElement('div');
-                    item.className = 'list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2';
+                    item.className = 'list-group-item p-3';
+                    const row = document.createElement('div');
+                    row.className = 'row g-3 align-items-center';
                     const details = document.createElement('div');
+                    details.className = 'col-12 col-lg-7';
+                    const heading = document.createElement('div');
+                    heading.className = 'd-flex flex-wrap align-items-center gap-2';
                     const name = document.createElement('div');
-                    name.className = 'fw-semibold';
+                    name.className = 'fw-semibold fs-6';
                     name.textContent = part.name;
-                    const description = document.createElement('div');
-                    description.className = 'small text-body-secondary';
-                    const sellingPrice = Number(part.selling_price) > 0
-                        ? `Selling price RM ${Number(part.selling_price).toFixed(2)}`
-                        : 'No RM selling price';
-                    const costPrice = Number(part.cost_price) > 0
-                        ? `Our cost RM ${Number(part.cost_price).toFixed(2)}`
-                        : 'Our cost not set';
-                    description.textContent = [
-                        categoryLabels[part.type] || part.type,
-                        part.sku || 'No SKU',
-                        'Builder catalogue · not tracked as inventory',
-                        sellingPrice,
-                        costPrice,
-                        part.supplier || 'No supplier linked',
-                    ].join(' · ');
-                    details.append(name, description);
+                    heading.append(name);
+                    if (profileGuidance && matchesProfileTarget(part, profileGuidance.recommendation)) {
+                        const recommendationBadge = document.createElement('span');
+                        recommendationBadge.className = 'badge text-bg-success ms-2';
+                        recommendationBadge.textContent = 'Matches profile spec';
+                        name.append(recommendationBadge);
+                    }
+                    const metadata = document.createElement('div');
+                    metadata.className = 'd-flex flex-wrap align-items-center gap-2 mt-1';
+                    const category = document.createElement('span');
+                    category.className = 'badge text-bg-light border text-dark';
+                    category.textContent = categoryLabels[part.type] || part.type;
+                    const sku = document.createElement('span');
+                    sku.className = 'small text-body-secondary';
+                    sku.textContent = part.sku ? `SKU: ${part.sku}` : 'No SKU';
+                    const catalogue = document.createElement('span');
+                    catalogue.className = 'badge text-bg-secondary';
+                    catalogue.textContent = 'Builder catalogue · no inventory stock';
+                    metadata.append(category, sku, catalogue);
+
+                    const specificationSummary = Object.entries(part.specifications || {})
+                        .filter(([label]) => !['name', 'source'].includes(label.toLowerCase().replace(/[^a-z0-9]/g, '')))
+                        .slice(0, 5)
+                        .map(([label, value]) => `${label}: ${value}`);
+                    if (specificationSummary.length > 0) {
+                        const specifications = document.createElement('div');
+                        specifications.className = 'd-flex flex-wrap gap-1 mt-2';
+                        specificationSummary.forEach((specification) => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge rounded-pill text-bg-light border text-dark fw-normal';
+                            badge.textContent = specification;
+                            specifications.append(badge);
+                        });
+                        details.append(heading, metadata, specifications);
+                    } else {
+                        details.append(heading, metadata);
+                    }
+
+                    const source = getPartSpecification(part, ['Source']);
+                    const catalogPrice = Number(part.catalog_price);
+                    const catalogCurrency = String(part.catalog_currency || '').toUpperCase();
+                    if (source || (catalogPrice > 0 && catalogCurrency)) {
+                        const sourceNote = document.createElement('div');
+                        sourceNote.className = 'small text-body-secondary mt-2';
+                        sourceNote.textContent = source ? `Source: ${source}` : '';
+                        if (catalogPrice > 0 && catalogCurrency) {
+                            sourceNote.textContent += `${source ? ' · ' : ''}Reference only: ${catalogCurrency} ${catalogPrice.toFixed(2)} (not used as an RM quote price)`;
+                        }
+                        details.append(sourceNote);
+                    }
+
+                    const supplierNames = document.createElement('div');
+                    supplierNames.className = 'small text-body-secondary mt-2';
+                    supplierNames.textContent = part.supplier ? `Suppliers: ${part.supplier}` : 'No supplier linked';
+                    details.append(supplierNames);
+
                     (part.supplier_offers || []).forEach((offer) => {
                         const offerDetails = document.createElement('div');
-                        offerDetails.className = 'small text-body-secondary';
+                        offerDetails.className = 'small text-body-secondary mt-1';
                         offerDetails.textContent = `${offer.name} · Cost RM ${offer.cost_price === null ? '—' : Number(offer.cost_price).toFixed(2)} · Unit RM ${offer.unit_price === null ? '—' : Number(offer.unit_price).toFixed(2)}`;
                         if (offer.product_url) {
                             const productLink = document.createElement('a');
@@ -578,12 +1030,33 @@
                         }
                         details.append(offerDetails);
                     });
+
+                    const pricing = document.createElement('div');
+                    pricing.className = 'col-12 col-sm-6 col-lg-3';
+                    const sellingPrice = Number(part.selling_price);
+                    const customerPrice = document.createElement('div');
+                    customerPrice.className = sellingPrice > 0 ? 'fw-semibold text-success' : 'fw-semibold text-warning-emphasis';
+                    customerPrice.textContent = sellingPrice > 0 ? `RM ${sellingPrice.toFixed(2)}` : 'RM quote price needed';
+                    const costPrice = document.createElement('div');
+                    costPrice.className = 'small text-body-secondary mt-1';
+                    costPrice.textContent = Number(part.cost_price) > 0
+                        ? `Our cost RM ${Number(part.cost_price).toFixed(2)}`
+                        : 'Our cost not set';
+                    pricing.append(customerPrice, costPrice);
+                    if (sellingPrice <= 0) {
+                        const priceNote = document.createElement('div');
+                        priceNote.className = 'small text-warning-emphasis';
+                        priceNote.textContent = 'Enter a customer price after selecting this part.';
+                        pricing.append(priceNote);
+                    }
+
                     const actions = document.createElement('div');
-                    actions.className = 'd-flex gap-2';
+                    actions.className = 'col-12 col-sm-6 col-lg-2 d-flex flex-wrap gap-2 justify-content-sm-end';
                     const addSupplier = document.createElement('button');
                     addSupplier.type = 'button';
                     addSupplier.className = 'btn btn-sm btn-outline-secondary';
-                            addSupplier.textContent = part.supplier ? 'Add another Shopee supplier' : 'Add Shopee supplier';
+                    addSupplier.textContent = part.supplier ? 'Add another supplier' : 'Add supplier';
+                    addSupplier.setAttribute('aria-label', `Add a supplier for ${part.name}`);
                     addSupplier.addEventListener('click', () => {
                         supplierPart = part;
                         document.getElementById('component-supplier-part-name').textContent = part.name;
@@ -601,11 +1074,13 @@
                     actions.append(addSupplier);
                     const choose = document.createElement('button');
                     choose.type = 'button';
-                    choose.className = 'btn btn-sm btn-outline-primary';
-                    choose.textContent = 'Choose';
+                    choose.className = 'btn btn-sm btn-primary';
+                    choose.textContent = 'Select part';
+                    choose.setAttribute('aria-label', `Select ${part.name}`);
                     choose.addEventListener('click', () => selectPart(part));
                     actions.append(choose);
-                    item.append(details, actions);
+                    row.append(details, pricing, actions);
+                    item.append(row);
                     searchResults.append(item);
                 });
             } catch (error) {
@@ -818,6 +1293,8 @@
 
         document.getElementById('add-pc-build').addEventListener('click', () => {
             const build = builds.querySelector('.pc-build').cloneNode(true);
+            build.querySelector('.build-template-select').value = '';
+            updateBuildTemplateGuidance(build);
             build.querySelectorAll('.component-line').forEach((row) => {
                 row.querySelector('.component-select').replaceChildren(new Option('Choose a component', ''));
                 row.querySelector('.component-cost').value = '';
@@ -838,6 +1315,11 @@
         });
 
         builds.addEventListener('change', (event) => {
+            if (event.target.matches('.build-template-select')) {
+                updateBuildTemplateGuidance(event.target.closest('.pc-build'));
+                return;
+            }
+
             if (event.target.matches('.component-select')) {
                 const price = event.target.selectedOptions[0]?.dataset.price;
                 const priceInput = event.target.closest('.component-line').querySelector('.component-price');
@@ -882,6 +1364,7 @@
             if (event.target.matches('.component-cost')) event.target.setCustomValidity('');
             updateEstimate();
         });
+        form.querySelector('[name="discount_amount"]').addEventListener('input', updateEstimate);
 
         setNames();
         updateCompatibility();

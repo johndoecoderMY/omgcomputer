@@ -18,6 +18,7 @@
                     : 'hello@omgcomputer.my'
             );
     @endphp
+    @push('styles')
     <style>
         .landing-hero { min-height: 720px; padding-top: 118px; background: linear-gradient(135deg, var(--falcon-gray-100, #fff) 0%, var(--falcon-body-bg, #edf2f9) 100%); overflow: hidden; }
         .landing-hero .hero-title { max-width: 760px; color: var(--falcon-gray-1000, #172033); font-size: clamp(3rem, 6vw, 5.6rem); line-height: .96; letter-spacing: -.055em; }
@@ -61,6 +62,7 @@
         .landing-hero .hero-float-one { left: -24px; top: 18%; }
         .landing-hero .hero-float-two { right: -12px; bottom: 12%; }
         .landing-hero .hero-float-icon { width: 52px; height: 52px; display: grid; place-items: center; flex-shrink: 0; border-radius: 15px; color: var(--falcon-primary); background: rgba(var(--falcon-primary-rgb), .08); }
+        .bi { min-width: 1em; }
         @media (max-width: 991.98px) { .landing-hero { min-height: auto; padding-top: 130px; } .landing-hero .hero-float-one { left: 0; } .landing-hero .hero-float-two { right: 0; } }
         @media (max-width: 575.98px) { .landing-hero { padding-top: 112px; } .landing-hero .hero-title { letter-spacing: -.04em; } .landing-hero .hero-actions .btn { width: 100%; } .landing-hero .hero-float { max-width: 210px; padding: .65rem !important; } }
         .landing-contact { background: #0b1727; }
@@ -73,6 +75,7 @@
         .landing-how-it-works .text-1000 { color: #fff !important; }
         .landing-how-it-works .text-700 { color: #a9bdd5 !important; }
     </style>
+    @endpush
 
     <section class="landing-hero d-flex align-items-center" id="home">
         <div class="container">
@@ -80,19 +83,19 @@
                 <div class="col-lg-6">
                     <span class="hero-kicker badge rounded-pill mb-4 px-3 py-2">
                         <span class="bi bi-tools me-2" aria-hidden="true"></span>
-                        <span class="hero-kicker-copy">Computer repair, website design &amp; technology support</span>
+                        <span class="hero-kicker-copy">{{ __('Computer repair, website design & technology support') }}</span>
                     </span>
-                    <h1 class="hero-title fw-bold mb-4">Computer trouble?<br><span>We’ll fix it.</span></h1>
-                    <p class="hero-copy lead text-700 mb-4">Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.</p>
+                    <h1 class="hero-title fw-bold mb-4">{{ __('Computer trouble?') }}<br><span>{{ __('We’ll fix it.') }}</span></h1>
+                    <p class="hero-copy lead text-700 mb-4">{{ __('Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.') }}</p>
                     <div class="hero-actions row g-3">
                         <div class="col-12 col-md-6">
                             <a class="hero-primary-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('bookings.create') }}">
-                                <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
+                                <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>{{ __('Book a service') }}
                             </a>
                         </div>
                         <div class="col-12 col-md-6">
                             <a class="btn btn-success btn-lg rounded-pill px-3 w-100" href="{{ $whatsappContactUrl }}" target="_blank" rel="noopener noreferrer">
-                                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>WhatsApp us
+                                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('WhatsApp us') }}
                             </a>
                         </div>
                         <div class="col-12 col-md-6">
@@ -102,19 +105,22 @@
                         </div>
                         <div class="col-12 col-md-6">
                             <a class="track-repair-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('repairs.track.form') }}">
-                                <span class="bi bi-search me-2" aria-hidden="true"></span>Track your repair
+                                <span class="bi bi-search me-2" aria-hidden="true"></span>{{ __('Track your repair') }}
                             </a>
                         </div>
                     </div>
                     <div class="d-flex flex-wrap gap-4 mt-5 text-700 small">
-                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Clear diagnosis</span>
-                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Practical solutions</span>
-                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>Friendly support</span>
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>{{ __('Clear diagnosis') }}</span>
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>{{ __('Practical solutions') }}</span>
+                        <span><span class="bi bi-check-circle-fill text-success me-2"></span>{{ __('Friendly support') }}</span>
                     </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="hero-visual">
-                        <img class="hero-image img-fluid w-100" src="{{ asset('assets/img/omg/hero-technician.jpg') }}" alt="Person working with a laptop at an electronics workbench" width="1400" height="800" fetchpriority="high" decoding="async">
+                        <picture class="d-block">
+                            <source type="image/webp" srcset="{{ asset('assets/img/omg/hero-technician-640.webp') }} 640w, {{ asset('assets/img/omg/hero-technician-768.webp') }} 768w, {{ asset('assets/img/omg/hero-technician-960.webp') }} 960w, {{ asset('assets/img/omg/hero-technician-1400.webp') }} 1400w" sizes="(max-width: 991.98px) 100vw, 50vw">
+                            <img class="hero-image img-fluid w-100" src="{{ asset('assets/img/omg/hero-technician.jpg') }}" alt="Person working with a laptop at an electronics workbench" width="1400" height="800" fetchpriority="high" decoding="async" sizes="(max-width: 991.98px) 100vw, 50vw">
+                        </picture>
                     </div>
                 </div>
             </div>
@@ -125,54 +131,66 @@
         <div class="container">
             <div class="row justify-content-center text-center mb-5">
                 <div class="col-lg-8">
-                    <span class="text-primary fw-bold text-uppercase fs-10">How we can help</span>
-                    <h2 class="fw-bold text-1000 mt-2">Technology services for home and work</h2>
-                    <p class="text-700 mb-0">From computer support to custom websites, get practical technology help for home and work.</p>
+                    <span class="text-primary fw-bold text-uppercase fs-10">{{ __('How we can help') }}</span>
+                    <h2 class="fw-bold text-1000 mt-2">{{ __('Technology services for home and work') }}</h2>
+                    <p class="text-700 mb-0">{{ __('From computer support to custom websites, get practical technology help for home and work.') }}</p>
                 </div>
             </div>
             <div class="row g-4">
                 <div class="col-md-6 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm p-2">
-                        <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/repair-board-work.jpg') }}" alt="Close-up of a technician inspecting an electronic circuit board" width="900" height="600" loading="lazy" decoding="async" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        <picture class="d-block">
+                            <source type="image/webp" srcset="{{ asset('assets/img/omg/repair-board-work-480.webp') }} 480w, {{ asset('assets/img/omg/repair-board-work-720.webp') }} 720w, {{ asset('assets/img/omg/repair-board-work-768.webp') }} 768w, {{ asset('assets/img/omg/repair-board-work-900.webp') }} 900w" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw">
+                            <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/repair-board-work.jpg') }}" alt="{{ __('Close-up of a technician inspecting an electronic circuit board') }}" width="900" height="600" loading="lazy" decoding="async" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        </picture>
                         <div class="card-body p-4">
                             <span class="bi bi-activity text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">PC diagnosis &amp; repair</h5>
-                            <p class="text-700 mb-0">Troubleshoot crashes, slowdowns, startup issues, and hardware faults. Get a clear diagnosis and repair options.</p>
+                            <h3 class="h5 text-1000">{{ __('PC diagnosis & repair') }}</h3>
+                            <p class="text-700 mb-0">{{ __('Troubleshoot crashes, slowdowns, startup issues, and hardware faults. Get a clear diagnosis and repair options.') }}</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm p-2">
-                        <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/repair-pc-components.jpg') }}" alt="Close-up view of PC cooling and internal components" width="900" height="600" loading="lazy" decoding="async" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        <picture class="d-block">
+                            <source type="image/webp" srcset="{{ asset('assets/img/omg/repair-pc-components-480.webp') }} 480w, {{ asset('assets/img/omg/repair-pc-components-720.webp') }} 720w, {{ asset('assets/img/omg/repair-pc-components-768.webp') }} 768w, {{ asset('assets/img/omg/repair-pc-components-900.webp') }} 900w" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw">
+                            <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/repair-pc-components.jpg') }}" alt="{{ __('Close-up view of PC cooling and internal components') }}" width="900" height="600" loading="lazy" decoding="async" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        </picture>
                         <div class="card-body p-4">
                             <span class="bi bi-memory text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">Upgrades &amp; software support</h5>
-                            <p class="text-700 mb-0">Improve performance, resolve software issues, and get practical help with system and security updates.</p>
+                            <h3 class="h5 text-1000">{{ __('Upgrades & software support') }}</h3>
+                            <p class="text-700 mb-0">{{ __('Improve performance, resolve software issues, and get practical help with system and security updates.') }}</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm p-2">
-                        <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/website-design-work.jpg') }}" alt="Laptop displaying website code at a desk" width="900" height="600" loading="lazy" decoding="async" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        <picture class="d-block">
+                            <source type="image/webp" srcset="{{ asset('assets/img/omg/website-design-work-480.webp') }} 480w, {{ asset('assets/img/omg/website-design-work-720.webp') }} 720w, {{ asset('assets/img/omg/website-design-work-768.webp') }} 768w, {{ asset('assets/img/omg/website-design-work-900.webp') }} 900w" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw">
+                            <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/website-design-work.jpg') }}" alt="{{ __('Laptop displaying website code at a desk') }}" width="900" height="600" loading="lazy" decoding="async" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        </picture>
                         <div class="card-body p-4">
                             <span class="bi bi-globe text-primary fs-4 mb-3"></span>
-                            <h5 class="text-1000">Website design &amp; development</h5>
-                            <p class="text-700">Get a custom website designed and built for your business or organization.</p>
+                            <h3 class="h5 text-1000">{{ __('Website design & development') }}</h3>
+                            <p class="text-700">{{ __('Get a custom website designed and built for your business or organization.') }}</p>
                             <a class="btn btn-sm btn-primary rounded-pill" href="#website-pricing">
-                                Explore website packages <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
+                                {{ __('Explore website packages') }} <span class="bi bi-arrow-down ms-1" aria-hidden="true"></span>
                             </a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm p-2">
-                        <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/ready-built-pc.jpg') }}" alt="Example of a ready-built desktop PC with illuminated internal components" width="900" height="600" loading="lazy" decoding="async" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        <picture class="d-block">
+                            <source type="image/webp" srcset="{{ asset('assets/img/omg/ready-built-pc-480.webp') }} 480w, {{ asset('assets/img/omg/ready-built-pc-720.webp') }} 720w, {{ asset('assets/img/omg/ready-built-pc-768.webp') }} 768w, {{ asset('assets/img/omg/ready-built-pc-900.webp') }} 900w" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw">
+                            <img class="img-fluid rounded-3" src="{{ asset('assets/img/omg/ready-built-pc.jpg') }}" alt="{{ __('Example of a ready-built desktop PC with illuminated internal components') }}" width="900" height="600" loading="lazy" decoding="async" sizes="(max-width: 767.98px) 100vw, (max-width: 1199.98px) 50vw, 25vw" style="aspect-ratio: 3 / 2; object-fit: cover;">
+                        </picture>
                         <div class="card-body p-4">
                             <span class="bi bi-pc-display-horizontal text-primary fs-4 mb-3" aria-hidden="true"></span>
-                            <h5 class="text-1000">Ready-built custom PCs</h5>
-                            <p class="text-700">Browse ready-built computers available from our shop, with options for different needs and budgets.</p>
+                            <h3 class="h5 text-1000">{{ __('Ready-built custom PCs') }}</h3>
+                            <p class="text-700">{{ __('Browse ready-built computers available from our shop, with options for different needs and budgets.') }}</p>
                             <a class="btn btn-sm btn-primary rounded-pill" href="{{ route('shop.public', ['type' => 'ready_built_pc']) }}">
-                                Browse ready-built PCs <span class="bi bi-arrow-right ms-1" aria-hidden="true"></span>
+                                {{ __('Browse ready-built PCs') }} <span class="bi bi-arrow-right ms-1" aria-hidden="true"></span>
                             </a>
                         </div>
                     </div>
@@ -183,7 +201,7 @@
             </p> --}}
             <div class="row justify-content-center mt-4" id="help" style="scroll-margin-top: 100px;">
                 <div class="col-lg-10 text-center">
-                    <p class="text-700 mb-0"><span class="fw-semibold text-1000">Not sure what you need?</span> <a href="#contact">Tell us what’s going on</a> and we’ll help you choose a next step.</p>
+                    <p class="text-700 mb-0"><span class="fw-semibold text-1000">{{ __('Not sure what you need?') }}</span> <a href="#contact">{{ __('Tell us what’s going on') }}</a> {{ __('and we’ll help you choose a next step.') }}</p>
                 </div>
             </div>
         </div>
@@ -193,47 +211,47 @@
         <div class="container">
             <div class="row align-items-center g-5">
                 <div class="col-lg-5">
-                    <span class="text-primary fw-bold text-uppercase fs-10">Straightforward support</span>
-                    <h2 class="fw-bold text-1000 mt-2">A clearer path to a working computer</h2>
-                    <p class="text-700">Book or contact us to arrange drop-off. We’ll diagnose the issue, share a written quote, and wait for your approval before carrying out the repair.</p>
+                    <span class="text-primary fw-bold text-uppercase fs-10">{{ __('Straightforward support') }}</span>
+                    <h2 class="fw-bold text-1000 mt-2">{{ __('A clearer path to a working computer') }}</h2>
+                    <p class="text-700">{{ __('Book or contact us to arrange drop-off. We’ll diagnose the issue, share a written quote, and wait for your approval before carrying out the repair.') }}</p>
                     <div class="d-flex flex-wrap gap-2">
                         <a class="btn btn-primary rounded-pill px-4" href="{{ route('bookings.create') }}">
-                            <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>Book a service
+                            <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>{{ __('Book a service') }}
                         </a>
                         <a class="track-repair-button btn rounded-pill px-4" href="{{ route('repairs.track.form') }}">
-                            <span class="bi bi-search me-2" aria-hidden="true"></span>Track your repair
+                            <span class="bi bi-search me-2" aria-hidden="true"></span>{{ __('Track your repair') }}
                         </a>
                     </div>
-                    <p class="small text-700 mt-3 mb-0">Have your service number ready to check repair progress.</p>
+                    <p class="small text-700 mt-3 mb-0">{{ __('Have your service number ready to check repair progress.') }}</p>
                 </div>
                 <div class="col-lg-7">
                     <div class="d-flex mb-4">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">1</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Book and drop off</h5>
-                            <p class="text-700 mb-0">Book an appointment or contact us to arrange a drop-off. Tell us the device model and what is happening.</p>
+                            <h3 class="h5 text-1000 mb-1">{{ __('Book and drop off') }}</h3>
+                            <p class="text-700 mb-0">{{ __('Book an appointment or contact us to arrange a drop-off. Tell us the device model and what is happening.') }}</p>
                         </div>
                     </div>
                     <div class="d-flex mb-4">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">2</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Review the diagnosis and quote</h5>
-                            <p class="text-700 mb-0">We’ll confirm the diagnostic fee before assessment, explain the findings and price, and get your approval before repairs or extra work.</p>
+                            <h3 class="h5 text-1000 mb-1">{{ __('Review the diagnosis and quote') }}</h3>
+                            <p class="text-700 mb-0">{{ __('We’ll confirm the diagnostic fee before assessment, explain the findings and price, and get your approval before repairs or extra work.') }}</p>
                         </div>
                     </div>
                     <div class="d-flex">
                         <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:42px;height:42px;">3</div>
                         <div class="ms-3">
-                            <h5 class="text-1000 mb-1">Collect your device</h5>
-                            <p class="text-700 mb-0">We’ll update you when the agreed work is complete and your device is ready for collection. Use your service number to check progress.</p>
+                            <h3 class="h5 text-1000 mb-1">{{ __('Collect your device') }}</h3>
+                            <p class="text-700 mb-0">{{ __('We’ll update you when the agreed work is complete and your device is ready for collection. Use your service number to check progress.') }}</p>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="row justify-content-center mt-5" id="about" style="scroll-margin-top: 100px;">
                 <div class="col-lg-10 border-top pt-4 text-center">
-                    <span class="text-primary fw-bold text-uppercase fs-10">About OMG Computer</span>
-                    <p class="text-700 mt-2 mb-0">Friendly local support for home and business users, with honest recommendations and practical solutions—without the jargon or pressure.</p>
+                    <span class="text-primary fw-bold text-uppercase fs-10">{{ __('About OMG Computer') }}</span>
+                    <p class="text-700 mt-2 mb-0">{{ __('Friendly local support for home and business users, with honest recommendations and practical solutions—without the jargon or pressure.') }}</p>
                 </div>
             </div>
         </div>
@@ -246,21 +264,21 @@
                     <img
                         class="img-fluid rounded-4"
                         src="{{ asset('assets/img/omg/website-design-illustration.svg') }}"
-                        alt="Responsive business website shown on desktop and mobile screens"
+                        alt="{{ __('Responsive business website shown on desktop and mobile screens') }}"
                         width="800"
                         height="520"
                         loading="lazy"
                     >
                 </div>
                 <div class="col-lg-7 text-center text-lg-start">
-                    <span class="text-primary fw-bold text-uppercase fs-10">Website design &amp; development</span>
-                    <h2 class="fw-bold text-1000 mt-2">Website packages tailored to your needs</h2>
-                    <p class="text-700 mb-0">Tell us what you need and we’ll provide a quote based on your project scope before work begins.</p>
+                    <span class="text-primary fw-bold text-uppercase fs-10">{{ __('Website design & development') }}</span>
+                    <h2 class="fw-bold text-1000 mt-2">{{ __('Website packages tailored to your needs') }}</h2>
+                    <p class="text-700 mb-0">{{ __('Tell us what you need and we’ll provide a quote based on your project scope before work begins.') }}</p>
                     <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $websiteQuoteUrl }}" target="_blank" rel="noopener noreferrer">
-                        <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Discuss a website project
+                        <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Discuss a website project') }}
                     </a>
                     <a class="btn btn-primary rounded-pill px-4 mt-3 ms-sm-2" href="{{ route('website-previews.index') }}">
-                        <span class="bi bi-images me-2" aria-hidden="true"></span>Browse website previews
+                        <span class="bi bi-images me-2" aria-hidden="true"></span>{{ __('Browse website previews') }}
                     </a>
                 </div>
             </div>
@@ -269,33 +287,33 @@
                     <article class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="bi bi-file-text text-primary fs-4 mb-3" aria-hidden="true"></span>
-                            <h3 class="h4 text-1000">Starter landing page</h3>
-                            <p class="text-700">A polished single-page website to introduce your business and help customers get in touch.</p>
+                            <h3 class="h4 text-1000">{{ __('Starter landing page') }}</h3>
+                            <p class="text-700">{{ __('A polished single-page website to introduce your business and help customers get in touch.') }}</p>
                             <ul class="text-700 ps-3 mb-0">
-                                <li class="mb-2">Responsive layout for mobile and desktop</li>
-                                <li class="mb-2">Core business information and contact call-to-action</li>
-                                <li>Basic on-page SEO setup</li>
+                                <li class="mb-2">{{ __('Responsive layout for mobile and desktop') }}</li>
+                                <li class="mb-2">{{ __('Core business information and contact call-to-action') }}</li>
+                                <li>{{ __('Basic on-page SEO setup') }}</li>
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">{{ __('Request a quote') }}</a>
                         </div>
                     </article>
                 </div>
                 <div class="col-md-6 col-xl-4">
                     <article class="card h-100 border border-primary shadow-sm p-2">
                         <div class="card-body p-4">
-                            <span class="badge text-bg-primary mb-3">Popular starting point</span>
-                            <h3 class="h4 text-1000">Business website</h3>
-                            <p class="text-700">A multi-page website for businesses that need room to explain their services and build trust.</p>
+                            <span class="badge text-bg-primary mb-3">{{ __('Popular starting point') }}</span>
+                            <h3 class="h4 text-1000">{{ __('Business website') }}</h3>
+                            <p class="text-700">{{ __('A multi-page website for businesses that need room to explain their services and build trust.') }}</p>
                             <ul class="text-700 ps-3 mb-0">
-                                <li class="mb-2">Up to five pages with a consistent custom design</li>
-                                <li class="mb-2">Contact form and clear navigation</li>
-                                <li>Responsive layout and basic on-page SEO</li>
+                                <li class="mb-2">{{ __('Up to five pages with a consistent custom design') }}</li>
+                                <li class="mb-2">{{ __('Contact form and clear navigation') }}</li>
+                                <li>{{ __('Responsive layout and basic on-page SEO') }}</li>
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">{{ __('Request a quote') }}</a>
                         </div>
                     </article>
                 </div>
@@ -303,22 +321,22 @@
                     <article class="card h-100 border-0 shadow-sm p-2">
                         <div class="card-body p-4">
                             <span class="bi bi-code-slash text-primary fs-4 mb-3" aria-hidden="true"></span>
-                            <h3 class="h4 text-1000">Custom website</h3>
-                            <p class="text-700">For larger sites, online stores, integrations, or features tailored to your workflow.</p>
+                            <h3 class="h4 text-1000">{{ __('Custom website') }}</h3>
+                            <p class="text-700">{{ __('For larger sites, online stores, integrations, or features tailored to your workflow.') }}</p>
                             <ul class="text-700 ps-3 mb-0">
-                                <li class="mb-2">Scope and features planned around your requirements</li>
-                                <li class="mb-2">Custom functionality or third-party integrations</li>
-                                <li>Final price provided after a project discussion</li>
+                                <li class="mb-2">{{ __('Scope and features planned around your requirements') }}</li>
+                                <li class="mb-2">{{ __('Custom functionality or third-party integrations') }}</li>
+                                <li>{{ __('Final price provided after a project discussion') }}</li>
                             </ul>
                         </div>
                         <div class="card-footer bg-body border-0 px-4 pb-4">
-                            <a class="btn btn-primary rounded-pill px-4" href="#contact">Request a quote</a>
+                            <a class="btn btn-primary rounded-pill px-4" href="#contact">{{ __('Request a quote') }}</a>
                         </div>
                     </article>
                 </div>
             </div>
             <p class="small text-body-secondary text-center mt-4 mb-0">
-                Every project is quoted individually. Domain registration, hosting, paid themes or plugins, and other third-party charges will be discussed as part of your quote.
+                {{ __('Every project is quoted individually. Domain registration, hosting, paid themes or plugins, and other third-party charges will be discussed as part of your quote.') }}
             </p>
         </div>
     </section>
@@ -327,9 +345,9 @@
         <div class="container">
             <div class="row justify-content-center text-center mb-5">
                 <div class="col-lg-8">
-                    <span class="text-primary fw-bold text-uppercase fs-10">Q &amp; A</span>
-                    <h2 class="display-5 fw-bold text-1000 mt-2">Common computer questions</h2>
-                    <p class="lead text-700 mb-0">Quick answers to questions we often hear.</p>
+                    <span class="text-primary fw-bold text-uppercase fs-10">{{ __('Q & A') }}</span>
+                    <h2 class="display-5 fw-bold text-1000 mt-2">{{ __('Common computer questions') }}</h2>
+                    <p class="lead text-700 mb-0">{{ __('Quick answers to questions we often hear.') }}</p>
                 </div>
             </div>
             <div class="row justify-content-center">
@@ -338,71 +356,71 @@
                         <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                             <h3 class="accordion-header" id="landingFaqOneHeading">
                                 <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqOne" aria-expanded="false" aria-controls="landingFaqOne">
-                                    Do you fix both laptops and desktops?
+                                    {{ __('Do you fix both laptops and desktops?') }}
                                 </button>
                             </h3>
                             <div id="landingFaqOne" class="accordion-collapse collapse" aria-labelledby="landingFaqOneHeading" data-bs-parent="#landingFaqAccordion">
-                                <div class="accordion-body text-700">Yes. We support desktop and laptop computers, including troubleshooting, upgrades, and repair recommendations.</div>
+                                <div class="accordion-body text-700">{{ __('Yes. We support desktop and laptop computers, including troubleshooting, upgrades, and repair recommendations.') }}</div>
                             </div>
                         </div>
                         <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                             <h3 class="accordion-header" id="landingFaqTwoHeading">
                                 <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqTwo" aria-expanded="false" aria-controls="landingFaqTwo">
-                                    How do I know if my computer needs repair or replacement?
+                                    {{ __('How do I know if my computer needs repair or replacement?') }}
                                 </button>
                             </h3>
                             <div id="landingFaqTwo" class="accordion-collapse collapse" aria-labelledby="landingFaqTwoHeading" data-bs-parent="#landingFaqAccordion">
-                                <div class="accordion-body text-700">It depends on the issue, the age of the device, and the cost of repair. We can assess the problem and explain your options.</div>
+                                <div class="accordion-body text-700">{{ __('It depends on the issue, the age of the device, and the cost of repair. We can assess the problem and explain your options.') }}</div>
                             </div>
                         </div>
                         <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                             <h3 class="accordion-header" id="landingFaqThreeHeading">
                                 <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqThree" aria-expanded="false" aria-controls="landingFaqThree">
-                                    Can you help with a slow computer?
+                                    {{ __('Can you help with a slow computer?') }}
                                 </button>
                             </h3>
                             <div id="landingFaqThree" class="accordion-collapse collapse" aria-labelledby="landingFaqThreeHeading" data-bs-parent="#landingFaqAccordion">
-                                <div class="accordion-body text-700">Yes. We can check for software, storage, or hardware causes and recommend practical ways to improve performance.</div>
+                                <div class="accordion-body text-700">{{ __('Yes. We can check for software, storage, or hardware causes and recommend practical ways to improve performance.') }}</div>
                             </div>
                         </div>
                         <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                             <h3 class="accordion-header" id="landingFaqFourHeading">
                                 <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqFour" aria-expanded="false" aria-controls="landingFaqFour">
-                                    Do you support business devices?
+                                    {{ __('Do you support business devices?') }}
                                 </button>
                             </h3>
                             <div id="landingFaqFour" class="accordion-collapse collapse" aria-labelledby="landingFaqFourHeading" data-bs-parent="#landingFaqAccordion">
-                                <div class="accordion-body text-700">Yes. We help home and business users with troubleshooting, setup, and recommendations for device reliability and performance.</div>
+                                <div class="accordion-body text-700">{{ __('Yes. We help home and business users with troubleshooting, setup, and recommendations for device reliability and performance.') }}</div>
                             </div>
                         </div>
                     <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                         <h3 class="accordion-header" id="landingFaqFiveHeading">
                             <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqFive" aria-expanded="false" aria-controls="landingFaqFive">
-                                How much will diagnosis and repair cost?
+                                {{ __('How much will diagnosis and repair cost?') }}
                             </button>
                         </h3>
                         <div id="landingFaqFive" class="accordion-collapse collapse" aria-labelledby="landingFaqFiveHeading" data-bs-parent="#landingFaqAccordion">
-                            <div class="accordion-body text-700">We’ll confirm the diagnostic fee with you before booking or assessment. Any “from” price is a starting estimate; the final written quote depends on the diagnosis. Parts and software are quoted separately where applicable, and we’ll get your approval before proceeding.</div>
+                            <div class="accordion-body text-700">{{ __('We’ll confirm the diagnostic fee with you before booking or assessment. Any “from” price is a starting estimate; the final written quote depends on the diagnosis. Parts and software are quoted separately where applicable, and we’ll get your approval before proceeding.') }}</div>
                         </div>
                     </div>
                     <div class="accordion-item border-0 shadow-sm mb-3 rounded">
                         <h3 class="accordion-header" id="landingFaqSixHeading">
                             <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqSix" aria-expanded="false" aria-controls="landingFaqSix">
-                                Is my repair covered by a warranty?
+                                {{ __('Is my repair covered by a warranty?') }}
                             </button>
                         </h3>
                         <div id="landingFaqSix" class="accordion-collapse collapse" aria-labelledby="landingFaqSixHeading" data-bs-parent="#landingFaqAccordion">
-                            <div class="accordion-body text-700">Warranty coverage and duration vary by repair and parts. We’ll state the applicable coverage and period in your written quotation.</div>
+                            <div class="accordion-body text-700">{{ __('Warranty coverage and duration vary by repair and parts. We’ll state the applicable coverage and period in your written quotation.') }}</div>
                         </div>
                     </div>
                     <div class="accordion-item border-0 shadow-sm rounded">
                         <h3 class="accordion-header" id="landingFaqSevenHeading">
                             <button class="accordion-button collapsed rounded" type="button" data-bs-toggle="collapse" data-bs-target="#landingFaqSeven" aria-expanded="false" aria-controls="landingFaqSeven">
-                                How should I prepare my data before a repair?
+                                {{ __('How should I prepare my data before a repair?') }}
                             </button>
                         </h3>
                         <div id="landingFaqSeven" class="accordion-collapse collapse" aria-labelledby="landingFaqSevenHeading" data-bs-parent="#landingFaqAccordion">
-                            <div class="accordion-body text-700">Please back up important data before handing over your device. We access files only when needed and with your permission, but we cannot guarantee against data loss. Read our <a href="{{ route('privacy') }}">Privacy Policy</a> for more information.</div>
+                            <div class="accordion-body text-700">{{ __('Please back up important data before handing over your device. We access files only when needed and with your permission, but we cannot guarantee against data loss. Read our') }} <a href="{{ route('privacy') }}">{{ __('Privacy Policy') }}</a> {{ __('for more information.') }}</div>
                         </div>
                     </div>
                     </div>
@@ -415,24 +433,26 @@
         <div class="container">
             <div class="row align-items-center g-5">
                    <div class="col-lg-6">
-                        <span class="contact-kicker fw-bold text-primary text-uppercase fs-10">Ready for the next step?</span>
-                        <h2 class="h2 fw-bold text-1000 mt-2 mb-3">Let’s get your computer sorted.</h2>
-                        <p class="contact-copy lead mb-4">Tell us what is happening and what device needs attention. We’ll help you figure out the next step.</p>
+                        <span class="contact-kicker fw-bold text-primary text-uppercase fs-10">{{ __('Ready for the next step?') }}</span>
+                        <h2 class="h2 fw-bold text-1000 mt-2 mb-3">{{ __('Let’s get your computer sorted.') }}</h2>
+                        <p class="contact-copy lead mb-4">{{ __('Tell us what is happening and what device needs attention. We’ll help you figure out the next step.') }}</p>
                         <div class="d-flex flex-wrap gap-2">
-                            <a href="{{ route('bookings.create') }}" class="btn btn-primary rounded-pill px-4">Book a service</a>
-                            <a href="#faq" class="btn btn-secondary rounded-pill px-4">Read common questions</a>
+                            <a href="{{ route('bookings.create') }}" class="btn btn-primary rounded-pill px-4">{{ __('Book a service') }}</a>
+                            <a href="#faq" class="btn btn-secondary rounded-pill px-4">{{ __('Read common questions') }}</a>
                         </div>
                     </div>
                 <div class="col-lg-6">
                     <div class="card border-0 shadow-lg p-2">
                         <div class="card-body p-4 p-lg-5">
                             <span class="bi bi-headset text-primary fs-2 mb-3"></span>
-                            <h3 class="h3 fw-bold text-1000">Need a hand?</h3>
-                            <p class="text-700 mb-0">Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.</p>
-                                                            <a class="btn btn-primary rounded-pill px-4 mt-3" href="mailto:support@omgcomputer.my">
-                                    <span class="bi bi-envelope me-2" aria-hidden="true"></span>support@omgcomputer.my
-                                </a>
-                                                        <a class="btn btn-success rounded-pill px-4 mt-3" href="https://wa.me/60104224350?text=Hi%20OMG%20Computer%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener noreferrer"><span class="bi bi-whatsapp me-2" aria-hidden="true"></span>Message us on WhatsApp</a>
+                            <h3 class="h3 fw-bold text-1000">{{ __('Need a hand?') }}</h3>
+                            <p class="text-700 mb-0">{{ __('Get in touch with OMG Computer to discuss a repair, ask about support, or find out what to do next.') }}</p>
+                            <a class="btn btn-primary rounded-pill px-4 mt-3" href="mailto:support@omgcomputer.my">
+                                <span class="bi bi-envelope me-2" aria-hidden="true"></span>support@omgcomputer.my
+                            </a>
+                            <a class="btn btn-success rounded-pill px-4 mt-3" href="https://wa.me/60104224350?text=Hi%20OMG%20Computer%2C%20I%20would%20like%20to%20ask%20about%20your%20services." target="_blank" rel="noopener noreferrer">
+                                <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -161,8 +161,50 @@ class ShopTest extends TestCase
             ->assertSee(asset('assets/img/omg/ready-built-pc.jpg'), false)
             ->assertSee('RM 2,899.00')
             ->assertSee('Get a custom PC quote');
+
+        $this->withSession(['public_locale' => 'ms'])
+            ->get(route('shop.public'))
+            ->assertOk()
+            ->assertSee('Komponen dan PC untuk persediaan anda.')
+            ->assertSee('Penapis');
+        $this->withSession(['public_locale' => 'ms'])
+            ->get(route('shop.public.products.show', $readyBuiltPc))
+            ->assertOk()
+            ->assertSee('PC siap bina');
+
+        $this->withSession(['public_locale' => 'zh_CN'])
+            ->get(route('shop.public'))
+            ->assertOk()
+            ->assertSee('为您的电脑配置选购配件与整机。')
+            ->assertSee('筛选');
+        $this->withSession(['public_locale' => 'zh_CN'])
+            ->get(route('shop.public.products.show', $readyBuiltPc))
+            ->assertOk()
+            ->assertSee('整机电脑');
+
         $this->get(route('shop.public.products.show', $hiddenPart))->assertNotFound();
         $this->get(route('shop.public.products.show', $outOfStockPart))->assertNotFound();
+    }
+
+    public function test_storage_product_uses_the_available_component_stock_photo(): void
+    {
+        $ssd = InventoryPart::query()->create([
+            'name' => '512GB NVMe SSD',
+            'sku' => 'STOCK-SSD-IMAGE-01',
+            'type' => 'other',
+            'description' => 'Solid state drive for a desktop computer.',
+            'cost_price' => 80,
+            'selling_price' => 120,
+            'stock_quantity' => 8,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+
+        $this->get(route('shop.public.products.show', $ssd))
+            ->assertOk()
+            ->assertSee('512GB NVMe SSD')
+            ->assertSee(asset('assets/img/omg/repair-pc-components.jpg'), false)
+            ->assertDontSee(asset('assets/img/omg/computer-repair-placeholder.svg'), false);
     }
 
     public function test_public_site_links_to_the_shop_grid_and_legacy_list_redirects_there(): void
@@ -290,6 +332,21 @@ class ShopTest extends TestCase
             ->assertSee('6.00%')
             ->assertSee('name="custom_pc_build" value="1"', false)
             ->assertSee('Select a motherboard to filter processors by socket')
+            ->assertSee('Starter profiles suggest targets only')
+            ->assertSee('Starter profile')
+            ->assertSee('Basic / low-end')
+            ->assertSee('Mid-range')
+            ->assertSee('High-end')
+            ->assertSee('Choose a profile to see suggested specs')
+            ->assertSee('This guide will not add parts or prices')
+            ->assertSee('select exact catalogue items with Browse parts')
+            ->assertSee('build-template-guidance', false)
+            ->assertSee('component-profile-guidance', false)
+            ->assertSee('Matches profile spec')
+            ->assertSee('Approximate performance')
+            ->assertSee('data-performance-gaming', false)
+            ->assertSee('data-performance-work', false)
+            ->assertSee('not a benchmark or guaranteed FPS')
             ->assertSee('Section')
             ->assertSee('CPU')
             ->assertSee('GPU')
@@ -396,6 +453,7 @@ class ShopTest extends TestCase
         ]))
             ->assertOk()
             ->assertJsonFragment(['name' => $am5Cpu->name, 'socket' => 'AM5'])
+            ->assertJsonFragment(['Cores' => '6'])
             ->assertJsonMissing(['name' => $intelCpu->name, 'socket' => 'LGA1700']);
         $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
             'category' => 'peripheral',

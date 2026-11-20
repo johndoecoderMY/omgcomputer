@@ -18,7 +18,38 @@
     }
 @endphp
 
+<div class="app-navigation-progress" data-app-navigation-progress role="progressbar"
+    aria-label="Loading page" aria-valuemin="0" aria-valuemax="100" hidden></div>
+
 <style>
+    .app-navigation-progress {
+        position: fixed;
+        z-index: 2000;
+        top: 0;
+        left: 0;
+        width: 30%;
+        height: 3px;
+        background: var(--bs-primary);
+        pointer-events: none;
+    }
+
+    .app-navigation-progress.is-active {
+        animation: app-navigation-progress 1.2s ease-in-out infinite;
+    }
+
+    @keyframes app-navigation-progress {
+        from { transform: translateX(-110%); }
+        to { transform: translateX(360%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .app-navigation-progress.is-active {
+            animation: none;
+            width: 100%;
+            transform: none;
+        }
+    }
+
     .app-toast-container .toast {
         --falcon-toast-bg: var(--falcon-emphasis-bg);
         --falcon-toast-color: var(--falcon-body-color);
@@ -167,6 +198,19 @@
                 : null;
             const isProjectAjaxPage = () => Boolean(document.querySelector('[data-project-ajax-root]'));
             const currentUrl = () => `${window.location.pathname}${window.location.search}`;
+            const hideAjaxModal = async (modal) => {
+                const instance = bootstrap.Modal.getInstance(modal);
+                if (!instance || !modal.classList.contains('show')) return;
+                if (instance._isTransitioning && instance._isShown) {
+                    await new Promise((resolve) => modal.addEventListener('shown.bs.modal', resolve, { once: true }));
+                }
+                if (!instance._isShown) return;
+
+                await new Promise((resolve) => {
+                    modal.addEventListener('hidden.bs.modal', resolve, { once: true });
+                    instance.hide();
+                });
+            };
 
             const runRootScripts = (root, refreshPage = false) => {
                 root.querySelectorAll('script:not([src])').forEach((script) => {
@@ -180,6 +224,12 @@
                 window.initializeProjectAjaxControls?.(root);
             };
 
+            const findVisibleResponseAlert = (parsedDocument, selector) => [...parsedDocument.querySelectorAll(selector)]
+                .find((candidate) => !candidate.hidden
+                    && !candidate.classList.contains('d-none')
+                    && !candidate.closest('[hidden], .d-none')
+                    && candidate.textContent.trim());
+
             const showResponseToast = (parsedDocument, fallbackMessage = '') => {
                 const flash = parsedDocument.querySelector('[data-flash-toast]');
                 if (flash) {
@@ -189,7 +239,7 @@
                     return;
                 }
 
-                const alert = parsedDocument.querySelector('.alert-danger, .alert-success');
+                const alert = findVisibleResponseAlert(parsedDocument, '.alert-danger, .alert-success');
                 const message = alert?.textContent?.trim();
                 if (message) {
                     const isError = alert.classList.contains('alert-danger');
@@ -288,12 +338,21 @@
                 event.preventDefault();
                 form.dataset.projectAjaxSubmitting = 'true';
                 form.setAttribute('aria-busy', 'true');
+                modal?.querySelector('[data-project-ajax-validation]')?.remove();
                 const formData = new FormData(form);
+                const isQuotationSend = form.hasAttribute('data-quotation-send-ajax');
                 if (event.submitter?.name) {
                     formData.append(event.submitter.name, event.submitter.value);
                 }
                 const submitButtons = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
                 const disabledState = submitButtons.map((button) => button.disabled);
+                const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
+                const submitSpinner = submitter ? document.createElement('span') : null;
+                if (submitSpinner) {
+                    submitSpinner.className = 'spinner-border spinner-border-sm ms-2';
+                    submitSpinner.setAttribute('aria-hidden', 'true');
+                    submitter.append(submitSpinner);
+                }
                 submitButtons.forEach((button) => { button.disabled = true; });
 
                 try {
@@ -316,6 +375,19 @@
                         const message = parsedDocument.querySelector('[data-flash-toast] .toast-body')?.textContent?.trim()
                             || `Could not save your changes (HTTP ${response.status}).`;
                         window.showAppToast(message, 'danger', 'Project update');
+                        if (form.matches('[data-offline-draft]')) {
+                            window.offlineDrafts?.save(form).then(() => {
+                                window.offlineDrafts.setStatus(
+                                    form,
+                                    'The server did not accept this change. A local copy is still available in this browser.',
+                                    'warning',
+                                    true,
+                                );
+                            }).catch((error) => {
+                                console.error('Could not save a local copy after the server rejected the change.', error);
+                                window.offlineDrafts?.setStatus(form, 'The server rejected this change and a local backup could not be saved.', 'danger');
+                            });
+                        }
                         return;
                     }
 
@@ -324,31 +396,60 @@
                     let isModalValidation = Boolean(projectFormModal && modalSource
                         && `${nextUrl.pathname}${nextUrl.search}` === `${new URL(modalSource).pathname}${new URL(modalSource).search}`);
                     let isSamePage = `${nextUrl.pathname}${nextUrl.search}` === currentUrl();
-                    if (modal && !isModalValidation && isSamePage
-                        && parsedDocument.querySelector('.alert-danger, [data-flash-toast][role="alert"]')) {
+                    const isTicketBillingRefresh = Boolean(projectFormModal && formData.has('modal_return_to_ticket')
+                        && nextUrl.pathname === window.location.pathname
+                        && document.querySelector('[data-ticket-billing-documents]'));
+                    const validationAlert = parsedDocument.querySelector('[data-flash-toast][role="alert"]')
+                        || findVisibleResponseAlert(parsedDocument, '.alert-danger');
+                    if (modal && !isQuotationSend && !isModalValidation && isSamePage
+                        && validationAlert) {
                         const flash = parsedDocument.querySelector('[data-flash-toast][role="alert"]');
                         const message = flash?.querySelector('.toast-body')?.textContent?.trim()
-                            || parsedDocument.querySelector('.alert-danger')?.textContent?.trim()
+                            || validationAlert.textContent?.trim()
                             || 'Please correct the highlighted form details.';
-                        const modalRoot = modal.querySelector('[data-project-ajax-root]') || formRoot;
-                        if (modalRoot) {
-                            modalRoot.querySelector('[data-project-ajax-validation]')?.remove();
-                            const alert = document.createElement('div');
-                            alert.className = 'alert alert-danger';
-                            alert.setAttribute('role', 'alert');
-                            alert.dataset.projectAjaxValidation = '';
-                            alert.textContent = message;
-                            modalRoot.prepend(alert);
-                        }
-                        showResponseToast(parsedDocument, message);
+                        const validationTarget = modal.querySelector('.modal-body') || modal;
+                        const alert = validationAlert.matches('.alert-danger')
+                            ? validationAlert.cloneNode(true)
+                            : document.createElement('div');
+                        alert.classList.add('alert', 'alert-danger');
+                        alert.setAttribute('role', 'alert');
+                        alert.dataset.projectAjaxValidation = '';
+                        if (!alert.textContent.trim()) alert.textContent = message;
+                        validationTarget.prepend(alert);
                         return;
                     }
-                    if (!isSamePage && !isModalValidation) {
+                    const hasValidationFeedback = Boolean(validationAlert);
+                    if (window.offlineDrafts && form.matches('[data-offline-draft]')
+                        && !(isSamePage && hasValidationFeedback)) {
+                        await window.offlineDrafts.clear(form).catch((error) => {
+                            console.error('The online save succeeded, but its local draft could not be cleared.', error);
+                            window.offlineDrafts.setStatus(
+                                form,
+                                'Saved online, but the local copy could not be cleared. Clear it manually if needed.',
+                                'warning',
+                                true,
+                            );
+                        });
+                    }
+                    if (!isSamePage && !isModalValidation && !isTicketBillingRefresh) {
                         window.location.assign(nextUrl.href);
                         return;
                     }
 
                     const updatedRoot = parsedDocument.querySelector('[data-project-ajax-root]');
+                    if (updatedRoot && isTicketBillingRefresh) {
+                        const updatedBillingDocuments = updatedRoot.querySelector('[data-ticket-billing-documents]');
+                        const currentBillingDocuments = document.querySelector('[data-ticket-billing-documents]');
+                        if (!updatedBillingDocuments || !currentBillingDocuments) {
+                            window.location.assign(nextUrl.href);
+                            return;
+                        }
+
+                        currentBillingDocuments.replaceWith(updatedBillingDocuments.cloneNode(true));
+                        await hideAjaxModal(modal);
+                        showResponseToast(parsedDocument);
+                        return;
+                    }
                     const updateMainPage = Boolean(modal && !isModalValidation && isSamePage);
                     const targetRoot = updateMainPage
                         ? document.querySelector('[data-project-ajax-root]')
@@ -361,6 +462,10 @@
                     }
 
                     const replacement = updatedRoot.cloneNode(true);
+                    if (updateMainPage && modal && targetRoot.contains(modal)) {
+                        document.body.append(modal);
+                        modal.addEventListener('hidden.bs.modal', () => modal.remove(), { once: true });
+                    }
                     targetRoot.replaceWith(replacement);
                     if (!modal && nextUrl.href !== window.location.href) {
                         window.history.replaceState({}, '', nextUrl.href);
@@ -370,15 +475,102 @@
                     }
                     runRootScripts(replacement, !modal || updateMainPage);
                     if (updateMainPage) {
-                        bootstrap.Modal.getInstance(modal)?.hide();
+                        await hideAjaxModal(modal);
                     }
                     showResponseToast(parsedDocument);
                 } catch (error) {
                     window.showAppToast(error.message || 'Could not save your changes. Please try again.', 'danger', 'Project update');
+                    if (form.matches('[data-offline-draft]')) {
+                        window.offlineDrafts?.save(form).then(() => {
+                            window.offlineDrafts.setStatus(
+                                form,
+                                navigator.onLine
+                                    ? 'Could not sync this change. A local copy is still available in this browser.'
+                                    : 'Connection lost. Your local draft is available; reconnect and submit it manually.',
+                                'warning',
+                                true,
+                            );
+                        }).catch((saveError) => {
+                            console.error('Could not save a local copy after the request failed.', saveError);
+                            window.offlineDrafts?.setStatus(form, 'The request failed and a local backup could not be saved.', 'danger');
+                        });
+                    }
                 } finally {
                     form.dataset.projectAjaxSubmitting = 'false';
                     form.removeAttribute('aria-busy');
+                    submitSpinner?.remove();
                     submitButtons.forEach((button, index) => { button.disabled = disabledState[index]; });
+                }
+            });
+
+            const navigationProgress = document.querySelector('[data-app-navigation-progress]');
+            let navigationProgressFallbackTimer = null;
+            const resetNavigationProgress = () => {
+                if (navigationProgressFallbackTimer !== null) {
+                    window.clearTimeout(navigationProgressFallbackTimer);
+                    navigationProgressFallbackTimer = null;
+                }
+                navigationProgress?.classList.remove('is-active');
+                if (navigationProgress) {
+                    navigationProgress.hidden = true;
+                    navigationProgress.removeAttribute('aria-valuenow');
+                }
+            };
+            const resetNativeFormFeedback = () => {
+                document.querySelectorAll('form[data-native-submitting="true"]').forEach((form) => {
+                    form.removeAttribute('aria-busy');
+                    delete form.dataset.nativeSubmitting;
+                });
+                document.querySelectorAll('[data-native-form-spinner]').forEach((spinner) => spinner.remove());
+            };
+
+            window.addEventListener('pageshow', () => {
+                resetNavigationProgress();
+                resetNativeFormFeedback();
+            });
+            window.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const link = target?.closest('a[href]');
+                if (!document.body.hasAttribute('data-notifications-user') || !navigationProgress
+                    || event.defaultPrevented || event.button !== 0
+                    || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+                    || !link || link.closest('[data-project-ajax-modal], [data-bs-toggle], [data-bs-dismiss]')
+                    || link.hasAttribute('download') || (link.target && link.target !== '_self')) {
+                    return;
+                }
+
+                const destination = new URL(link.href, window.location.href);
+                if (destination.origin !== window.location.origin
+                    || (destination.pathname === window.location.pathname && destination.search === window.location.search)) {
+                    return;
+                }
+
+                navigationProgress.hidden = false;
+                navigationProgress.removeAttribute('aria-valuenow');
+                navigationProgress.classList.add('is-active');
+                navigationProgressFallbackTimer = window.setTimeout(resetNavigationProgress, 12000);
+            });
+            window.addEventListener('submit', (event) => {
+                const form = event.target instanceof HTMLFormElement ? event.target : null;
+                if (!document.body.hasAttribute('data-notifications-user') || !form || event.defaultPrevented) {
+                    return;
+                }
+                if (form.dataset.nativeSubmitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+                if (form.method.toLowerCase() === 'get' || (form.target && form.target.toLowerCase() !== '_self')) {
+                    return;
+                }
+
+                form.dataset.nativeSubmitting = 'true';
+                form.setAttribute('aria-busy', 'true');
+                if (event.submitter instanceof HTMLButtonElement) {
+                    const spinner = document.createElement('span');
+                    spinner.className = 'spinner-border spinner-border-sm ms-2';
+                    spinner.dataset.nativeFormSpinner = '';
+                    spinner.setAttribute('aria-hidden', 'true');
+                    event.submitter.append(spinner);
                 }
             });
         })();

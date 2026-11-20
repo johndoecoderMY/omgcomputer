@@ -6,7 +6,8 @@
 
     <!-- ===============================================--><!--    Document Title--><!-- ===============================================-->
     @php
-        $pageTitle = trim($__env->yieldContent('title', 'OMG Computer'));
+        $pageTitle = html_entity_decode(trim($__env->yieldContent('title', 'OMG Computer')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $pageTitle = html_entity_decode($pageTitle, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $pageTitle = $pageTitle !== '' ? $pageTitle : 'OMG Computer';
     @endphp
     <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
@@ -31,13 +32,11 @@
 
     <!-- ===============================================--><!--    Stylesheets--><!-- ===============================================-->
     <link href="{{ asset('vendors/prism/prism-okaidia.css') }}" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,500,600,700%7cPoppins:300,400,500,600,700,800,900&amp;display=swap" rel="stylesheet">
+    <link href="{{ asset('assets/css/local-fonts.css') }}" rel="stylesheet">
     <link href="{{ asset('vendors/simplebar/simplebar.min.css') }}" rel="stylesheet">
     <link href="{{ asset('vendors/datatables.net-bs5/dataTables.bootstrap5.min.css') }}" rel="stylesheet">
      <link href="{{ asset('assets/css/theme.min.css') }}" rel="stylesheet" id="style-default">
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
-     <link rel="preload" href="{{ Vite::asset('node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2') }}" as="font" type="font/woff2" crossorigin>
      @vite('resources/css/icons.css')
      <link href="{{ asset('vendors/select2/select2.min.css') }}" rel="stylesheet">
      <link href="{{ asset('vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css') }}" rel="stylesheet">
@@ -105,6 +104,20 @@
 
          .modal-footer {
              justify-content: flex-end;
+         }
+
+         .navbar-vibrant .navbar-vertical-content .nav-link.dropdown-indicator.active {
+             background-color: transparent !important;
+             color: #fff !important;
+             font-size: .95rem;
+             font-weight: 700 !important;
+         }
+
+         .navbar-vibrant .navbar-vertical-content .nav-link[aria-current="page"] {
+             background-color: transparent !important;
+             color: #fff !important;
+             font-size: .95rem;
+             font-weight: 700 !important;
          }
      </style>
      @stack('styles')

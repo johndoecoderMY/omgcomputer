@@ -51,6 +51,7 @@
 
 
     @include('layouts.app.scripts')
+    @include('layouts.app.offline-drafts')
     @stack('scripts')
 
 </body>

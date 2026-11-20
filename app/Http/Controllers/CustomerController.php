@@ -53,14 +53,19 @@ class CustomerController extends Controller
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('company', 'like', "%{$search}%")
-                        ->orWhere('notes', 'like', "%{$search}%"));
+                        ->orWhere('notes', 'like', "%{$search}%")
+                        ->orWhere('warning', 'like', "%{$search}%"));
                 }
             }, true)
             ->addColumn('customer', fn (Customer $customer): string => sprintf(
                 '<a class="fw-semibold" href="%s">%s</a>%s',
                 e(route('customers.show', $customer)),
                 e($customer->name),
-                $customer->company ? '<div class="small text-body-secondary">'.e($customer->company).'</div>' : '',
+                ($customer->company ? '<div class="small text-body-secondary">'.e($customer->company).'</div>' : '')
+                    .($customer->warning
+                        ? '<div class="small text-warning-emphasis fw-semibold"><span class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></span>'
+                            .e(Str::limit($customer->warning, 100)).'</div>'
+                        : ''),
             ))
             ->addColumn('contact', fn (Customer $customer): string => e($customer->email ?: '—')
                 .'<div class="small text-body-secondary">'.e($customer->phone ?: '').'</div>')
@@ -167,6 +172,7 @@ class CustomerController extends Controller
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],
             'address' => ['nullable', 'string', 'max:3000'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'warning' => ['nullable', 'string', 'max:5000'],
         ]);
     }
 }

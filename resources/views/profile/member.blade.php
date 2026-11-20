@@ -17,6 +17,26 @@
         @endif
     </x-page-header>
 
+    @if ($canManageAccount && $isCustomerAccount)
+        @if ($customerRecord?->warning)
+            <div class="alert alert-warning" role="alert">
+                <div class="fw-semibold"><span class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></span>Important customer warning</div>
+                <div class="text-pre-line mt-1">{{ $customerRecord->warning }}</div>
+            </div>
+        @endif
+        @if ($customerRecord?->notes)
+            <div class="alert alert-info" role="status">
+                <div class="fw-semibold">Internal customer notes</div>
+                <div class="text-pre-line mt-1">{{ $customerRecord->notes }}</div>
+            </div>
+        @endif
+        @if ($customerRecord)
+            <p><a href="{{ route('customers.show', $customerRecord) }}">Open linked customer record</a></p>
+        @else
+            <div class="alert alert-light border" role="status">No customer record is linked to this account email yet.</div>
+        @endif
+    @endif
+
     @if ($canManageAccount && ! $isCustomerAccount)
         @if (session('success'))
             <div class="alert alert-success" role="status">{{ session('success') }}</div>

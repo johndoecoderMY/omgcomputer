@@ -24,22 +24,57 @@
                 @endif
                 <figcaption class="small mt-2 text-body-secondary">{{ $attachment->caption ?: $attachment->original_name }}</figcaption>
                 @if ($editableCaptions ?? false)
-                    <form class="mt-2" method="POST"
-                        action="{{ route($captionRoute ?? 'tasks.attachments.caption', array_merge($captionRouteParameters ?? [$task], [$attachment])) }}">
-                        @csrf
-                        @method('PATCH')
-                        <label class="visually-hidden" for="attachment-caption-{{ $attachment->id }}">Caption for {{ $attachment->original_name }}</label>
-                        <div class="input-group input-group-sm">
-                            <input class="form-control" id="attachment-caption-{{ $attachment->id }}" name="caption"
-                                maxlength="255" value="{{ $attachment->caption }}" placeholder="Add a caption">
-                            <button class="btn btn-outline-secondary" type="submit" aria-label="Save caption">
-                                <span class="bi bi-floppy" aria-hidden="true"></span>
-                            </button>
+                    @php
+                        $captionAction = route($captionRoute ?? 'tasks.attachments.caption', array_merge($captionRouteParameters ?? [$task], [$attachment]));
+                        $captionModalId = 'attachment-caption-modal-'.($galleryName ?? 'gallery').'-'.$attachment->id;
+                    @endphp
+                    @if ($captionEditorModal ?? false)
+                        <button class="btn btn-sm btn-outline-secondary mt-2" type="button"
+                            data-bs-toggle="modal" data-bs-target="#{{ $captionModalId }}">
+                            <span class="bi bi-pencil me-1" aria-hidden="true"></span>Edit caption
+                        </button>
+                        <div class="modal fade" id="{{ $captionModalId }}" tabindex="-1"
+                            aria-labelledby="{{ $captionModalId }}-title" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <form method="POST" action="{{ $captionAction }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <div class="modal-header">
+                                            <div>
+                                                <h2 class="modal-title h5" id="{{ $captionModalId }}-title">Edit photo caption</h2>
+                                                <div class="small text-body-secondary">{{ $attachment->original_name }}</div>
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            @include('attachments._caption-fields', ['attachment' => $attachment])
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                                            <button class="btn btn-primary" type="submit">Save caption</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                        @error('caption')
-                            <div class="small text-danger mt-1">{{ $message }}</div>
-                        @enderror
-                    </form>
+                    @else
+                        <form class="mt-2" method="POST" action="{{ $captionAction }}">
+                            @csrf
+                            @method('PATCH')
+                            <label class="visually-hidden" for="attachment-caption-{{ $attachment->id }}">Caption for {{ $attachment->original_name }}</label>
+                            <div class="input-group input-group-sm">
+                                <input class="form-control" id="attachment-caption-{{ $attachment->id }}" name="caption"
+                                    maxlength="255" value="{{ $attachment->caption }}" placeholder="Add a caption">
+                                <button class="btn btn-outline-secondary" type="submit" aria-label="Save caption">
+                                    <span class="bi bi-floppy" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                            @error('caption')
+                                <div class="small text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                        </form>
+                    @endif
                 @endif
             </figure>
         </div>

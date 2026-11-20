@@ -9,7 +9,7 @@
     @if ($ticket)<div class="alert alert-info">Quotation for repair ticket <a href="{{ route('tickets.show', $ticket) }}">{{ $ticket->ticket_number }}</a>. Customer and issue details have been prefilled.</div>@endif
     @if ($project)<div class="alert alert-info">Billing document for project <a href="{{ route('projects.show', $project) }}">{{ $project->name }}</a>. Customer details have been prefilled where available.</div>@endif
     @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-    <form method="POST" action="{{ $formAction }}">
+    <form method="POST" action="{{ $formAction }}" data-offline-draft="billing-document">
         @csrf
         @if ($editing)@method('PUT')@endif
         <input type="hidden" name="type" value="{{ $type }}">
@@ -18,6 +18,9 @@
             <input type="hidden" name="modal_return_to_ticket" value="{{ $ticket->id }}">
         @endif
         @if ($project)<input type="hidden" name="project_id" value="{{ $project->id }}">@endif
+        @if (! $editing && $project && request()->ajax() && request()->filled('project_id'))
+            <input type="hidden" name="modal_return_to_project" value="1">
+        @endif
         <div class="card mb-3"><div class="card-header fw-semibold">Customer and dates</div><div class="card-body row g-3">
             @if (! empty($customerRecipients))
                 <div class="col-12">
@@ -111,7 +114,10 @@
                     @php($selectedCatalogValue = !empty($line['inventory_part_id']) ? 'part:'.$line['inventory_part_id'] : ($selectedProduct ? 'service:'.$selectedProduct['id'] : ''))
                     <tr class="billing-line">
                         <td>
-                            <select class="form-select catalog-select" data-search-url="{{ route('billing.parts.search') }}" aria-label="Choose inventory item or service">
+                            <select class="form-select catalog-select"
+                                data-offline-draft-field="items[{{ $index }}][catalog]"
+                                data-search-url="{{ route('billing.parts.search') }}"
+                                aria-label="Choose inventory item or service">
                                 <option value="" @selected($selectedCatalogValue === '')>Custom line</option>
                                 @if ($selectedPart)
                                     <option value="part:{{ $selectedPart->id }}" data-name="{{ $selectedPart->name }}" data-price="{{ $selectedPart->selling_price }}" selected>
@@ -146,7 +152,23 @@
                     </tr>
                 @endforeach
             </tbody></table></div>
-            <div class="card-body row g-3"><div class="col-md-3"><label class="form-label" for="tax_rate">Tax rate (%)</label><input class="form-control" id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="0.01" value="{{ old('tax_rate', $document->tax_rate ?? 0) }}" required></div><div class="col-md-9"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="2">{{ old('notes', $document->notes) }}</textarea></div></div>
+            <div class="card-body row g-3">
+                <div class="col-md-3">
+                    <label class="form-label" for="discount_amount">Discount (RM)</label>
+                    <input class="form-control" id="discount_amount" name="discount_amount" type="number" min="0" step="0.01"
+                        value="{{ old('discount_amount', $document->discount_amount ?? 0) }}">
+                    <div class="form-text">Deducted from the subtotal before tax.</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="tax_rate">Tax rate (%)</label>
+                    <input class="form-control" id="tax_rate" name="tax_rate" type="number" min="0" max="100" step="0.01"
+                        value="{{ old('tax_rate', $document->tax_rate ?? 0) }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2">{{ old('notes', $document->notes) }}</textarea>
+                </div>
+            </div>
         </div>
         <div class="d-flex justify-content-end gap-2"><a class="btn btn-outline-secondary" href="{{ $editing ? route('billing.documents.show', $document) : route('billing.index') }}">Cancel</a><button class="btn btn-primary" type="submit">{{ $editing ? ($document->status === 'rejected' ? 'Save revised quotation as draft' : 'Save draft changes') : ($type === 'invoice' ? 'Create and issue invoice' : 'Save quotation') }}</button></div>
     </form>
@@ -211,6 +233,9 @@ const initializeBillingCreateForm = () => {
     lines.querySelectorAll('.catalog-select').forEach(initializeCatalogSelect);
     const renumber = () => lines.querySelectorAll('.billing-line').forEach((row, index) => {
         row.querySelectorAll('[name]').forEach((field) => field.name = field.name.replace(/items\[\d+\]/, `items[${index}]`));
+        row.querySelectorAll('[data-offline-draft-field]').forEach((field) => {
+            field.dataset.offlineDraftField = field.dataset.offlineDraftField.replace(/items\[\d+\]/, `items[${index}]`);
+        });
     });
     document.getElementById('add-line').addEventListener('click', () => {
         const row = lines.querySelector('.billing-line').cloneNode(true);

@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class CustomerMessageTemplate extends Model
 {
+    public const LANGUAGES = [
+        'en' => 'English',
+        'ms' => 'Bahasa Melayu',
+        'zh_CN' => 'Mandarin',
+    ];
+
     public const STAGES = [
         'booking' => 'Booking',
         'intake' => 'Device intake',
@@ -43,6 +49,7 @@ class CustomerMessageTemplate extends Model
         'name',
         'stage',
         'channel',
+        'language',
         'subject',
         'body',
         'is_active',

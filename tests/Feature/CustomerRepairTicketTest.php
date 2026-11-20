@@ -47,6 +47,8 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('id="ticket-step-modal"', false)
             ->assertSee('id="workflow-device-model"', false)
             ->assertSee('id="workflow-serial-number"', false)
+            ->assertSee('id="workflow-pickup-address"', false)
+            ->assertSee('id="workflow-dropoff-address"', false)
             ->assertSee('id="step-customer-details"', false)
             ->assertSee('Create quotation')
             ->assertSee('data-project-ajax-modal', false)
@@ -92,6 +94,8 @@ class CustomerRepairTicketTest extends TestCase
             'due_at' => now()->addDays(3)->toDateString(),
             'device_model' => 'ThinkPad T14',
             'serial_number' => 'SN-1001',
+            'pickup_address' => '12 Jalan Repair, Kampar',
+            'dropoff_address' => '18 Jalan Repair, Kampar',
         ])->assertOk()
             ->assertJsonPath('status', 'in_repair')
             ->assertJsonPath('priority', 'high')
@@ -99,11 +103,15 @@ class CustomerRepairTicketTest extends TestCase
             ->assertJsonPath('assignees.0', $staff->name)
             ->assertJsonPath('diagnosis', 'Charging port requires replacement.')
             ->assertJsonPath('device_model', 'ThinkPad T14')
-            ->assertJsonPath('serial_number', 'SN-1001');
+            ->assertJsonPath('serial_number', 'SN-1001')
+            ->assertJsonPath('pickup_address', '12 Jalan Repair, Kampar')
+            ->assertJsonPath('dropoff_address', '18 Jalan Repair, Kampar');
 
         $this->assertStringContainsString('In repair', $workflowResponse->json('status_html'));
         $this->assertSame('ThinkPad T14', $ticket->fresh()->device_model);
         $this->assertSame('SN-1001', $ticket->fresh()->serial_number);
+        $this->assertSame('12 Jalan Repair, Kampar', $ticket->fresh()->pickup_address);
+        $this->assertSame('18 Jalan Repair, Kampar', $ticket->fresh()->dropoff_address);
 
         $this->postJson(route('tickets.steps.store', $ticket), [
             'title' => 'A step with photos must be rejected',
@@ -145,42 +153,63 @@ class CustomerRepairTicketTest extends TestCase
             $stepResponse->json('updates_html'),
         );
         $this->assertStringContainsString(
+            'or choose images, take a photo, or paste screenshots',
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString(
+            'data-ticket-step-photo-preview',
+            $stepResponse->json('updates_html'),
+        );
+        $this->assertStringContainsString('Click each photo to add its caption.', $stepResponse->json('updates_html'));
+        $this->assertStringContainsString(
             'action="'.route('tickets.steps.attachments.store', [$ticket, $update]).'"',
             $stepResponse->json('updates_html'),
         );
 
         $photoRoute = route('tickets.steps.attachments.store', [$ticket, $update]);
         $this->postJson($photoRoute, [
-            'photos' => [
-                UploadedFile::fake()->image('first.png'),
-                UploadedFile::fake()->image('second.png'),
-            ],
-            'caption' => 'A batch should be rejected.',
+            'photos' => array_map(
+                fn (int $index): UploadedFile => UploadedFile::fake()->image("photo-{$index}.png"),
+                range(1, 9),
+            ),
+            'captions' => array_fill(0, 9, 'Too many photos should be rejected.'),
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('photos');
         $this->postJson($photoRoute, [
             'photos' => [UploadedFile::fake()->image('caption-required.png')],
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors('caption');
+            ->assertJsonValidationErrors('captions');
+        $this->postJson($photoRoute, [
+            'photos' => [
+                UploadedFile::fake()->image('photo-without-caption.png'),
+                UploadedFile::fake()->image('another-photo-without-caption.png'),
+            ],
+            'captions' => ['Only one caption'],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('captions');
 
         $this->postJson($photoRoute, [
-            'photos' => [UploadedFile::fake()->image('port-inspection.png')],
-            'caption' => 'Port inspection',
+            'photos' => [
+                UploadedFile::fake()->image('port-inspection.png'),
+                UploadedFile::fake()->image('replacement-port.png'),
+            ],
+            'captions' => ['Port inspection', 'Replacement port'],
         ])->assertOk()
             ->assertJsonPath('message', 'Photo added to repair step.');
 
         $secondPhotoResponse = $this->postJson($photoRoute, [
             'photos' => [UploadedFile::fake()->image('bent-pin.png')],
-            'caption' => 'Bent connector pin',
+            'captions' => ['Bent connector pin'],
         ])->assertOk()
             ->assertJsonPath('message', 'Photo added to repair step.');
 
         $this->assertStringContainsString('Port inspection', $secondPhotoResponse->json('updates_html'));
+        $this->assertStringContainsString('Replacement port', $secondPhotoResponse->json('updates_html'));
         $this->assertStringContainsString('Bent connector pin', $secondPhotoResponse->json('updates_html'));
         $this->assertStringContainsString('data-ticket-step-carousel', $secondPhotoResponse->json('updates_html'));
         $this->assertStringContainsString('data-bs-slide="next"', $secondPhotoResponse->json('updates_html'));
         $this->assertSame(
-            ['Port inspection', 'Bent connector pin'],
+            ['Port inspection', 'Replacement port', 'Bent connector pin'],
             $update->attachments()->reorder('id')->pluck('caption')->all(),
         );
         $this->assertSame('waiting_parts', $ticket->fresh()->status);
@@ -398,12 +427,24 @@ class CustomerRepairTicketTest extends TestCase
         ])->assertRedirect(route('tickets.show', $ticket))
             ->assertSessionHas('success', 'Quotation saved as a draft.');
 
+        $quotation = BillingDocument::query()->where('repair_ticket_id', $ticket->id)->firstOrFail();
+        $this->assertSame('draft', $quotation->status);
         $this->assertDatabaseHas('billing_documents', [
             'repair_ticket_id' => $ticket->id,
             'type' => 'quotation',
             'status' => 'draft',
             'total' => 120,
         ]);
+        $this->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee($quotation->number)
+            ->assertSee('Draft')
+            ->assertSee('data-ticket-billing-documents', false);
+        $this->get(route('billing.documents.show', $quotation))
+            ->assertOk()
+            ->assertSee('data-project-ajax-root', false)
+            ->assertSee('data-quotation-send-ajax', false)
+            ->assertSee('action="'.route('billing.documents.send', $quotation).'"', false);
     }
 
     public function test_guest_can_track_a_repair_with_only_the_service_number(): void
@@ -640,9 +681,25 @@ class CustomerRepairTicketTest extends TestCase
             'company' => 'Kampar Campus',
             'project_id' => $project->id,
             'notes' => 'Prefers contact after 2 PM.',
+            'warning' => 'Initial customer warning.',
         ])->assertRedirect();
 
         $customer = Customer::query()->firstOrFail();
+        $customerAccount = User::factory()->create(['email' => 'avery@example.test']);
+        $customerAccount->assignRole('customer');
+        $this->get(route('customers.edit', $customer))
+            ->assertOk()
+            ->assertSee('id="warning" name="warning"', false);
+        $this->put(route('customers.update', $customer), [
+            'name' => 'Avery Tan',
+            'email' => 'avery@example.test',
+            'phone' => '+60123456789',
+            'company' => 'Kampar Campus',
+            'project_id' => $project->id,
+            'notes' => 'Prefers contact after 2 PM.',
+            'warning' => 'Call before pickup; use the side entrance.',
+        ])->assertRedirect(route('customers.show', $customer));
+        $customer->refresh();
         $this->assertSame($project->id, $customer->project_id);
         $this->getJson(route('customers.datatable', [
             'draw' => 1,
@@ -652,13 +709,23 @@ class CustomerRepairTicketTest extends TestCase
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.notes', fn (string $notes): bool => str_contains($notes, 'Prefers contact after 2 PM.'))
+            ->assertJsonPath('data.0.customer', fn (string $customerHtml): bool => str_contains($customerHtml, 'Call before pickup; use the side entrance.'))
             ->assertSee('Avery Tan');
         $this->get(route('customers.show', $customer))
             ->assertOk()
             ->assertSee('Avery Tan')
             ->assertSee('Prefers contact after 2 PM.')
+            ->assertSee('Important customer warning')
+            ->assertSee('Call before pickup; use the side entrance.')
+            ->assertSee('Customer login account')
             ->assertSee('Student support project')
             ->assertSee('New repair ticket');
+        $this->get(route('members.show', $customerAccount))
+            ->assertOk()
+            ->assertSee('Important customer warning')
+            ->assertSee('Call before pickup; use the side entrance.')
+            ->assertSee('Prefers contact after 2 PM.')
+            ->assertSee(route('customers.show', $customer), false);
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('Avery Tan');
@@ -703,7 +770,16 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee($ticket->ticket_number)
             ->assertSee('Charging port requires replacement.')
             ->assertSee('Waiting for parts')
+            ->assertSee('Important customer warning')
+            ->assertSee('Call before pickup; use the side entrance.')
+            ->assertSee('Internal customer notes')
             ->assertSee('<span class="badge text-bg-warning">Waiting for parts</span>', false);
+        $this->actingAs($customerAccount)->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertDontSee('Important customer warning')
+            ->assertDontSee('Call before pickup; use the side entrance.')
+            ->assertDontSee('Prefers contact after 2 PM.');
+        $this->actingAs($user);
         $this->get(route('tickets.index', ['status' => 'waiting_parts']))
             ->assertOk()
             ->assertSee('data-datatable', false)

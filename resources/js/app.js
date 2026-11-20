@@ -10,6 +10,104 @@ window.Pusher = Pusher;
 
 Alpine.start();
 
+const initializeActiveSidebarLink = () => {
+    const sidebar = document.getElementById('navbarVerticalNav');
+    if (!sidebar) {
+        return;
+    }
+
+    const normalizePath = (path) => path.replace(/\/+$/, '') || '/';
+    const currentUrl = new URL(window.location.href);
+    const currentPath = normalizePath(currentUrl.pathname);
+    const links = Array.from(sidebar.querySelectorAll('a.nav-link[href]'))
+        .filter((link) => !link.getAttribute('href').startsWith('#'))
+        .map((link) => {
+            const url = new URL(link.href, currentUrl.origin);
+            return url.origin === currentUrl.origin
+                ? { link, url, path: normalizePath(url.pathname) }
+                : null;
+        })
+        .filter(Boolean);
+    const matchesQuery = ({ url }) => Array.from(url.searchParams.entries())
+        .every(([key, value]) => currentUrl.searchParams.getAll(key).includes(value));
+    const exactPathLinks = links.filter(({ path }) => path === currentPath);
+    let activeLinks = exactPathLinks.filter(matchesQuery);
+    let relatedLinks = activeLinks.length ? activeLinks : exactPathLinks;
+
+    if (exactPathLinks.length === 0) {
+        const prefixLinks = links.filter(({ path }) => (
+            path !== '/' && currentPath.startsWith(`${path}/`)
+        ));
+        const matchingPrefixLinks = prefixLinks.filter(matchesQuery);
+        const candidates = matchingPrefixLinks.length ? matchingPrefixLinks : prefixLinks;
+
+        if (candidates.length) {
+            const longestPath = Math.max(...candidates.map(({ path }) => path.length));
+            relatedLinks = candidates.filter(({ path }) => path.length === longestPath);
+            activeLinks = matchingPrefixLinks.length ? relatedLinks : [];
+        }
+    }
+
+    activeLinks.forEach(({ link }) => {
+        link.classList.add('active', 'bg-primary-subtle', 'fw-semibold');
+        link.setAttribute('aria-current', 'page');
+    });
+
+    relatedLinks.forEach(({ link }) => {
+        let collapse = link.closest('.nav.collapse');
+
+        while (collapse) {
+            collapse.classList.add('show');
+            const trigger = Array.from(sidebar.querySelectorAll('[aria-controls]'))
+                .find((element) => element.getAttribute('aria-controls') === collapse.id);
+
+            if (trigger) {
+                trigger.classList.add('active', 'text-primary', 'fw-semibold');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
+
+            collapse = collapse.parentElement?.closest('.nav.collapse') || null;
+        }
+    });
+};
+
+initializeActiveSidebarLink();
+
+const modalTriggers = new WeakMap();
+
+document.addEventListener('show.bs.modal', (event) => {
+    const modal = event.target;
+    const trigger = event.relatedTarget;
+
+    if (modal instanceof HTMLElement && trigger instanceof HTMLElement) {
+        modalTriggers.set(modal, trigger);
+    }
+}, true);
+
+document.addEventListener('hide.bs.modal', (event) => {
+    const modal = event.target;
+    if (!(modal instanceof HTMLElement)) {
+        return;
+    }
+
+    const trigger = modalTriggers.get(modal);
+    if (!trigger) {
+        return;
+    }
+
+    const dropdownToggle = trigger.closest('.dropdown')?.querySelector('[data-bs-toggle="dropdown"]');
+    const focusTarget = trigger.getClientRects().length > 0 ? trigger : dropdownToggle;
+    if (!(focusTarget instanceof HTMLElement)) {
+        return;
+    }
+
+    window.requestAnimationFrame(() => {
+        if (focusTarget.isConnected) {
+            focusTarget.focus({ preventScroll: true });
+        }
+    });
+}, true);
+
 document.addEventListener('submit', async (event) => {
     const form = event.target.closest('[data-cart-add-form]');
     if (!form) {

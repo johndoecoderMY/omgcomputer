@@ -72,7 +72,9 @@ class WorkspaceDashboardAndPartsTest extends TestCase
 
     public function test_project_parts_can_be_recommended_without_changing_stock(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('admin');
         $project = Project::query()->create(['name' => 'Hardware refresh']);
         $part = InventoryPart::query()->create([
             'name' => '16GB DDR4 memory',
@@ -85,7 +87,14 @@ class WorkspaceDashboardAndPartsTest extends TestCase
 
         $this->actingAs($user)->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Parts & hardware recommendations')
+            ->assertSee('Parts & hardware recommendations', false)
+            ->assertSee('data-bs-target="#project-part-recommendation-modal"', false)
+            ->assertSee('id="project-part-recommendation-modal"', false)
+            ->assertSee('data-bs-target="#project-custom-part-modal"', false)
+            ->assertSee('id="project-custom-part-modal"', false)
+            ->assertSee('data-bs-target="#project-estimate-create-modal"', false)
+            ->assertSee('id="project-estimate-create-modal"', false)
+            ->assertSee('id="estimate-create-category"', false)
             ->assertSee('Find a part');
 
         $this->post(route('projects.parts.store', $project), [
@@ -116,6 +125,8 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         $this->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('16GB DDR4 memory')
+            ->assertSee('data-bs-target="#project-part-price-modal-'.$part->id.'"', false)
+            ->assertSee('id="project-part-price-modal-'.$part->id.'"', false)
             ->assertSee('table table-bordered align-middle mb-0', false)
             ->assertSee('2 needed')
             ->assertSee('Use the laptop-compatible memory kit.')
@@ -140,7 +151,7 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         ]);
         $this->get(route('projects.show', $project))
             ->assertOk()
-            ->assertSee('Software &other project costs', false)
+            ->assertSee('Software &amp; other project costs', false)
             ->assertSee('IDE licenses')
             ->assertSee('RM 31.00')
             ->assertSee('RM 56.00');
@@ -194,6 +205,7 @@ class WorkspaceDashboardAndPartsTest extends TestCase
         $this->actingAs($user)->get(route('projects.show', $project))
             ->assertOk()
             ->assertSee('Add a custom part')
+            ->assertSee('id="project-custom-part-modal"', false)
             ->assertSee('does not create an inventory item or change stock');
 
         $this->post(route('projects.estimate-items.store', $project), [

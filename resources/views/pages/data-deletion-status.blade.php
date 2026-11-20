@@ -7,6 +7,11 @@
         'eyebrow' => 'Privacy',
         'heading' => 'Data Deletion Status',
         'description' => 'Status for your Meta data-deletion request.',
+        'image_path' => 'assets/img/icons/shield.png',
+        'image_alt' => 'Shield illustration representing private deletion-request status.',
+        'image_width' => 512,
+        'image_height' => 512,
+        'image_fit' => 'contain',
         'compact' => true,
     ])
 
@@ -17,12 +22,12 @@
                     <div class="card border-0 shadow-sm p-1">
                         <div class="card-body p-3 p-lg-4 text-center">
                             <span class="bi bi-check-circle-fill text-success display-5" aria-hidden="true"></span>
-                            <h2 class="h4 fw-bold text-1000 mt-3">Deletion request completed</h2>
+                            <h2 class="h4 fw-bold text-1000 mt-3">{{ __('Deletion request completed') }}</h2>
                             <p class="text-700 mb-2">
-                                The Meta ad-account and Page connections associated with your Facebook account have been deleted.
+                                {{ __('The Meta ad-account and Page connections associated with your Facebook account have been deleted.') }}
                             </p>
                             <p class="small text-body-secondary mb-0">
-                                Completed {{ $deletionRequest->completed_at->format('M j, Y g:i A') }}.
+                                {{ __('Completed') }} {{ $deletionRequest->completed_at->format('M j, Y g:i A') }}.
                             </p>
                         </div>
                     </div>

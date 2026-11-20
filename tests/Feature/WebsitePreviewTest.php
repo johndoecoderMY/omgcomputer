@@ -76,6 +76,18 @@ class WebsitePreviewTest extends TestCase
             ->assertSee('not completed client projects')
             ->assertSee('<meta name="description" content="Explore responsive website demos for cafes, shops, events, and more.', false)
             ->assertSee('<link rel="canonical" href="'.route('website-previews.index').'">', false);
+
+        $this->withSession(['public_locale' => 'ms'])
+            ->get(route('website-previews.index'))
+            ->assertOk()
+            ->assertSee('Lihat potensi laman web yang boleh anda miliki.')
+            ->assertSee('Terokai pratonton laman web');
+        $this->withSession(['public_locale' => 'zh_CN'])
+            ->get(route('website-previews.concepts.show', 'dashboard'))
+            ->assertOk()
+            ->assertSee('收入概览')
+            ->assertSee('渠道销售额')
+            ->assertSee('最近 30 天');
     }
 
     public function test_each_seeded_concept_renders_a_bootstrap_page_with_three_images(): void

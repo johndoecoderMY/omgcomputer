@@ -20,6 +20,7 @@ class CustomerMessageTemplateController extends Controller
     {
         return view('customer-messages.index', [
             'stages' => CustomerMessageTemplate::STAGES,
+            'languages' => CustomerMessageTemplate::LANGUAGES,
         ]);
     }
 
@@ -27,18 +28,25 @@ class CustomerMessageTemplateController extends Controller
     {
         $data = $request->validate([
             'channel' => ['required', Rule::in(array_keys(CustomerMessageTemplate::CHANNELS))],
+            'language' => ['sometimes', 'nullable', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
         ]);
 
         $templates = CustomerMessageTemplate::query()
             ->where('is_active', true)
             ->where('channel', $data['channel'])
+            ->when(
+                filled($data['language'] ?? null),
+                fn ($query) => $query->where('language', $data['language']),
+            )
             ->orderBy('stage')
             ->orderBy('name')
-            ->get(['id', 'name', 'stage', 'subject', 'body'])
+            ->get(['id', 'name', 'stage', 'language', 'subject', 'body'])
             ->map(fn (CustomerMessageTemplate $template): array => [
                 'id' => $template->id,
                 'name' => $template->name,
                 'stage' => CustomerMessageTemplate::STAGES[$template->stage],
+                'language' => $template->language,
+                'language_label' => CustomerMessageTemplate::LANGUAGES[$template->language],
                 'subject' => $template->render($template->subject ?? ''),
                 'body' => $template->render($template->body),
             ]);
@@ -54,9 +62,14 @@ class CustomerMessageTemplateController extends Controller
         if (is_string($stage) && isset(CustomerMessageTemplate::STAGES[$stage])) {
             $query->where('stage', $stage);
         }
+        $language = $request->input('language');
+        if (is_string($language) && isset(CustomerMessageTemplate::LANGUAGES[$language])) {
+            $query->where('language', $language);
+        }
 
         return DataTables::eloquent(DataTableQueryBuilder::for($query, $request, [
             'stage' => AllowedFilter::exact('stage'),
+            'language' => AllowedFilter::exact('language'),
             'name' => AllowedFilter::partial('name'),
             'subject' => AllowedFilter::partial('subject'),
             'channel' => AllowedFilter::exact('channel'),
@@ -78,6 +91,7 @@ class CustomerMessageTemplateController extends Controller
             ))
             ->addColumn('stage_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::STAGES[$template->stage])
             ->addColumn('channel_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::CHANNELS[$template->channel])
+            ->addColumn('language_label', fn (CustomerMessageTemplate $template): string => CustomerMessageTemplate::LANGUAGES[$template->language])
             ->addColumn('status_label', fn (CustomerMessageTemplate $template): string => (string) StatusBadge::make(
                 $template->is_active ? 'active' : 'archived',
                 $template->is_active ? 'Available' : 'Archived',
@@ -93,9 +107,10 @@ class CustomerMessageTemplateController extends Controller
     public function create(): View
     {
         return view('customer-messages.create', [
-            'template' => new CustomerMessageTemplate(['channel' => 'email', 'stage' => 'general', 'is_active' => true]),
+            'template' => new CustomerMessageTemplate(['channel' => 'email', 'stage' => 'general', 'language' => 'en', 'is_active' => true]),
             'stages' => CustomerMessageTemplate::STAGES,
             'channels' => CustomerMessageTemplate::CHANNELS,
+            'languages' => CustomerMessageTemplate::LANGUAGES,
             'placeholders' => CustomerMessageTemplate::PLACEHOLDERS,
         ]);
     }
@@ -120,7 +135,8 @@ class CustomerMessageTemplateController extends Controller
             'canManage' => request()->user()->hasRole('admin')
                 || (int) $customerMessage->created_by_user_id === (int) request()->user()->id,
             'eyebrow' => CustomerMessageTemplate::STAGES[$customerMessage->stage]
-                .' · '.CustomerMessageTemplate::CHANNELS[$customerMessage->channel],
+                .' · '.CustomerMessageTemplate::CHANNELS[$customerMessage->channel]
+                .' · '.CustomerMessageTemplate::LANGUAGES[$customerMessage->language],
             'subjectPreview' => $customerMessage->render($customerMessage->subject ?? ''),
             'bodyPreview' => $customerMessage->render($customerMessage->body),
             'placeholders' => CustomerMessageTemplate::PLACEHOLDERS,
@@ -133,6 +149,7 @@ class CustomerMessageTemplateController extends Controller
             'template' => $customerMessage,
             'stages' => CustomerMessageTemplate::STAGES,
             'channels' => CustomerMessageTemplate::CHANNELS,
+            'languages' => CustomerMessageTemplate::LANGUAGES,
             'placeholders' => CustomerMessageTemplate::PLACEHOLDERS,
         ]);
     }
@@ -159,6 +176,7 @@ class CustomerMessageTemplateController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'stage' => ['required', Rule::in(array_keys(CustomerMessageTemplate::STAGES))],
             'channel' => ['required', Rule::in(array_keys(CustomerMessageTemplate::CHANNELS))],
+            'language' => ['required', Rule::in(array_keys(CustomerMessageTemplate::LANGUAGES))],
             'subject' => ['nullable', 'string', 'max:255'],
             'body' => ['required', 'string', 'max:10000'],
         ]);
