@@ -24,6 +24,7 @@
         .booking-selection-value { min-width: 0; }
         .booking-location-card.is-active { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem rgba(var(--bs-primary-rgb), .12); }
         .booking-location-preview { overflow-wrap: anywhere; min-height: 1.5rem; }
+        #booking-location-map { min-height: 320px; height: min(62vh, 620px); border-radius: .5rem; z-index: 0; }
         #calendar .booking-date-unavailable { cursor: not-allowed; }
         #calendar .booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; color: #858b92; }
         #calendar .booking-date-unavailable .fc-daygrid-day-number { color: #858b92; }
@@ -37,7 +38,6 @@
         #calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
-        #booking-location-map { min-height: 280px; border-radius: .5rem; z-index: 0; }
         .booking-location-pin { background: transparent; border: 0; }
     </style>
     @if ($authenticatedBooking)
@@ -179,13 +179,20 @@
                                                                             <h3 class="h6 mb-0" id="dropoff-location-title">{{ __('Drop-off address') }}</h3>
                                                                             <span class="badge text-bg-secondary" id="dropoff-pin-badge">{{ __('Pin not set') }}</span>
                                                                         </div>
+                                                                        <div class="form-check mb-2">
+                                                                            <input class="form-check-input" id="dropoff-same-as-pickup"
+                                                                                name="dropoff_same_as_pickup" type="checkbox" value="1"
+                                                                                @checked(old('dropoff_same_as_pickup'))>
+                                                                            <label class="form-check-label" for="dropoff-same-as-pickup">{{ __('Same as pickup address') }}</label>
+                                                                        </div>
                                                                         <label class="visually-hidden" for="dropoff-address">{{ __('Drop-off address') }}</label>
                                                                         <textarea class="form-control" id="dropoff-address" name="dropoff_address"
                                                                             rows="2" maxlength="1000" autocomplete="street-address">{{ old('dropoff_address') }}</textarea>
                                                                         <div class="form-text">{{ __('Where should we return the PC after repair? Leave blank if it is the same address.') }}</div>
+                                                                        <div class="form-text">{{ __('Use the checkbox to copy the pickup address and pin, or set a separate drop-off pin.') }}</div>
                                                                         <div class="booking-location-preview small text-body-secondary mt-2" id="dropoff-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
                                                                         <div class="small text-body-secondary" id="dropoff-pin-coordinates">{{ __('Pin not set') }}</div>
-                                                                        <button class="btn btn-sm btn-outline-primary mt-3" type="button"
+                                                                        <button class="btn btn-sm btn-outline-primary mt-3" id="dropoff-pin-button" type="button"
                                                                             data-booking-location-mode="dropoff" aria-pressed="false">
                                                                             <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set drop-off pin') }}
                                                                         </button>
@@ -197,28 +204,8 @@
                                                         <input type="hidden" id="pickup-longitude" name="pickup_longitude" value="{{ old('pickup_longitude') }}">
                                                         <input type="hidden" id="dropoff-latitude" name="dropoff_latitude" value="{{ old('dropoff_latitude') }}">
                                                         <input type="hidden" id="dropoff-longitude" name="dropoff_longitude" value="{{ old('dropoff_longitude') }}">
-                                                        <section class="mb-3" aria-labelledby="booking-location-heading">
-                                                            <h3 class="h6 mb-2" id="booking-location-heading">{{ __('Choose a location on the map') }}</h3>
-                                                            <p class="form-text">{{ __('Enter the address above and set its pin so we can confirm it is within Kampar.') }}</p>
-                                                            <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
-                                                            <div class="alert alert-primary py-2 mb-2">
-                                                                {{ __('Currently pinning') }} <strong id="booking-location-active-mode">{{ __('Pickup address') }}</strong>
-                                                            </div>
-                                                            <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
-                                                                <button class="btn btn-sm btn-outline-primary" id="booking-find-address" type="button" disabled>
-                                                                    <span class="bi bi-search me-1" aria-hidden="true"></span>{{ __('Fill address from pin') }}
-                                                                </button>
-                                                                <button class="btn btn-sm btn-outline-secondary" id="booking-use-location" type="button">
-                                                                    <span class="bi bi-crosshair me-1" aria-hidden="true"></span>{{ __('Use my current location') }}
-                                                                </button>
-                                                            </div>
-                                                            <p class="form-text">{{ __('Address lookup is optional. When you select it, the pin coordinates are sent to OpenStreetMap to find a nearby address.') }}</p>
-                                                            <div id="booking-location-map" role="application"
-                                                                aria-label="{{ __('Map for selecting a pickup or drop-off location') }}"></div>
-                                                            <p class="form-text mb-0 mt-2" id="booking-location-status" role="status" aria-live="polite">
-                                                                {{ __('Tap the map or drag the pin to select the location.') }}
-                                                            </p>
-                                                        </section>
+                                                        <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
+                                                        <p class="form-text">{{ __('Choose a pin button to open the map and set that location.') }}</p>
                                                         <div class="mb-3">
                                                             <label class="form-label" for="request-notes">{{ __('What do you need help with?') }}</label>
                                                             <textarea class="form-control" id="request-notes"
@@ -252,8 +239,43 @@
                                                     class="d-flex flex-wrap justify-content-center gap-3"></div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal fade" id="booking-location-modal" tabindex="-1"
+                                            aria-labelledby="booking-location-modal-title" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-sm-down">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <div>
+                                                            <h2 class="modal-title h5" id="booking-location-modal-title">{{ __('Choose a location on the map') }}</h2>
+                                                            <div class="small text-body-secondary">{{ __('Currently pinning') }} <strong id="booking-location-active-mode">{{ __('Pickup address') }}</strong></div>
+                                                        </div>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="{{ __('Close') }}"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
+                                                        <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
+                                                            <button class="btn btn-sm btn-outline-primary" id="booking-find-address" type="button" disabled>
+                                                                <span class="bi bi-search me-1" aria-hidden="true"></span>{{ __('Fill address from pin') }}
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-secondary" id="booking-use-location" type="button">
+                                                                <span class="bi bi-crosshair me-1" aria-hidden="true"></span>{{ __('Use my current location') }}
+                                                            </button>
+                                                        </div>
+                                                        <p class="form-text">{{ __('Address lookup is optional. When you select it, the pin coordinates are sent to OpenStreetMap to find a nearby address.') }}</p>
+                                                        <div id="booking-location-map" role="application"
+                                                            aria-label="{{ __('Map for selecting a pickup or drop-off location') }}"></div>
+                                                        <p class="form-text mb-0 mt-2" id="booking-location-status" role="status" aria-live="polite">
+                                                            {{ __('Tap the map or drag the pin to select the location.') }}
+                                                        </p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button class="btn btn-primary" type="button" data-bs-dismiss="modal">{{ __('Done') }}</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                 <div class="modal fade" id="booking-out-of-area-modal" tabindex="-1"
                                     aria-labelledby="booking-out-of-area-title" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
@@ -338,6 +360,8 @@
                     const deviceModel = document.getElementById("device-model");
                     const pickupAddress = document.getElementById("pickup-address");
                     const dropoffAddress = document.getElementById("dropoff-address");
+                    const dropoffSameAsPickup = document.getElementById("dropoff-same-as-pickup");
+                    const dropoffPinButton = document.getElementById("dropoff-pin-button");
                     const locationInputs = {
                         pickup: {
                             latitude: document.getElementById("pickup-latitude"),
@@ -349,6 +373,7 @@
                         },
                     };
                     const locationMapElement = document.getElementById("booking-location-map");
+                    const locationPickerModalElement = document.getElementById("booking-location-modal");
                     const locationStatus = document.getElementById("booking-location-status");
                     const locationModeButtons = document.querySelectorAll("[data-booking-location-mode]");
                     const locationPresentation = {
@@ -373,6 +398,7 @@
                     const availableTimes = document.getElementById("available-times");
                     const calendarAvailabilityStatus = document.getElementById("calendar-availability-status");
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
+                    const locationPickerModal = bootstrap.Modal.getOrCreateInstance(locationPickerModalElement);
                     const locationHelpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-out-of-area-modal"));
                     const availabilityUrl = @json(route('bookings.availability'));
                     const availabilityEventsUrl = @json(route('bookings.events'));
@@ -403,6 +429,7 @@
                     let locationMap = null;
                     let locationMarker = null;
                     let locationMode = "pickup";
+                    let deviceDetailsEnabled = false;
                     const defaultMapCenter = @json($serviceAreaCenter);
                     const serviceAreaRadiusKm = @json($serviceAreaRadiusKm);
                     const locationPinIcon = window.L?.divIcon({
@@ -413,6 +440,10 @@
                     });
 
                     function getLocationCoordinates(mode) {
+                        if (mode === "dropoff" && dropoffSameAsPickup.checked) {
+                            return getLocationCoordinates("pickup");
+                        }
+
                         const latitude = Number.parseFloat(locationInputs[mode].latitude.value);
                         const longitude = Number.parseFloat(locationInputs[mode].longitude.value);
                         return Number.isFinite(latitude) && Number.isFinite(longitude)
@@ -437,17 +468,27 @@
 
                     function showOutOfAreaModal() {
                         locationStatus.textContent = locationMessages.outsideArea;
-                        locationHelpModal.show();
+                        const showContactModal = function () {
+                            locationHelpModal.show();
+                        };
+                        if (locationPickerModalElement.classList.contains("show")) {
+                            locationPickerModalElement.addEventListener("hidden.bs.modal", showContactModal, { once: true });
+                            locationPickerModal.hide();
+                        } else {
+                            showContactModal();
+                        }
                     }
 
                     function updateLocationSummaries() {
                         Object.keys(locationPresentation).forEach(function (mode) {
                             const presentation = locationPresentation[mode];
-                            const address = (mode === "pickup" ? pickupAddress : dropoffAddress).value.trim();
+                            const address = mode === "pickup" || dropoffSameAsPickup.checked
+                                ? pickupAddress.value.trim()
+                                : dropoffAddress.value.trim();
                             const coordinates = getLocationCoordinates(mode);
                             presentation.card.classList.toggle("is-active", mode === locationMode);
                             presentation.preview.textContent = address
-                                || (mode === "dropoff" && pickupAddress.value.trim()
+                                || (mode === "dropoff" && (dropoffSameAsPickup.checked || pickupAddress.value.trim())
                                     ? locationMessages.sameAsPickup
                                     : locationMessages.addressNotEntered);
                             presentation.badge.textContent = coordinates ? locationMessages.pinSet : locationMessages.pinNotSet;
@@ -460,6 +501,19 @@
                         activeLocationLabel.textContent = locationMode === "pickup"
                             ? locationMessages.pickupAddress
                             : locationMessages.dropoffAddress;
+                    }
+
+                    function updateDropoffSameAsPickup() {
+                        const sameAsPickup = dropoffSameAsPickup.checked;
+                        dropoffAddress.disabled = !deviceDetailsEnabled || sameAsPickup;
+                        dropoffPinButton.disabled = !deviceDetailsEnabled || sameAsPickup;
+                        if (sameAsPickup && locationMode === "dropoff") {
+                            locationMode = "pickup";
+                        }
+                        updateLocationSummaries();
+                        if (locationMap) {
+                            showLocationForMode();
+                        }
                     }
 
                     function saveLocationPin(coordinates) {
@@ -591,11 +645,15 @@
                         button.addEventListener("click", function () {
                             locationMode = button.dataset.bookingLocationMode;
                             showLocationForMode();
-                            locationMapElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                            locationPickerModal.show();
                         });
+                    });
+                    locationPickerModalElement.addEventListener("shown.bs.modal", function () {
+                        initializeLocationMap();
                     });
                     pickupAddress.addEventListener("input", updateLocationSummaries);
                     dropoffAddress.addEventListener("input", updateLocationSummaries);
+                    dropoffSameAsPickup.addEventListener("change", updateDropoffSameAsPickup);
                     useLocationButton.addEventListener("click", function () {
                         if (!navigator.geolocation) {
                             locationStatus.textContent = locationMessages.locationUnsupported;
@@ -662,18 +720,19 @@
 
                     function updateDeviceDetails() {
                         const showDeviceDetails = serviceSelect.value === deviceDetailsServiceId;
+                        deviceDetailsEnabled = showDeviceDetails;
                         deviceDetails.hidden = !showDeviceDetails;
                         deviceModel.disabled = !showDeviceDetails;
                         pickupAddress.disabled = !showDeviceDetails;
-                        dropoffAddress.disabled = !showDeviceDetails;
+                        dropoffSameAsPickup.disabled = !showDeviceDetails;
+                        dropoffAddress.disabled = !showDeviceDetails || dropoffSameAsPickup.checked;
+                        dropoffPinButton.disabled = !showDeviceDetails || dropoffSameAsPickup.checked;
                         Object.values(locationInputs).forEach(function (inputs) {
                             inputs.latitude.disabled = !showDeviceDetails;
                             inputs.longitude.disabled = !showDeviceDetails;
                         });
                         requestNotes.disabled = !showDeviceDetails;
-                        if (showDeviceDetails) {
-                            initializeLocationMap();
-                        }
+                        updateLocationSummaries();
                     }
 
                     serviceSelect.addEventListener("change", updateDeviceDetails);

@@ -196,12 +196,18 @@ class BookingController extends Controller
             'request_notes' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:3000'],
             'pickup_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
             'dropoff_address' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'string', 'max:1000'],
+            'dropoff_same_as_pickup' => ['exclude_unless:service_id,basic-troubleshooting', 'sometimes', 'boolean'],
             'pickup_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
             'pickup_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
             'dropoff_latitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
             'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
             'booking_date' => ['required', 'date_format:Y-m-d'],
         ]);
+        if ($data['service_id'] === 'basic-troubleshooting' && ($data['dropoff_same_as_pickup'] ?? false)) {
+            $data['dropoff_address'] = $data['pickup_address'] ?? null;
+            $data['dropoff_latitude'] = $data['pickup_latitude'] ?? null;
+            $data['dropoff_longitude'] = $data['pickup_longitude'] ?? null;
+        }
         if ($data['service_id'] === 'basic-troubleshooting') {
             foreach (['pickup', 'dropoff'] as $location) {
                 $latitude = $data[$location.'_latitude'] ?? null;

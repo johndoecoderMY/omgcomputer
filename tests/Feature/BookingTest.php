@@ -468,7 +468,12 @@ class BookingTest extends TestCase
             ->assertSee('pickup-location-preview', false)
             ->assertSee('dropoff-location-preview', false)
             ->assertSee('booking-location-active-mode', false)
-            ->assertSee('locationMapElement.scrollIntoView', false)
+            ->assertSee('booking-location-modal', false)
+            ->assertSee('locationPickerModal.show()', false)
+            ->assertSee('modal-fullscreen-sm-down', false)
+            ->assertSee('dropoff-same-as-pickup', false)
+            ->assertSee('dropoffSameAsPickup.checked', false)
+            ->assertSee('Choose a pin button to open the map and set that location.', false)
             ->assertSee('booking-out-of-area-modal', false)
             ->assertSee('maxBoundsViscosity: 1', false)
             ->assertSee('serviceAreaRadiusKm * 1000', false)
@@ -486,6 +491,10 @@ class BookingTest extends TestCase
         $this->assertSame(
             0,
             $xpath->query('//*[@id="booking-out-of-area-modal"]/ancestor::*[@id="booking-times-modal"]')->length,
+        );
+        $this->assertSame(
+            0,
+            $xpath->query('//*[@id="booking-location-modal"]/ancestor::*[@id="booking-times-modal"]')->length,
         );
 
         $this->post(route('bookings.store'), [
@@ -533,6 +542,32 @@ class BookingTest extends TestCase
         $this->assertSame('Computer/PC Troubleshooting', $booking->service_name);
         $this->assertSame('Dell XPS 13', $booking->device_model);
         $this->assertSame('The fan is noisy.', $booking->request_notes);
+    }
+
+    public function test_dropoff_can_reuse_the_pickup_address_and_pin(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'Same Location Customer',
+            'customer_email' => 'same-location@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'pickup_address' => '12 Jalan Test, Kampar',
+            'pickup_latitude' => '4.326',
+            'pickup_longitude' => '101.15',
+            'dropoff_same_as_pickup' => '1',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $booking = Booking::query()->firstOrFail();
+        $this->assertSame($booking->pickup_address, $booking->dropoff_address);
+        $this->assertSame($booking->pickup_latitude, $booking->dropoff_latitude);
+        $this->assertSame($booking->pickup_longitude, $booking->dropoff_longitude);
     }
 
     public function test_staff_can_create_a_repair_ticket_from_a_booking(): void
