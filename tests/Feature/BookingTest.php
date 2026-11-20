@@ -848,6 +848,7 @@ class BookingTest extends TestCase
             ->assertSee('new FullCalendar.Calendar(calendarEl, {', false)
             ->assertSee('timeZone: "UTC"', false)
             ->assertSee('initialView: "dayGridMonth"', false)
+            ->assertSee('weekends: false', false)
             ->assertSee('events: availabilityEventsUrl', false)
             ->assertSee('eventsSet:', false)
             ->assertSee('dayCellClassNames:', false)

@@ -824,6 +824,7 @@
                         timeZone: "UTC",
                         now: @json($calendarNow),
                         initialView: "dayGridMonth",
+                        weekends: false,
                         events: availabilityEventsUrl,
                         loading: function (isLoading) {
                             if (isLoading) {
