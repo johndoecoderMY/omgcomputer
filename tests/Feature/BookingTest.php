@@ -417,6 +417,42 @@ class BookingTest extends TestCase
         $this->assertDatabaseCount('bookings', 0);
     }
 
+    public function test_pickup_and_dropoff_pins_outside_kampar_are_rejected(): void
+    {
+        $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
+        while ($date->isSunday()) {
+            $date->addDay();
+        }
+
+        foreach ([
+            ['pickup', '4.5', '101.15'],
+            ['dropoff', '-4.326', '-78.85'],
+        ] as [$location, $latitude, $longitude]) {
+            $this->post(route('bookings.store'), [
+                'customer_name' => 'Booking Customer',
+                'customer_email' => 'booking-customer@example.test',
+                'customer_phone' => '+60112223333',
+                'service_id' => 'basic-troubleshooting',
+                'booking_date' => $date->toDateString(),
+                'start_time' => '11:00',
+                $location.'_latitude' => $latitude,
+                $location.'_longitude' => $longitude,
+            ])->assertSessionHasErrors($location.'_latitude');
+        }
+
+        $this->post(route('bookings.store'), [
+            'customer_name' => 'Booking Customer',
+            'customer_email' => 'booking-customer@example.test',
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'pickup_address' => 'Outside Kampar',
+            'booking_date' => $date->toDateString(),
+            'start_time' => '11:00',
+        ])->assertSessionHasErrors('pickup_address');
+
+        $this->assertDatabaseCount('bookings', 0);
+    }
+
     public function test_fyp_booking_does_not_store_computer_troubleshooting_details(): void
     {
         $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
@@ -427,6 +463,10 @@ class BookingTest extends TestCase
         $this->get(route('bookings.create'))
             ->assertOk()
             ->assertSee('booking-location-map')
+            ->assertSee('booking-out-of-area-modal', false)
+            ->assertSee('maxBoundsViscosity: 1', false)
+            ->assertSee('serviceAreaRadiusKm * 1000', false)
+            ->assertSee('Contact us on WhatsApp or email', false)
             ->assertSee('data-booking-location-mode="pickup"', false)
             ->assertSee('data-booking-location-mode="dropoff"', false);
 

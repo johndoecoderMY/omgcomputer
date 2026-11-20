@@ -40,6 +40,10 @@ class BookingController extends Controller
 
     private const BOOKABLE_SERVICES = ['basic-troubleshooting', 'fyp-consultation'];
 
+    private const KAMPAR_CENTER = [4.326, 101.15];
+
+    private const KAMPAR_SERVICE_RADIUS_KM = 15;
+
     public function create(Request $request): View
     {
         return $this->bookingForm($request, false);
@@ -62,6 +66,8 @@ class BookingController extends Controller
             'services' => $services,
             'authenticatedBooking' => $authenticatedBooking,
             'deviceDetailsServiceId' => 'basic-troubleshooting',
+            'serviceAreaCenter' => self::KAMPAR_CENTER,
+            'serviceAreaRadiusKm' => self::KAMPAR_SERVICE_RADIUS_KM,
             // FullCalendar runs in UTC mode so these wall-clock values stay in MYT without a timezone plugin.
             'calendarNow' => Carbon::now(self::TIMEZONE)->format('Y-m-d\TH:i:s\Z'),
         ]);
@@ -196,6 +202,28 @@ class BookingController extends Controller
             'dropoff_longitude' => ['exclude_unless:service_id,basic-troubleshooting', 'nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
             'booking_date' => ['required', 'date_format:Y-m-d'],
         ]);
+        if ($data['service_id'] === 'basic-troubleshooting') {
+            foreach (['pickup', 'dropoff'] as $location) {
+                $latitude = $data[$location.'_latitude'] ?? null;
+                $longitude = $data[$location.'_longitude'] ?? null;
+                $address = trim((string) ($data[$location.'_address'] ?? ''));
+                $locationLabel = $location === 'pickup' ? 'Pickup' : 'Drop-off';
+                if ($address !== '' && ($latitude === null || $longitude === null)) {
+                    throw ValidationException::withMessages([
+                        $location.'_address' => __(
+                            ':location address needs a map pin so we can confirm it is within Kampar.',
+                            ['location' => $locationLabel],
+                        ),
+                    ]);
+                }
+                if ($latitude !== null && $longitude !== null
+                    && ! $this->isWithinKamparServiceArea((float) $latitude, (float) $longitude)) {
+                    throw ValidationException::withMessages([
+                        $location.'_latitude' => $locationLabel.' pin must be within the Kampar service area.',
+                    ]);
+                }
+            }
+        }
         $bookingDate = Carbon::createFromFormat('Y-m-d', $data['booking_date'], self::TIMEZONE)->startOfDay();
         if ($bookingDate->lt(Carbon::today(self::TIMEZONE))) {
             throw ValidationException::withMessages(['booking_date' => 'Choose a future appointment date.']);
@@ -599,5 +627,20 @@ class BookingController extends Controller
 
             return ! in_array($slot, $booked, true) && $slotTime->gt($now);
         }));
+    }
+
+    private function isWithinKamparServiceArea(float $latitude, float $longitude): bool
+    {
+        $earthRadiusKm = 6371;
+        $latitudeDelta = deg2rad($latitude - self::KAMPAR_CENTER[0]);
+        $longitudeDelta = deg2rad($longitude - self::KAMPAR_CENTER[1]);
+        $startLatitude = deg2rad(self::KAMPAR_CENTER[0]);
+        $endLatitude = deg2rad($latitude);
+        $distanceFactor = sin($latitudeDelta / 2) ** 2
+            + cos($startLatitude) * cos($endLatitude) * sin($longitudeDelta / 2) ** 2;
+        $distanceFactor = min(1.0, max(0.0, $distanceFactor));
+        $distanceKm = 2 * $earthRadiusKm * atan2(sqrt($distanceFactor), sqrt(1 - $distanceFactor));
+
+        return $distanceKm <= self::KAMPAR_SERVICE_RADIUS_KM;
     }
 }

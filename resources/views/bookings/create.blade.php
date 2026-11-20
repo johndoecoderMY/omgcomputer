@@ -10,6 +10,8 @@
 @section('content')
     @php
         $bookingHelpWhatsappUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I am not sure which service to book. Can you help me choose?');
+        $bookingLocationHelpWhatsappUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, my pickup or drop-off location is outside the Kampar service area. Can you advise me?');
+        $bookingLocationHelpEmailUrl = 'mailto:support@omgcomputer.my?subject=' . rawurlencode('Pickup or drop-off outside Kampar') . '&body=' . rawurlencode('My pickup or drop-off location is outside the Kampar service area. Can you advise me?');
     @endphp
     <style>
         .booking-help-section { background: #0b1727; }
@@ -164,7 +166,8 @@
                                                         <input type="hidden" id="dropoff-longitude" name="dropoff_longitude" value="{{ old('dropoff_longitude') }}">
                                                         <section class="mb-3" aria-labelledby="booking-location-heading">
                                                             <h3 class="h6 mb-2" id="booking-location-heading">{{ __('Choose a location on the map') }}</h3>
-                                                            <p class="form-text">{{ __('Enter the address above too; the pin helps our team find the exact location.') }}</p>
+                                                            <p class="form-text">{{ __('Enter the address above and set its pin so we can confirm it is within Kampar.') }}</p>
+                                                            <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
                                                             <div class="btn-group w-100 mb-2" role="group" aria-label="{{ __('Choose which location to pin') }}">
                                                                 <button class="btn btn-outline-primary active" type="button"
                                                                     data-booking-location-mode="pickup" aria-pressed="true">{{ __('Set pickup pin') }}</button>
@@ -217,6 +220,31 @@
                                                 <p id="availability-message" role="status" aria-live="polite">{{ __('Loading available times...') }}</p>
                                                 <div id="available-times"
                                                     class="d-flex flex-wrap justify-content-center gap-3"></div>
+                                            </div>
+                                        </div>
+                                        <div class="modal fade" id="booking-out-of-area-modal" tabindex="-1"
+                                            aria-labelledby="booking-out-of-area-title" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h2 class="modal-title h5" id="booking-out-of-area-title">{{ __('Outside our service area') }}</h2>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="{{ __('Close') }}"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>{{ __('That pin is outside our Kampar pickup and drop-off area.') }}</p>
+                                                        <p class="mb-0">{{ __('Contact us on WhatsApp or email and we will advise you.') }}</p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <a class="btn btn-outline-primary" href="{{ $bookingLocationHelpEmailUrl }}">
+                                                            <span class="bi bi-envelope me-1" aria-hidden="true"></span>{{ __('Email us') }}
+                                                        </a>
+                                                        <a class="btn btn-success" href="{{ $bookingLocationHelpWhatsappUrl }}"
+                                                            target="_blank" rel="noopener noreferrer">
+                                                            <span class="bi bi-whatsapp me-1" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
+                                                        </a>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -300,6 +328,7 @@
                     const availableTimes = document.getElementById("available-times");
                     const calendarAvailabilityStatus = document.getElementById("calendar-availability-status");
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
+                    const locationHelpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-out-of-area-modal"));
                     const availabilityUrl = @json(route('bookings.availability'));
                     const availabilityEventsUrl = @json(route('bookings.events'));
                     const calendarLocale = @json(app()->getLocale() === 'zh_CN' ? 'zh-cn' : (app()->getLocale() === 'ms' ? 'ms' : 'en'));
@@ -315,13 +344,15 @@
                         addressLookupUnavailable: @json(__('Address lookup is temporarily unavailable. Please enter the address manually.'), JSON_UNESCAPED_UNICODE),
                         addressLookupRateLimited: @json(__('Please wait a moment before looking up another address.'), JSON_UNESCAPED_UNICODE),
                         addressLookupSuccess: @json(__('Address filled from the selected pin.'), JSON_UNESCAPED_UNICODE),
+                        outsideArea: @json(__('That pin is outside our Kampar pickup and drop-off area.'), JSON_UNESCAPED_UNICODE),
                     };
                     let availabilityRequest = 0;
                     let selectedAppointmentDate = bookingDate.value || null;
                     let locationMap = null;
                     let locationMarker = null;
                     let locationMode = "pickup";
-                    const defaultMapCenter = [4.326, 101.15];
+                    const defaultMapCenter = @json($serviceAreaCenter);
+                    const serviceAreaRadiusKm = @json($serviceAreaRadiusKm);
                     const locationPinIcon = window.L?.divIcon({
                         className: "booking-location-pin",
                         html: '<span class="bi bi-geo-alt-fill" aria-hidden="true"></span>',
@@ -337,7 +368,39 @@
                             : null;
                     }
 
+                    function isWithinKamparServiceArea(coordinates) {
+                        const [latitude, longitude] = coordinates;
+                        const toRadians = (degrees) => degrees * Math.PI / 180;
+                        const latitudeDelta = toRadians(latitude - defaultMapCenter[0]);
+                        const longitudeDelta = toRadians(longitude - defaultMapCenter[1]);
+                        const startLatitude = toRadians(defaultMapCenter[0]);
+                        const endLatitude = toRadians(latitude);
+                        const distanceFactor = Math.sin(latitudeDelta / 2) ** 2
+                            + Math.cos(startLatitude) * Math.cos(endLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+                        const boundedDistanceFactor = Math.min(1, Math.max(0, distanceFactor));
+                        const distanceKm = 6371 * 2 * Math.atan2(Math.sqrt(boundedDistanceFactor), Math.sqrt(1 - boundedDistanceFactor));
+
+                        return distanceKm <= serviceAreaRadiusKm;
+                    }
+
+                    function showOutOfAreaModal() {
+                        locationStatus.textContent = locationMessages.outsideArea;
+                        locationHelpModal.show();
+                    }
+
                     function saveLocationPin(coordinates) {
+                        if (!isWithinKamparServiceArea(coordinates)) {
+                            const previousCoordinates = getLocationCoordinates(locationMode);
+                            if (locationMarker && previousCoordinates) {
+                                locationMarker.setLatLng(previousCoordinates);
+                            } else if (locationMarker) {
+                                locationMap.removeLayer(locationMarker);
+                                locationMarker = null;
+                            }
+                            showOutOfAreaModal();
+                            return;
+                        }
+
                         const [latitude, longitude] = coordinates;
                         if (!locationMarker) {
                             locationMarker = window.L.marker(coordinates, { draggable: true, icon: locationPinIcon }).addTo(locationMap);
@@ -369,6 +432,19 @@
                         const coordinates = getLocationCoordinates(locationMode);
                         findAddressButton.disabled = !coordinates;
                         if (coordinates) {
+                            if (!isWithinKamparServiceArea(coordinates)) {
+                                locationInputs[locationMode].latitude.value = "";
+                                locationInputs[locationMode].longitude.value = "";
+                                findAddressButton.disabled = true;
+                                if (locationMarker) {
+                                    locationMap.removeLayer(locationMarker);
+                                    locationMarker = null;
+                                }
+                                locationMap.setView(defaultMapCenter, 12);
+                                showOutOfAreaModal();
+                                return;
+                            }
+
                             if (!locationMarker) {
                                 locationMarker = window.L.marker(coordinates, { draggable: true, icon: locationPinIcon }).addTo(locationMap);
                                 locationMarker.on("dragend", function () {
@@ -400,10 +476,25 @@
                         }
 
                         try {
-                            locationMap = window.L.map(locationMapElement).setView(defaultMapCenter, 12);
+                            const latitudeBounds = serviceAreaRadiusKm / 111.045;
+                            const longitudeBounds = serviceAreaRadiusKm / (111.045 * Math.cos(defaultMapCenter[0] * Math.PI / 180));
+                            const serviceAreaBounds = window.L.latLngBounds(
+                                [defaultMapCenter[0] - latitudeBounds, defaultMapCenter[1] - longitudeBounds],
+                                [defaultMapCenter[0] + latitudeBounds, defaultMapCenter[1] + longitudeBounds],
+                            );
+                            locationMap = window.L.map(locationMapElement, {
+                                maxBounds: serviceAreaBounds,
+                                maxBoundsViscosity: 1,
+                            }).setView(defaultMapCenter, 12);
                             const tileLayer = window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                                 maxZoom: 19,
                                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+                            }).addTo(locationMap);
+                            window.L.circle(defaultMapCenter, {
+                                radius: serviceAreaRadiusKm * 1000,
+                                color: "#0d6efd",
+                                fillColor: "#0d6efd",
+                                fillOpacity: 0.08,
                             }).addTo(locationMap);
                             tileLayer.on("tileerror", function () {
                                 locationStatus.textContent = locationMessages.mapUnavailable;
@@ -700,6 +791,19 @@
                         }
                     });
                     bookingForm.addEventListener("submit", function (event) {
+                        if (serviceSelect.value === deviceDetailsServiceId) {
+                            const outsideLocation = Object.keys(locationInputs).find(function (mode) {
+                                const coordinates = getLocationCoordinates(mode);
+                                return coordinates && !isWithinKamparServiceArea(coordinates);
+                            });
+                            if (outsideLocation) {
+                                event.preventDefault();
+                                locationMode = outsideLocation;
+                                showLocationForMode();
+                                return;
+                            }
+                        }
+
                         if (bookingDate.value && bookingTime.value) {
                             return;
                         }
