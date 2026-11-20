@@ -22,6 +22,8 @@
         .booking-selection-card.is-selected { border-color: rgba(var(--bs-primary-rgb), .35); background: rgba(var(--bs-primary-rgb), .06); }
         .booking-selection-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 2.5rem; place-items: center; border-radius: .65rem; background: var(--bs-body-bg); color: var(--bs-primary); font-size: 1.15rem; }
         .booking-selection-value { min-width: 0; }
+        .booking-location-card.is-active { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem rgba(var(--bs-primary-rgb), .12); }
+        .booking-location-preview { overflow-wrap: anywhere; min-height: 1.5rem; }
         #calendar .booking-date-unavailable { cursor: not-allowed; }
         #calendar .booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; color: #858b92; }
         #calendar .booking-date-unavailable .fc-daygrid-day-number { color: #858b92; }
@@ -149,17 +151,47 @@
                                                             <input class="form-control" id="device-model" name="device_model"
                                                                 value="{{ old('device_model') }}" autocomplete="off">
                                                         </div>
-                                                        <div class="mb-3">
-                                                            <label class="form-label" for="pickup-address">{{ __('Pickup address') }}</label>
-                                                            <textarea class="form-control" id="pickup-address" name="pickup_address"
-                                                                rows="2" maxlength="1000" autocomplete="street-address">{{ old('pickup_address') }}</textarea>
-                                                            <div class="form-text">{{ __('Where should we collect the PC for repair?') }}</div>
-                                                        </div>
-                                                        <div class="mb-3">
-                                                            <label class="form-label" for="dropoff-address">{{ __('Drop-off address') }}</label>
-                                                            <textarea class="form-control" id="dropoff-address" name="dropoff_address"
-                                                                rows="2" maxlength="1000" autocomplete="street-address">{{ old('dropoff_address') }}</textarea>
-                                                            <div class="form-text">{{ __('Where should we return the PC after repair? Leave blank if it is the same address.') }}</div>
+                                                        <div class="row g-3 mb-3">
+                                                            <div class="col-12">
+                                                                <section class="card booking-location-card" id="pickup-location-card" aria-labelledby="pickup-location-title">
+                                                                    <div class="card-body">
+                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                                            <h3 class="h6 mb-0" id="pickup-location-title">{{ __('Pickup address') }}</h3>
+                                                                            <span class="badge text-bg-secondary" id="pickup-pin-badge">{{ __('Pin not set') }}</span>
+                                                                        </div>
+                                                                        <label class="visually-hidden" for="pickup-address">{{ __('Pickup address') }}</label>
+                                                                        <textarea class="form-control" id="pickup-address" name="pickup_address"
+                                                                            rows="2" maxlength="1000" autocomplete="street-address">{{ old('pickup_address') }}</textarea>
+                                                                        <div class="form-text">{{ __('Where should we collect the PC for repair?') }}</div>
+                                                                        <div class="booking-location-preview small text-body-secondary mt-2" id="pickup-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
+                                                                        <div class="small text-body-secondary" id="pickup-pin-coordinates">{{ __('Pin not set') }}</div>
+                                                                        <button class="btn btn-sm btn-outline-primary mt-3" type="button"
+                                                                            data-booking-location-mode="pickup" aria-pressed="true">
+                                                                            <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set pickup pin') }}
+                                                                        </button>
+                                                                    </div>
+                                                                </section>
+                                                            </div>
+                                                            <div class="col-12">
+                                                                <section class="card booking-location-card" id="dropoff-location-card" aria-labelledby="dropoff-location-title">
+                                                                    <div class="card-body">
+                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                                            <h3 class="h6 mb-0" id="dropoff-location-title">{{ __('Drop-off address') }}</h3>
+                                                                            <span class="badge text-bg-secondary" id="dropoff-pin-badge">{{ __('Pin not set') }}</span>
+                                                                        </div>
+                                                                        <label class="visually-hidden" for="dropoff-address">{{ __('Drop-off address') }}</label>
+                                                                        <textarea class="form-control" id="dropoff-address" name="dropoff_address"
+                                                                            rows="2" maxlength="1000" autocomplete="street-address">{{ old('dropoff_address') }}</textarea>
+                                                                        <div class="form-text">{{ __('Where should we return the PC after repair? Leave blank if it is the same address.') }}</div>
+                                                                        <div class="booking-location-preview small text-body-secondary mt-2" id="dropoff-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
+                                                                        <div class="small text-body-secondary" id="dropoff-pin-coordinates">{{ __('Pin not set') }}</div>
+                                                                        <button class="btn btn-sm btn-outline-primary mt-3" type="button"
+                                                                            data-booking-location-mode="dropoff" aria-pressed="false">
+                                                                            <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set drop-off pin') }}
+                                                                        </button>
+                                                                    </div>
+                                                                </section>
+                                                            </div>
                                                         </div>
                                                         <input type="hidden" id="pickup-latitude" name="pickup_latitude" value="{{ old('pickup_latitude') }}">
                                                         <input type="hidden" id="pickup-longitude" name="pickup_longitude" value="{{ old('pickup_longitude') }}">
@@ -169,11 +201,8 @@
                                                             <h3 class="h6 mb-2" id="booking-location-heading">{{ __('Choose a location on the map') }}</h3>
                                                             <p class="form-text">{{ __('Enter the address above and set its pin so we can confirm it is within Kampar.') }}</p>
                                                             <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
-                                                            <div class="btn-group w-100 mb-2" role="group" aria-label="{{ __('Choose which location to pin') }}">
-                                                                <button class="btn btn-outline-primary active" type="button"
-                                                                    data-booking-location-mode="pickup" aria-pressed="true">{{ __('Set pickup pin') }}</button>
-                                                                <button class="btn btn-outline-primary" type="button"
-                                                                    data-booking-location-mode="dropoff" aria-pressed="false">{{ __('Set drop-off pin') }}</button>
+                                                            <div class="alert alert-primary py-2 mb-2">
+                                                                {{ __('Currently pinning') }} <strong id="booking-location-active-mode">{{ __('Pickup address') }}</strong>
                                                             </div>
                                                             <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
                                                                 <button class="btn btn-sm btn-outline-primary" id="booking-find-address" type="button" disabled>
@@ -322,6 +351,21 @@
                     const locationMapElement = document.getElementById("booking-location-map");
                     const locationStatus = document.getElementById("booking-location-status");
                     const locationModeButtons = document.querySelectorAll("[data-booking-location-mode]");
+                    const locationPresentation = {
+                        pickup: {
+                            card: document.getElementById("pickup-location-card"),
+                            badge: document.getElementById("pickup-pin-badge"),
+                            preview: document.getElementById("pickup-location-preview"),
+                            coordinates: document.getElementById("pickup-pin-coordinates"),
+                        },
+                        dropoff: {
+                            card: document.getElementById("dropoff-location-card"),
+                            badge: document.getElementById("dropoff-pin-badge"),
+                            preview: document.getElementById("dropoff-location-preview"),
+                            coordinates: document.getElementById("dropoff-pin-coordinates"),
+                        },
+                    };
+                    const activeLocationLabel = document.getElementById("booking-location-active-mode");
                     const useLocationButton = document.getElementById("booking-use-location");
                     const findAddressButton = document.getElementById("booking-find-address");
                     const requestNotes = document.getElementById("request-notes");
@@ -346,6 +390,13 @@
                         addressLookupRateLimited: @json(__('Please wait a moment before looking up another address.'), JSON_UNESCAPED_UNICODE),
                         addressLookupSuccess: @json(__('Address filled from the selected pin.'), JSON_UNESCAPED_UNICODE),
                         outsideArea: @json(__('That pin is outside our Kampar pickup and drop-off area.'), JSON_UNESCAPED_UNICODE),
+                        addressNotEntered: @json(__('No address entered'), JSON_UNESCAPED_UNICODE),
+                        sameAsPickup: @json(__('Same as pickup address'), JSON_UNESCAPED_UNICODE),
+                        pinNotSet: @json(__('Pin not set'), JSON_UNESCAPED_UNICODE),
+                        pinSet: @json(__('Pin set'), JSON_UNESCAPED_UNICODE),
+                        pinCoordinates: @json(__('Pin coordinates'), JSON_UNESCAPED_UNICODE),
+                        pickupAddress: @json(__('Pickup address'), JSON_UNESCAPED_UNICODE),
+                        dropoffAddress: @json(__('Drop-off address'), JSON_UNESCAPED_UNICODE),
                     };
                     let availabilityRequest = 0;
                     let selectedAppointmentDate = bookingDate.value || null;
@@ -389,6 +440,28 @@
                         locationHelpModal.show();
                     }
 
+                    function updateLocationSummaries() {
+                        Object.keys(locationPresentation).forEach(function (mode) {
+                            const presentation = locationPresentation[mode];
+                            const address = (mode === "pickup" ? pickupAddress : dropoffAddress).value.trim();
+                            const coordinates = getLocationCoordinates(mode);
+                            presentation.card.classList.toggle("is-active", mode === locationMode);
+                            presentation.preview.textContent = address
+                                || (mode === "dropoff" && pickupAddress.value.trim()
+                                    ? locationMessages.sameAsPickup
+                                    : locationMessages.addressNotEntered);
+                            presentation.badge.textContent = coordinates ? locationMessages.pinSet : locationMessages.pinNotSet;
+                            presentation.badge.classList.toggle("text-bg-success", Boolean(coordinates));
+                            presentation.badge.classList.toggle("text-bg-secondary", !coordinates);
+                            presentation.coordinates.textContent = coordinates
+                                ? `${locationMessages.pinCoordinates}: ${coordinates[0].toFixed(5)}, ${coordinates[1].toFixed(5)}`
+                                : locationMessages.pinNotSet;
+                        });
+                        activeLocationLabel.textContent = locationMode === "pickup"
+                            ? locationMessages.pickupAddress
+                            : locationMessages.dropoffAddress;
+                    }
+
                     function saveLocationPin(coordinates) {
                         if (!isWithinKamparServiceArea(coordinates)) {
                             const previousCoordinates = getLocationCoordinates(locationMode);
@@ -417,9 +490,11 @@
                         locationInputs[locationMode].longitude.value = longitude.toFixed(7);
                         findAddressButton.disabled = false;
                         locationStatus.textContent = `${locationMode === "pickup" ? locationMessages.pickupSet : locationMessages.dropoffSet}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
+                        updateLocationSummaries();
                     }
 
                     function showLocationForMode() {
+                        updateLocationSummaries();
                         locationModeButtons.forEach(function (button) {
                             const isSelected = button.dataset.bookingLocationMode === locationMode;
                             button.classList.toggle("active", isSelected);
@@ -516,8 +591,11 @@
                         button.addEventListener("click", function () {
                             locationMode = button.dataset.bookingLocationMode;
                             showLocationForMode();
+                            locationMapElement.scrollIntoView({ behavior: "smooth", block: "center" });
                         });
                     });
+                    pickupAddress.addEventListener("input", updateLocationSummaries);
+                    dropoffAddress.addEventListener("input", updateLocationSummaries);
                     useLocationButton.addEventListener("click", function () {
                         if (!navigator.geolocation) {
                             locationStatus.textContent = locationMessages.locationUnsupported;
@@ -573,6 +651,7 @@
 
                             (mode === "pickup" ? pickupAddress : dropoffAddress).value = result.address;
                             locationStatus.textContent = locationMessages.addressLookupSuccess;
+                            updateLocationSummaries();
                         } catch (error) {
                             console.error("Could not look up the address for a booking pin.", error);
                             locationStatus.textContent = locationMessages.addressLookupUnavailable;
