@@ -22,6 +22,7 @@
         .booking-selection-card.is-selected { border-color: rgba(var(--bs-primary-rgb), .35); background: rgba(var(--bs-primary-rgb), .06); }
         .booking-selection-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 2.5rem; place-items: center; border-radius: .65rem; background: var(--bs-body-bg); color: var(--bs-primary); font-size: 1.15rem; }
         .booking-selection-value { min-width: 0; }
+        .booking-location-card .card-body { padding: .65rem; }
         .booking-location-card.is-active { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem rgba(var(--bs-primary-rgb), .12); }
         .booking-location-preview { overflow-wrap: anywhere; min-height: 1.5rem; }
         #booking-location-map { min-height: 320px; height: min(62vh, 620px); border-radius: .5rem; z-index: 0; }
@@ -151,11 +152,11 @@
                                                             <input class="form-control" id="device-model" name="device_model"
                                                                 value="{{ old('device_model') }}" autocomplete="off">
                                                         </div>
-                                                        <div class="row g-3 mb-3">
+                                                        <div class="row g-2 mb-2">
                                                             <div class="col-12">
                                                                 <section class="card booking-location-card" id="pickup-location-card" aria-labelledby="pickup-location-title">
                                                                     <div class="card-body">
-                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                                                                             <h3 class="h6 mb-0" id="pickup-location-title">{{ __('Pickup address') }}</h3>
                                                                             <span class="badge text-bg-secondary" id="pickup-pin-badge">{{ __('Pin not set') }}</span>
                                                                         </div>
@@ -163,9 +164,9 @@
                                                                         <textarea class="form-control" id="pickup-address" name="pickup_address"
                                                                             rows="2" maxlength="1000" autocomplete="street-address">{{ old('pickup_address') }}</textarea>
                                                                         <div class="form-text">{{ __('Where should we collect the PC for repair?') }}</div>
-                                                                        <div class="booking-location-preview small text-body-secondary mt-2" id="pickup-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
+                                                                        <div class="booking-location-preview small text-body-secondary mt-1" id="pickup-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
                                                                         <div class="small text-body-secondary" id="pickup-pin-coordinates">{{ __('Pin not set') }}</div>
-                                                                        <button class="btn btn-sm btn-outline-primary mt-3" type="button"
+                                                                        <button class="btn btn-sm btn-outline-primary mt-2" type="button"
                                                                             data-booking-location-mode="pickup" aria-pressed="true">
                                                                             <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set pickup pin') }}
                                                                         </button>
@@ -175,11 +176,11 @@
                                                             <div class="col-12">
                                                                 <section class="card booking-location-card" id="dropoff-location-card" aria-labelledby="dropoff-location-title">
                                                                     <div class="card-body">
-                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                                                        <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
                                                                             <h3 class="h6 mb-0" id="dropoff-location-title">{{ __('Drop-off address') }}</h3>
                                                                             <span class="badge text-bg-secondary" id="dropoff-pin-badge">{{ __('Pin not set') }}</span>
                                                                         </div>
-                                                                        <div class="form-check mb-2">
+                                                                        <div class="form-check mb-1">
                                                                             <input class="form-check-input" id="dropoff-same-as-pickup"
                                                                                 name="dropoff_same_as_pickup" type="checkbox" value="1"
                                                                                 @checked(old('dropoff_same_as_pickup'))>
@@ -188,11 +189,10 @@
                                                                         <label class="visually-hidden" for="dropoff-address">{{ __('Drop-off address') }}</label>
                                                                         <textarea class="form-control" id="dropoff-address" name="dropoff_address"
                                                                             rows="2" maxlength="1000" autocomplete="street-address">{{ old('dropoff_address') }}</textarea>
-                                                                        <div class="form-text">{{ __('Where should we return the PC after repair? Leave blank if it is the same address.') }}</div>
                                                                         <div class="form-text">{{ __('Use the checkbox to copy the pickup address and pin, or set a separate drop-off pin.') }}</div>
-                                                                        <div class="booking-location-preview small text-body-secondary mt-2" id="dropoff-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
+                                                                        <div class="booking-location-preview small text-body-secondary mt-1" id="dropoff-location-preview" aria-live="polite">{{ __('No address entered') }}</div>
                                                                         <div class="small text-body-secondary" id="dropoff-pin-coordinates">{{ __('Pin not set') }}</div>
-                                                                        <button class="btn btn-sm btn-outline-primary mt-3" id="dropoff-pin-button" type="button"
+                                                                        <button class="btn btn-sm btn-outline-primary mt-2" id="dropoff-pin-button" type="button"
                                                                             data-booking-location-mode="dropoff" aria-pressed="false">
                                                                             <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>{{ __('Set drop-off pin') }}
                                                                         </button>
