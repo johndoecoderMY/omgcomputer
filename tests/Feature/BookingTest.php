@@ -460,15 +460,27 @@ class BookingTest extends TestCase
             $date->addDay();
         }
 
-        $this->get(route('bookings.create'))
+        $bookingPage = $this->get(route('bookings.create'))
             ->assertOk()
             ->assertSee('booking-location-map')
             ->assertSee('booking-out-of-area-modal', false)
             ->assertSee('maxBoundsViscosity: 1', false)
             ->assertSee('serviceAreaRadiusKm * 1000', false)
+            ->assertSee('<svg viewBox="0 0 28 40"', false)
+            ->assertDontSee('bi-geo-alt-fill')
             ->assertSee('Contact us on WhatsApp or email', false)
             ->assertSee('data-booking-location-mode="pickup"', false)
             ->assertSee('data-booking-location-mode="dropoff"', false);
+        $document = new \DOMDocument();
+        $previousLibxmlErrorSetting = libxml_use_internal_errors(true);
+        $document->loadHTML($bookingPage->getContent());
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousLibxmlErrorSetting);
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(
+            0,
+            $xpath->query('//*[@id="booking-out-of-area-modal"]/ancestor::*[@id="booking-times-modal"]')->length,
+        );
 
         $this->post(route('bookings.store'), [
             'customer_name' => 'FYP Customer',
@@ -803,6 +815,7 @@ class BookingTest extends TestCase
             ->assertSee('.fc-day-today', false)
             ->assertSee('#ffb51b', false)
             ->assertSee('#calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b', false)
+            ->assertSee('#calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important', false)
             ->assertSee('booking-date-unavailable', false)
             ->assertSee('if (!availableAppointmentDates.has(info.dateStr))', false)
             ->assertSee('booking-date-selected', false)

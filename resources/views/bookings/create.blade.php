@@ -33,9 +33,10 @@
         #calendar .fc-day-today.booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
         #calendar .fc-day-today.booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; }
         #calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
+        #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
         #booking-location-map { min-height: 280px; border-radius: .5rem; z-index: 0; }
-        .booking-location-pin { color: var(--bs-primary); font-size: 2rem; text-shadow: 0 1px 3px #fff; }
+        .booking-location-pin { background: transparent; border: 0; }
     </style>
     @if ($authenticatedBooking)
         <div class="container-fluid py-3">
@@ -222,29 +223,29 @@
                                                     class="d-flex flex-wrap justify-content-center gap-3"></div>
                                             </div>
                                         </div>
-                                        <div class="modal fade" id="booking-out-of-area-modal" tabindex="-1"
-                                            aria-labelledby="booking-out-of-area-title" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h2 class="modal-title h5" id="booking-out-of-area-title">{{ __('Outside our service area') }}</h2>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                            aria-label="{{ __('Close') }}"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <p>{{ __('That pin is outside our Kampar pickup and drop-off area.') }}</p>
-                                                        <p class="mb-0">{{ __('Contact us on WhatsApp or email and we will advise you.') }}</p>
-                                                    </div>
-                                                    <div class="modal-footer">
-                                                        <a class="btn btn-outline-primary" href="{{ $bookingLocationHelpEmailUrl }}">
-                                                            <span class="bi bi-envelope me-1" aria-hidden="true"></span>{{ __('Email us') }}
-                                                        </a>
-                                                        <a class="btn btn-success" href="{{ $bookingLocationHelpWhatsappUrl }}"
-                                                            target="_blank" rel="noopener noreferrer">
-                                                            <span class="bi bi-whatsapp me-1" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
-                                                        </a>
-                                                    </div>
-                                                </div>
+                                    </div>
+                                </div>
+                                <div class="modal fade" id="booking-out-of-area-modal" tabindex="-1"
+                                    aria-labelledby="booking-out-of-area-title" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h2 class="modal-title h5" id="booking-out-of-area-title">{{ __('Outside our service area') }}</h2>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="{{ __('Close') }}"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>{{ __('That pin is outside our Kampar pickup and drop-off area.') }}</p>
+                                                <p class="mb-0">{{ __('Contact us on WhatsApp or email and we will advise you.') }}</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <a class="btn btn-outline-primary" href="{{ $bookingLocationHelpEmailUrl }}">
+                                                    <span class="bi bi-envelope me-1" aria-hidden="true"></span>{{ __('Email us') }}
+                                                </a>
+                                                <a class="btn btn-success" href="{{ $bookingLocationHelpWhatsappUrl }}"
+                                                    target="_blank" rel="noopener noreferrer">
+                                                    <span class="bi bi-whatsapp me-1" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -355,9 +356,9 @@
                     const serviceAreaRadiusKm = @json($serviceAreaRadiusKm);
                     const locationPinIcon = window.L?.divIcon({
                         className: "booking-location-pin",
-                        html: '<span class="bi bi-geo-alt-fill" aria-hidden="true"></span>',
-                        iconSize: [32, 32],
-                        iconAnchor: [16, 30],
+                        html: '<svg viewBox="0 0 28 40" width="28" height="40" aria-hidden="true"><path d="M14 1C6.82 1 1 6.82 1 14c0 9.5 13 25 13 25s13-15.5 13-25C27 6.82 21.18 1 14 1Z" fill="#ff4b0b" stroke="#fff" stroke-width="2"/><circle cx="14" cy="14" r="4.5" fill="#fff"/></svg>',
+                        iconSize: [28, 40],
+                        iconAnchor: [14, 39],
                     });
 
                     function getLocationCoordinates(mode) {
