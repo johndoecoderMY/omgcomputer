@@ -802,6 +802,7 @@ class BookingTest extends TestCase
             ->assertSee('#dcfce7', false)
             ->assertSee('.fc-day-today', false)
             ->assertSee('#ffb51b', false)
+            ->assertSee('#calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b', false)
             ->assertSee('booking-date-unavailable', false)
             ->assertSee('if (!availableAppointmentDates.has(info.dateStr))', false)
             ->assertSee('booking-date-selected', false)

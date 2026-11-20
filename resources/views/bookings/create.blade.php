@@ -32,7 +32,7 @@
         #calendar .fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b; border-radius: .5rem; }
         #calendar .fc-day-today.booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
         #calendar .fc-day-today.booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; }
-        #calendar .fc-day-today .fc-daygrid-day-number { color: #493500 !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
+        #calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
         #booking-location-map { min-height: 280px; border-radius: .5rem; z-index: 0; }
         .booking-location-pin { color: var(--bs-primary); font-size: 2rem; text-shadow: 0 1px 3px #fff; }
