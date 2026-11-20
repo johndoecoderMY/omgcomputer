@@ -839,6 +839,19 @@ class BookingTest extends TestCase
             ->assertJsonPath('0.start', $localStart->format('Y-m-d\TH:i:s\Z'));
     }
 
+    public function test_booking_submission_shows_a_confirmation_modal_with_details(): void
+    {
+        $this->get('/book')
+            ->assertOk()
+            ->assertSee('id="booking-confirmation-modal"', false)
+            ->assertSee('id="booking-confirmation-details"', false)
+            ->assertSee('Confirm your booking')
+            ->assertSee('Edit details')
+            ->assertSee('Confirm booking')
+            ->assertSee('bookingConfirmationModal.show()', false)
+            ->assertSee('bookingForm.requestSubmit()', false);
+    }
+
     public function test_booking_calendar_is_basic_and_availability_comes_from_the_database(): void
     {
         $this->get('/book')

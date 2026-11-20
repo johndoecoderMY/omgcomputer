@@ -224,6 +224,27 @@
                                     </div>
                                 </form>
 
+                                <div class="modal fade" id="booking-confirmation-modal" tabindex="-1"
+                                    aria-labelledby="booking-confirmation-title" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h2 class="modal-title h5" id="booking-confirmation-title">{{ __('Confirm your booking') }}</h2>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="{{ __('Close') }}"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>{{ __('Review the details below before confirming.') }}</p>
+                                                <dl class="row mb-0" id="booking-confirmation-details"></dl>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{{ __('Edit details') }}</button>
+                                                <button class="btn btn-primary" id="booking-confirm-button" type="button">{{ __('Confirm booking') }}</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="modal fade" id="booking-times-modal" tabindex="-1"
                                     aria-labelledby="booking-times-title" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
@@ -397,13 +418,33 @@
                     const availabilityMessage = document.getElementById("availability-message");
                     const availableTimes = document.getElementById("available-times");
                     const calendarAvailabilityStatus = document.getElementById("calendar-availability-status");
+                    const bookingConfirmationModalElement = document.getElementById("booking-confirmation-modal");
+                    const bookingConfirmationDetails = document.getElementById("booking-confirmation-details");
+                    const confirmBookingButton = document.getElementById("booking-confirm-button");
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
                     const locationPickerModal = bootstrap.Modal.getOrCreateInstance(locationPickerModalElement);
                     const locationHelpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-out-of-area-modal"));
+                    const bookingConfirmationModal = bootstrap.Modal.getOrCreateInstance(bookingConfirmationModalElement);
                     const availabilityUrl = @json(route('bookings.availability'));
                     const availabilityEventsUrl = @json(route('bookings.events'));
                     const calendarLocale = @json(app()->getLocale() === 'zh_CN' ? 'zh-cn' : (app()->getLocale() === 'ms' ? 'ms' : 'en'));
                     const deviceDetailsServiceId = @json($deviceDetailsServiceId);
+                    const confirmationLabels = {
+                        fullName: @json(__('Full name'), JSON_UNESCAPED_UNICODE),
+                        email: @json(__('Email'), JSON_UNESCAPED_UNICODE),
+                        phone: @json(__('Phone'), JSON_UNESCAPED_UNICODE),
+                        service: @json(__('Service'), JSON_UNESCAPED_UNICODE),
+                        appointmentDate: @json(__('Appointment date'), JSON_UNESCAPED_UNICODE),
+                        appointmentTime: @json(__('Appointment time (MYT)'), JSON_UNESCAPED_UNICODE),
+                        deviceModel: @json(__('Device model'), JSON_UNESCAPED_UNICODE),
+                        pickupAddress: @json(__('Pickup address'), JSON_UNESCAPED_UNICODE),
+                        dropoffAddress: @json(__('Drop-off address'), JSON_UNESCAPED_UNICODE),
+                        pickupPin: @json(__('Pickup pin'), JSON_UNESCAPED_UNICODE),
+                        dropoffPin: @json(__('Drop-off pin'), JSON_UNESCAPED_UNICODE),
+                        requestNotes: @json(__('What do you need help with?'), JSON_UNESCAPED_UNICODE),
+                        notProvided: @json(__('Not provided'), JSON_UNESCAPED_UNICODE),
+                        sameAsPickup: @json(__('Same as pickup address'), JSON_UNESCAPED_UNICODE),
+                    };
                     const locationMessages = {
                         pickupSet: @json(__('Pickup pin set'), JSON_UNESCAPED_UNICODE),
                         dropoffSet: @json(__('Drop-off pin set'), JSON_UNESCAPED_UNICODE),
@@ -817,8 +858,56 @@
                             : appointmentMessages.chooseTime;
                     }
 
+                    function addConfirmationDetail(label, value) {
+                        const term = document.createElement("dt");
+                        term.className = "col-sm-4 text-body-secondary";
+                        term.textContent = label;
+                        const description = document.createElement("dd");
+                        description.className = "col-sm-8 mb-2 text-break";
+                        description.textContent = value;
+                        bookingConfirmationDetails.append(term, description);
+                    }
+
+                    function updateBookingConfirmation() {
+                        bookingConfirmationDetails.replaceChildren();
+                        addConfirmationDetail(confirmationLabels.fullName, document.getElementById("customer-name").value.trim());
+                        addConfirmationDetail(confirmationLabels.email, document.getElementById("customer-email").value.trim());
+                        addConfirmationDetail(confirmationLabels.phone, document.getElementById("customer-phone").value.trim());
+                        addConfirmationDetail(
+                            confirmationLabels.service,
+                            serviceSelect.options[serviceSelect.selectedIndex].textContent.trim(),
+                        );
+                        addConfirmationDetail(confirmationLabels.appointmentDate, bookingDateSummary.textContent);
+                        addConfirmationDetail(confirmationLabels.appointmentTime, bookingTimeSummary.textContent);
+
+                        if (serviceSelect.value === deviceDetailsServiceId) {
+                            const pickupCoordinates = getLocationCoordinates("pickup");
+                            const dropoffCoordinates = getLocationCoordinates("dropoff");
+                            const pickupAddressValue = pickupAddress.value.trim() || confirmationLabels.notProvided;
+                            const dropoffAddressValue = dropoffSameAsPickup.checked
+                                ? `${confirmationLabels.sameAsPickup}: ${pickupAddressValue}`
+                                : dropoffAddress.value.trim() || confirmationLabels.notProvided;
+
+                            if (deviceModel.value.trim()) {
+                                addConfirmationDetail(confirmationLabels.deviceModel, deviceModel.value.trim());
+                            }
+                            addConfirmationDetail(confirmationLabels.pickupAddress, pickupAddressValue);
+                            if (pickupCoordinates) {
+                                addConfirmationDetail(confirmationLabels.pickupPin, pickupCoordinates.map((value) => value.toFixed(5)).join(", "));
+                            }
+                            addConfirmationDetail(confirmationLabels.dropoffAddress, dropoffAddressValue);
+                            if (dropoffCoordinates) {
+                                addConfirmationDetail(confirmationLabels.dropoffPin, dropoffCoordinates.map((value) => value.toFixed(5)).join(", "));
+                            }
+                            if (requestNotes.value.trim()) {
+                                addConfirmationDetail(confirmationLabels.requestNotes, requestNotes.value.trim());
+                            }
+                        }
+                    }
+
                     let availableAppointmentDates = new Set();
                     let calendarAvailabilityFailed = false;
+                    let bookingConfirmationAccepted = false;
                     const calendar = new FullCalendar.Calendar(calendarEl, {
                         locale: calendarLocale,
                         timeZone: "UTC",
@@ -931,6 +1020,11 @@
                         }
                     });
                     bookingForm.addEventListener("submit", function (event) {
+                        if (bookingConfirmationAccepted) {
+                            bookingConfirmationAccepted = false;
+                            return;
+                        }
+
                         if (serviceSelect.value === deviceDetailsServiceId) {
                             const outsideLocation = Object.keys(locationInputs).find(function (mode) {
                                 const coordinates = getLocationCoordinates(mode);
@@ -945,6 +1039,9 @@
                         }
 
                         if (bookingDate.value && bookingTime.value) {
+                            event.preventDefault();
+                            updateBookingConfirmation();
+                            bookingConfirmationModal.show();
                             return;
                         }
 
@@ -955,6 +1052,11 @@
                         } else {
                             calendarEl.scrollIntoView({ behavior: "smooth", block: "center" });
                         }
+                    });
+                    confirmBookingButton.addEventListener("click", function () {
+                        bookingConfirmationAccepted = true;
+                        bookingForm.requestSubmit();
+                        bookingConfirmationAccepted = false;
                     });
 
                     calendar.render();
