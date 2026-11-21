@@ -16,6 +16,7 @@
     @endif
 
     <div class="card">
+        <div class="card-header fw-semibold">Payment receipts</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 table-bordered">
                 <thead>

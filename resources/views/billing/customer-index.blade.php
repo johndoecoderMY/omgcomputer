@@ -33,7 +33,8 @@
         </div>
     </form>
 
-    <div class="card p-2">
+    <div class="card">
+        <div class="card-header fw-semibold">Billing documents</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0 table-bordered" data-datatable
                 data-source="{{ route('billing.datatable', request()->only(['type', 'status'])) }}"

@@ -196,6 +196,34 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('issued', $document->fresh()->status);
     }
 
+    public function test_invoice_email_is_not_reported_as_sent_when_only_log_mailer_is_configured(): void
+    {
+        Mail::fake();
+        $staff = $this->adminUser();
+        $document = $this->createIssuedInvoice(
+            Project::query()->create(['name' => 'Invoice email configuration project']),
+            125,
+        );
+        config(['mail.default' => 'log']);
+
+        $this->actingAs($staff)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('Outgoing email is not configured')
+            ->assertSee(route('email.settings'), false);
+
+        $this->actingAs($staff)->from(route('billing.documents.show', $document))
+            ->post(route('billing.documents.send', $document), [
+                'email' => 'invoice-customer@example.test',
+                'locale' => 'en',
+            ])->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas(
+                'error',
+                'Invoice email could not be sent. Check the outgoing SMTP settings in Email Server Settings and try again.',
+            );
+
+        Mail::assertNothingSent();
+    }
+
     public function test_staff_can_send_and_preview_quotation_in_selected_language(): void
     {
         Mail::fake();
@@ -1009,6 +1037,13 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee('Payment history')
             ->assertSee('Partial payments are not currently supported.');
         $this->assertSame(2, substr_count($invoicePage->getContent(), 'class="col-lg-6"'));
+        $documentHtml = new \DOMDocument;
+        @$documentHtml->loadHTML($invoicePage->getContent());
+        $paymentHistoryHeader = (new \DOMXPath($documentHtml))->query(
+            '//*[contains(concat(" ", normalize-space(@class), " "), " container-fluid ")]'
+            .'//*[contains(concat(" ", normalize-space(@class), " "), " card-header ") and contains(normalize-space(.), "Payment history")]',
+        );
+        $this->assertSame(1, $paymentHistoryHeader->length);
         $this->assertSame(3, $part->fresh()->stock_quantity);
 
         $paymentData['amount'] = 10;

@@ -96,6 +96,18 @@
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if (session('info'))<div class="alert alert-info">{{ session('info') }}</div>@endif
     @if (session('error'))<div class="alert alert-danger" role="alert">{{ session('error') }}</div>@endif
+    @if (! auth()->user()->hasRole('customer')
+        && in_array(config('mail.default'), ['log', 'array'], true)
+        && !(config('mail.default') === 'array' && app()->environment('testing')))
+        <div class="alert alert-warning" role="alert">
+            Outgoing email is not configured, so billing emails will not be delivered.
+            @if (auth()->user()->hasRole('admin'))
+                <a class="alert-link" href="{{ route('email.settings') }}">Configure SMTP settings</a> and send a test email.
+            @else
+                Ask an administrator to configure SMTP settings and send a test email.
+            @endif
+        </div>
+    @endif
     @if (! auth()->user()->hasRole('customer') && $document->type === 'quotation' && $document->status === 'draft')
         <div class="alert alert-info">Sending this quotation through the website is optional. If the customer already accepted it by phone, in person, or through another form, use <strong>Record customer accepted</strong> to automatically issue and email the invoice.</div>
     @endif
@@ -116,7 +128,8 @@
             @endif
         </div></div></div>
         <div class="col-lg-4">
-            <div class="card mb-3 p-2">
+            <div class="card mb-3">
+                <div class="card-header fw-semibold">Document summary</div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>RM {{ number_format($document->subtotal, 2) }}</span></div>
                     @if ((float) $document->discount_amount > 0)
@@ -177,22 +190,24 @@
                                 <button class="btn btn-outline-secondary" type="button" data-copy-target="guest-payment-url">Copy link</button>
                             </div>
                         @endif
-                        @if (filter_var($document->customer_email, FILTER_VALIDATE_EMAIL))
-                            <form method="POST" action="{{ route('billing.guest-payment-link', $document) }}">
+                        @unless (filter_var($document->customer_email, FILTER_VALIDATE_EMAIL))
+                            <div class="alert alert-warning mb-0">A valid customer email is required before creating a payment link.</div>
+                        @endunless
+                    </div>
+                    @if (filter_var($document->customer_email, FILTER_VALIDATE_EMAIL))
+                        <div class="card-footer">
+                            <form class="w-100" method="POST" action="{{ route('billing.guest-payment-link', $document) }}">
                                 @csrf
                                 <button class="btn btn-outline-primary w-100" type="submit">
                                     <span class="bi bi-link-45deg me-2" aria-hidden="true"></span>Generate or replace link
                                 </button>
                             </form>
-                        @else
-                            <div class="alert alert-warning mb-0">A valid customer email is required before creating a payment link.</div>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
                 </div>
             @endif
         </div>
-    </div>
     @if ($document->type === 'invoice')
         <div class="row g-3 mb-3">
             @if (auth()->user()->hasRole('admin') && in_array($document->status, ['issued', 'partial', 'part_paid'], true))

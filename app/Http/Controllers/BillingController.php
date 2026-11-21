@@ -1076,8 +1076,8 @@ class BillingController extends Controller
 
         if (! $emailSent) {
             return back()->with('error', $document->type === 'quotation'
-                ? 'Quotation was added to the customer panel, but the email could not be sent. Check the email server settings and try again.'
-                : 'Invoice email could not be sent. Check the email server settings and try again.');
+                ? 'Quotation was added to the customer panel, but the email could not be sent. Check the outgoing SMTP settings in Email Server Settings and try again.'
+                : 'Invoice email could not be sent. Check the outgoing SMTP settings in Email Server Settings and try again.');
         }
 
         $delivery = ucfirst($document->type).' '.$document->number.' was emailed to '.$data['email'].'.';
@@ -1365,6 +1365,19 @@ class BillingController extends Controller
         }
 
         try {
+            $mailSettings = app(MailSettingsService::class);
+            $mailSettings->apply();
+            $activeMailer = config('mail.default');
+            if (in_array($activeMailer, ['log', 'array'], true)
+                && ! ($activeMailer === 'array' && app()->environment('testing'))) {
+                Log::warning('Billing document email was not sent because the active mailer does not deliver email.', [
+                    'document_id' => $document->id,
+                    'mailer' => $activeMailer,
+                ]);
+
+                return false;
+            }
+
             $paymentUrl = null;
             if ($document->type === 'invoice'
                 && $chip->isConfigured()
@@ -1373,7 +1386,6 @@ class BillingController extends Controller
                 $paymentUrl = $paymentLinks->getOrCreate($document, $locale);
             }
 
-            app(MailSettingsService::class)->apply();
             $document->load(['items', 'payments']);
             $pdf = $this->renderPdf($document, $locale);
             $mail = $document->type === 'quotation'
@@ -1412,7 +1424,7 @@ class BillingController extends Controller
 
         return redirect()
             ->route('billing.documents.show', $invoice)
-            ->with('error', 'Invoice '.$invoice->number.' was created, but the email could not be sent. Check the email settings or use WhatsApp to share it.');
+            ->with('error', 'Invoice '.$invoice->number.' was created, but the email could not be sent. Check the outgoing SMTP settings in Email Server Settings or use WhatsApp to share it.');
     }
 
     private function validateLineItems(array $items): void
