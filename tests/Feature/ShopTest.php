@@ -567,6 +567,38 @@ class ShopTest extends TestCase
         $this->assertDatabaseMissing('custom_pc_build_drafts', ['id' => $draft->id]);
     }
 
+    public function test_custom_pc_build_draft_accepts_selected_components_without_prices(): void
+    {
+        $staff = $this->staffUser();
+        $cpu = CustomPcComponent::query()->create([
+            'name' => 'Unpriced draft CPU',
+            'type' => 'cpu',
+        ]);
+
+        $this->actingAs($staff)->post(route('shop.custom-pc-builder.drafts.store'), [
+            'build_name' => 'Unpriced PC plan',
+            'items' => [[
+                'custom_pc_component_id' => $cpu->id,
+                'component_type' => 'cpu',
+                'build_group' => '1',
+                'quantity' => 1,
+                'unit_cost' => '',
+                'unit_price' => '',
+            ]],
+        ])->assertRedirect(route('shop.custom-pc-builder.drafts.index'))
+            ->assertSessionHas('success', 'Custom PC build draft saved.');
+
+        $draft = CustomPcBuildDraft::query()->firstOrFail();
+        $this->assertSame($cpu->id, $draft->form_data['items'][0]['custom_pc_component_id']);
+        $this->assertNull($draft->form_data['items'][0]['unit_cost']);
+        $this->assertNull($draft->form_data['items'][0]['unit_price']);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('data-save-build-draft', false)
+            ->assertSee('Enter an RM quote price for this catalog item.');
+    }
+
     public function test_custom_pc_builder_catalog_search_filters_by_price_and_supplier(): void
     {
         $staff = $this->staffUser();

@@ -203,6 +203,7 @@
                     </div>
                     <div class="card-footer d-grid gap-2">
                         <button class="btn btn-outline-primary" type="submit" formnovalidate
+                            data-save-build-draft
                             formaction="{{ $draft ? route('shop.custom-pc-builder.drafts.update', $draft) : route('shop.custom-pc-builder.drafts.store') }}">
                             <i class="bi bi-save me-1" aria-hidden="true"></i>{{ $draft ? 'Update saved build draft' : 'Save build draft' }}
                         </button>
@@ -1671,6 +1672,11 @@
             updateEstimate();
         });
         form.addEventListener('submit', (event) => {
+            if (event.submitter?.hasAttribute('data-save-build-draft')) {
+                setNames();
+                return;
+            }
+
             allRows().forEach((row) => {
                 if (!row.querySelector('.component-select').value) row.remove();
             });
