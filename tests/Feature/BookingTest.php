@@ -267,6 +267,7 @@ class BookingTest extends TestCase
             ->assertSee('id="booking-use-location"', false)
             ->assertDontSee('id="booking-find-address"', false)
             ->assertSee('id="booking-location-address-preview"', false)
+            ->assertSee('<textarea class="form-control form-control-sm" id="booking-location-address-preview"', false)
             ->assertSee('id="pickup-location-preview"', false)
             ->assertSee('id="dropoff-location-preview"', false)
             ->assertSee('id="booking-open-calendar"', false)

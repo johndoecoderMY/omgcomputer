@@ -24,6 +24,17 @@ class DatabaseSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_demo_data_seeder_does_not_insert_a_sample_marketing_campaign(): void
+    {
+        User::factory()->create(['email' => 'support@omgcomputer.my']);
+
+        $this->seed(\Database\Seeders\DemoDataSeeder::class);
+
+        $this->assertDatabaseMissing('marketing_campaigns', [
+            'name' => 'Sample student laptop care campaign',
+        ]);
+    }
+
     public function test_default_seeder_keeps_operational_records_empty_and_can_run_repeatedly(): void
     {
         config(['auth.seed_admin_password' => 'SeedAdmin!Test-Password-2026']);
@@ -116,7 +127,7 @@ class DatabaseSeederTest extends TestCase
         $this->assertNotContains('cpu', $seededPartTypes);
         $this->assertSame(0, $counts['repair_tickets']);
         $this->assertSame(0, $counts['billing_documents']);
-        $this->assertGreaterThan(0, $counts['marketing_campaigns']);
+        $this->assertSame(0, $counts['marketing_campaigns']);
         $this->assertSame(0, $counts['bookings']);
         $this->assertSame(0, $counts['shop_orders']);
         $this->assertGreaterThan(0, $counts['tasks']);

@@ -6,7 +6,6 @@ use App\Models\Customer;
 use App\Models\FlowChart;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
-use App\Models\MarketingCampaign;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -101,22 +100,6 @@ class DemoDataSeeder extends Seeder
             'flow_chart_id' => $flowChart->id,
             'flow_chart_step_id' => 'seed-booking-review',
         ]);
-
-        MarketingCampaign::query()->firstOrCreate(
-            ['name' => 'Sample student laptop care campaign'],
-            [
-                'channel' => 'social',
-                'status' => 'active',
-                'starts_on' => now()->subDays(3)->toDateString(),
-                'ends_on' => now()->addDays(14)->toDateString(),
-                'spend' => 80,
-                'impressions' => 1800,
-                'clicks' => 95,
-                'leads' => 12,
-                'conversions' => 3,
-                'attributed_revenue' => 360,
-            ],
-        );
 
     }
 }

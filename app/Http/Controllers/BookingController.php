@@ -15,6 +15,7 @@ use App\Support\AssignmentAccess;
 use App\Support\DataTableQueryBuilder;
 use App\Support\StatusBadge;
 use Carbon\Carbon;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
@@ -143,18 +144,24 @@ class BookingController extends Controller
             return response()->json(['message' => 'Please wait before looking up another address.'], 429);
         }
 
+        $request = Http::acceptJson()
+            ->withUserAgent(config('app.name').' booking address lookup ('.config('app.url').')')
+            ->timeout(5);
+        if (PHP_OS_FAMILY === 'Windows' && defined('CURLSSLOPT_NATIVE_CA')) {
+            $request->withOptions([
+                'curl' => [CURLOPT_SSL_OPTIONS => CURLSSLOPT_NATIVE_CA],
+            ]);
+        }
+
         try {
-            $response = Http::acceptJson()
-                ->withUserAgent(config('app.name').' booking address lookup ('.config('app.url').')')
-                ->timeout(5)
-                ->get('https://nominatim.openstreetmap.org/reverse', [
-                    'format' => 'jsonv2',
-                    'lat' => $data['latitude'],
-                    'lon' => $data['longitude'],
-                    'zoom' => 18,
-                    'addressdetails' => 1,
-                ]);
-        } catch (ConnectionException $exception) {
+            $response = $request->get('https://nominatim.openstreetmap.org/reverse', [
+                'format' => 'jsonv2',
+                'lat' => $data['latitude'],
+                'lon' => $data['longitude'],
+                'zoom' => 18,
+                'addressdetails' => 1,
+            ]);
+        } catch (ConnectionException|RequestException $exception) {
             Log::warning('Booking pin address lookup could not connect to OpenStreetMap.', [
                 'exception' => $exception::class,
                 'message' => $exception->getMessage(),

@@ -21,11 +21,11 @@ function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = 
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-/* -------------------------------------------------------------------------- */
-/*                                    Utils                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 var docReady = function docReady(fn) {
-  // see if DOM is already available
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', fn);
   } else {
@@ -55,12 +55,12 @@ var getData = function getData(el, data) {
   }
 };
 
-/* ----------------------------- Colors function ---------------------------- */
+
 
 var hexToRgb = function hexToRgb(hexValue) {
   var hex;
   hexValue.indexOf('#') === 0 ? hex = hexValue.substring(1) : hex = hexValue;
-  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+
   var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
   var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.replace(shorthandRegex, function (m, r, g, b) {
     return r + r + g + g + b + b;
@@ -73,7 +73,7 @@ var rgbaColor = function rgbaColor() {
   return "rgba(".concat(hexToRgb(color), ", ").concat(alpha, ")");
 };
 
-/* --------------------------------- Colors --------------------------------- */
+
 
 var getColor = function getColor(name) {
   var dom = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.documentElement;
@@ -172,7 +172,7 @@ var getSystemTheme = function getSystemTheme() {
 var isDark = function isDark() {
   return localStorage.getItem('theme') === 'auto' ? getSystemTheme() : localStorage.getItem('theme');
 };
-/* --------------------------------- Cookie --------------------------------- */
+
 
 var setCookie = function setCookie(name, value, expire) {
   var expires = new Date();
@@ -192,14 +192,14 @@ var settings = {
   }
 };
 
-/* -------------------------- Chart Initialization -------------------------- */
+
 
 var newChart = function newChart(chart, config) {
   var ctx = chart.getContext('2d');
   return new window.Chart(ctx, config);
 };
 
-/* ---------------------------------- Store --------------------------------- */
+
 
 var getItemFromStore = function getItemFromStore(key, defaultValue) {
   var store = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : localStorage;
@@ -218,7 +218,7 @@ var getStoreSpace = function getStoreSpace() {
   return parseFloat((escape(encodeURIComponent(JSON.stringify(store))).length / (1024 * 1024)).toFixed(2));
 };
 
-/* get Dates between */
+
 
 var getDates = function getDates(startDate, endDate) {
   var interval = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1000 * 60 * 60 * 24;
@@ -251,7 +251,7 @@ var getPastDates = function getPastDates(duration) {
   return getDates(startDate, endDate);
 };
 
-/* Get Random Number */
+
 var getRandomNumber = function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min) + min);
 };
@@ -288,9 +288,9 @@ var utils = {
   isDark: isDark
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Detector                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var detectorInit = function detectorInit() {
   var _window = window,
@@ -311,10 +311,8 @@ var detectorInit = function detectorInit() {
   navigator.userAgent.match('CriOS') && addClass(html, 'chrome');
 };
 
-/*-----------------------------------------------
-|   DomNode
------------------------------------------------*/
-var DomNode = /*#__PURE__*/function () {
+
+var DomNode = function () {
   function DomNode(node) {
     _classCallCheck(this, DomNode);
     this.node = node;
@@ -382,7 +380,7 @@ var DomNode = /*#__PURE__*/function () {
       return !!this.node;
     }
 
-    // eslint-disable-next-line class-methods-use-this
+
   }, {
     key: "camelize",
     value: function camelize(str) {
@@ -880,7 +878,7 @@ var advanceAjaxTableInit = function advanceAjaxTableInit() {
     updatedButton.disabled = disabled;
     updatedButton.classList[disabled ? 'add' : 'remove']('disabled');
   };
-  // Selectors
+
   var table = document.getElementById('advanceAjaxTable');
   if (table) {
     var options = {
@@ -910,7 +908,7 @@ var advanceAjaxTableInit = function advanceAjaxTableInit() {
     var listFilter = document.querySelector('[data-list-filter]');
     var orderList = new window.List(table, options, orders);
 
-    // Fallback
+
     orderList.on('updated', function (item) {
       var fallback = table.querySelector('.fallback') || document.getElementById(options.fallback);
       if (fallback) {
@@ -1008,9 +1006,9 @@ var advanceAjaxTableInit = function advanceAjaxTableInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Anchor JS                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var anchors = new window.AnchorJS();
 anchors.options = {
@@ -1018,9 +1016,7 @@ anchors.options = {
 };
 anchors.add('[data-anchor]');
 
-/*-----------------------------------------------
-|   Bottom Bar Control
------------------------------------------------*/
+
 
 var bottomBarInit = function bottomBarInit() {
   var bottomBars = document.querySelectorAll('[data-bottom-bar]');
@@ -1032,7 +1028,7 @@ var bottomBarInit = function bottomBarInit() {
   };
   if (bottomBars.length) {
     bottomBars.forEach(function (bar) {
-      // get options
+
       var barOptions = utils.getData(bar, 'bottom-bar');
       var defaultOptions = {
         target: '#bottom-bar-target',
@@ -1044,10 +1040,10 @@ var bottomBarInit = function bottomBarInit() {
         offsetTop = _window$_$merge.offsetTop,
         breakPoint = _window$_$merge.breakPoint;
 
-      // select target
+
       var targetEl = document.getElementById(target);
 
-      // handle Bottombar
+
       var toggleBottomBar = function toggleBottomBar() {
         if (window.matchMedia("(max-width: ".concat(utils.breakpoints[breakPoint], "px)")).matches) {
           if (!isElementInViewport(targetEl, offsetTop)) {
@@ -1074,12 +1070,10 @@ var bottomBarInit = function bottomBarInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Bulk Select
------------------------------------------------*/
+
 
 var elementMap = new Map();
-var BulkSelect = /*#__PURE__*/function () {
+var BulkSelect = function () {
   function BulkSelect(element, option) {
     _classCallCheck(this, BulkSelect);
     this.element = element;
@@ -1089,7 +1083,7 @@ var BulkSelect = /*#__PURE__*/function () {
     elementMap.set(this.element, this);
   }
 
-  // Static
+
   return _createClass(BulkSelect, [{
     key: "init",
     value: function init() {
@@ -1126,7 +1120,7 @@ var BulkSelect = /*#__PURE__*/function () {
     key: "clickBulkCheckbox",
     value: function clickBulkCheckbox() {
       var _this = this;
-      // Handle click event in bulk checkbox
+
       this.element.addEventListener('click', function () {
         if (_this.element.indeterminate === 'indeterminate') {
           _this.actions.addClass(_this.option.displayNoneClassName);
@@ -1156,7 +1150,7 @@ var BulkSelect = /*#__PURE__*/function () {
     key: "clickRowCheckbox",
     value: function clickRowCheckbox() {
       var _this2 = this;
-      // Handle click event in checkbox of each row
+
       this.bulkSelectRows.forEach(function (el) {
         var rowCheck = new DomNode(el);
         rowCheck.on('click', function () {
@@ -1228,9 +1222,7 @@ function bulkSelectInit() {
 }
 window.BulkSelect = BulkSelect;
 
-/*-----------------------------------------------
-|   Chat
------------------------------------------------*/
+
 var chatInit = function chatInit() {
   var Events = {
     CLICK: 'click',
@@ -1264,7 +1256,7 @@ var chatInit = function chatInit() {
   var $btnSend = document.querySelector(Selector.BTN_SEND);
   var $currentChatArea = document.querySelector(Selector.CHAT_CONTENT_SCROLL_AREA);
 
-  // Set scrollbar position
+
   var setScrollbarPosition = function setScrollbarPosition($chatArea) {
     if ($chatArea) {
       var scrollArea = $chatArea;
@@ -1278,10 +1270,10 @@ var chatInit = function chatInit() {
     el.addEventListener(Events.CLICK, function (e) {
       var $this = e.currentTarget;
       $this.classList.add('active');
-      // Hide contact list sidebar on responsive
+
       window.innerWidth < 768 && !e.target.classList.contains('hover-actions') && ($chatSidebar.style.left = '-100%');
 
-      // Remove unread-message class when read
+
       $this.classList.contains(ClassName.UNREAD_MESSAGE) && $this.classList.remove(ClassName.UNREAD_MESSAGE);
     });
   });
@@ -1294,7 +1286,7 @@ var chatInit = function chatInit() {
     });
   });
 
-  // change send button color on
+
 
   if ($chatEmojiarea) {
     $chatEmojiarea.setAttribute('placeholder', 'Type your message');
@@ -1311,7 +1303,7 @@ var chatInit = function chatInit() {
       setScrollbarPosition(TargetChatArea);
     });
   }
-  // Open conversation info sidebar
+
   $chatEmojiarea && document.querySelectorAll(Selector.BTN_INFO).forEach(function (el) {
     el.addEventListener(Events.CLICK, function (e) {
       var $this = e.currentTarget;
@@ -1321,23 +1313,23 @@ var chatInit = function chatInit() {
     });
   });
 
-  // Show contact list sidebar on responsive
+
   document.querySelectorAll(Selector.CONTACTS_LIST_SHOW).forEach(function (el) {
     el.addEventListener(Events.CLICK, function () {
       $chatSidebar.style.left = 0;
     });
   });
 
-  // Set scrollbar area height on resize
+
   utils.resize(function () {
     var TargetChatArea = document.querySelector(Selector.CHAT_CONTENT_SCROLL_AREA_ACTIVE);
     setScrollbarPosition(TargetChatArea);
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   choices                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 var choicesInit = function choicesInit() {
   if (window.Choices) {
     var elements = document.querySelectorAll('.js-choice');
@@ -1363,7 +1355,7 @@ var choicesInit = function choicesInit() {
                   choicesItem.classList.add('invalid');
                 }
               }
-              //----- for multiple select only ----------
+
               if (multipleSelect) {
                 var selectedOptions = item.selectedOptions;
                 if (selectedOptions.length > 0 && _toConsumableArray(selectedOptions).some(function (opt) {
@@ -1377,7 +1369,7 @@ var choicesInit = function choicesInit() {
                 }
               }
 
-              //------ select end ---------------
+
             }
           });
         };
@@ -1393,9 +1385,7 @@ var choicesInit = function choicesInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Cookie notice
------------------------------------------------*/
+
 var cookieNoticeInit = function cookieNoticeInit() {
   var Selector = {
     NOTICE: '.notice',
@@ -1456,9 +1446,9 @@ var cookieNoticeInit = function cookieNoticeInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Copy LinK                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var copyLink = function copyLink() {
   var copyLinkModal = document.getElementById('copyLinkModal');
@@ -1490,9 +1480,9 @@ var copyLink = function copyLink() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Count Up                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var countupInit = function countupInit() {
   if (window.countUp) {
@@ -1513,9 +1503,7 @@ var countupInit = function countupInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Data table
------------------------------------------------*/
+
 var dataTablesInit = function dataTablesInit() {
   if (window.jQuery) {
     var $ = window.jQuery;
@@ -1539,11 +1527,9 @@ var dataTablesInit = function dataTablesInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Dashboard Table dropdown
------------------------------------------------*/
+
 var dropdownMenuInit = function dropdownMenuInit() {
-  // Only for ios
+
   if (window.is.ios()) {
     var _Event = {
       SHOWN_BS_DROPDOWN: 'shown.bs.dropdown',
@@ -1567,12 +1553,12 @@ var dropdownMenuInit = function dropdownMenuInit() {
   }
 };
 
-// Reference
-// https://github.com/twbs/bootstrap/issues/11037#issuecomment-274870381
 
-/* -------------------------------------------------------------------------- */
-/*                           Open dropdown on hover                           */
-/* -------------------------------------------------------------------------- */
+
+
+
+
+
 
 var dropdownOnHover = function dropdownOnHover() {
   var navbarArea = document.querySelector('[data-top-nav-dropdowns]');
@@ -1591,9 +1577,7 @@ var dropdownOnHover = function dropdownOnHover() {
   }
 };
 
-/*-----------------------------------------------
-|   Dropzone
------------------------------------------------*/
+
 
 window.Dropzone ? window.Dropzone.autoDiscover = false : '';
 var dropzoneInit = function dropzoneInit() {
@@ -1693,9 +1677,9 @@ var dropzoneInit = function dropzoneInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Popover                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var emojiMartInit = function emojiMartInit() {
   var _ref2 = window.EmojiMart || {},
@@ -1728,9 +1712,9 @@ var emojiMartInit = function emojiMartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  Flatpickr                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var defaultPredefinedRanges = [{
   id: 'today',
@@ -1830,15 +1814,15 @@ var flatpickrIntit = function flatpickrIntit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               from-validation                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var formValidationInit = function formValidationInit() {
-  // Fetch all the forms we want to apply custom Bootstrap validation styles to
+
   var forms = document.querySelectorAll('.needs-validation');
 
-  // Loop over them and prevent submission
+
   Array.prototype.slice.call(forms).forEach(function (form) {
     form.addEventListener('submit', function (event) {
       if (!form.checkValidity()) {
@@ -1850,9 +1834,9 @@ var formValidationInit = function formValidationInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                FullCalendar                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var merge = window._.merge;
 var renderCalendar = function renderCalendar(el, option) {
@@ -1891,9 +1875,9 @@ var fullCalendar = {
   fullCalendarInit: fullCalendarInit
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Glightbox                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var glightboxInit = function glightboxInit() {
   if (window.GLightbox) {
@@ -1903,9 +1887,7 @@ var glightboxInit = function glightboxInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Gooogle Map
------------------------------------------------*/
+
 
 function destroyMap(map) {
   if (map) {
@@ -1917,8 +1899,8 @@ function initMap() {
   var themeController = document.body;
   var $googlemaps = document.querySelectorAll('.googlemap');
   if ($googlemaps.length && window.google) {
-    $googlemaps.forEach( /*#__PURE__*/function () {
-      var _ref4 = _asyncToGenerator( /*#__PURE__*/_regeneratorRuntime().mark(function _callee(itm) {
+    $googlemaps.forEach( function () {
+      var _ref4 = _asyncToGenerator( _regeneratorRuntime().mark(function _callee(itm) {
         var _yield$window$google$, Map, InfoWindow, _yield$window$google$2, AdvancedMarkerElement, _yield$window$google$3, ColorScheme, latLng, markerPopup, zoom, mapId, mapElement, lightIconUrl, darkIconUrl, pov, _mapOptions, mapOptions, map, infowindow, iconImage, marker;
         return _regeneratorRuntime().wrap(function _callee$(_context) {
           while (1) switch (_context.prev = _context.next) {
@@ -1945,7 +1927,7 @@ function initMap() {
               mapId = utils.getData(itm, 'mapid');
               mapElement = itm;
               lightIconUrl = utils.getData(itm, 'icon') ? utils.getData(itm, 'icon') : 'https://maps.gstatic.com/mapfiles/api-3/images/spotlight-poi.png';
-              darkIconUrl = utils.getData(itm, 'dark-icon') ? utils.getData(itm, 'dark-icon') : lightIconUrl; // Fallback
+              darkIconUrl = utils.getData(itm, 'dark-icon') ? utils.getData(itm, 'dark-icon') : lightIconUrl;
               if (!(utils.getData(itm, 'theme') === 'streetview')) {
                 _context.next = 24;
                 break;
@@ -2024,9 +2006,9 @@ var hideOnCollapseInit = function hideOnCollapseInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                           Icon copy to clipboard                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var iconCopiedInit = function iconCopiedInit() {
   var iconList = document.getElementById('icon-list');
@@ -2046,9 +2028,9 @@ var iconCopiedInit = function iconCopiedInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Inputmask                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 var inputmaskInit = function inputmaskInit() {
   if (window.Inputmask) {
     var elements = document.querySelectorAll('[data-input-mask]');
@@ -2066,9 +2048,9 @@ var inputmaskInit = function inputmaskInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Kanbah                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var kanbanInit = function kanbanInit() {
   var Selectors = {
@@ -2096,7 +2078,7 @@ var kanbanInit = function kanbanInit() {
   var addListForm = document.querySelector(Selectors.ADD_LIST_FORM);
   var collapseDismissButtons = document.querySelectorAll(Selectors.BTN_COLLAPSE_DISMISS);
 
-  // Show add card form and place scrollbar bottom of the list
+
   addCardButtons && addCardButtons.forEach(function (button) {
     button.addEventListener(Events.CLICK, function (_ref6) {
       var el = _ref6.currentTarget;
@@ -2111,7 +2093,7 @@ var kanbanInit = function kanbanInit() {
     });
   });
 
-  // Remove add card form
+
   formHideButtons.forEach(function (button) {
     button.addEventListener(Events.CLICK, function (_ref7) {
       var el = _ref7.currentTarget;
@@ -2119,21 +2101,21 @@ var kanbanInit = function kanbanInit() {
     });
   });
   if (addListForm) {
-    // Hide add list button when the form is going to show
+
     addListForm.addEventListener(Events.SHOW_BS_COLLAPSE, function (_ref8) {
       var el = _ref8.currentTarget;
       var nextElement = el.nextElementSibling;
       nextElement && nextElement.classList.add(ClassNames.D_NONE);
     });
 
-    // Focus input field when the form is shown
+
     addListForm.addEventListener(Events.SHOWN_BS_COLLAPSE, function (_ref9) {
       var el = _ref9.currentTarget;
       el.querySelector(Selectors.INPUT_ADD_LIST).focus();
     });
   }
 
-  // Hide add list form when the dismiss button is clicked
+
   collapseDismissButtons.forEach(function (button) {
     button.addEventListener(Events.CLICK, function (_ref10) {
       var el = _ref10.currentTarget;
@@ -2145,9 +2127,9 @@ var kanbanInit = function kanbanInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   leaflet                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var leafletActiveUserInit = function leafletActiveUserInit() {
   var points = [{
@@ -3184,9 +3166,9 @@ var leafletActiveUserInit = function leafletActiveUserInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Data Table                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var togglePaginationButtonDisable = function togglePaginationButtonDisable(button, disabled) {
   button.disabled = disabled;
@@ -3214,7 +3196,7 @@ var listInit = function listInit() {
         var listFilters = document.querySelectorAll('[data-list-filter]');
         var list = new window.List(el, options);
 
-        //-------fallback-----------
+
 
         list.on('updated', function (item) {
           var fallback = el.querySelector('.fallback') || document.getElementById(options.fallback);
@@ -3227,7 +3209,7 @@ var listInit = function listInit() {
           }
         });
 
-        // ---------------------------------------
+
 
         var totalItem = list.items.length;
         var itemsPerPage = list.page;
@@ -3248,7 +3230,7 @@ var listInit = function listInit() {
           }
         };
 
-        // List info
+
         updateListControls();
         if (paginationButtonNext) {
           paginationButtonNext.addEventListener('click', function (e) {
@@ -3294,7 +3276,7 @@ var listInit = function listInit() {
             toggleViewBtn();
           });
         }
-        // numbering pagination
+
         if (options.pagination) {
           el.querySelector('.pagination').addEventListener('click', function (e) {
             if (e.target.classList[0] === 'page') {
@@ -3324,7 +3306,7 @@ var listInit = function listInit() {
           });
         }
 
-        //bulk-select
+
         if (bulkSelect) {
           var bulkSelectInstance = window.BulkSelect.getInstance(bulkSelect);
           bulkSelectInstance.attachRowNodes(list.items.map(function (item) {
@@ -3365,9 +3347,9 @@ var lottieInit = function lottieInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Navbar Combo Layout                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var navbarComboInit = function navbarComboInit() {
   var Selector = {
@@ -3416,9 +3398,9 @@ var navbarComboInit = function navbarComboInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                         Navbar Darken on scroll                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 var navbarDarkenOnScroll = function navbarDarkenOnScroll() {
   var Selector = {
     NAVBAR: '[data-navbar-darken-on-scroll]',
@@ -3489,7 +3471,7 @@ var navbarDarkenOnScroll = function navbarDarkenOnScroll() {
       backgroundImage = _window$getComputedSt.backgroundImage;
     var transition = 'background-color 0.35s ease';
     navbar.style.backgroundImage = 'none';
-    // Change navbar background color on scroll
+
     window.addEventListener(Events.SCROLL, function () {
       var scrollTop = html.scrollTop;
       var alpha = scrollTop / windowHeight * 2;
@@ -3503,7 +3485,7 @@ var navbarDarkenOnScroll = function navbarDarkenOnScroll() {
       }
     });
 
-    // Toggle bg class on window resize
+
     utils.resize(function () {
       var breakPoint = utils.getBreakpoint(navbar);
       if (window.innerWidth > breakPoint) {
@@ -3533,9 +3515,9 @@ var navbarDarkenOnScroll = function navbarDarkenOnScroll() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Navbar Top                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var navbarTopDropShadow = function navbarTopDropShadow() {
   var Selector = {
@@ -3599,9 +3581,9 @@ var navbarTopDropShadow = function navbarTopDropShadow() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               Navbar Vertical                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var handleNavbarVerticalCollapsed = function handleNavbarVerticalCollapsed() {
   var Selector = {
@@ -3628,7 +3610,7 @@ var handleNavbarVerticalCollapsed = function handleNavbarVerticalCollapsed() {
       navbarVerticalToggle.blur();
       html.classList.toggle(ClassNames.NAVBAR_VERTICAL_COLLAPSED);
 
-      // Set collapse state on localStorage
+
       var isNavbarVerticalCollapsed = utils.getItemFromStore('isNavbarVerticalCollapsed');
       utils.setItemToStore('isNavbarVerticalCollapsed', !isNavbarVerticalCollapsed);
       var event = new CustomEvent(Events.NAVBAR_VERTICAL_TOGGLE);
@@ -3649,9 +3631,9 @@ var handleNavbarVerticalCollapsed = function handleNavbarVerticalCollapsed() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                               noUiSlider                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 var nouisliderInit = function nouisliderInit() {
   if (window.noUiSlider) {
     var elements = document.querySelectorAll('[data-nouislider]');
@@ -3677,9 +3659,7 @@ var nouisliderInit = function nouisliderInit() {
   }
 };
 
-/*-----------------------------------------------
-|   Inline Player [plyr]
------------------------------------------------*/
+
 
 var plyrInit = function plyrInit() {
   if (window.Plyr) {
@@ -3697,9 +3677,9 @@ var plyrInit = function plyrInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Popover                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var popoverInit = function popoverInit() {
   var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
@@ -3708,9 +3688,9 @@ var popoverInit = function popoverInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                         Bootstrap Animated Progress                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var progressAnimationToggle = function progressAnimationToggle() {
   var animatedProgress = document.querySelectorAll('[data-progress-animation]');
@@ -3723,9 +3703,7 @@ var progressAnimationToggle = function progressAnimationToggle() {
   });
 };
 
-/*-----------------------------------------------
-|  Quantity
------------------------------------------------*/
+
 var quantityInit = function quantityInit() {
   var Selector = {
     DATA_QUANTITY_BTN: '[data-quantity] [data-type]',
@@ -3759,11 +3737,11 @@ var quantityInit = function quantityInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
 
-/*                               Ratings                               */
 
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var ratingInit = function ratingInit() {
   var raters = document.querySelectorAll('[data-rater]');
@@ -3782,10 +3760,10 @@ var ratingInit = function ratingInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Scrollbars                                 */
-/* -------------------------------------------------------------------------- */
-// import utils from './utils';
+
+
+
+
 
 var scrollInit = function scrollInit() {
   var dropdownElements = Array.from(document.querySelectorAll('[data-hide-on-body-scroll]'));
@@ -3799,9 +3777,9 @@ var scrollInit = function scrollInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Scrollbars                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var scrollbarInit = function scrollbarInit() {
   Array.prototype.forEach.call(document.querySelectorAll('.scrollbar-overlay'), function (el) {
@@ -3875,9 +3853,7 @@ var searchInit = function searchInit() {
   });
 };
 
-/*-----------------------------------------------
-|   Select2
------------------------------------------------*/
+
 
 var select2Init = function select2Init() {
   if (window.jQuery) {
@@ -3893,9 +3869,9 @@ var select2Init = function select2Init() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 SortableJS                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var sortableInit = function sortableInit() {
   var getData = utils.getData;
@@ -3922,9 +3898,7 @@ var sortableInit = function sortableInit() {
   });
 };
 
-/*-----------------------------------------------
-|  Swiper
------------------------------------------------*/
+
 var swiperInit = function swiperInit() {
   var swipers = document.querySelectorAll('[data-swiper]');
   var navbarVerticalToggle = document.querySelector('.navbar-vertical-toggle');
@@ -3967,9 +3941,9 @@ var swiperInit = function swiperInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Theme Control                               */
-/* -------------------------------------------------------------------------- */
+
+
+
 var initialDomSetup = function initialDomSetup(element) {
   if (!element) return;
   var dataUrlDom = element.querySelector('[data-theme-control = "navbarPosition"]');
@@ -4076,7 +4050,7 @@ var themeControl = function themeControl() {
     }
   });
 
-  // control navbar position
+
   themeController.on('change', function (e) {
     var target = new DomNode(e.target);
     if (target.data('theme-control') === 'navbarPosition') {
@@ -4095,9 +4069,9 @@ var themeControl = function themeControl() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Tinymce                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var tinymceInit = function tinymceInit() {
   if (window.tinymce) {
@@ -4142,9 +4116,9 @@ var tinymceInit = function tinymceInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                    Toast                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var toastInit = function toastInit() {
   var toastElList = [].slice.call(document.querySelectorAll('.toast'));
@@ -4160,9 +4134,9 @@ var toastInit = function toastInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Tooltip                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var tooltipInit = function tooltipInit() {
   var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -4172,9 +4146,9 @@ var tooltipInit = function tooltipInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Treeview                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var treeviewInit = function treeviewInit() {
   var Events = {
     CHANGE: 'change',
@@ -4275,7 +4249,7 @@ var treeviewInit = function treeviewInit() {
             collapse = collapse.parentElement;
           }
           parents.forEach(function (collapseEl) {
-            // eslint-disable-next-line no-new
+
             new window.bootstrap.Collapse(collapseEl, {
               show: true
             });
@@ -4295,9 +4269,9 @@ var treeviewInit = function treeviewInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 Typed Text                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var typedTextInit = function typedTextInit() {
   var typedTexts = document.querySelectorAll('.typed-text');
@@ -4322,9 +4296,9 @@ var unresolvedTicketsTabInit = function unresolvedTicketsTabInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                 step wizard                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var wizardInit = function wizardInit() {
   var getData = utils.getData;
@@ -4402,21 +4376,21 @@ var wizardInit = function wizardInit() {
         });
         item.addEventListener(events.SHOWN, function () {
           count = index;
-          // can't go back tab
+
           if (count === tabToggleButtonEl.length - 1) {
             tabToggleButtonEl.forEach(function (tab) {
               tab.setAttribute('data-bs-toggle', 'modal');
               tab.setAttribute('data-bs-target', '#error-modal');
             });
           }
-          // add done class
+
           for (var i = 0; i < count; i += 1) {
             tabToggleButtonEl[i].classList.add('done');
             if (i > 0) {
               tabToggleButtonEl[i - 1].classList.add('complete');
             }
           }
-          // remove done class
+
           for (var j = count; j < tabToggleButtonEl.length; j += 1) {
             tabToggleButtonEl[j].classList.remove('done');
             if (j > 0) {
@@ -4424,13 +4398,13 @@ var wizardInit = function wizardInit() {
             }
           }
 
-          // card footer remove at last step
+
           if (count > tabToggleButtonEl.length - 2) {
             wizardFooter.classList.add('d-none');
           } else {
             wizardFooter.classList.remove('d-none');
           }
-          // prev-button removing
+
           if (count > 0 && count !== tabToggleButtonEl.length - 1) {
             prevButton.classList.remove('d-none');
           } else {
@@ -4526,9 +4500,7 @@ var events = [{
   className: 'bg-primary-subtle'
 }];
 
-/*-----------------------------------------------
-|   Calendar
------------------------------------------------*/
+
 var appCalendarInit = function appCalendarInit() {
   var Selectors = {
     ACTIVE: '.active',
@@ -4669,9 +4641,7 @@ var appCalendarInit = function appCalendarInit() {
   });
 };
 
-/*-----------------------------------------------
-|   Project Management Calendar
------------------------------------------------*/
+
 var managementCalendarInit = function managementCalendarInit() {
   var Selectors = {
     ADD_EVENT_FORM: '#addEventForm',
@@ -4863,9 +4833,9 @@ var getTemplate = function getTemplate(event) {
   }).join(''), "\n            </ul>\n        </div>\n      ") : '', "\n  </div>\n</div>\n<div class=\"modal-footer d-flex justify-content-end bg-body-tertiary px-card border-top-0\">\n  <a href=\"").concat(document.location.href.split('/').slice(0, 5).join('/'), "/app/events/create-an-event.html\" class=\"btn btn-falcon-default btn-sm\">\n    <span class=\"fas fa-pencil-alt fs-11 mr-2\"></span> Edit\n  </a>\n  <a href='").concat(document.location.href.split('/').slice(0, 5).join('/'), "/app/events/event-detail.html' class=\"btn btn-falcon-primary btn-sm\">\n    See more details\n    <span class=\"fas fa-angle-right fs-11 ml-1\"></span>\n  </a>\n</div>\n");
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                  bar-chart                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var barChartInit = function barChartInit() {
   var barChartElement = document.getElementById('chartjs-bar-chart');
@@ -4916,9 +4886,9 @@ var barChartInit = function barChartInit() {
   chartJsInit(barChartElement, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Bubble                                    */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var chartBubble = function chartBubble() {
   var pie = document.getElementById('chartjs-bubble-chart');
@@ -4979,9 +4949,9 @@ var chartBubble = function chartBubble() {
   chartJsInit(pie, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Combo                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartCombo = function chartCombo() {
   var combo = document.getElementById('chartjs-combo-chart');
   var getOptions = function getOptions() {
@@ -5047,9 +5017,9 @@ var chartCombo = function chartCombo() {
   chartJsInit(combo, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Doughnut                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartDoughnut = function chartDoughnut() {
   var doughnut = document.getElementById('chartjs-doughnut-chart');
   var getOptions = function getOptions() {
@@ -5080,9 +5050,9 @@ var chartDoughnut = function chartDoughnut() {
   chartJsInit(doughnut, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Half Doughnut                             */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartHalfDoughnutInit = function chartHalfDoughnutInit() {
   var $chartHalfDoughnuts = document.querySelectorAll('[data-half-doughnut]');
   $chartHalfDoughnuts.forEach(function ($chartHalfDoughnut) {
@@ -5126,9 +5096,9 @@ var chartHalfDoughnutInit = function chartHalfDoughnutInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Line                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartLine = function chartLine() {
   var line = document.getElementById('chartjs-line-chart');
   var getOptions = function getOptions() {
@@ -5181,9 +5151,9 @@ var chartLine = function chartLine() {
   chartJsInit(line, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Pie                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartPie = function chartPie() {
   var pie = document.getElementById('chartjs-pie-chart');
   var getOptions = function getOptions() {
@@ -5214,9 +5184,9 @@ var chartPie = function chartPie() {
   chartJsInit(pie, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Polar                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartPolar = function chartPolar() {
   var polar = document.getElementById('chartjs-polar-chart');
   var getOptions = function getOptions() {
@@ -5254,9 +5224,9 @@ var chartPolar = function chartPolar() {
   chartJsInit(polar, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Radar                                  */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartRadar = function chartRadar() {
   var radar = document.getElementById('chartjs-radar-chart');
   var getOptions = function getOptions() {
@@ -5299,9 +5269,9 @@ var chartRadar = function chartRadar() {
   chartJsInit(radar, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Scatter                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 var chartScatter = function chartScatter() {
   var scatter = document.getElementById('chartjs-scatter-chart');
   var getOptions = function getOptions() {
@@ -5427,9 +5397,9 @@ var chartScatter = function chartScatter() {
   chartJsInit(scatter, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            ChartJs Initialization                          */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var chartJsInit = function chartJsInit(chartEl, config) {
   if (!chartEl) return;
@@ -5469,9 +5439,9 @@ var getBubbleDataset = function getBubbleDataset(count, rmin, rmax, min, max) {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Chart Scatter                                   */
-/* -------------------------------------------------------------------------- */
+
+
+
 var productShareDoughnutInit = function productShareDoughnutInit() {
   var marketShareDoughnutElement = document.getElementById('marketShareDoughnut');
   var getOptions = function getOptions() {
@@ -5501,9 +5471,9 @@ var productShareDoughnutInit = function productShareDoughnutInit() {
   chartJsInit(marketShareDoughnutElement, getOptions);
 };
 
-/* -------------------------------------------------------------------------- */
-/*                          D3 Packed Bubble Chart                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var D3PackedBubbleInit = function D3PackedBubbleInit() {
   var $d3PackedBubble = document.querySelector('.d3-packed-bubble-chart');
@@ -5679,9 +5649,9 @@ var D3PackedBubbleInit = function D3PackedBubbleInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                           Trending Keywords                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var trendingKeywordsInit = function trendingKeywordsInit() {
   var $d3TrendingKeywords = document.querySelector('.d3-trending-keywords');
@@ -5857,9 +5827,9 @@ var trendingKeywordsInit = function trendingKeywordsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Active Users                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var activeUsersChartReportInit = function activeUsersChartReportInit() {
   var $echartsActiveUsersChart = document.querySelector('.echart-active-users-report');
@@ -6003,9 +5973,9 @@ var activeUsersChartReportInit = function activeUsersChartReportInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Market Share                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var assignmentScoresInit = function assignmentScoresInit() {
   var $echartAssignmentScores = document.querySelector('.echart-assignment-scores');
@@ -6084,9 +6054,9 @@ var assignmentScoresInit = function assignmentScoresInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Audience Chart                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var audienceChartInit = function audienceChartInit() {
   var data = {
@@ -6238,9 +6208,9 @@ var audienceChartInit = function audienceChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                      Echarts Total Sales Courses                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var avgEnrollmentRateInit = function avgEnrollmentRateInit() {
   var $echartsLineAvgEnrollmentLms = document.querySelector('.echart-avg-enrollment-rate');
@@ -6448,9 +6418,9 @@ var avgEnrollmentRateInit = function avgEnrollmentRateInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Bandwidth Saved                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var bandwidthSavedInit = function bandwidthSavedInit() {
   var $echartsBandwidthSaved = document.querySelector('.echart-bandwidth-saved');
@@ -6534,9 +6504,9 @@ var bandwidthSavedInit = function bandwidthSavedInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                     Echart Bar Member info                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var basicEchartsInit = function basicEchartsInit() {
   var $echartBasicCharts = document.querySelectorAll('[data-echarts]');
@@ -6605,9 +6575,9 @@ var basicEchartsInit = function basicEchartsInit() {
   });
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Bounce Rate                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var bounceRateChartInit = function bounceRateChartInit() {
   var $echartsBounceRateChart = document.querySelector('.echart-bounce-rate');
@@ -6750,9 +6720,9 @@ var bounceRateChartInit = function bounceRateChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Browsed Courses                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var browsedCoursesInit = function browsedCoursesInit() {
   var $echartsBrowsedCourses = document.querySelector('.echart-browsed-courses');
@@ -6886,9 +6856,9 @@ var browsedCoursesInit = function browsedCoursesInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Candle Chart                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var candleChartInit = function candleChartInit() {
   var ECHART_CANDLE_CHART = '.echart-candle-chart';
@@ -6923,9 +6893,9 @@ var candleChartInit = function candleChartInit() {
       return {
         tooltip: {
           trigger: 'axis',
-          // axisPointer: {
-          //   type: "cross",
-          // },
+
+
+
           padding: [7, 10],
           backgroundColor: utils.getGrays()['100'],
           borderColor: utils.getGrays()['300'],
@@ -7067,16 +7037,16 @@ var candleChartInit = function candleChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Total Sales                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var closedVsGoalInit = function closedVsGoalInit() {
   var ECHART_LINE_TOTAL_SALES = '.echart-closed-vs-goal';
   var $echartsLineTotalSales = document.querySelector(ECHART_LINE_TOTAL_SALES);
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if ($echartsLineTotalSales) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsLineTotalSales, 'options');
     var chart = window.echarts.init($echartsLineTotalSales);
     var getDefaultOptions = function getDefaultOptions() {
@@ -7226,9 +7196,9 @@ var closedVsGoalInit = function closedVsGoalInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Course Enrollment                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var courseEnrollmentsInit = function courseEnrollmentsInit() {
   var $echartBarCourseEnrollments = document.querySelector('.echart-bar-course-enrollments');
@@ -7388,9 +7358,9 @@ var courseEnrollmentsInit = function courseEnrollmentsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Pie Chart                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var courseStatusInit = function courseStatusInit() {
   var $echartsCourseStatus = document.querySelector('.echart-course-status');
@@ -7466,9 +7436,9 @@ var courseStatusInit = function courseStatusInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Audience Chart                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var revenueChartInit = function revenueChartInit() {
   var data = {
@@ -7597,7 +7567,7 @@ var revenueChartInit = function revenueChartInit() {
 var echartsCustomerSatisfactionInit = function echartsCustomerSatisfactionInit() {
   var $echartCustomerSatisfaction = document.querySelector('.echart-customer-setisfaction');
   if ($echartCustomerSatisfaction) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartCustomerSatisfaction, 'options');
     var chart = window.echarts.init($echartCustomerSatisfaction);
     var getDefaultOptions = function getDefaultOptions() {
@@ -7664,9 +7634,9 @@ var echartsCustomerSatisfactionInit = function echartsCustomerSatisfactionInit()
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Bounce Rate                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var dealStorageFunnelInit = function dealStorageFunnelInit() {
   var $echartDealStorageFunnel = document.querySelector('.echart-deal-storage-funnel');
@@ -7880,7 +7850,7 @@ var getPosition = function getPosition(pos, params, dom, rect, size) {
 };
 var echartSetOption = function echartSetOption(chart, userOptions, getDefaultOptions) {
   var themeController = document.body;
-  // Merge user options with lodash
+
   chart.setOption(window._.merge(getDefaultOptions(), userOptions));
   themeController.addEventListener('clickControl', function (_ref20) {
     var control = _ref20.detail.control;
@@ -7927,16 +7897,16 @@ echartTabs && echartTabs.forEach(function (tab) {
   });
 });
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Gross Revenue                          */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var grossRevenueChartInit = function grossRevenueChartInit() {
   var ECHART_GROSS_REVENUE = '.echart-gross-revenue-chart';
   var $echartsGrossRevenue = document.querySelector(ECHART_GROSS_REVENUE);
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if ($echartsGrossRevenue) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsGrossRevenue, 'options');
     var chart = window.echarts.init($echartsGrossRevenue);
     var SELECT_MONTH = "#".concat(userOptions.monthSelect);
@@ -8087,7 +8057,7 @@ var grossRevenueChartInit = function grossRevenueChartInit() {
     };
     echartSetOption(chart, userOptions, getDefaultOptions);
 
-    // Change chart options accordiong to the selected month
+
     var monthSelect = document.querySelector(SELECT_MONTH);
     var month = 0;
     var currentMonthData = monthsnumber[Number(month) + 1];
@@ -8126,9 +8096,9 @@ var grossRevenueChartInit = function grossRevenueChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Traffic Channels                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var leadConversionInit = function leadConversionInit() {
   var $leadConversion = document.querySelector('.echart-lead-conversion');
@@ -8240,9 +8210,9 @@ var leadConversionInit = function leadConversionInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Line Payment                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var linePaymentChartInit = function linePaymentChartInit() {
   var $echartsLinePaymentChart = document.querySelector('.echart-line-payment');
@@ -8399,9 +8369,9 @@ var linePaymentChartInit = function linePaymentChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Session By Country Map                      */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var locationBySessionInit = function locationBySessionInit() {
   var $locationBySessionMap = document.querySelector('.echart-location-by-session-map');
@@ -9036,9 +9006,9 @@ var locationBySessionInit = function locationBySessionInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Product Share                               */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var marketShareEcommerceInit = function marketShareEcommerceInit() {
   var ECHART_PRODUCT_SHARE = '.echart-product-share';
@@ -9114,9 +9084,9 @@ var marketShareEcommerceInit = function marketShareEcommerceInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Market Share                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var marketShareInit = function marketShareInit() {
   var ECHART_MARKET_SHARE = '.echart-market-share';
@@ -9192,9 +9162,9 @@ var marketShareInit = function marketShareInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Bandwidth Saved                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var marketingExpensesInit = function marketingExpensesInit() {
   var $echartsMarketingExp = document.querySelector('.echart-marketing-expenses');
@@ -9337,9 +9307,9 @@ var marketingExpensesInit = function marketingExpensesInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Market Share                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var mostLeadsInit = function mostLeadsInit() {
   var ECHART_MOST_LEADS = '.echart-most-leads';
@@ -9536,9 +9506,9 @@ var echartsNumberOfTicketsInit = function echartsNumberOfTicketsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Real Time Users                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var realTimeUsersChartInit = function realTimeUsersChartInit() {
   var $echartsRealTimeUsers = document.querySelector('.echart-real-time-users');
@@ -9748,9 +9718,9 @@ var echartsReceivedTicketsInit = function echartsReceivedTicketsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                     Echart Bar Report For This Week                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var reportForThisWeekInit = function reportForThisWeekInit() {
   var ECHART_BAR_REPORT_FOR_THIS_WEEK = '.echart-bar-report-for-this-week';
@@ -9883,15 +9853,15 @@ var reportForThisWeekInit = function reportForThisWeekInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                     Echarts Line Returing Customer Rate                    */
-/* -------------------------------------------------------------------------- */
+
+
+
 var returningCustomerRateInit = function returningCustomerRateInit() {
   var ECHART_LINE_RETURNING_CUSTOMER_RATE = '.echart-line-returning-customer-rate';
   var $echartsLineReturningCustomerRate = document.querySelector(ECHART_LINE_RETURNING_CUSTOMER_RATE);
   var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   if ($echartsLineReturningCustomerRate) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsLineReturningCustomerRate, 'options');
     var LEGEND_MONTH_TARGET = userOptions.target;
     var SELECT_MONTH = "#".concat(userOptions.monthSelect);
@@ -10069,7 +10039,7 @@ var returningCustomerRateInit = function returningCustomerRateInit() {
     };
     echartSetOption(chart, userOptions, getDefaultOptions);
 
-    // Change chart options accordiong to the selected month
+
     var monthSelect = document.querySelector(SELECT_MONTH);
     monthSelect.addEventListener('change', function (e) {
       var month = e.currentTarget.value;
@@ -10103,19 +10073,19 @@ var returningCustomerRateInit = function returningCustomerRateInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                          Echarts Sales Pos Location                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var salesByPosLocationInit = function salesByPosLocationInit() {
   var ECHART_RADAR_SALES_BY_POS_LOCATION = '.echart-radar-sales-by-pos-location';
   var $echartsRadarSalesByPosLocation = document.querySelector(ECHART_RADAR_SALES_BY_POS_LOCATION);
   function getformatter(params) {
-    //const indicators = ['Marketing','Sales', 'Dev', 'Support', 'Tech', 'Admin']
+
     return "<strong > ".concat(params.name, " </strong>\n    <div class=\"fs-10 text-600\">\n      <strong >Marketing</strong>: ").concat(params.value[0], "  <br>\n      <strong>Sales</strong>: ").concat(params.value[1], "  <br>\n      <strong>Dev</strong>: ").concat(params.value[2], "  <br>\n      <strong>Support</strong>: ").concat(params.value[3], "  <br>\n      <strong>Tech</strong>: ").concat(params.value[4], "  <br>\n      <strong>Admin</strong>: ").concat(params.value[5], "  <br>\n    </div>");
   }
   if ($echartsRadarSalesByPosLocation) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsRadarSalesByPosLocation, 'options');
     var chart = window.echarts.init($echartsRadarSalesByPosLocation);
     var getDefaultOptions = function getDefaultOptions() {
@@ -10340,9 +10310,9 @@ var echartsSatisfactionSurveyInit = function echartsSatisfactionSurveyInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Session By Device                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var sessionByBrowserChartInit = function sessionByBrowserChartInit() {
   var $sessionByBroswser = document.querySelector('.echart-session-by-browser');
@@ -10445,9 +10415,9 @@ var sessionByBrowserChartInit = function sessionByBrowserChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Session By Country Map                      */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var sessionByCountryMapInit = function sessionByCountryMapInit() {
   var $sessionByCountryMap = document.querySelector('.echart-session-by-country-map');
@@ -11059,9 +11029,9 @@ var sessionByCountryMapInit = function sessionByCountryMapInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Session By Country                          */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var sessionByCountryChartInit = function sessionByCountryChartInit() {
   var $sessionByCountry = document.querySelector('.echart-session-by-country');
@@ -11086,7 +11056,7 @@ var sessionByCountryChartInit = function sessionByCountryChartInit() {
           transitionDuration: 0,
           position: function position(pos, params, dom, rect, size) {
             return getPosition(pos, params, dom, rect, size);
-          } // formatter: tooltipFormatter
+          }
         },
         xAxis: {
           type: 'category',
@@ -11104,7 +11074,7 @@ var sessionByCountryChartInit = function sessionByCountryChartInit() {
           },
           axisTick: {
             show: true,
-            // length: 8,
+
             alignWithLabel: true,
             lineStyle: {
               color: utils.getGrays()['200']
@@ -11113,7 +11083,7 @@ var sessionByCountryChartInit = function sessionByCountryChartInit() {
         },
         yAxis: {
           type: 'value',
-          // inverse: true,
+
           axisTick: {
             show: false
           },
@@ -11181,9 +11151,9 @@ var echartTicketPriority = function echartTicketPriority() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Traffic Channels                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var ticketVolumeChartInit = function ticketVolumeChartInit() {
   var $ticketVolume = document.querySelector('.echart-ticket-volume');
@@ -11319,9 +11289,9 @@ var ticketVolumeChartInit = function ticketVolumeChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Audience Chart                              */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var topCustomersChartInit = function topCustomersChartInit() {
   var data = {
@@ -11456,9 +11426,9 @@ var topCustomersChartInit = function topCustomersChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Top Products                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var topProductsInit = function topProductsInit() {
   var ECHART_BAR_TOP_PRODUCTS = '.echart-bar-top-products';
@@ -11581,23 +11551,23 @@ var topProductsInit = function topProductsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Total Order                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var totalOrderInit = function totalOrderInit() {
   var ECHART_LINE_TOTAL_ORDER = '.echart-line-total-order';
 
-  //
-  // ─── TOTAL ORDER CHART ──────────────────────────────────────────────────────────
-  //
+
+
+
   var $echartLineTotalOrder = document.querySelector(ECHART_LINE_TOTAL_ORDER);
   if ($echartLineTotalOrder) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartLineTotalOrder, 'options');
     var chart = window.echarts.init($echartLineTotalOrder);
 
-    // Default options
+
     var getDefaultOptions = function getDefaultOptions() {
       return {
         tooltip: {
@@ -11671,7 +11641,7 @@ var totalOrderInit = function totalOrderInit() {
           },
           hoverAnimation: true,
           data: [20, 40, 100, 120],
-          // connectNulls: true,
+
           smooth: 0.6,
           smoothMonotone: 'x',
           showSymbol: false,
@@ -11706,9 +11676,9 @@ var totalOrderInit = function totalOrderInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                      Echarts Total Sales E-commerce                        */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var totalSalesEcommerce = function totalSalesEcommerce() {
   var ECHART_LINE_TOTAL_SALES_ECOMM = '.echart-line-total-sales-ecommerce';
@@ -11723,7 +11693,7 @@ var totalSalesEcommerce = function totalSalesEcommerce() {
     }).join('<br/>');
   }
   if ($echartsLineTotalSalesEcomm) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsLineTotalSalesEcomm, 'options');
     var TOTAL_SALES_LAST_MONTH = "#".concat(userOptions.optionOne);
     var TOTAL_SALES_PREVIOUS_YEAR = "#".concat(userOptions.optionTwo);
@@ -11769,7 +11739,7 @@ var totalSalesEcommerce = function totalSalesEcommerce() {
           },
           axisLine: {
             lineStyle: {
-              // color: utils.getGrays()['300'],
+
               color: utils.rgbaColor('#000', 0.01),
               type: 'dashed'
             }
@@ -11784,7 +11754,7 @@ var totalSalesEcommerce = function totalSalesEcommerce() {
               return "".concat(months[date.getMonth()], " ").concat(date.getDate());
             },
             margin: 15
-            // showMaxLabel: false
+
           }
         },
         yAxis: {
@@ -11880,9 +11850,9 @@ var totalSalesEcommerce = function totalSalesEcommerce() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Total Sales                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var totalSalesInit = function totalSalesInit() {
   var ECHART_LINE_TOTAL_SALES = '.echart-line-total-sales';
@@ -11897,7 +11867,7 @@ var totalSalesInit = function totalSalesInit() {
     return "".concat(months[0], " ").concat(date.getDate(), ", ").concat(value);
   }
   if ($echartsLineTotalSales) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartsLineTotalSales, 'options');
     var chart = window.echarts.init($echartsLineTotalSales);
     var monthsnumber = [[60, 80, 60, 80, 65, 130, 120, 100, 30, 40, 30, 70], [100, 70, 80, 50, 120, 100, 130, 140, 90, 100, 40, 50], [80, 50, 60, 40, 60, 120, 100, 130, 60, 80, 50, 60], [70, 80, 100, 70, 90, 60, 80, 130, 40, 60, 50, 80], [90, 40, 80, 80, 100, 140, 100, 130, 90, 60, 70, 50], [80, 60, 80, 60, 40, 100, 120, 100, 30, 40, 30, 70], [20, 40, 20, 50, 70, 60, 110, 80, 90, 30, 50, 50], [60, 70, 30, 40, 80, 140, 80, 140, 120, 130, 100, 110], [90, 90, 40, 60, 40, 110, 90, 110, 60, 80, 60, 70], [50, 80, 50, 80, 50, 80, 120, 80, 50, 120, 110, 110], [60, 90, 60, 70, 40, 70, 100, 140, 30, 40, 30, 70], [20, 40, 20, 50, 30, 80, 120, 100, 30, 40, 30, 70]];
@@ -11936,7 +11906,7 @@ var totalSalesInit = function totalSalesInit() {
           },
           axisLine: {
             lineStyle: {
-              // color: utils.getGrays()['300'],
+
               color: utils.rgbaColor('#000', 0.01),
               type: 'dashed'
             }
@@ -12020,7 +11990,7 @@ var totalSalesInit = function totalSalesInit() {
     };
     echartSetOption(chart, userOptions, getDefaultOptions);
 
-    // Change chart options accordiong to the selected month
+
     var monthSelect = document.querySelector(SELECT_MONTH);
     if (monthSelect) {
       monthSelect.addEventListener('change', function (e) {
@@ -12054,9 +12024,9 @@ var totalSalesInit = function totalSalesInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Traffic Channels                           */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var trafficChannelChartInit = function trafficChannelChartInit() {
   var $trafficChannels = document.querySelector('.echart-traffic-channels');
@@ -12304,9 +12274,9 @@ var echartsUnresolvedTicketsInit = function echartsUnresolvedTicketsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                User By Location Map                      */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var userByLocationInit = function userByLocationInit() {
   var $userByLocationMap = document.querySelector('.echart-user-by-location-map');
@@ -12929,9 +12899,9 @@ var userByLocationInit = function userByLocationInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Echarts Users By Time                          */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var usersByTimeChartInit = function usersByTimeChartInit() {
   var $echartUsersByTimeChart = document.querySelector('.echart-users-by-time');
@@ -13052,9 +13022,9 @@ var usersByTimeChartInit = function usersByTimeChartInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Bandwidth Saved                                 */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var weeklyGoalsInit = function weeklyGoalsInit() {
   var $echartsBandwidthSaved = document.querySelector('.echart-weekly-goals-lms');
@@ -13190,25 +13160,25 @@ var weeklyGoalsInit = function weeklyGoalsInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                Weekly Sales                                */
-/* -------------------------------------------------------------------------- */
+
+
+
 
 var weeklySalesInit = function weeklySalesInit() {
   var ECHART_BAR_WEEKLY_SALES = '.echart-bar-weekly-sales';
   var $echartBarWeeklySales = document.querySelector(ECHART_BAR_WEEKLY_SALES);
   if ($echartBarWeeklySales) {
-    // Get options from data attribute
+
     var userOptions = utils.getData($echartBarWeeklySales, 'options');
     var data = [120, 200, 150, 80, 70, 110, 120];
 
-    // Max value of data
-    // const yMax = Math.max(...data);
 
-    // const dataBackground = data.map(() => yMax);
+
+
+
     var chart = window.echarts.init($echartBarWeeklySales);
 
-    // Default options
+
     var getDefaultOptions = function getDefaultOptions() {
       return {
         tooltip: {
@@ -13292,9 +13262,9 @@ var weeklySalesInit = function weeklySalesInit() {
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                            Theme Initialization                            */
-/* -------------------------------------------------------------------------- */
+
+
+
 docReady(detectorInit);
 docReady(handleNavbarVerticalCollapsed);
 docReady(totalOrderInit);
