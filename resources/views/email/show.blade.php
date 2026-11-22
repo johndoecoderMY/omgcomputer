@@ -63,7 +63,7 @@
                         <div class="small text-body-secondary">To: {{ $message['to'] }}</div>
                     @endif
                 </div>
-                <time class="small text-body-secondary">{{ $message['date'] }}</time>
+                <time class="small text-body-secondary" data-email-date="{{ $message['date'] }}">{{ $message['date'] }}</time>
             </div>
         </div>
         <div class="card-body">
@@ -93,4 +93,23 @@
     .email-message-frame { display: block; width: 100%; min-height: 65vh; border: 0; background: #fff; }
     @media print { .navbar, .sidebar, .card:first-child { display: none !important; } }
 </style>
+<script>
+    (() => {
+        const element = document.querySelector('[data-email-date]');
+        if (!element) return;
+
+        const date = new Date(element.dataset.emailDate);
+        if (Number.isNaN(date.getTime())) return;
+
+        element.dateTime = date.toISOString();
+        element.textContent = new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+        }).format(date);
+        element.title = new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'full',
+            timeStyle: 'long',
+        }).format(date);
+    })();
+</script>
 @endsection

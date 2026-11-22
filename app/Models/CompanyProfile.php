@@ -43,4 +43,42 @@ class CompanyProfile extends Model
 
         return self::query()->find('primary') ?? new self(['legal_name' => 'OMG Computer']);
     }
+
+    public function formattedPhone(): ?string
+    {
+        $phone = trim((string) $this->phone);
+        if ($phone === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+            $phone = '+'.$digits;
+        }
+
+        if (str_starts_with($digits, '60')) {
+            $nationalNumber = substr($digits, 2);
+        } elseif (str_starts_with($digits, '0')) {
+            $nationalNumber = substr($digits, 1);
+        } else {
+            return $phone;
+        }
+
+        if ($nationalNumber === '') {
+            return $phone;
+        }
+
+        $prefixLength = str_starts_with($nationalNumber, '1') ? 2 : 1;
+        $prefix = substr($nationalNumber, 0, $prefixLength);
+        $subscriber = substr($nationalNumber, $prefixLength);
+
+        if (strlen($subscriber) === 7) {
+            $subscriber = substr($subscriber, 0, 3).' '.substr($subscriber, 3);
+        } elseif (strlen($subscriber) === 8) {
+            $subscriber = substr($subscriber, 0, 4).' '.substr($subscriber, 4);
+        }
+
+        return '+60 '.$prefix.($subscriber !== '' ? '-'.$subscriber : '');
+    }
 }

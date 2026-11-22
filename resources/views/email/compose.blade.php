@@ -343,5 +343,23 @@
     .email-recipient-chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .8rem; padding: .35rem .5rem; }
     .email-recipient-remove { border: 0; padding: 0; color: inherit; background: transparent; font-size: 1rem; line-height: 1; }
     .copywriting-preview { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; color: inherit; border: 1px solid var(--falcon-border-color, #d8e0e8); border-radius: 4px; padding: 1rem; max-height: 16rem; overflow-y: auto; }
+    #email-copywriting-list .list-group-item.active {
+        color: #592600;
+        background-color: #fff0e8;
+        border-color: #f7b08c;
+        box-shadow: inset 3px 0 var(--falcon-primary, #f34303);
+    }
+    #email-copywriting-list .list-group-item.active .text-body-secondary {
+        color: #744b3a !important;
+    }
+    #email-copywriting-list .list-group-item.active:hover,
+    #email-copywriting-list .list-group-item.active:focus {
+        color: #592600;
+        background-color: #ffe3d4;
+    }
+    #email-copywriting-list .list-group-item:focus-visible {
+        outline: 2px solid var(--falcon-primary, #f34303);
+        outline-offset: -2px;
+    }
 </style>
 @endsection

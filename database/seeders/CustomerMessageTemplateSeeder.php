@@ -16,7 +16,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'booking',
                 'channel' => 'email',
                 'subject' => 'We received your appointment request',
-                'body' => "Hi {{customer_name}},\n\nThanks for requesting a {{service_name}} appointment for {{appointment_date}} at {{appointment_time}}. This is a request, not a confirmed appointment yet. Our team will contact you shortly to confirm the time and any details we need.\n\nIf your plans change, reply to this message or call us at {{business_phone}}.\n\nRegards,\nOMG Computer",
+                'body' => "Hi {{customer_name}},\n\nThanks for requesting a {{service_name}} appointment for {{appointment_date}} at {{appointment_time}}. This is a request, not a confirmed appointment yet. Our team will contact you shortly to confirm the time and any details we need.\n\nIf your plans change, reply to this email.",
             ],
             [
                 'slug' => 'device-received',
@@ -32,7 +32,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'diagnosis',
                 'channel' => 'email',
                 'subject' => 'Diagnosis and estimate for {{ticket_number}}',
-                'body' => "Hi {{customer_name}},\n\nWe’ve completed the initial diagnosis of your {{device_model}}. The proposed work is: {{service_name}}. The current estimate is {{estimate_total}}.\n\nPlease reply to approve or decline the work. We won’t proceed with the quoted repair until we have your approval. The final amount may change if additional faults are found; we’ll check with you first.\n\nRegards,\nOMG Computer\n{{business_phone}}",
+                'body' => "Hi {{customer_name}},\n\nWe’ve completed the initial diagnosis of your {{device_model}}. The proposed work is: {{service_name}}. The current estimate is {{estimate_total}}.\n\nPlease reply to approve or decline the work. We won’t proceed with the quoted repair until we have your approval. The final amount may change if additional faults are found; we’ll check with you first.",
             ],
             [
                 'slug' => 'quotation-follow-up',
@@ -64,7 +64,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'follow_up',
                 'channel' => 'email',
                 'subject' => 'How is your device working?',
-                'body' => "Hi {{customer_name}},\n\nWe’re checking in after the {{service_name}} on your {{device_model}} (ticket {{ticket_number}}). Is everything working as expected?\n\nIf the issue returns or you have a question about the work, reply to this email or call {{business_phone}} and mention your ticket number.\n\nThanks,\nOMG Computer",
+                'body' => "Hi {{customer_name}},\n\nWe’re checking in after the {{service_name}} on your {{device_model}} (ticket {{ticket_number}}). Is everything working as expected?\n\nIf the issue returns or you have a question about the work, reply to this email and mention your ticket number.",
             ],
             [
                 'slug' => 'booking-request-received-ms',
@@ -72,7 +72,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'booking',
                 'channel' => 'email',
                 'subject' => 'Permintaan janji temu anda telah diterima',
-                'body' => "Hai {{customer_name}},\n\nTerima kasih kerana memohon janji temu {{service_name}} pada {{appointment_date}} jam {{appointment_time}}. Ini ialah permintaan dan belum merupakan janji temu yang disahkan. Pasukan kami akan menghubungi anda sebentar lagi untuk mengesahkan masa dan mendapatkan maklumat yang diperlukan.\n\nJika rancangan anda berubah, balas mesej ini atau hubungi kami di {{business_phone}}.\n\nSalam hormat,\nOMG Computer",
+                'body' => "Hai {{customer_name}},\n\nTerima kasih kerana memohon janji temu {{service_name}} pada {{appointment_date}} jam {{appointment_time}}. Ini ialah permintaan dan belum merupakan janji temu yang disahkan. Pasukan kami akan menghubungi anda sebentar lagi untuk mengesahkan masa dan mendapatkan maklumat yang diperlukan.\n\nJika rancangan anda berubah, balas e-mel ini.",
             ],
             [
                 'slug' => 'device-received-ms',
@@ -88,7 +88,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'diagnosis',
                 'channel' => 'email',
                 'subject' => 'Diagnosis dan anggaran untuk {{ticket_number}}',
-                'body' => "Hai {{customer_name}},\n\nPemeriksaan awal {{device_model}} anda telah selesai. Kerja yang dicadangkan: {{service_name}}. Anggaran semasa ialah {{estimate_total}}.\n\nSila balas untuk meluluskan atau menolak kerja tersebut. Kami tidak akan memulakan pembaikan yang dianggarkan tanpa kelulusan anda. Jumlah akhir mungkin berubah jika kerosakan lain ditemui; kami akan mendapatkan persetujuan anda terlebih dahulu.\n\nSalam hormat,\nOMG Computer\n{{business_phone}}",
+                'body' => "Hai {{customer_name}},\n\nPemeriksaan awal {{device_model}} anda telah selesai. Kerja yang dicadangkan: {{service_name}}. Anggaran semasa ialah {{estimate_total}}.\n\nSila balas untuk meluluskan atau menolak kerja tersebut. Kami tidak akan memulakan pembaikan yang dianggarkan tanpa kelulusan anda. Jumlah akhir mungkin berubah jika kerosakan lain ditemui; kami akan mendapatkan persetujuan anda terlebih dahulu.",
             ],
             [
                 'slug' => 'quotation-follow-up-ms',
@@ -120,7 +120,7 @@ class CustomerMessageTemplateSeeder extends Seeder
                 'stage' => 'follow_up',
                 'channel' => 'email',
                 'subject' => 'Bagaimanakah keadaan peranti anda?',
-                'body' => "Hai {{customer_name}},\n\nKami ingin membuat susulan selepas {{service_name}} pada {{device_model}} anda (tiket {{ticket_number}}). Adakah semuanya berfungsi seperti yang dijangka?\n\nJika masalah berulang atau anda mempunyai soalan tentang kerja tersebut, balas e-mel ini atau hubungi {{business_phone}} dan berikan nombor tiket anda.\n\nTerima kasih,\nOMG Computer",
+                'body' => "Hai {{customer_name}},\n\nKami ingin membuat susulan selepas {{service_name}} pada {{device_model}} anda (tiket {{ticket_number}}). Adakah semuanya berfungsi seperti yang dijangka?\n\nJika masalah berulang atau anda mempunyai soalan tentang kerja tersebut, balas e-mel ini dan berikan nombor tiket anda.",
             ],
         ];
 

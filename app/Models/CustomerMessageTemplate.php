@@ -40,7 +40,7 @@ class CustomerMessageTemplate extends Model
         'appointment_date' => 'Appointment date',
         'appointment_time' => 'Appointment time',
         'estimate_total' => 'Estimate total in RM',
-        'business_phone' => 'Business phone number',
+        'business_phone' => 'Business phone from Company Profile',
     ];
 
     protected $fillable = [
@@ -72,8 +72,10 @@ class CustomerMessageTemplate extends Model
             'appointment_date' => 'Monday, 19 October',
             'appointment_time' => '10:00 AM MYT',
             'estimate_total' => 'RM 120.00',
-            'business_phone' => '+60 5-000 0000',
         ];
+        if (str_contains($content, '{{business_phone')) {
+            $examples['business_phone'] = CompanyProfile::current()->formattedPhone() ?? 'your business phone';
+        }
 
         return preg_replace_callback('/\{\{\s*([a-z_]+)\s*\}\}/', function (array $matches) use ($examples): string {
             return $examples[$matches[1]] ?? $matches[0];

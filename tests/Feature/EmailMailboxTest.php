@@ -86,6 +86,7 @@ class EmailMailboxTest extends TestCase
             ->assertSee('Customer <customer@example.test>')
             ->assertSee('data-detail-url="'.route('email.show', 25).'"', false)
             ->assertSee('href="'.route('email.show', 25).'"', false)
+            ->assertSee('data-email-date="Wed, 21 Oct 2026 10:00:00 +0800"', false)
             ->assertSee('id="unread-email-count" aria-label="Unread email count">1</span>', false)
             ->assertSee('class="col-12 col-md-4 col-xl-3 ps-md-0 mb-1 mb-md-0"', false)
             ->assertSee('id="email-page-size"', false)
@@ -94,6 +95,7 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($admin)->get(route('email.show', 25))
             ->assertOk()
             ->assertSee('Your repair booking is confirmed.')
+            ->assertSee('data-email-date="Wed, 21 Oct 2026 10:00:00 +0800"', false)
             ->assertSee('Archive')
             ->assertSee('Delete');
 

@@ -45,6 +45,6 @@
         </div>
     </div>
     <div class="col-auto ms-auto d-flex flex-column justify-content-between {{ $message['seen'] ? 'text-body-secondary' : 'fw-bold' }}">
-        <time class="small">{{ $message['date'] }}</time>
+        <time class="small" data-email-date="{{ $message['date'] }}">{{ $message['date'] }}</time>
     </div>
 </div>

@@ -231,6 +231,21 @@
             return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
         };
 
+        const formatEmailDate = (element, value) => {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return;
+            element.dateTime = date.toISOString();
+            element.textContent = dateLabel(date);
+            element.title = new Intl.DateTimeFormat(undefined, {
+                dateStyle: 'full',
+                timeStyle: 'long',
+            }).format(date);
+        };
+
+        rows.querySelectorAll('[data-email-date]').forEach((element) => {
+            formatEmailDate(element, element.dataset.emailDate);
+        });
+
         const makeForm = (uid, action, label, icon, extraClass = '') => {
             const form = document.createElement('form');
             form.method = 'POST';
@@ -318,7 +333,9 @@
 
             const dateCol = document.createElement('div');
             dateCol.className = `col-auto ms-auto d-flex flex-column justify-content-between${message.seen ? ' text-body-secondary' : ' fw-bold'}`;
-            dateCol.append(textNode('time', 'small', dateLabel(message.date)));
+            const date = textNode('time', 'small', dateLabel(message.date));
+            formatEmailDate(date, message.date);
+            dateCol.append(date);
             row.append(dateCol);
             return row;
         };

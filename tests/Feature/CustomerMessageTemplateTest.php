@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\CompanyProfile;
 use App\Models\CustomerMessageTemplate;
 use App\Models\User;
+use Database\Seeders\CustomerMessageTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -81,6 +83,53 @@ class CustomerMessageTemplateTest extends TestCase
         ]))->assertOk()
             ->assertSee('Bahasa Melayu')
             ->assertDontSee('Booking request received');
+    }
+
+    public function test_email_templates_leave_signature_to_the_mailbox_and_use_real_business_phone_examples(): void
+    {
+        $this->seed(CustomerMessageTemplateSeeder::class);
+        $emailTemplates = CustomerMessageTemplate::query()->where('channel', 'email')->get();
+
+        $this->assertNotEmpty($emailTemplates);
+        foreach ($emailTemplates as $template) {
+            $this->assertStringNotContainsString('{{business_phone}}', $template->body);
+            $this->assertStringNotContainsString('Regards,', $template->body);
+            $this->assertStringNotContainsString('Salam hormat,', $template->body);
+            $this->assertStringNotContainsString('OMG Computer', $template->body);
+        }
+
+        CompanyProfile::query()->create([
+            'id' => 'primary',
+            'phone' => '0104224350',
+        ]);
+        $phoneTemplate = new CustomerMessageTemplate;
+        $this->assertSame(
+            'Call +60 10-422 4350.',
+            $phoneTemplate->render('Call {{business_phone}}.'),
+        );
+    }
+
+    public function test_existing_default_email_templates_are_migrated_without_their_duplicate_signatures(): void
+    {
+        $legacyBody = "Hi Avery,\n\nIf your plans change, reply to this message or call us at {{business_phone}}.\n\nRegards,\nOMG Computer";
+        $template = CustomerMessageTemplate::query()->create([
+            'slug' => 'booking-request-received',
+            'name' => 'Booking request received',
+            'stage' => 'booking',
+            'channel' => 'email',
+            'language' => 'en',
+            'body' => $legacyBody,
+            'is_active' => true,
+        ]);
+        $migration = require database_path('migrations/2026_11_22_000001_remove_signatures_from_default_email_templates.php');
+
+        $migration->up();
+
+        $updatedBody = "Hi Avery,\n\nIf your plans change, reply to this email.";
+        $this->assertSame($updatedBody, $template->fresh()->body);
+
+        $migration->down();
+        $this->assertSame($legacyBody, $template->fresh()->body);
     }
 
     public function test_staff_can_load_active_copywriting_suggestions_by_channel(): void

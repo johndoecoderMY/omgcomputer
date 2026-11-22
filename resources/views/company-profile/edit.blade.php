@@ -51,6 +51,7 @@
                     <div class="col-md-4">
                         <label class="form-label" for="business-phone">Business phone</label>
                         <input class="form-control" id="business-phone" name="phone" maxlength="50" value="{{ old('phone', $companyProfile->phone) }}">
+                        <div class="form-text">Used by SMS and WhatsApp message templates.</div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="business-email">Business email</label>
