@@ -37,33 +37,36 @@
                 <input class="form-control" id="phone" name="phone" value="{{ old('phone') }}" maxlength="50">
             </div>
             @if ($accountType !== 'customers')
-            @if ($cpanelProvisioningEnabled)
                 <div class="col-md-6">
-                    <label class="form-label" for="mailbox_username">Preferred email name</label>
-                    <div class="input-group">
-                        <input class="form-control" id="mailbox_username" name="mailbox_username" value="{{ old('mailbox_username') }}"
-                            maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._+-]*[A-Za-z0-9]|[A-Za-z0-9]"
-                            placeholder="firstname.lastname" aria-describedby="mailbox-username-help" required>
-                        <span class="input-group-text">{{ '@'.config('services.cpanel.email_domain') }}</span>
-                    </div>
-                    <div class="form-text" id="mailbox-username-help">
-                        Choose the preferred part before @ for the member's work email.
-                        Mailbox quota: {{ (int) config('services.cpanel.email_quota') === 0 ? 'unlimited' : number_format((int) config('services.cpanel.email_quota')).' MB' }}.
-                        cPanel automatically provisions and connects this mailbox to the OMGComputer inbox using a separate generated password stored encrypted.
-                    </div>
+                    <label class="form-label" for="team_ids">Teams <span class="text-body-secondary">(optional)</span></label>
+                    <select class="form-select js-user-search" id="team_ids" name="team_ids[]" multiple data-placeholder="Select one or more teams">
+                        @foreach ($teams as $team)
+                            <option value="{{ $team->id }}" @selected(in_array((string) $team->id, array_map('strval', old('team_ids', [])), true))>
+                                {{ $team->department?->name ? $team->department->name.' · ' : '' }}{{ $team->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Select one or more teams.</div>
                 </div>
-            @endif
-            <div class="col-md-6">
-                <label class="form-label" for="team_ids">Teams <span class="text-body-secondary">(optional)</span></label>
-                <select class="form-select js-user-search" id="team_ids" name="team_ids[]" multiple data-placeholder="Select one or more teams">
-                    @foreach ($teams as $team)
-                        <option value="{{ $team->id }}" @selected(in_array((string) $team->id, array_map('strval', old('team_ids', [])), true))>
-                            {{ $team->department?->name ? $team->department->name.' · ' : '' }}{{ $team->name }}
-                        </option>
-                    @endforeach
-                </select>
-                <div class="form-text">Select one or more teams.</div>
-            </div>
+                @if ($cpanelProvisioningEnabled)
+                    <div class="col-12">
+                        <label class="form-label" for="mailbox_username">Preferred email name</label>
+                        <div class="input-group">
+                            <input class="form-control" id="mailbox_username" name="mailbox_username" value="{{ old('mailbox_username') }}"
+                                maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._+-]*[A-Za-z0-9]|[A-Za-z0-9]"
+                                placeholder="firstname.lastname" aria-describedby="mailbox-username-help" required>
+                            <span class="input-group-text">{{ '@'.config('services.cpanel.email_domain') }}</span>
+                        </div>
+                        <div class="form-text">Choose the part before @ for the member's work email.</div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2 small text-body-secondary" id="mailbox-username-help">
+                            <span><span class="bi bi-envelope-check me-1" aria-hidden="true"></span>Automatically connected to the OMGComputer inbox</span>
+                            <span class="badge rounded-pill bg-body-secondary text-body border">
+                                Mailbox quota: {{ (int) config('services.cpanel.email_quota') === 0 ? 'Unlimited' : number_format((int) config('services.cpanel.email_quota')).' MB' }}
+                            </span>
+                            <span>Separate generated password, stored encrypted</span>
+                        </div>
+                    </div>
+                @endif
             @endif
             <div class="col-12">
                 <label class="form-label" for="address">Address</label>

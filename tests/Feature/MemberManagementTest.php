@@ -172,8 +172,9 @@ class MemberManagementTest extends TestCase
             ->assertSee('Preferred email name')
             ->assertSee('firstname.lastname')
             ->assertSee('@example.test')
-            ->assertSee('automatically provisions and connects this mailbox')
-            ->assertSee('Mailbox quota: unlimited.');
+            ->assertSee('Automatically connected to the OMGComputer inbox')
+            ->assertSee('Mailbox quota:')
+            ->assertSee('Unlimited');
         Http::fake([
             'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
                 'data' => [],
