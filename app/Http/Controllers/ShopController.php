@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomPcBuildDraft;
 use App\Models\CustomPcComponent;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
@@ -97,9 +98,19 @@ class ShopController extends Controller
 
     public function customPcBuilder(): View
     {
+        return $this->customPcBuilderView();
+    }
+
+    public function editCustomPcBuilderDraft(CustomPcBuildDraft $draft): View
+    {
+        return $this->customPcBuilderView($draft);
+    }
+
+    private function customPcBuilderView(?CustomPcBuildDraft $draft = null): View
+    {
         $componentTypes = array_slice($this->customPcBuilderComponentTypes(), 0, 10);
         $additionalComponentTypes = ['peripheral', 'other'];
-        $selectedPartIds = collect(session()->getOldInput('items', []))
+        $selectedPartIds = collect(session()->getOldInput('items', $draft?->form_data['items'] ?? []))
             ->filter(fn (mixed $item): bool => is_array($item))
             ->pluck('custom_pc_component_id')
             ->filter(fn (mixed $id): bool => is_numeric($id))
@@ -118,6 +129,92 @@ class ShopController extends Controller
             'componentSearchUrl' => route('shop.custom-pc-builder.components'),
             'componentStoreUrl' => route('shop.custom-pc-builder.components.store'),
             'taxRate' => config('billing.tax_rate', 6),
+            'draft' => $draft,
+        ]);
+    }
+
+    public function customPcBuilderDrafts(): View
+    {
+        $drafts = CustomPcBuildDraft::query()
+            ->with('user:id,name')
+            ->latest('updated_at')
+            ->paginate(20);
+        $componentIds = $drafts->getCollection()
+            ->flatMap(fn (CustomPcBuildDraft $draft): array => collect($draft->form_data['items'] ?? [])
+                ->pluck('custom_pc_component_id')
+                ->filter()
+                ->all())
+            ->unique()
+            ->values();
+
+        return view('shop.custom-pc-builder-drafts', [
+            'drafts' => $drafts,
+            'components' => CustomPcComponent::query()
+                ->whereIn('id', $componentIds)
+                ->pluck('name', 'id'),
+        ]);
+    }
+
+    public function storeCustomPcBuilderDraft(Request $request): RedirectResponse
+    {
+        $data = $this->validateCustomPcBuilderDraft($request);
+        $draft = CustomPcBuildDraft::query()->create([
+            'user_id' => $request->user()->id,
+            'build_name' => $data['build_name'] ?? null,
+            'intended_use' => $data['intended_use'] ?? null,
+            'customer_name' => $data['customer_name'] ?? null,
+            'form_data' => $data,
+        ]);
+
+        return redirect()->route('shop.custom-pc-builder.drafts.index')
+            ->with('success', 'Custom PC build draft saved.');
+    }
+
+    public function updateCustomPcBuilderDraft(Request $request, CustomPcBuildDraft $draft): RedirectResponse
+    {
+        $data = $this->validateCustomPcBuilderDraft($request);
+        $draft->update([
+            'build_name' => $data['build_name'] ?? null,
+            'intended_use' => $data['intended_use'] ?? null,
+            'customer_name' => $data['customer_name'] ?? null,
+            'form_data' => $data,
+        ]);
+
+        return redirect()->route('shop.custom-pc-builder.drafts.index')
+            ->with('success', 'Custom PC build draft updated.');
+    }
+
+    public function destroyCustomPcBuilderDraft(CustomPcBuildDraft $draft): RedirectResponse
+    {
+        $draft->delete();
+
+        return redirect()->route('shop.custom-pc-builder.drafts.index')
+            ->with('success', 'Custom PC build draft deleted.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateCustomPcBuilderDraft(Request $request): array
+    {
+        return $request->validate([
+            'build_name' => ['nullable', 'string', 'max:255'],
+            'intended_use' => ['nullable', 'string', 'max:1000'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_email' => ['nullable', 'email', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:64'],
+            'customer_address' => ['nullable', 'string', 'max:2000'],
+            'due_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
+            'items' => ['nullable', 'array', 'max:50'],
+            'items.*.custom_pc_component_id' => ['nullable', 'integer', 'exists:custom_pc_components,id'],
+            'items.*.quantity' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.component_type' => ['nullable', 'string', 'max:50'],
+            'items.*.build_group' => ['nullable', 'string', 'max:20'],
         ]);
     }
 
@@ -149,6 +246,9 @@ class ShopController extends Controller
             'price_min' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
             'price_max' => ['nullable', 'numeric', 'min:0', 'max:999999999', 'gte:price_min'],
             'supplier' => ['nullable', Rule::in($supplierFilters)],
+            'ram_speed' => ['nullable', 'string', 'max:80'],
+            'ram_capacity' => ['nullable', 'string', 'max:80'],
+            'gpu_memory' => ['nullable', 'string', 'max:80'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -163,7 +263,10 @@ class ShopController extends Controller
                 });
             })
             ->when(isset($filters['price_min']), fn (Builder $parts) => $parts->where('selling_price', '>=', $filters['price_min']))
-            ->when(isset($filters['price_max']), fn (Builder $parts) => $parts->where('selling_price', '<=', $filters['price_max']));
+            ->when(isset($filters['price_max']), fn (Builder $parts) => $parts->where('selling_price', '<=', $filters['price_max']))
+            ->when(($filters['category'] ?? null) === 'ram' && filled($filters['ram_speed'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['ram_speed'].'%'))
+            ->when(($filters['category'] ?? null) === 'ram' && filled($filters['ram_capacity'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['ram_capacity'].'%'))
+            ->when(($filters['category'] ?? null) === 'gpu' && filled($filters['gpu_memory'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['gpu_memory'].'%'));
 
         $supplierFilter = $filters['supplier'] ?? 'all';
         if ($supplierFilter === 'assigned') {

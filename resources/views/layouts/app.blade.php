@@ -14,6 +14,7 @@
     data-beams-auth-url="{{ route('beams.auth', [], false) }}"
     data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
     data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
+    data-broadcasting-auth-url="{{ url('/broadcasting/auth') }}"
     data-notification-read-prefix="{{ url('/notifications') }}">
     <!-- ===============================================--><!--    Main Content--><!-- ===============================================-->
     <main class="main" id="top">

@@ -5,6 +5,9 @@
     <script src="{{ asset('vendors/is/is.min.js') }}"></script>
     <script src="{{ asset('vendors/lodash/lodash.min.js') }}"></script>
     <script src="{{ asset('assets/js/theme.js') }}"></script>
+    @auth
+        @vite('resources/js/app.js')
+    @endauth
     <script>
         (() => {
             const root = document.documentElement;

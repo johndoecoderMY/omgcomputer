@@ -58,6 +58,7 @@
                     @if (auth()->user()->hasRole('customer'))
                         @php($cartItemCount = collect(session('shop_cart', []))->sum())
                     @endif
+                    @include('notifications._navbar')
                     <li class="nav-item dropdown my-2 my-lg-0 ms-lg-2">
                         <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-account-menu" type="button"
                             data-bs-toggle="dropdown" aria-expanded="false">

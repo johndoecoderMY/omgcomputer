@@ -22,6 +22,11 @@
     <x-page-header eyebrow="Shop" title="Custom PC builder"
         description="Search the component catalog, add your own RM quote prices, and prepare a draft quotation."
         :back-url="route('shop.products.index')" :back-label="'Back to shop products'" />
+    <div class="d-flex justify-content-end mb-3">
+        <a class="btn btn-outline-primary" href="{{ route('shop.custom-pc-builder.drafts.index') }}">
+            <i class="bi bi-folder2-open me-1" aria-hidden="true"></i>Saved build drafts
+        </a>
+    </div>
     @if ($errors->any())
         <div class="alert alert-danger">
             <ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
@@ -31,7 +36,7 @@
         @csrf
         <input type="hidden" name="custom_pc_build" value="1">
         <input type="hidden" name="type" value="quotation">
-        <input type="hidden" name="tax_rate" value="{{ old('tax_rate', $taxRate) }}">
+        <input type="hidden" name="tax_rate" value="{{ old('tax_rate', $draft?->form_data['tax_rate'] ?? $taxRate) }}">
         <div class="row g-3">
             <div class="col-xl-8">
                 <div class="card mb-3">
@@ -44,7 +49,7 @@
                             <i class="bi bi-plus me-1" aria-hidden="true"></i>Add another PC
                         </button>
                     </div>
-                    @php($previousBuilds = collect(old('items', []))->groupBy(fn ($line) => $line['build_group'] ?? '1'))
+                    @php($previousBuilds = collect(old('items', $draft?->form_data['items'] ?? []))->groupBy(fn ($line) => $line['build_group'] ?? '1'))
                     @if ($previousBuilds->isEmpty())
                         @php($previousBuilds = collect(['1' => collect()]))
                     @endif
@@ -92,23 +97,21 @@
                                                 <select class="form-select component-select d-none" aria-label="Choose {{ $label }}">
                                                     <option value="">Choose {{ strtolower($label) }}</option>
                                                     @if ($selectedComponent)
-                                                            <option value="{{ $selectedComponent->id }}" data-price="{{ $selectedComponent->selling_price }}" data-cost="{{ $selectedComponent->cost_price }}" data-type="{{ $selectedComponent->type }}" data-socket="{{ $selectedComponent->specification('Socket') }}" data-specifications="{{ json_encode($selectedComponent->specifications(), JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) }}" data-selection-label="{{ $selectedComponent->name }} · Builder catalogue · RM {{ number_format((float) $selectedComponent->selling_price, 2) }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}" selected>
+                                                            <option value="{{ $selectedComponent->id }}" data-price="{{ $selectedComponent->selling_price }}" data-cost="{{ $selectedComponent->cost_price }}" data-type="{{ $selectedComponent->type }}" data-socket="{{ $selectedComponent->specification('Socket') }}" data-supplier="{{ $selectedComponentSupplier }}" data-specifications="{{ json_encode($selectedComponent->specifications(), JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_HEX_TAG) }}" selected>
                                                             {{ $selectedComponent->name }}
                                                         </option>
                                                     @endif
                                                 </select>
                                                 <button class="btn btn-outline-primary btn-sm choose-component" type="button">Browse parts</button>
-                                                <div class="component-selection small text-body-secondary mt-2" aria-live="polite">
+                                                <div class="component-selection mt-2" aria-live="polite">
                                                     @if ($selectedComponent)
-                                                        {{ $selectedComponent->name }}
-                                                        · Builder catalogue (not inventory stock)
-                                                        · RM {{ number_format((float) $selectedComponent->selling_price, 2) }}
-                                                        · {{ $selectedComponentSupplier ?: 'No supplier linked' }}
+                                                        <strong class="component-selected-name d-block text-body-emphasis">{{ $selectedComponent->name }}</strong>
+                                                        <span class="small text-body-secondary">Builder catalogue · RM {{ number_format((float) $selectedComponent->selling_price, 2) }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}</span>
                                                     @else
-                                                        No component selected
+                                                        <span class="small text-body-secondary">No component selected</span>
                                                     @endif
                                                 </div>
-                                                <div class="component-specifications small text-body-secondary mt-2" aria-live="polite"></div>
+                                                <div class="component-specifications d-flex flex-wrap gap-1 mt-2" aria-live="polite"></div>
                                             </td>
                                             <td><input class="form-control component-quantity" type="number" min="1" max="100000" value="{{ $line['quantity'] ?? 1 }}" aria-label="{{ $label }} quantity"></td>
                                             <td><input class="form-control component-cost" type="number" min="0" max="99999999" step="0.01" value="{{ $line['unit_cost'] ?? '' }}" placeholder="Enter our cost" aria-label="{{ $label }} our unit cost" required></td>
@@ -143,31 +146,39 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-header fw-semibold">Customer details</div>
+                    <div class="card-header fw-semibold">Build and customer details</div>
                     <div class="card-body row g-3">
                         <div class="col-md-6">
+                            <label class="form-label" for="build_name">Build name</label>
+                            <input class="form-control" id="build_name" name="build_name" value="{{ old('build_name', $draft?->build_name) }}" maxlength="255" placeholder="e.g. Studio editing PC">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="intended_use">What is this PC for?</label>
+                            <input class="form-control" id="intended_use" name="intended_use" value="{{ old('intended_use', $draft?->intended_use) }}" maxlength="1000" placeholder="e.g. gaming, work, editing">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label" for="customer_name">Customer name</label>
-                            <input class="form-control" id="customer_name" name="customer_name" value="{{ old('customer_name') }}" maxlength="255" required>
+                            <input class="form-control" id="customer_name" name="customer_name" value="{{ old('customer_name', $draft?->form_data['customer_name'] ?? '') }}" maxlength="255" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="customer_email">Email</label>
-                            <input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email') }}" maxlength="255">
+                            <input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email', $draft?->form_data['customer_email'] ?? '') }}" maxlength="255">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="customer_phone">Phone</label>
-                            <x-phone-input id="customer_phone" name="customer_phone" :value="old('customer_phone')" maxlength="64" />
+                            <x-phone-input id="customer_phone" name="customer_phone" :value="old('customer_phone', $draft?->form_data['customer_phone'] ?? '')" maxlength="64" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="due_date">Quotation valid until</label>
-                            <input class="form-control" id="due_date" name="due_date" type="date" value="{{ old('due_date') }}">
+                            <input class="form-control" id="due_date" name="due_date" type="date" value="{{ old('due_date', $draft?->form_data['due_date'] ?? '') }}">
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="customer_address">Billing address</label>
-                            <textarea class="form-control" id="customer_address" name="customer_address" rows="2" maxlength="2000">{{ old('customer_address') }}</textarea>
+                            <textarea class="form-control" id="customer_address" name="customer_address" rows="2" maxlength="2000">{{ old('customer_address', $draft?->form_data['customer_address'] ?? '') }}</textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label" for="notes">Notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="2" maxlength="5000">{{ old('notes', 'Custom PC build') }}</textarea>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" maxlength="5000">{{ old('notes', $draft?->form_data['notes'] ?? 'Custom PC build') }}</textarea>
                         </div>
                     </div>
                 </div>
@@ -180,18 +191,22 @@
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                             <label class="form-label mb-0" for="discount_amount">Discount (RM)</label>
                             <input class="form-control form-control-sm text-end" id="discount_amount" name="discount_amount" type="number" min="0" step="0.01"
-                                value="{{ old('discount_amount', 0) }}" style="max-width: 10rem">
+                                value="{{ old('discount_amount', $draft?->form_data['discount_amount'] ?? 0) }}" style="max-width: 10rem">
                         </div>
                         <div class="d-flex justify-content-between mb-2 text-success"><span>Discount applied</span><span id="build-discount">RM 0.00</span></div>
                         <div class="d-flex justify-content-between mb-2"><span>Our total cost</span><span id="build-cost-total">RM 0.00</span></div>
                         <div class="d-flex justify-content-between mb-2"><span>Estimated gross profit</span><span id="build-gross-profit">RM 0.00</span></div>
-                        <div class="d-flex justify-content-between mb-2"><span>Tax ({{ number_format((float) old('tax_rate', $taxRate), 2) }}%)</span><span id="build-tax">RM 0.00</span></div>
+                        <div class="d-flex justify-content-between mb-2"><span>Tax ({{ number_format((float) old('tax_rate', $draft?->form_data['tax_rate'] ?? $taxRate), 2) }}%)</span><span id="build-tax">RM 0.00</span></div>
                         <hr>
                         <div class="d-flex justify-content-between fw-bold"><span>Total</span><span id="build-total">RM 0.00</span></div>
-                        <p class="small text-body-secondary mt-3 mb-0">This creates a draft quotation. Review it in Billing before sending it to the customer.</p>
+                        <p class="small text-body-secondary mt-3 mb-0">Save a build draft to continue planning later, or create a quotation to review in Billing before sending it to the customer.</p>
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary w-100" type="submit">
+                    <div class="card-footer d-grid gap-2">
+                        <button class="btn btn-outline-primary" type="submit" formnovalidate
+                            formaction="{{ $draft ? route('shop.custom-pc-builder.drafts.update', $draft) : route('shop.custom-pc-builder.drafts.store') }}">
+                            <i class="bi bi-save me-1" aria-hidden="true"></i>{{ $draft ? 'Update saved build draft' : 'Save build draft' }}
+                        </button>
+                        <button class="btn btn-primary" type="submit">
                             <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Create draft quotation
                         </button>
                     </div>
@@ -254,6 +269,20 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-12 row g-2 mx-0 px-0" id="component-spec-filters" aria-live="polite">
+                        <div class="col-md-4 d-none" data-component-spec-filter="ram">
+                            <label class="form-label" for="catalog-ram-speed">RAM speed</label>
+                            <input class="form-control" id="catalog-ram-speed" name="ram_speed" maxlength="80" placeholder="e.g. 6000 MT/s" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="ram">
+                            <label class="form-label" for="catalog-ram-capacity">RAM capacity</label>
+                            <input class="form-control" id="catalog-ram-capacity" name="ram_capacity" maxlength="80" placeholder="e.g. 32 GB" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="gpu">
+                            <label class="form-label" for="catalog-gpu-memory">GPU memory</label>
+                            <input class="form-control" id="catalog-gpu-memory" name="gpu_memory" maxlength="80" placeholder="e.g. 12 GB" disabled>
+                        </div>
+                    </div>
                     <div class="col-12 d-flex justify-content-end">
                         <button class="btn btn-primary" type="submit">Search parts</button>
                     </div>
@@ -287,8 +316,13 @@
                             </select>
                         </div>
                         <div class="col-12">
-                            <label class="form-label" for="new-component-description">Specifications / notes</label>
-                            <textarea class="form-control" id="new-component-description" name="description" rows="2" maxlength="5000" placeholder="Include compatibility details such as Socket: AM5"></textarea>
+                            <h3 class="h6 mb-1">Common specifications <span class="text-body-secondary fw-normal">(optional)</span></h3>
+                            <p class="small text-body-secondary mb-2">Fields change by category. These details are saved as searchable specifications.</p>
+                            <div class="row g-2" id="new-component-spec-fields"></div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="new-component-description">Additional specifications / notes</label>
+                            <textarea class="form-control" id="new-component-description" name="description" rows="2" maxlength="3000" placeholder="Add any other details, compatibility notes, or source information"></textarea>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="new-component-cost">Our estimated cost (RM)</label>
@@ -391,8 +425,8 @@
                 <option value="">Choose a component</option>
             </select>
             <button class="btn btn-outline-primary btn-sm choose-component" type="button">Browse parts</button>
-            <div class="component-selection small text-body-secondary mt-2" aria-live="polite">No component selected</div>
-            <div class="component-specifications small text-body-secondary mt-2" aria-live="polite"></div>
+            <div class="component-selection mt-2" aria-live="polite"><span class="small text-body-secondary">No component selected</span></div>
+            <div class="component-specifications d-flex flex-wrap gap-1 mt-2" aria-live="polite"></div>
         </td>
         <td><input class="form-control component-quantity" type="number" min="1" max="100000" value="1" aria-label="Component quantity"></td>
         <td><input class="form-control component-cost" type="number" min="0" max="99999999" step="0.01" placeholder="Enter our cost" aria-label="Component our unit cost" required></td>
@@ -414,6 +448,10 @@
         const searchResults = document.getElementById('component-search-results');
         const searchStatus = document.getElementById('component-search-status');
         const pageStatus = document.getElementById('component-search-page');
+        const categoryFilter = document.getElementById('catalog-category');
+        const componentCreateForm = document.getElementById('component-create-form');
+        const componentCreateType = document.getElementById('new-component-type');
+        const componentSpecFields = document.getElementById('new-component-spec-fields');
         const supplierPanel = document.getElementById('component-supplier-form-panel');
         const supplierForm = document.getElementById('component-supplier-form');
         const supplierType = supplierForm.querySelector('select[name="supplier_type"]');
@@ -423,6 +461,21 @@
         let currentPage = 1;
         let lastPage = 1;
         let searchRequest = 0;
+        const updateComponentSpecFilters = () => {
+            document.querySelectorAll('[data-component-spec-filter]').forEach((group) => {
+                const active = group.dataset.componentSpecFilter === categoryFilter.value;
+                group.classList.toggle('d-none', !active);
+                group.querySelectorAll('input').forEach((input) => {
+                    input.disabled = !active;
+                    if (!active) input.value = '';
+                });
+            });
+        };
+        categoryFilter.addEventListener('change', () => {
+            updateComponentSpecFilters();
+            searchParts();
+        });
+        updateComponentSpecFilters();
         const updateSupplierTypeFields = () => {
             const isShopee = supplierType.value === 'shopee';
             supplierForm.querySelectorAll('[data-supplier-type-fields="shopee"]').forEach((field) => {
@@ -457,6 +510,138 @@
             peripheral: 'Peripheral',
             other: 'Other',
         };
+
+        const componentSpecificationFields = {
+            cpu: [
+                ['Brand', 'e.g. AMD'],
+                ['Socket', 'e.g. AM5'],
+                ['Cores', 'e.g. 8'],
+                ['Threads', 'e.g. 16'],
+                ['Base clock', 'e.g. 3.8 GHz'],
+                ['Max boost clock', 'e.g. Up to 5.2 GHz'],
+                ['Default TDP', 'e.g. 65 W'],
+                ['Memory support', 'e.g. DDR5'],
+            ],
+            gpu: [
+                ['Brand', 'e.g. MSI'],
+                ['VRAM', 'e.g. 12 GB GDDR6'],
+                ['Memory bus', 'e.g. 192-bit'],
+                ['Interface', 'e.g. PCIe 4.0 x16'],
+                ['Length', 'e.g. 280 mm'],
+                ['Recommended power supply', 'e.g. 750 W'],
+            ],
+            ram: [
+                ['Brand', 'e.g. Kingston'],
+                ['Capacity', 'e.g. 32 GB (2 x 16 GB)'],
+                ['Memory type', 'e.g. DDR5 UDIMM'],
+                ['Rated speed', 'e.g. 6000 MT/s'],
+                ['CAS latency', 'e.g. CL36'],
+                ['Voltage', 'e.g. 1.35 V'],
+                ['Profile', 'e.g. AMD EXPO / Intel XMP'],
+            ],
+            motherboard: [
+                ['Brand', 'e.g. MSI'],
+                ['Socket', 'e.g. AM5'],
+                ['Chipset', 'e.g. AMD B650'],
+                ['Form factor', 'e.g. Micro-ATX'],
+                ['Memory support', 'e.g. DDR5'],
+                ['Memory slots', 'e.g. 4'],
+                ['Max memory', 'e.g. 96 GB'],
+                ['Storage', 'e.g. 2 x M.2 NVMe'],
+                ['Networking', 'e.g. 2.5 Gb Ethernet'],
+            ],
+            storage: [
+                ['Brand', 'e.g. Samsung'],
+                ['Capacity', 'e.g. 1 TB'],
+                ['Form factor', 'e.g. M.2 2280'],
+                ['Interface', 'e.g. PCIe 4.0 x4 NVMe'],
+                ['Sequential read', 'e.g. Up to 5,000 MB/s'],
+                ['Sequential write', 'e.g. Up to 4,000 MB/s'],
+            ],
+            power_supply: [
+                ['Brand', 'e.g. Seasonic'],
+                ['Continuous output', 'e.g. 750 W'],
+                ['Form factor', 'e.g. ATX'],
+                ['Efficiency', 'e.g. 80 PLUS Gold'],
+                ['PCIe power', 'e.g. 2 x 8-pin'],
+                ['Connectors', 'e.g. 24-pin ATX, 2 x EPS'],
+            ],
+            case: [
+                ['Brand', 'e.g. Fractal Design'],
+                ['Form factor', 'e.g. Mid-tower'],
+                ['Motherboard support', 'e.g. ATX, Micro-ATX'],
+                ['GPU clearance', 'e.g. 340 mm'],
+                ['CPU cooler clearance', 'e.g. 170 mm'],
+                ['Cooling', 'e.g. 3 x 120 mm fans included'],
+            ],
+            cooling: [
+                ['Brand', 'e.g. DeepCool'],
+                ['Type', 'e.g. Single-tower air cooler'],
+                ['Socket support', 'e.g. AM5, LGA1700'],
+                ['Fan size', 'e.g. 120 mm'],
+                ['Speed range', 'e.g. 600–1,800 RPM'],
+                ['Height', 'e.g. 155 mm'],
+            ],
+            operating_system: [
+                ['Product', 'e.g. Windows 11 Home'],
+                ['Edition', 'e.g. 64-bit'],
+                ['License', 'e.g. Retail'],
+                ['Device limit', 'e.g. 1 PC'],
+            ],
+            software: [
+                ['Product', 'e.g. Microsoft 365 Personal'],
+                ['License', 'e.g. 12-month subscription'],
+                ['Subscription term', 'e.g. 1 year'],
+                ['Device limit', 'e.g. 5 devices'],
+            ],
+            peripheral: [
+                ['Brand', 'e.g. Logitech'],
+                ['Connector', 'e.g. USB-A'],
+                ['Standard', 'e.g. USB 3.0'],
+                ['Length', 'e.g. 2 m'],
+                ['Compatibility', 'e.g. Windows and macOS'],
+            ],
+            other: [
+                ['Brand', 'e.g. Manufacturer'],
+                ['Key specification', 'e.g. Model, size, or capacity'],
+                ['Compatibility', 'e.g. Supported systems or parts'],
+            ],
+        };
+        const componentSpecValues = {};
+        let activeComponentSpecType = null;
+        const renderComponentSpecFields = () => {
+            if (activeComponentSpecType) {
+                componentSpecValues[activeComponentSpecType] = Object.fromEntries(
+                    [...componentSpecFields.querySelectorAll('[data-specification-value]')]
+                        .map((input) => [input.dataset.specificationLabel, input.value]),
+                );
+            }
+
+            const type = componentCreateType.value;
+            componentSpecFields.replaceChildren();
+            (componentSpecificationFields[type] || []).forEach(([label, placeholder], index) => {
+                const field = document.createElement('div');
+                field.className = 'col-12 col-md-6 col-lg-4';
+                const inputId = `new-component-spec-${type}-${index}`;
+                const fieldLabel = document.createElement('label');
+                fieldLabel.className = 'form-label small';
+                fieldLabel.htmlFor = inputId;
+                fieldLabel.textContent = label;
+                const input = document.createElement('input');
+                input.className = 'form-control';
+                input.id = inputId;
+                input.maxLength = 120;
+                input.placeholder = placeholder;
+                input.dataset.specificationLabel = label;
+                input.dataset.specificationValue = '';
+                input.value = componentSpecValues[type]?.[label] || '';
+                field.append(fieldLabel, input);
+                componentSpecFields.append(field);
+            });
+            activeComponentSpecType = type;
+        };
+        componentCreateType.addEventListener('change', renderComponentSpecFields);
+        renderComponentSpecFields();
 
         const buildTemplates = {
             basic: {
@@ -530,6 +715,22 @@
                 expectedLabels.has(label.toLowerCase().replace(/[^a-z0-9]/g, '')),
             );
             return entry ? String(entry[1]) : null;
+        };
+
+        const getComponentBrand = (part) => {
+            const specifiedBrand = getPartSpecification(part, ['Brand', 'Manufacturer']);
+            if (specifiedBrand) return specifiedBrand;
+
+            const brands = [
+                'ASRock', 'ASUS', 'ADATA', 'AMD', 'Antec', 'Arctic', 'be quiet!', 'Cooler Master',
+                'Corsair', 'Crucial', 'DeepCool', 'EVGA', 'Fractal Design', 'G.Skill', 'GALAX',
+                'Gigabyte', 'Kingston', 'Lian Li', 'MSI', 'NVIDIA', 'Noctua', 'NZXT', 'Palit',
+                'Patriot', 'PNY', 'PowerColor', 'Samsung', 'Sapphire', 'Seagate', 'Seasonic',
+                'SilverStone', 'Super Flower', 'TeamGroup', 'Thermaltake', 'Western Digital', 'XFX', 'Zotac',
+            ];
+            const name = String(part.name || '').toLowerCase();
+
+            return brands.find((brand) => name.startsWith(`${brand.toLowerCase()} `)) || '';
         };
 
         const getNumericPartSpecification = (part, labels) => {
@@ -635,8 +836,13 @@
             row.querySelector('.component-quantity').required = Boolean(select.value);
             row.querySelector('.component-cost').required = Boolean(select.value);
             if (!option?.value) {
-                target.textContent = '';
-                row.querySelector('.component-selection').textContent = 'No component selected';
+                target.replaceChildren();
+                const selection = row.querySelector('.component-selection');
+                selection.replaceChildren();
+                const emptySelection = document.createElement('span');
+                emptySelection.className = 'small text-body-secondary';
+                emptySelection.textContent = 'No component selected';
+                selection.append(emptySelection);
                 row.querySelector('.component-price').placeholder = 'Choose a part first';
                 status.textContent = 'Not selected';
                 status.classList.remove('text-success');
@@ -645,10 +851,36 @@
             }
 
             const specifications = JSON.parse(option.dataset.specifications || '{}');
-            target.textContent = Object.entries(specifications)
-                .map(([label, value]) => `${label}: ${value}`)
-                .join(' · ');
-            row.querySelector('.component-selection').textContent = option.dataset.selectionLabel || option.textContent.trim();
+            const selection = row.querySelector('.component-selection');
+            selection.replaceChildren();
+            const identity = document.createElement('div');
+            identity.className = 'd-flex flex-wrap align-items-center gap-2';
+            const name = document.createElement('strong');
+            name.className = 'component-selected-name text-break text-body-emphasis';
+            name.textContent = option.textContent.trim();
+            identity.append(name);
+            const brand = getComponentBrand({ name: name.textContent, specifications });
+            if (brand) {
+                const brandBadge = document.createElement('span');
+                brandBadge.className = 'badge rounded-pill text-bg-primary';
+                brandBadge.textContent = brand;
+                identity.append(brandBadge);
+            }
+            const selectionDetails = document.createElement('div');
+            selectionDetails.className = 'small text-body-secondary mt-1';
+            selectionDetails.textContent = `Builder catalogue · RM ${Number(option.dataset.price || 0).toFixed(2)} · ${option.dataset.supplier || 'No supplier linked'}`;
+            selection.append(identity, selectionDetails);
+
+            target.replaceChildren();
+            Object.entries(specifications)
+                .filter(([label]) => !['name', 'source', 'brand', 'manufacturer'].includes(label.toLowerCase().replace(/[^a-z0-9]/g, '')))
+                .slice(0, 6)
+                .forEach(([label, value]) => {
+                    const specification = document.createElement('span');
+                    specification.className = 'badge rounded-pill text-bg-light border text-dark fw-normal';
+                    specification.textContent = `${label}: ${value}`;
+                    target.append(specification);
+                });
             row.querySelector('.component-price').placeholder = Number(option.dataset.price) > 0
                 ? 'Use RM selling price'
                 : 'Enter RM quote price';
@@ -1184,13 +1416,8 @@
             option.dataset.cost = String(part.cost_price);
             option.dataset.type = part.type;
             option.dataset.socket = part.socket || '';
+            option.dataset.supplier = part.supplier || '';
             option.dataset.specifications = JSON.stringify(part.specifications || {});
-            option.dataset.selectionLabel = [
-                part.name,
-            'Builder catalogue (not inventory stock)',
-                `RM ${Number(part.selling_price).toFixed(2)}`,
-                part.supplier || 'No supplier linked',
-            ].join(' · ');
             select.value = String(part.id);
 
             const priceInput = activeRow.querySelector('.component-price');
@@ -1205,7 +1432,7 @@
             if (closePicker) pickerModal.hide();
         };
 
-        document.getElementById('component-create-form').addEventListener('submit', async (event) => {
+        componentCreateForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const createForm = event.currentTarget;
             const submitButton = createForm.querySelector('button[type="submit"]');
@@ -1215,13 +1442,20 @@
             status.className = 'small text-body-secondary';
 
             try {
+                const formData = new FormData(createForm);
+                const structuredSpecifications = [...componentSpecFields.querySelectorAll('[data-specification-value]')]
+                    .map((input) => input.value.trim() ? `${input.dataset.specificationLabel}: ${input.value.trim()}` : '')
+                    .filter(Boolean);
+                const notes = String(formData.get('description') || '').trim();
+                formData.set('description', [...structuredSpecifications, notes].filter(Boolean).join('\n'));
+
                 const response = await fetch(picker.dataset.componentStoreUrl, {
                     method: 'POST',
                     headers: {
                         Accept: 'application/json',
                         'X-CSRF-TOKEN': createForm.querySelector('input[name="_token"]').value,
                     },
-                    body: new FormData(createForm),
+                    body: formData,
                 });
                 const result = await response.json();
                 if (!response.ok) {
@@ -1232,6 +1466,9 @@
                 status.textContent = `${result.name} was added to the builder catalogue. Add a supplier below if needed.`;
                 status.className = 'small text-success';
                 createForm.reset();
+                Object.keys(componentSpecValues).forEach((type) => delete componentSpecValues[type]);
+                activeComponentSpecType = null;
+                renderComponentSpecFields();
                 createForm.querySelector('input[name="_token"]').value =
                     document.querySelector('meta[name="csrf-token"]')?.content || createForm.querySelector('input[name="_token"]').value;
                 selectPart(result, false);
@@ -1258,7 +1495,11 @@
             if (button) {
                 activeRow = button.closest('.component-line');
                 const type = activeRow.querySelector('.component-type').value;
-                document.getElementById('catalog-category').value = type;
+                document.querySelectorAll('#component-spec-filters input').forEach((input) => {
+                    input.value = '';
+                });
+                categoryFilter.value = type;
+                updateComponentSpecFilters();
                 document.getElementById('catalog-search').value = '';
                 document.getElementById('catalog-price-min').value = '';
                 document.getElementById('catalog-price-max').value = '';

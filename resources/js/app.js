@@ -172,6 +172,7 @@ const page = document.body;
 const userId = page.dataset.notificationsUser;
 const pusherKey = page.dataset.pusherKey;
 const pusherCluster = page.dataset.pusherCluster;
+const broadcastingAuthUrl = page.dataset.broadcastingAuthUrl || '/broadcasting/auth';
 const readPrefix = page.dataset.notificationReadPrefix;
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 const beamsInstanceId = page.dataset.beamsInstanceId;
@@ -882,7 +883,7 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
         key: pusherKey,
         cluster: pusherCluster,
         forceTLS: true,
-        authEndpoint: '/broadcasting/auth',
+        authEndpoint: broadcastingAuthUrl,
         auth: {
             headers: {
                 'X-CSRF-TOKEN': csrfToken,

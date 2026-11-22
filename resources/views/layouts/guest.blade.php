@@ -4,7 +4,14 @@
 
 @include('layouts.guest.head')
 
-<body>
+<body
+    @auth
+        data-notifications-user="{{ auth()->id() }}"
+    @endauth
+    data-pusher-key="{{ config('broadcasting.connections.pusher.key') }}"
+    data-pusher-cluster="{{ config('broadcasting.connections.pusher.options.cluster') }}"
+    data-broadcasting-auth-url="{{ url('/broadcasting/auth') }}"
+    data-notification-read-prefix="{{ url('/notifications') }}">
     @include('layouts.guest.navbar')
 
     @unless (request()->getPathInfo() === '/')

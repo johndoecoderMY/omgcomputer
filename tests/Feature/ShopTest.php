@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BillingDocument;
 use App\Models\ChipSetting;
 use App\Models\Customer;
+use App\Models\CustomPcBuildDraft;
 use App\Models\CustomPcComponent;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
@@ -67,6 +68,7 @@ class ShopTest extends TestCase
 
         $this->actingAs($customer)->get(route('shop.products.index'))->assertForbidden();
         $this->actingAs($customer)->get(route('shop.custom-pc-builder'))->assertForbidden();
+        $this->actingAs($customer)->get(route('shop.custom-pc-builder.drafts.index'))->assertForbidden();
         $this->actingAs($customer)->get(route('shop.cart'))->assertOk();
         $this->actingAs($customer)->get(route('shop.orders.index'))->assertForbidden();
         $this->actingAs($this->staffUser())->get(route('shop.cart'))->assertForbidden();
@@ -377,6 +379,9 @@ class ShopTest extends TestCase
             ->assertSee('Add another supplier')
             ->assertSee('Min selling price (RM)')
             ->assertSee('Max selling price (RM)')
+            ->assertSee('Common specifications')
+            ->assertSee('Rated speed')
+            ->assertSee('VRAM')
             ->assertSee('Manage builder parts')
             ->assertDontSee('id="builder-part-form"', false)
             ->assertDontSee('USD')
@@ -494,6 +499,72 @@ class ShopTest extends TestCase
         $this->assertSame(650.0, (float) $quote->items()->where('custom_pc_component_id', $parts['DEMO-CPU-001']->id)->firstOrFail()->unit_cost);
     }
 
+    public function test_staff_can_save_edit_list_and_delete_incomplete_custom_pc_build_drafts(): void
+    {
+        $staff = $this->staffUser();
+        $cpu = CustomPcComponent::query()->create([
+            'name' => 'Draft list test CPU',
+            'sku' => 'DRAFT-LIST-CPU-01',
+            'type' => 'cpu',
+            'cost_price' => 180,
+            'selling_price' => 250,
+        ]);
+
+        $this->actingAs($staff)->post(route('shop.custom-pc-builder.drafts.store'), [
+            'build_name' => 'Editing workstation',
+            'intended_use' => 'Video editing and design',
+            'items' => [],
+        ])->assertRedirect(route('shop.custom-pc-builder.drafts.index'))
+            ->assertSessionHas('success', 'Custom PC build draft saved.');
+
+        $draft = CustomPcBuildDraft::query()->firstOrFail();
+        $this->assertSame([], $draft->form_data['items']);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder.drafts.index'))
+            ->assertOk()
+            ->assertSee('Saved PC build drafts')
+            ->assertSee('Editing workstation')
+            ->assertSee('Video editing and design')
+            ->assertSee('No customer assigned')
+            ->assertSee('No parts selected yet');
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder.drafts.edit', $draft))
+            ->assertOk()
+            ->assertSee('value="Editing workstation"', false)
+            ->assertSee('value="Video editing and design"', false)
+            ->assertSee('Update saved build draft');
+
+        $this->actingAs($staff)->post(route('shop.custom-pc-builder.drafts.update', $draft), [
+            'build_name' => 'Editing workstation',
+            'intended_use' => 'Video editing and design',
+            'customer_name' => 'Avery Customer',
+            'customer_email' => 'avery@example.test',
+            'tax_rate' => 6,
+            'items' => [[
+                'custom_pc_component_id' => $cpu->id,
+                'component_type' => 'cpu',
+                'build_group' => '1',
+                'quantity' => 1,
+                'unit_cost' => 180,
+                'unit_price' => 250,
+            ]],
+        ])->assertRedirect(route('shop.custom-pc-builder.drafts.index'))
+            ->assertSessionHas('success', 'Custom PC build draft updated.');
+
+        $draft->refresh();
+        $this->assertSame('Avery Customer', $draft->customer_name);
+        $this->assertSame($cpu->id, $draft->form_data['items'][0]['custom_pc_component_id']);
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder.drafts.index'))
+            ->assertOk()
+            ->assertSee('Avery Customer')
+            ->assertSee('avery@example.test')
+            ->assertSee('Draft list test CPU');
+
+        $this->actingAs($staff)->delete(route('shop.custom-pc-builder.drafts.destroy', $draft))
+            ->assertRedirect(route('shop.custom-pc-builder.drafts.index'));
+        $this->assertDatabaseMissing('custom_pc_build_drafts', ['id' => $draft->id]);
+    }
+
     public function test_custom_pc_builder_catalog_search_filters_by_price_and_supplier(): void
     {
         $staff = $this->staffUser();
@@ -537,6 +608,85 @@ class ShopTest extends TestCase
             'category' => 'cpu',
             'supplier' => 'unassigned',
         ]))->assertOk()->assertJsonFragment(['name' => 'Unlinked catalog CPU']);
+    }
+
+    public function test_custom_pc_builder_search_filters_ram_speed_capacity_and_gpu_memory(): void
+    {
+        $staff = $this->staffUser();
+        $fastRam = CustomPcComponent::query()->create([
+            'name' => '6000 MT/s RAM kit',
+            'type' => 'ram',
+            'description' => "Capacity: 32 GB\nRated speed: 6000 MT/s",
+        ]);
+        CustomPcComponent::query()->create([
+            'name' => 'Slower RAM kit',
+            'type' => 'ram',
+            'description' => "Capacity: 16 GB\nRated speed: 3200 MT/s",
+        ]);
+        $highMemoryGpu = CustomPcComponent::query()->create([
+            'name' => '12 GB graphics card',
+            'type' => 'gpu',
+            'description' => 'Memory: 12 GB GDDR6',
+        ]);
+        CustomPcComponent::query()->create([
+            'name' => '8 GB graphics card',
+            'type' => 'gpu',
+            'description' => 'Memory: 8 GB GDDR6',
+        ]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'ram',
+            'ram_speed' => '6000',
+            'ram_capacity' => '32 GB',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $fastRam->name]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'gpu',
+            'gpu_memory' => '12 GB',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $highMemoryGpu->name]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'gpu_memory' => '12 GB',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 0);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('catalog-ram-speed', false)
+            ->assertSee('catalog-ram-capacity', false)
+            ->assertSee('catalog-gpu-memory', false);
+    }
+
+    public function test_custom_pc_builder_shows_selected_component_name_prominently(): void
+    {
+        $staff = $this->staffUser();
+        $gpu = CustomPcComponent::query()->create([
+            'name' => 'MSI RTX 5060 Ti 8G INSPIRE 2X',
+            'type' => 'gpu',
+            'description' => "Name: MSI RTX 5060 Ti 8G INSPIRE 2X\nMemory: 8 GB GDDR6\nSource: video-card.csv",
+        ]);
+
+        $this->actingAs($staff)
+            ->withSession(['_old_input' => [
+                'items' => [[
+                    'custom_pc_component_id' => $gpu->id,
+                    'component_type' => 'gpu',
+                    'build_group' => '1',
+                    'quantity' => 1,
+                    'unit_cost' => 1000,
+                    'unit_price' => 1200,
+                ]],
+            ]])
+            ->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('component-selected-name', false)
+            ->assertSee('MSI RTX 5060 Ti 8G INSPIRE 2X')
+            ->assertSee('Builder catalogue · RM 0.00 · No supplier linked');
     }
 
     public function test_staff_can_add_supplier_from_custom_pc_builder_and_link_component(): void

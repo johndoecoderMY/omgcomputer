@@ -413,6 +413,11 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
         Route::get('/products/grid', 'productsGrid')->name('products.grid');
         Route::get('/custom-pc-builder', 'customPcBuilder')->name('custom-pc-builder');
+        Route::get('/custom-pc-builder/drafts', 'customPcBuilderDrafts')->name('custom-pc-builder.drafts.index');
+        Route::post('/custom-pc-builder/drafts', 'storeCustomPcBuilderDraft')->name('custom-pc-builder.drafts.store');
+        Route::get('/custom-pc-builder/drafts/{draft}/edit', 'editCustomPcBuilderDraft')->name('custom-pc-builder.drafts.edit');
+        Route::post('/custom-pc-builder/drafts/{draft}', 'updateCustomPcBuilderDraft')->name('custom-pc-builder.drafts.update');
+        Route::delete('/custom-pc-builder/drafts/{draft}', 'destroyCustomPcBuilderDraft')->name('custom-pc-builder.drafts.destroy');
         Route::get('/custom-pc-builder/parts', 'customPcBuilderParts')->name('custom-pc-builder.parts');
         Route::get('/custom-pc-builder/components', 'customPcBuilderComponents')->name('custom-pc-builder.components');
         Route::post('/custom-pc-builder/components', 'storeCustomPcBuilderComponent')->name('custom-pc-builder.components.store');
