@@ -46,6 +46,18 @@
              display: none;
          }
 
+         .main .card {
+             padding: .5rem;
+             --falcon-card-bg: var(--falcon-emphasis-bg);
+             box-shadow: var(--falcon-box-shadow);
+         }
+
+         .main .card-header {
+             background: var(--falcon-body-bg) !important;
+             border-bottom: 0;
+             border-radius: var(--falcon-card-border-radius) !important;
+         }
+
          .card-header {
              display: flex;
              flex-wrap: wrap;

@@ -51,6 +51,7 @@ class Booking extends Model
         'service_name',
         'device_model',
         'request_notes',
+        'cancellation_reason',
         'customer_dropoff_at_shop',
         'pickup_address',
         'dropoff_address',

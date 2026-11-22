@@ -522,11 +522,12 @@ class BookingController extends Controller
                     : '';
 
                 return sprintf(
-                    '<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#booking-status-modal" data-booking-update data-booking-update-url="%s" data-booking-status="%s" data-booking-assigned-to="%s" data-booking-reference="%s">Update</button>',
+                    '<button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#booking-status-modal" data-booking-update data-booking-update-url="%s" data-booking-status="%s" data-booking-assigned-to="%s" data-booking-reference="%s" data-booking-cancellation-reason="%s">Update</button>',
                     e(route('bookings.update', $booking)),
                     e($booking->status),
                     e($assignedTo),
                     e($booking->reference),
+                    e($booking->cancellation_reason ?? ''),
                 );
             })
             ->rawColumns(['customer_contact', 'service', 'status_label', 'management'])
@@ -540,7 +541,11 @@ class BookingController extends Controller
         $data = $request->validate([
             'status' => ['required', Rule::in(array_keys(Booking::EDITABLE_STATUSES))],
             'assigned_to' => ['nullable', 'integer', new AssignableUser],
+            'cancellation_reason' => ['nullable', 'string', 'max:1000'],
         ]);
+        if ($data['status'] !== 'cancelled') {
+            $data['cancellation_reason'] = null;
+        }
         $previousAssigneeId = $booking->assigned_to;
         $previousStatus = $booking->status;
         DB::transaction(function () use ($booking, $data, $request): void {
@@ -568,7 +573,6 @@ class BookingController extends Controller
                     'user_id' => $request->user()->id,
                     'title' => 'Created from confirmed booking '.$booking->reference,
                     'status' => 'new',
-                    'notes' => $booking->request_notes,
                 ]);
                 $booking->update(['repair_ticket_id' => $ticket->id]);
             }

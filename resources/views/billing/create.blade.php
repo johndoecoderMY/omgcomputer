@@ -106,7 +106,7 @@
             </div>
         @endif
         <div class="card mb-3"><div class="card-header d-flex justify-content-between align-items-center"><span class="fw-semibold">Line items</span><button class="btn btn-sm btn-outline-primary" id="add-line" type="button"><span class="bi bi-plus me-1"></span>Add line</button></div>
-            <div class="table-responsive"><table class="table align-middle mb-0 table-bordered"><thead><tr><th style="min-width:260px">Inventory or service</th><th style="min-width:200px">Description</th><th style="width:110px">Quantity</th><th style="width:160px">Unit price (RM)</th><th style="width:56px"></th></tr></thead><tbody id="lines">
+            <div class="table-responsive"><table class="table align-middle mb-0 table-bordered"><thead><tr><th style="min-width:260px">Inventory or service</th><th style="min-width:200px">Description</th><th style="width:110px">Quantity</th><th style="width:160px">Unit price (RM)</th><th style="width:160px">Line discount (RM)</th><th style="width:56px"></th></tr></thead><tbody id="lines">
                 @php($currentLines = old('items', $lines))
                 @foreach ($currentLines as $index => $line)
                     @php($selectedPart = empty($line['inventory_part_id']) ? null : $parts->get($line['inventory_part_id']))
@@ -148,16 +148,17 @@
                         <td><input class="form-control line-description" name="items[{{ $index }}][description]" value="{{ $line['description'] ?? '' }}" placeholder="Service or item description"></td>
                         <td><input class="form-control" name="items[{{ $index }}][quantity]" type="number" min="1" value="{{ $line['quantity'] ?? 1 }}" required></td>
                         <td><input class="form-control line-price" name="items[{{ $index }}][unit_price]" type="number" min="0" step="0.01" value="{{ $line['unit_price'] ?? '' }}" placeholder="0.00"></td>
+                        <td><input class="form-control" name="items[{{ $index }}][discount_amount]" type="number" min="0" step="0.01" value="{{ $line['discount_amount'] ?? '' }}" placeholder="0.00" aria-label="Line discount in RM"></td>
                         <td><button class="btn btn-outline-secondary remove-line" type="button" aria-label="Remove line"><span class="bi bi-x-lg"></span></button></td>
                     </tr>
                 @endforeach
             </tbody></table></div>
             <div class="card-body row g-3">
                 <div class="col-md-3">
-                    <label class="form-label" for="discount_amount">Discount (RM)</label>
+                    <label class="form-label" for="discount_amount">Overall discount (RM)</label>
                     <input class="form-control" id="discount_amount" name="discount_amount" type="number" min="0" step="0.01"
                         value="{{ old('discount_amount', $document->discount_amount ?? 0) }}">
-                    <div class="form-text">Deducted from the subtotal before tax.</div>
+                    <div class="form-text">Applied in addition to line discounts, before tax.</div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label" for="tax_rate">Tax rate (%)</label>

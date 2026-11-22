@@ -93,12 +93,27 @@ class BookingTest extends TestCase
         $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
             'status' => 'cancelled',
             'assigned_to' => $staff->id,
+            'cancellation_reason' => 'Technician unavailable.',
         ])->assertOk()->assertJson(['message' => 'Booking updated.']);
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
             'status' => 'cancelled',
             'assigned_to' => $staff->id,
+            'cancellation_reason' => 'Technician unavailable.',
+        ]);
+        $this->actingAs($staff)->get(route('bookings.show', $booking))
+            ->assertOk()
+            ->assertSee('Cancellation reason')
+            ->assertSee('Technician unavailable.');
+
+        $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
+            'status' => 'pending',
+        ])->assertOk();
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => 'pending',
+            'cancellation_reason' => null,
         ]);
 
         $this->actingAs($staff)->putJson(route('bookings.update', $booking), [
@@ -117,6 +132,8 @@ class BookingTest extends TestCase
         $response = $this->actingAs($staff)->get(route('bookings.index'))
             ->assertOk()
             ->assertSee('<select class="form-select" id="booking-status-value" name="status" required>', false)
+            ->assertSee('id="booking-cancellation-reason-group"', false)
+            ->assertSee('name="cancellation_reason"', false)
             ->assertSee('<option value="cancelled">Cancelled</option>', false);
 
         $document = new \DOMDocument();
@@ -197,8 +214,6 @@ class BookingTest extends TestCase
             ->assertSee('Computer/PC Troubleshooting')
             ->assertSee('FYP Consultation')
             ->assertDontSee('Laptop cleaning')
-            ->assertSee('Fill address from pin')
-            ->assertSee('pin coordinates are sent to OpenStreetMap')
             ->assertViewHas('services', fn ($services): bool => $services->pluck('id')->all() === [
                 'basic-troubleshooting',
                 'fyp-consultation',
@@ -243,6 +258,20 @@ class BookingTest extends TestCase
             $request->url(),
             'nominatim.openstreetmap.org/reverse',
         ) && $request->hasHeader('User-Agent'));
+    }
+
+    public function test_booking_location_picker_has_one_location_action_and_address_previews(): void
+    {
+        $this->get(route('bookings.create'))
+            ->assertOk()
+            ->assertSee('id="booking-use-location"', false)
+            ->assertDontSee('id="booking-find-address"', false)
+            ->assertSee('id="booking-location-address-preview"', false)
+            ->assertSee('id="pickup-location-preview"', false)
+            ->assertSee('id="dropoff-location-preview"', false)
+            ->assertSee('id="booking-open-calendar"', false)
+            ->assertSee('id="booking-calendar-modal"', false)
+            ->assertSee('booking-calendar-column', false);
     }
 
     public function test_booking_page_and_calendar_messages_follow_the_selected_public_language(): void
@@ -356,11 +385,14 @@ class BookingTest extends TestCase
         $this->assertNotNull($ticket);
         $this->assertSame($ticket->id, $booking->fresh()->repair_ticket_id);
         $this->assertSame($booking->customer_id, $ticket->customer_id);
-        $this->actingAs($staff)->get(route('tickets.show', $ticket))
+        $this->assertStringContainsString('Fan is noisy.', $ticket->issue_description);
+        $this->assertNull($ticket->updates()->firstOrFail()->notes);
+        $ticketPage = $this->actingAs($staff)->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('Pickup and drop-off')
             ->assertSee('12 Jalan Test, Kampar')
             ->assertSee('Unit 4, Example Apartments, Kampar');
+        $this->assertSame(1, substr_count($ticketPage->getContent(), 'Fan is noisy.'));
         $this->get(route('bookings.show', $booking->fresh()))
             ->assertOk()
             ->assertSee('Pickup address')
@@ -373,7 +405,7 @@ class BookingTest extends TestCase
         $this->actingAs($staff)->get(route('bookings.index'))
             ->assertOk()
             ->assertSee('data-datatable', false)
-            ->assertSee('All bookings')
+            ->assertSee('Bookings')
             ->assertSee('href="#bookingsMenu"', false)
             ->assertSee('id="bookingsMenu"', false)
             ->assertSee('<li class="breadcrumb-item active" aria-current="page">Bookings</li>', false)
@@ -414,8 +446,8 @@ class BookingTest extends TestCase
                 'href="'.route('customers.show', $booking->customer).'"',
             ))
             ->assertJsonPath('data.0.status_label', '<span class="badge text-bg-success">Confirmed</span>')
-            ->assertJsonPath('data.0.management', fn (string $management): bool => str_contains($management, 'js-user-search')
-                && str_contains($management, 'Search staff by name'))
+            ->assertJsonPath('data.0.management', fn (string $management): bool => str_contains($management, 'data-booking-update')
+                && str_contains($management, 'booking-status-modal'))
             ->assertSee('Morgan Lee')
             ->assertSee($booking->reference);
 
@@ -658,6 +690,8 @@ class BookingTest extends TestCase
         $this->assertSame($ticket->id, $booking->fresh()->repair_ticket_id);
         $this->assertSame($customer->id, $ticket->customer_id);
         $this->assertSame('Dell XPS 13', $ticket->device_model);
+        $this->assertSame("Laptop cleaning\n\nFan is noisy.", $ticket->issue_description);
+        $this->assertNull($ticket->updates()->firstOrFail()->notes);
 
         $this->get(route('bookings.show', $booking->fresh()))
             ->assertOk()
@@ -886,11 +920,13 @@ class BookingTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee(route('bookings.create'))
-            ->assertSee('Packages')
+            ->assertSee('Book a service')
+            ->assertSee(route('shop.public'))
+            ->assertSee(route('repairs.track.form'))
+            ->assertSee('Technology services for home and work')
             ->assertDontSee('Website pricing')
             ->assertSee('https://wa.me/60104224350')
-            ->assertSee('Message us on WhatsApp')
-            ->assertSee('Choose the service you need')
+            ->assertSee('WhatsApp us')
             ->assertDontSee('Online service booking is coming soon.');
     }
 

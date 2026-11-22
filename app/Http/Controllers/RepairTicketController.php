@@ -289,6 +289,10 @@ class RepairTicketController extends Controller
                 'device_model' => $booking?->device_model,
                 'pickup_address' => $booking?->pickup_address,
                 'dropoff_address' => $booking?->dropoff_address,
+                'pickup_latitude' => $booking?->pickup_latitude,
+                'pickup_longitude' => $booking?->pickup_longitude,
+                'dropoff_latitude' => $booking?->dropoff_latitude,
+                'dropoff_longitude' => $booking?->dropoff_longitude,
                 'issue_description' => $booking
                     ? trim($booking->service_name."\n\n".($booking->request_notes ?? ''))
                     : null,
@@ -302,7 +306,7 @@ class RepairTicketController extends Controller
         ]);
     }
 
-    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse
+    public function store(Request $request, WorkspaceNotifier $notifier): RedirectResponse|JsonResponse
     {
         AssignmentAccess::preventNonAdminAssignment($request, ['assigned_to', 'assignees', 'assignees_present']);
         $issueDescription = $request->input('issue_description');
@@ -327,6 +331,10 @@ class RepairTicketController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'pickup_address' => ['nullable', 'string', 'max:1000'],
             'dropoff_address' => ['nullable', 'string', 'max:1000'],
+            'pickup_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
+            'dropoff_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
+            'dropoff_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
             'issue_description' => ['required', 'string', 'max:20000'],
             'priority' => ['required', Rule::in(array_keys(RepairTicket::PRIORITIES))],
             'due_at' => ['nullable', 'date'],
@@ -341,13 +349,12 @@ class RepairTicketController extends Controller
                 'issue_description' => 'The reported issue may not be greater than 5000 characters.',
             ]);
         }
-        $issueDescriptionText = app(RepairTicketIssueSanitizer::class)->plainText($data['issue_description']);
         $bookingId = $data['booking_id'] ?? null;
         unset($data['booking_id']);
         $assignees = $this->assigneeIds($request, $data);
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
 
-        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId, $issueDescriptionText): RepairTicket {
+        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId): RepairTicket {
             $booking = $bookingId
                 ? Booking::query()->with('customer')->lockForUpdate()->findOrFail($bookingId)
                 : null;
@@ -370,6 +377,11 @@ class RepairTicketController extends Controller
             $customer ??= Customer::query()->findOrFail($data['customer_id']);
             $data['pickup_address'] ??= $booking?->pickup_address;
             $data['dropoff_address'] ??= $booking?->dropoff_address;
+            foreach (['pickup_latitude', 'pickup_longitude', 'dropoff_latitude', 'dropoff_longitude'] as $coordinateField) {
+                if ($booking && ! $request->exists($coordinateField)) {
+                    $data[$coordinateField] = $booking->{$coordinateField};
+                }
+            }
             $ticket = RepairTicket::create([
                 ...$data,
                 'customer_id' => $customer->id,
@@ -387,7 +399,6 @@ class RepairTicketController extends Controller
                 'user_id' => $request->user()->id,
                 'title' => 'Device received',
                 'status' => 'new',
-                'notes' => $issueDescriptionText,
             ]);
 
             $ticket->assignees()->sync($assignees);
@@ -410,6 +421,13 @@ class RepairTicketController extends Controller
             sprintf('Repair ticket %s was created.', $ticket->ticket_number),
             route('tickets.show', $ticket),
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Repair ticket created.',
+                'redirect_url' => route('tickets.show', $ticket),
+            ], 201);
+        }
 
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket created.');
     }
@@ -476,6 +494,10 @@ class RepairTicketController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'pickup_address' => ['nullable', 'string', 'max:1000'],
             'dropoff_address' => ['nullable', 'string', 'max:1000'],
+            'pickup_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:pickup_longitude'],
+            'pickup_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:pickup_latitude'],
+            'dropoff_latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:dropoff_longitude'],
+            'dropoff_longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:dropoff_latitude'],
         ]);
         foreach (['pickup_address', 'dropoff_address'] as $addressField) {
             if ($request->exists($addressField) && $data[$addressField] === null) {
@@ -544,8 +566,14 @@ class RepairTicketController extends Controller
                 'serial_number' => $ticket->serial_number,
                 'pickup_address' => $ticket->pickup_address ?? $ticket->booking?->pickup_address,
                 'dropoff_address' => $ticket->dropoff_address ?? $ticket->booking?->dropoff_address,
+                'pickup_latitude' => $ticket->pickup_latitude ?? $ticket->booking?->pickup_latitude,
+                'pickup_longitude' => $ticket->pickup_longitude ?? $ticket->booking?->pickup_longitude,
+                'dropoff_latitude' => $ticket->dropoff_latitude ?? $ticket->booking?->dropoff_latitude,
+                'dropoff_longitude' => $ticket->dropoff_longitude ?? $ticket->booking?->dropoff_longitude,
                 'has_location_pin' => $ticket->booking?->pickup_latitude !== null
-                    || $ticket->booking?->dropoff_latitude !== null,
+                    || $ticket->booking?->dropoff_latitude !== null
+                    || $ticket->pickup_latitude !== null
+                    || $ticket->dropoff_latitude !== null,
             ]);
         }
 

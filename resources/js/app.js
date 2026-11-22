@@ -337,6 +337,7 @@ const playNotificationSoundOnce = async (notificationId) => {
         logNotificationSoundError(error);
     }
 };
+window.playAppNotificationSoundOnce = playNotificationSoundOnce;
 const serviceWorkerPromise = needsServiceWorker && 'serviceWorker' in navigator
     ? navigator.serviceWorker.register(serviceWorkerPath, { scope: '/', updateViaCache: 'none' })
         .catch((error) => {

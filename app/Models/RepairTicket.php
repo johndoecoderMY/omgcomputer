@@ -20,6 +20,7 @@ class RepairTicket extends Model
         'in_repair' => 'In repair',
         'ready_for_pickup' => 'Ready for pickup',
         'ready_to_drop_off' => 'Ready to drop off',
+        'dropping_off' => 'Dropping off',
         'closed' => 'Closed',
         'cancelled' => 'Cancelled',
     ];
@@ -42,6 +43,10 @@ class RepairTicket extends Model
         'serial_number',
         'pickup_address',
         'dropoff_address',
+        'pickup_latitude',
+        'pickup_longitude',
+        'dropoff_latitude',
+        'dropoff_longitude',
         'issue_description',
         'diagnosis',
         'status',
@@ -68,6 +73,10 @@ class RepairTicket extends Model
         return [
             'due_at' => 'date',
             'received_at' => 'datetime',
+            'pickup_latitude' => 'decimal:7',
+            'pickup_longitude' => 'decimal:7',
+            'dropoff_latitude' => 'decimal:7',
+            'dropoff_longitude' => 'decimal:7',
         ];
     }
 

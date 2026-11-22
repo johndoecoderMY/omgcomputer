@@ -22,11 +22,14 @@
                 <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">{{ __('Contact Us') }}</a></li>
                 <li class="nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">{{ __('Book a service') }}</a></li>
                 <li class="nav-item dropdown my-2 my-lg-0 ms-lg-2">
-                    <button class="nav-link dropdown-toggle border-0 bg-transparent" id="language-menu" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="bi bi-translate me-1" aria-hidden="true"></span>{{ ['en' => 'EN', 'ms' => 'BM', 'zh_CN' => '中文'][app()->getLocale()] ?? 'EN' }}
+                    <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-settings-menu" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ __('Settings') }}">
+                        <span class="bi bi-gear" aria-hidden="true"></span>
+                        <span class="d-lg-none ms-1">{{ __('Settings') }}</span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="language-menu">
-                    @foreach (['en' => 'English', 'ms' => 'Bahasa Melayu', 'zh_CN' => '中文'] as $locale => $language)
+                    <div class="dropdown-menu dropdown-menu-end py-0" aria-labelledby="guest-settings-menu">
+                        <div class="bg-white dark__bg-1000 rounded-2 py-2">
+                            <div class="dropdown-header text-uppercase">{{ __('Language') }}</div>
+                            @foreach (['en' => 'English', 'ms' => 'Bahasa Melayu', 'zh_CN' => '中文'] as $locale => $language)
                             <form method="POST" action="{{ route('language.update') }}">
                                 @csrf
                                 <input type="hidden" name="locale" value="{{ $locale }}">
@@ -37,7 +40,18 @@
                                     @endif
                                 </button>
                             </form>
-                        @endforeach
+                            @endforeach
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-header text-uppercase">{{ __('Appearance') }}</div>
+                            <button class="dropdown-item d-flex align-items-center gap-2" type="button" value="light" data-theme-control="theme">
+                                <span class="bi bi-sun" aria-hidden="true"></span>{{ __('Light') }}
+                                <span class="bi bi-check dropdown-check-icon ms-auto text-600" aria-hidden="true"></span>
+                            </button>
+                            <button class="dropdown-item d-flex align-items-center gap-2" type="button" value="dark" data-theme-control="theme">
+                                <span class="bi bi-moon" aria-hidden="true"></span>{{ __('Dark') }}
+                                <span class="bi bi-check dropdown-check-icon ms-auto text-600" aria-hidden="true"></span>
+                            </button>
+                        </div>
                     </div>
                 </li>
                 @auth

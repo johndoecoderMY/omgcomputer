@@ -42,19 +42,8 @@
                 <div class="card-header fw-semibold">Shipment tracking</div>
                 <div class="card-body">
                     @if ($order->tracking_number)
-                        <p class="mb-3"><span class="text-body-secondary">Tracking number:</span> <span class="fw-semibold text-break">{{ $order->tracking_number }}</span></p>
-                        <form method="POST" action="{{ route('shop.my-orders.tracking', $order) }}">
-                            @csrf
-                            <button class="btn btn-primary" type="submit">
-                                <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Refresh tracking
-                            </button>
-                        </form>
-                        @if ($error = session('customer_tracking_error'))
-                            <div class="alert alert-danger mt-3 mb-0" role="alert">{{ $error }}</div>
-                        @endif
-                        @if ($tracking)
-                            <div class="mt-3"><x-shop.parcel-tracking-result :tracking="$tracking" /></div>
-                        @endif
+                        <p class="mb-2"><span class="text-body-secondary">Tracking number:</span> <span class="fw-semibold text-break">{{ $order->tracking_number }}</span></p>
+                        <p class="text-body-secondary mb-0">Use this number on the delivery service’s tracking page or contact the service directly. Live tracking updates are not available here.</p>
                     @else
                         <p class="text-body-secondary mb-0">A tracking number will appear here when your order has shipped.</p>
                     @endif

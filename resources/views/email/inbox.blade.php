@@ -152,6 +152,9 @@
         let currentFilter = 'all';
         let currentFilterLabel = 'All';
         let refreshing = false;
+        const knownMessageIds = new Set(
+            [...rows.querySelectorAll('[data-email-row]')].map((row) => row.dataset.uid),
+        );
 
         const textNode = (tag, className, text) => {
             const node = document.createElement(tag);
@@ -310,6 +313,23 @@
                 if (!response.ok) throw new Error(payload.message || 'The inbox could not be refreshed.');
                 if (!Array.isArray(payload.messages) || typeof payload.checked_at !== 'string') {
                     throw new Error('The inbox server returned an incomplete response. Please try again.');
+                }
+                const newMessages = payload.messages.filter((message) => {
+                    const uid = String(message.uid);
+                    if (knownMessageIds.has(uid)) return false;
+                    knownMessageIds.add(uid);
+                    return true;
+                });
+                if (newMessages.length > 0) {
+                    const latestMessage = newMessages[0];
+                    const singleMessage = newMessages.length === 1;
+                    const summary = singleMessage
+                        ? `${latestMessage.from || 'Unknown sender'}: ${latestMessage.subject || '(No subject)'}`
+                        : `${newMessages.length} new messages have arrived.`;
+                    window.showAppToast?.(summary, 'info', singleMessage ? 'New email' : 'New emails');
+                    void window.playAppNotificationSoundOnce?.(
+                        `email:${mailboxEmail || 'mailbox'}:${latestMessage.uid}`,
+                    );
                 }
                 const selectedIds = new Set([...rows.querySelectorAll('.email-select:checked')].map((input) => input.value));
                 unreadSection.querySelectorAll('[data-email-row]').forEach((row) => row.remove());

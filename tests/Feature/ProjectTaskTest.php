@@ -159,6 +159,8 @@ class ProjectTaskTest extends TestCase
             ->assertSee('System')
             ->assertSee('logoex2w.png')
             ->assertSee('html[data-bs-theme="dark"] .brand-logo-light', false)
+            ->assertSee('.main .card', false)
+            ->assertSee('.main .card-header', false)
             ->assertSee('aria-label="Task view"', false)
             ->assertSee('task-filter-fab')
             ->assertSee('task-view-fab')

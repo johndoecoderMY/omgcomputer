@@ -144,7 +144,14 @@ class PublicContactTest extends TestCase
             ->assertOk()
             ->assertSee('<html data-bs-theme="light" lang="en"', false)
             ->assertSee('Computer trouble?')
-            ->assertSee('Book a service');
+            ->assertSee('Book a service')
+            ->assertSee('id="guest-settings-menu"', false)
+            ->assertSee('value="light"', false)
+            ->assertSee('value="dark"', false)
+            ->assertSee('assets/js/config.js', false)
+            ->assertSee('assets/js/theme.js', false)
+            ->assertSee("localStorage.setItem('theme', resolvedTheme)", false)
+            ->assertSee("root.setAttribute('data-bs-theme', resolvedTheme)", false);
     }
 
     public function test_public_languages_cover_additional_guest_pages(): void

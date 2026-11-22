@@ -17,6 +17,42 @@ use Throwable;
 
 class AdminBackupController extends Controller
 {
+    private const CUSTOMER_DATA_TABLES = [
+        'users',
+        'roles',
+        'permissions',
+        'model_has_roles',
+        'model_has_permissions',
+        'role_has_permissions',
+        'customers',
+        'bookings',
+        'booking_time_slots',
+        'repair_tickets',
+        'repair_ticket_updates',
+        'attachments',
+        'projects',
+        'tasks',
+        'project_events',
+        'project_estimate_items',
+        'project_technologies',
+        'project_requirements',
+        'project_links',
+        'project_modules',
+        'project_features',
+        'project_milestones',
+        'project_quality_items',
+        'project_activities',
+        'flow_charts',
+        'flow_chart_project',
+        'user_assignments',
+        'inventory_parts',
+        'project_inventory_part',
+        'billing_documents',
+        'billing_document_items',
+        'billing_payments',
+        'billing_payment_attempts',
+    ];
+
     public function index(): View
     {
         $backupName = config('backup.backup.name');
@@ -35,15 +71,20 @@ class AdminBackupController extends Controller
                     'total_size' => $backups->sum(fn (Backup $backup): float => $backup->sizeInBytes()),
                 ];
             });
+        $databaseTables = collect(Schema::getTables())
+            ->pluck('name')
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
+            ->sort()
+            ->values();
+        $customerDataTables = collect(self::CUSTOMER_DATA_TABLES)
+            ->intersect($databaseTables)
+            ->values();
 
         return view('admin.backups.index', [
             'backupName' => $backupName,
             'destinations' => $destinations,
-            'databaseTables' => collect(Schema::getTables())
-                ->pluck('name')
-                ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
-                ->sort()
-                ->values(),
+            'databaseTables' => $databaseTables,
+            'customerDataTables' => $customerDataTables,
         ]);
     }
 

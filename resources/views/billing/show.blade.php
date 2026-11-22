@@ -119,7 +119,7 @@
     <div class="row g-3 mb-3">
         <div class="col-lg-8"><div class="card h-100"><div class="card-header fw-semibold">Document details</div><div class="card-body">
             <div class="row g-3"><div class="col-md-6"><div class="small text-body-secondary">Bill to</div>@if ($document->type === 'quotation' && $customerRecord && ! auth()->user()->hasRole('customer'))<a class="fw-semibold" href="{{ route('customers.show', $customerRecord) }}">{{ $document->customer_name }}</a>@else<strong>{{ $document->customer_name }}</strong>@endif<div>{{ $document->customer_email }}</div><div>{{ $document->customer_phone }}</div><div class="text-pre-line">{{ $document->customer_address }}</div></div><div class="col-md-3"><div class="small text-body-secondary">Issue date</div><div>{{ $document->issue_date->format('M j, Y') }}</div><div class="small text-body-secondary mt-2">Due date</div><div>{{ $document->due_date?->format('M j, Y') ?? 'Not set' }}</div></div><div class="col-md-3"><div class="small text-body-secondary">Status</div><x-status-badge :status="$document->status" :label="str_replace('_', ' ', ucfirst($document->status))" /></div></div>
-            <hr><div class="table-responsive"><table class="table align-middle table-bordered"><thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Total</th></tr></thead><tbody>@foreach ($document->items as $item)<tr><td>{{ $item->description }}</td><td class="text-end">{{ $item->quantity }}</td><td class="text-end">RM {{ number_format($item->unit_price, 2) }}</td><td class="text-end">RM {{ number_format($item->line_total, 2) }}</td></tr>@endforeach</tbody></table></div>
+            <hr><div class="table-responsive"><table class="table align-middle table-bordered"><thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Total</th><th class="text-end">{{ __('billing.pdf.item_discount') }}</th></tr></thead><tbody>@foreach ($document->items as $item)<tr><td>{{ $item->description }}</td><td class="text-end">{{ $item->quantity }}</td><td class="text-end">RM {{ number_format($item->unit_price, 2) }}</td><td class="text-end">RM {{ number_format($item->line_total, 2) }}</td><td class="text-end">{{ (float) $item->discount_amount > 0 ? '- RM '.number_format($item->discount_amount, 2) : '—' }}</td></tr>@endforeach</tbody></table></div>
             @if ($document->notes)<div class="small text-body-secondary">{{ $document->notes }}</div>@endif
             @if ($document->type === 'quotation' && $document->project_id)
                 <div class="border-top mt-4 pt-3">
@@ -132,6 +132,9 @@
                 <div class="card-header fw-semibold">Document summary</div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between"><span>Subtotal</span><span>RM {{ number_format($document->subtotal, 2) }}</span></div>
+                    @if ($document->items->sum('discount_amount') > 0)
+                        <div class="d-flex justify-content-between text-success"><span>{{ __('billing.pdf.item_discount') }}</span><span>- RM {{ number_format($document->items->sum('discount_amount'), 2) }}</span></div>
+                    @endif
                     @if ((float) $document->discount_amount > 0)
                         <div class="d-flex justify-content-between text-success"><span>Discount</span><span>- RM {{ number_format($document->discount_amount, 2) }}</span></div>
                     @endif

@@ -61,6 +61,7 @@ return [
         'quantity' => 'Kuantiti',
         'unit_price' => 'Harga seunit',
         'amount' => 'Amaun',
+        'item_discount' => 'Diskaun baris',
         'subtotal' => 'Jumlah kecil',
         'discount' => 'Diskaun',
         'tax' => 'Cukai',

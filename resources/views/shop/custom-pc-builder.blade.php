@@ -303,15 +303,22 @@
                             <button class="btn btn-primary" type="submit">Add to builder catalogue</button>
                         </div>
                     </form>
-                    <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Add supplier and Shopee product details after saving the part.</p>
+                    <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Add suppliers and pricing after saving a part.</p>
                 </details>
                 <section id="component-supplier-form-panel" class="border rounded p-3 mt-4 d-none" aria-labelledby="component-supplier-form-title">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="h6 mb-0" id="component-supplier-form-title">Add Shopee supplier for <span id="component-supplier-part-name"></span></h3>
+                        <h3 class="h6 mb-0" id="component-supplier-form-title">Add supplier for <span id="component-supplier-part-name"></span></h3>
                         <button class="btn btn-sm btn-outline-secondary" id="component-supplier-cancel" type="button">Back to parts</button>
                     </div>
                     <form id="component-supplier-form" class="row g-3">
                         @csrf
+                        <div class="col-md-6">
+                            <label class="form-label" for="new-supplier-type">Supplier type</label>
+                            <select class="form-select" id="new-supplier-type" name="supplier_type" required>
+                                <option value="shopee">Shopee marketplace</option>
+                                <option value="other">Other supplier</option>
+                            </select>
+                        </div>
                         <div class="col-12">
                             <h4 class="h6 mb-0">Supplier details</h4>
                         </div>
@@ -335,7 +342,7 @@
                             <label class="form-label" for="new-supplier-website">Website</label>
                             <input class="form-control" id="new-supplier-website" name="website" type="url" maxlength="255">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" data-supplier-type-fields="shopee">
                             <label class="form-label" for="new-supplier-shop-url">Shopee shop account URL</label>
                             <input class="form-control" id="new-supplier-shop-url" name="shopee_shop_url" type="url" maxlength="2048" placeholder="https://shopee.com.my/..." required>
                         </div>
@@ -346,7 +353,7 @@
                         <div class="col-12">
                             <h4 class="h6 mb-0">Part listing and pricing</h4>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" data-supplier-type-fields="shopee">
                             <label class="form-label" for="new-supplier-product-url">Shopee product URL</label>
                             <input class="form-control" id="new-supplier-product-url" name="shopee_product_url" type="url" maxlength="2048" placeholder="https://shopee.com.my/..." required>
                         </div>
@@ -409,12 +416,24 @@
         const pageStatus = document.getElementById('component-search-page');
         const supplierPanel = document.getElementById('component-supplier-form-panel');
         const supplierForm = document.getElementById('component-supplier-form');
+        const supplierType = supplierForm.querySelector('select[name="supplier_type"]');
         const supplierStatus = document.getElementById('component-supplier-status');
         let activeRow = null;
         let supplierPart = null;
         let currentPage = 1;
         let lastPage = 1;
         let searchRequest = 0;
+        const updateSupplierTypeFields = () => {
+            const isShopee = supplierType.value === 'shopee';
+            supplierForm.querySelectorAll('[data-supplier-type-fields="shopee"]').forEach((field) => {
+                field.classList.toggle('d-none', !isShopee);
+                field.querySelectorAll('input').forEach((input) => {
+                    input.disabled = !isShopee;
+                });
+            });
+        };
+        supplierType.addEventListener('change', updateSupplierTypeFields);
+        updateSupplierTypeFields();
         const allRows = () => [...builds.querySelectorAll('.component-line')];
         const rowsForBuild = (build) => [...build.querySelectorAll('.component-line')];
 
@@ -1055,7 +1074,7 @@
                     const addSupplier = document.createElement('button');
                     addSupplier.type = 'button';
                     addSupplier.className = 'btn btn-sm btn-outline-secondary';
-                    addSupplier.textContent = part.supplier ? 'Add another supplier' : 'Add supplier';
+                    addSupplier.textContent = 'Add another supplier';
                     addSupplier.setAttribute('aria-label', `Add a supplier for ${part.name}`);
                     addSupplier.addEventListener('click', () => {
                         supplierPart = part;
@@ -1070,6 +1089,7 @@
                         supplierForm.reset();
                         supplierForm.querySelector('input[name="_token"]').value =
                             document.querySelector('meta[name="csrf-token"]')?.content || supplierForm.querySelector('input[name="_token"]').value;
+                        updateSupplierTypeFields();
                     });
                     actions.append(addSupplier);
                     const choose = document.createElement('button');

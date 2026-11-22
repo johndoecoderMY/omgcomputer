@@ -64,7 +64,7 @@
                         @error('tracking_number')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
-                        <div class="form-text">The customer can see this number and request live courier updates from their order page.</div>
+                        <div class="form-text">Enter the number provided by the delivery service after dispatch. The customer will see it under My orders; live courier updates are not fetched here.</div>
                     </form>
                 </div>
             </div>

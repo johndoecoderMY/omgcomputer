@@ -737,6 +737,7 @@ class BillingInventoryReportsTest extends TestCase
         $data['customer_email'] = 'discount-customer@example.test';
         $data['tax_rate'] = 6;
         $data['discount_amount'] = 5;
+        $data['items'][0]['discount_amount'] = 3;
 
         $this->actingAs($user)->get(route('shop.custom-pc-builder'))
             ->assertOk()
@@ -745,17 +746,21 @@ class BillingInventoryReportsTest extends TestCase
         $this->actingAs($user)->get(route('billing.create', ['type' => 'quotation']))
             ->assertOk()
             ->assertSee('name="discount_amount"', false)
-            ->assertSee('Deducted from the subtotal before tax.');
+            ->assertSee('name="items[0][discount_amount]"', false)
+            ->assertSee('Applied in addition to line discounts, before tax.');
         $this->actingAs($user)->post(route('billing.store'), $data)->assertSessionHasNoErrors();
         $document = BillingDocument::query()->firstOrFail();
         $this->assertSame(20.0, (float) $document->subtotal);
         $this->assertSame(5.0, (float) $document->discount_amount);
-        $this->assertSame(0.9, (float) $document->tax_amount);
-        $this->assertSame(15.9, (float) $document->total);
+        $this->assertSame(3.0, (float) $document->items()->firstOrFail()->discount_amount);
+        $this->assertSame(0.72, (float) $document->tax_amount);
+        $this->assertSame(12.72, (float) $document->total);
 
         $this->actingAs($user)->get(route('billing.documents.show', $document))
             ->assertOk()
             ->assertSee('Discount')
+            ->assertSee('Line discount')
+            ->assertSee('- RM 3.00')
             ->assertSee('- RM 5.00');
         $this->actingAs($user)->get(route('billing.documents.pdf', $document))
             ->assertOk()
@@ -763,18 +768,20 @@ class BillingInventoryReportsTest extends TestCase
 
         $data['issue_date'] = now()->toDateString();
         $data['discount_amount'] = 3;
+        $data['items'][0]['discount_amount'] = 2;
         $this->actingAs($user)->put(route('billing.documents.update', $document), $data)
             ->assertRedirect(route('billing.documents.show', $document));
         $document->refresh();
         $this->assertSame(3.0, (float) $document->discount_amount);
-        $this->assertSame(1.02, (float) $document->tax_amount);
-        $this->assertSame(18.02, (float) $document->total);
+        $this->assertSame(2.0, (float) $document->items()->firstOrFail()->discount_amount);
+        $this->assertSame(0.9, (float) $document->tax_amount);
+        $this->assertSame(15.9, (float) $document->total);
 
         $this->actingAs($user)->post(route('billing.documents.quotation-status', $document), ['status' => 'accepted']);
         $document->refresh();
         $this->assertSame('invoice', $document->type);
         $this->assertSame(3.0, (float) $document->discount_amount);
-        $this->assertSame(18.02, (float) $document->total);
+        $this->assertSame(15.9, (float) $document->total);
         $this->actingAs($user)->get(route('billing.documents.pdf', $document))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
@@ -786,14 +793,23 @@ class BillingInventoryReportsTest extends TestCase
             'hasValidCustomerEmail' => true,
         ])->render();
         $this->assertStringContainsString('Discount', $guestInvoiceHtml);
+        $this->assertStringContainsString('Line discount', $guestInvoiceHtml);
+        $this->assertStringContainsString('- RM 2.00', $guestInvoiceHtml);
         $this->assertStringContainsString('- RM 3.00', $guestInvoiceHtml);
 
         $this->actingAs($user)->post(route('billing.documents.payments.store', $document), [
-            'amount' => 18.02,
+            'amount' => 15.9,
             'method' => 'cash',
             'paid_at' => now()->toDateString(),
         ])->assertRedirect(route('billing.documents.show', $document));
         $payment = $document->payments()->firstOrFail();
+        Mail::assertSent(
+            BillingReceiptMail::class,
+            fn (BillingReceiptMail $mail): bool => $mail->hasTo('discount-customer@example.test')
+                && str_contains($mail->render(), 'Line discount')
+                && str_contains($mail->render(), '- RM 2.00')
+                && str_contains($mail->render(), '- RM 3.00'),
+        );
 
         $this->actingAs($user)->get(route('billing.receipts.pdf', $payment))
             ->assertOk()
@@ -804,8 +820,10 @@ class BillingInventoryReportsTest extends TestCase
             'logoData' => null,
         ])->render();
         $this->assertStringContainsString('Discount', $receiptHtml);
+        $this->assertStringContainsString('Line discount', $receiptHtml);
+        $this->assertStringContainsString('- RM 2.00', $receiptHtml);
         $this->assertStringContainsString('RM 3.00', $receiptHtml);
-        $this->assertStringContainsString('RM 18.02', $receiptHtml);
+        $this->assertStringContainsString('RM 15.90', $receiptHtml);
     }
 
     public function test_billing_discount_cannot_exceed_document_subtotal(): void
@@ -814,6 +832,27 @@ class BillingInventoryReportsTest extends TestCase
         $data = $this->documentData('quotation', null, 1);
         $data['discount_amount'] = 10.01;
 
+        $this->actingAs($user)->from(route('billing.create', ['type' => 'quotation']))
+            ->post(route('billing.store'), $data)
+            ->assertRedirect(route('billing.create', ['type' => 'quotation']))
+            ->assertSessionHasErrors('discount_amount');
+        $this->assertSame(0, BillingDocument::query()->count());
+    }
+
+    public function test_line_discount_cannot_exceed_its_line_total_or_make_combined_discounts_exceed_subtotal(): void
+    {
+        $user = $this->adminUser();
+        $data = $this->documentData('quotation', null, 1);
+        $data['items'][0]['discount_amount'] = 10.01;
+
+        $this->actingAs($user)->from(route('billing.create', ['type' => 'quotation']))
+            ->post(route('billing.store'), $data)
+            ->assertRedirect(route('billing.create', ['type' => 'quotation']))
+            ->assertSessionHasErrors('items.0.discount_amount');
+        $this->assertSame(0, BillingDocument::query()->count());
+
+        $data['items'][0]['discount_amount'] = 4;
+        $data['discount_amount'] = 6.01;
         $this->actingAs($user)->from(route('billing.create', ['type' => 'quotation']))
             ->post(route('billing.store'), $data)
             ->assertRedirect(route('billing.create', ['type' => 'quotation']))
@@ -1281,18 +1320,18 @@ class BillingInventoryReportsTest extends TestCase
         $document = $this->createIssuedInvoice($project, 75);
         $quotation = $this->createIssuedInvoice($project, 120, 'quotation');
         $draftQuotation = $this->createDraftQuotation($project, $customer->email);
-        $secondCustomer = User::factory()->create(['email' => 'second-customer@example.test']);
-        $secondCustomer->assignRole('customer');
-        $secondCustomer = Customer::query()->create([
+        $secondCustomerUser = User::factory()->create(['email' => 'second-customer@example.test']);
+        $secondCustomerUser->assignRole('customer');
+        $secondCustomerProfile = Customer::query()->create([
             'project_id' => $project->id,
             'name' => 'Second customer',
-            'email' => $secondCustomer->email,
+            'email' => $secondCustomerUser->email,
         ]);
         $secondCustomerDocument = $this->createIssuedInvoice(
             $project,
             90,
             'invoice',
-            $secondCustomer->email,
+            $secondCustomerProfile->email,
             'Second customer',
         );
         $otherCustomer = User::factory()->create(['email' => 'other-invoice-customer@example.test']);
@@ -1353,7 +1392,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->get(route('billing.documents.show', $unlinkedDocument))->assertNotFound();
         $this->get(route('billing.documents.show', $otherTicketDocument))->assertNotFound();
 
-        $this->actingAs($secondCustomer)
+        $this->actingAs($secondCustomerUser)
             ->getJson(route('billing.datatable', [
                 'draw' => 1,
                 'start' => 0,
@@ -1375,6 +1414,7 @@ class BillingInventoryReportsTest extends TestCase
 
     public function test_customer_project_billing_lists_sent_quotations_and_invoices_but_not_drafts(): void
     {
+        Mail::fake();
         $this->seed(PlannerRoleSeeder::class);
         $customer = User::factory()->create(['email' => 'billing-portal@example.test']);
         $customer->assignRole('customer');
@@ -1392,8 +1432,13 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee($invoice->number)
             ->assertSee($quotation->number)
             ->assertDontSee($draft->number);
-        $this->post(route('billing.documents.quotation-status', $quotation), ['status' => 'accepted'])
-            ->assertForbidden();
+        $this->actingAs($customer)
+            ->post(route('billing.documents.quotation-status', $quotation), ['status' => 'accepted'])
+            ->assertRedirect(route('billing.documents.show', $quotation));
+        $this->assertSame('invoice', $quotation->fresh()->type);
+        $this->assertSame('issued', $quotation->fresh()->status);
+        $this->assertStringStartsWith('INV-', $quotation->fresh()->number);
+        Mail::assertSent(InvoiceMail::class);
     }
 
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void

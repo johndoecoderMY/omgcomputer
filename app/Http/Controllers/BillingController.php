@@ -225,6 +225,7 @@ class BillingController extends Controller
                 'quantity' => $item->quantity,
                 'unit_price' => $item->unit_price,
                 'unit_cost' => $item->unit_cost,
+                'discount_amount' => $item->discount_amount,
             ])->all(),
             'type' => $document->type,
             'formAction' => route('billing.documents.update', $document),
@@ -422,6 +423,7 @@ class BillingController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'items.*.unit_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
             'items.*.build_group' => ['nullable', 'string', 'max:20'],
         ]);
 
@@ -579,7 +581,8 @@ class BillingController extends Controller
             ]);
 
             $subtotal = 0;
-            foreach ($data['items'] as $item) {
+            $itemDiscountTotal = 0;
+            foreach ($data['items'] as $index => $item) {
                 $part = ! empty($item['inventory_part_id'])
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
                     : null;
@@ -591,7 +594,14 @@ class BillingController extends Controller
                     : null;
                 $price = round((float) ($item['unit_price'] ?? $component?->selling_price ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);
+                $lineDiscount = round((float) ($item['discount_amount'] ?? 0), 2);
+                if ($lineDiscount > $lineTotal) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.discount_amount" => 'The line discount cannot be greater than the line total.',
+                    ]);
+                }
                 $subtotal += $lineTotal;
+                $itemDiscountTotal += $lineDiscount;
 
                 $document->items()->create([
                     'inventory_part_id' => $part?->id,
@@ -601,16 +611,18 @@ class BillingController extends Controller
                     'unit_price' => $price,
                     'unit_cost' => $item['unit_cost'] ?? null,
                     'line_total' => $lineTotal,
+                    'discount_amount' => $lineDiscount,
                 ]);
             }
 
             $discountAmount = round((float) ($data['discount_amount'] ?? 0), 2);
-            if ($discountAmount > $subtotal) {
+            $subtotalAfterItemDiscounts = round($subtotal - $itemDiscountTotal, 2);
+            if ($discountAmount > $subtotalAfterItemDiscounts) {
                 throw ValidationException::withMessages([
-                    'discount_amount' => 'The discount cannot be greater than the subtotal.',
+                    'discount_amount' => 'The overall discount cannot be greater than the subtotal after line discounts.',
                 ]);
             }
-            $taxableSubtotal = round($subtotal - $discountAmount, 2);
+            $taxableSubtotal = round($subtotalAfterItemDiscounts - $discountAmount, 2);
             $taxAmount = round($taxableSubtotal * (float) $data['tax_rate'] / 100, 2);
             $document->update([
                 'number' => ($type === 'quotation' ? 'QUO-' : 'INV-')
@@ -666,6 +678,7 @@ class BillingController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'items.*.unit_cost' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'items.*.discount_amount' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999.99'],
         ]);
 
         $this->validateLineItems($data['items']);
@@ -699,6 +712,7 @@ class BillingController extends Controller
             $locked->items()->delete();
 
             $subtotal = 0;
+            $itemDiscountTotal = 0;
             foreach ($data['items'] as $index => $item) {
                 $part = ! empty($item['inventory_part_id'])
                     ? InventoryPart::query()->findOrFail($item['inventory_part_id'])
@@ -711,7 +725,14 @@ class BillingController extends Controller
                     : null;
                 $price = round((float) ($item['unit_price'] ?? $component?->selling_price ?? $part?->selling_price ?? $product['billing_price'] ?? 0), 2);
                 $lineTotal = round($price * (int) $item['quantity'], 2);
+                $lineDiscount = round((float) ($item['discount_amount'] ?? 0), 2);
+                if ($lineDiscount > $lineTotal) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.discount_amount" => 'The line discount cannot be greater than the line total.',
+                    ]);
+                }
                 $subtotal += $lineTotal;
+                $itemDiscountTotal += $lineDiscount;
                 $locked->items()->create([
                     'inventory_part_id' => $part?->id,
                     'custom_pc_component_id' => $component?->id,
@@ -720,16 +741,18 @@ class BillingController extends Controller
                     'unit_price' => $price,
                     'unit_cost' => $item['unit_cost'] ?? $existingUnitCosts[$index] ?? null,
                     'line_total' => $lineTotal,
+                    'discount_amount' => $lineDiscount,
                 ]);
             }
 
             $discountAmount = round((float) ($data['discount_amount'] ?? 0), 2);
-            if ($discountAmount > $subtotal) {
+            $subtotalAfterItemDiscounts = round($subtotal - $itemDiscountTotal, 2);
+            if ($discountAmount > $subtotalAfterItemDiscounts) {
                 throw ValidationException::withMessages([
-                    'discount_amount' => 'The discount cannot be greater than the subtotal.',
+                    'discount_amount' => 'The overall discount cannot be greater than the subtotal after line discounts.',
                 ]);
             }
-            $taxableSubtotal = round($subtotal - $discountAmount, 2);
+            $taxableSubtotal = round($subtotalAfterItemDiscounts - $discountAmount, 2);
             $taxAmount = round($taxableSubtotal * (float) $data['tax_rate'] / 100, 2);
             $locked->update([
                 'subtotal' => $subtotal,

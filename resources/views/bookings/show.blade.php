@@ -39,6 +39,10 @@
                 <dl class="row mb-0 gy-3">
                     <dt class="col-sm-3">Status</dt>
                     <dd class="col-sm-9"><x-status-badge :status="$booking->status" :label="\App\Models\Booking::STATUSES[$booking->status] ?? $booking->status" /></dd>
+                    @if (! auth()->user()->hasRole('customer') && $booking->status === 'cancelled' && $booking->cancellation_reason)
+                        <dt class="col-sm-3">Cancellation reason</dt>
+                        <dd class="col-sm-9" style="white-space: pre-wrap">{{ $booking->cancellation_reason }}</dd>
+                    @endif
                     <dt class="col-sm-3">Customer</dt><dd class="col-sm-9">{{ $booking->customer_name }}</dd>
                     <dt class="col-sm-3">Email</dt><dd class="col-sm-9 text-break">{{ $booking->customer_email }}</dd>
                     <dt class="col-sm-3">Phone</dt><dd class="col-sm-9">{{ $booking->customer_phone ?: '—' }}</dd>

@@ -29,7 +29,7 @@
                     <div class="table-responsive mb-4">
                         <table class="table table-bordered align-middle">
                             <thead>
-                                <tr><th>{{ __('Description') }}</th><th class="text-end">{{ __('Qty') }}</th><th class="text-end">{{ __('Amount') }}</th></tr>
+                                <tr><th>{{ __('Description') }}</th><th class="text-end">{{ __('Qty') }}</th><th class="text-end">{{ __('Amount') }}</th><th class="text-end">{{ __('billing.pdf.item_discount') }}</th></tr>
                             </thead>
                             <tbody>
                                 @foreach ($document->items as $item)
@@ -37,20 +37,24 @@
                                         <td>{{ $item->description }}</td>
                                         <td class="text-end">{{ $item->quantity }}</td>
                                         <td class="text-end">RM {{ number_format($item->line_total, 2) }}</td>
+                                        <td class="text-end">{{ (float) $item->discount_amount > 0 ? '- RM '.number_format($item->discount_amount, 2) : '—' }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
-                                <tr><td colspan="2" class="text-end">{{ __('Subtotal') }}</td><td class="text-end">RM {{ number_format($document->subtotal, 2) }}</td></tr>
+                                <tr><td colspan="3" class="text-end">{{ __('Subtotal') }}</td><td class="text-end">RM {{ number_format($document->subtotal, 2) }}</td></tr>
+                                @if ($document->items->sum('discount_amount') > 0)
+                                    <tr><td colspan="3" class="text-end">{{ __('billing.pdf.item_discount') }}</td><td class="text-end">- RM {{ number_format($document->items->sum('discount_amount'), 2) }}</td></tr>
+                                @endif
                                 @if ((float) $document->discount_amount > 0)
-                                    <tr><td colspan="2" class="text-end">{{ __('Discount') }}</td><td class="text-end">- RM {{ number_format($document->discount_amount, 2) }}</td></tr>
+                                    <tr><td colspan="3" class="text-end">{{ __('Discount') }}</td><td class="text-end">- RM {{ number_format($document->discount_amount, 2) }}</td></tr>
                                 @endif
                                 @if ((float) $document->tax_amount > 0)
-                                    <tr><td colspan="2" class="text-end">{{ __('Tax') }} ({{ number_format($document->tax_rate, 2) }}%)</td><td class="text-end">RM {{ number_format($document->tax_amount, 2) }}</td></tr>
+                                    <tr><td colspan="3" class="text-end">{{ __('Tax') }} ({{ number_format($document->tax_rate, 2) }}%)</td><td class="text-end">RM {{ number_format($document->tax_amount, 2) }}</td></tr>
                                 @endif
-                                <tr><th colspan="2" class="text-end">{{ __('Invoice total') }}</th><th class="text-end">RM {{ number_format($document->total, 2) }}</th></tr>
-                                <tr><td colspan="2" class="text-end">{{ __('Paid') }}</td><td class="text-end">RM {{ number_format($document->paid_amount, 2) }}</td></tr>
-                                <tr class="fw-bold"><td colspan="2" class="text-end">{{ __('Balance due') }}</td><td class="text-end">RM {{ number_format($document->balance, 2) }}</td></tr>
+                                <tr><th colspan="3" class="text-end">{{ __('Invoice total') }}</th><th class="text-end">RM {{ number_format($document->total, 2) }}</th></tr>
+                                <tr><td colspan="3" class="text-end">{{ __('Paid') }}</td><td class="text-end">RM {{ number_format($document->paid_amount, 2) }}</td></tr>
+                                <tr class="fw-bold"><td colspan="3" class="text-end">{{ __('Balance due') }}</td><td class="text-end">RM {{ number_format($document->balance, 2) }}</td></tr>
                             </tfoot>
                         </table>
                     </div>

@@ -232,7 +232,7 @@
                             </div>
                         </div>
                         <div class="col-lg-5">
-                            <img src="{{ asset('assets/img/omg/hero-technician.jpg') }}" alt="{{ __('Technician working on a laptop during a repair process') }}" width="900" height="700" loading="eager" decoding="async">
+                            <img src="{{ asset('assets/img/omg/repair-board-work.jpg') }}" alt="{{ __('Technician repairing a computer motherboard') }}" width="900" height="700" loading="eager" decoding="async">
                         </div>
                     </div>
                 </div>

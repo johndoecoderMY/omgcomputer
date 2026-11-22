@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BillingDocumentItem extends Model
 {
     protected $fillable = [
-        'billing_document_id', 'inventory_part_id', 'custom_pc_component_id', 'description', 'quantity', 'unit_price', 'unit_cost', 'line_total',
+        'billing_document_id', 'inventory_part_id', 'custom_pc_component_id', 'description', 'quantity', 'unit_price', 'unit_cost', 'line_total', 'discount_amount',
     ];
 
     protected function casts(): array
@@ -17,6 +17,7 @@ class BillingDocumentItem extends Model
             'unit_price' => 'decimal:2',
             'unit_cost' => 'decimal:2',
             'line_total' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
         ];
     }
 

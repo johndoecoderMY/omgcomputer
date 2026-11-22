@@ -61,6 +61,7 @@ return [
         'quantity' => 'Qty',
         'unit_price' => 'Unit price',
         'amount' => 'Amount',
+        'item_discount' => 'Line discount',
         'subtotal' => 'Subtotal',
         'discount' => 'Discount',
         'tax' => 'Tax',

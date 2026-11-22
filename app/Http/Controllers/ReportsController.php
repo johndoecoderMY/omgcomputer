@@ -43,7 +43,7 @@ class ReportsController extends Controller
         $documents = $this->salesDocuments()->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]);
         $invoices = (clone $documents)->latest('issue_date')->paginate(50)->withQueryString();
         $topItems = BillingDocumentItem::query()
-            ->selectRaw('billing_document_items.description, SUM(billing_document_items.quantity) as units, SUM(billing_document_items.line_total) as revenue')
+            ->selectRaw('billing_document_items.description, SUM(billing_document_items.quantity) as units, SUM(billing_document_items.line_total - billing_document_items.discount_amount) as revenue')
             ->whereHas('document', fn ($query) => $query->where('type', 'invoice')
                 ->whereIn('status', ['issued', 'part_paid', 'paid'])
                 ->whereBetween('issue_date', [$from->toDateString(), $to->toDateString()]))

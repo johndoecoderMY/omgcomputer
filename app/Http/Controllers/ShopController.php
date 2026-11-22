@@ -11,20 +11,17 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Services\ChipCollect;
 use App\Services\InventoryStock;
-use App\Services\ParcelTrackingService;
 use App\Services\WorkspaceNotifier;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use RuntimeException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -300,16 +297,32 @@ class ShopController extends Controller
     {
         abort_unless(in_array($part->type, $this->customPcBuilderComponentTypes(), true), 404);
 
-        $shopData = $request->validate([
-            'shopee_shop_url' => ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
+        $supplierType = $request->input('supplier_type', 'shopee');
+        $request->merge(['supplier_type' => $supplierType]);
+        $shopUrlRules = $supplierType === 'shopee'
+            ? ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (! is_string($value) || ! $this->isShopeeUrl($value)) {
                     $fail('The shop account URL must be a Shopee link.');
                 }
-            }],
+            }]
+            : ['prohibited'];
+        $productUrlRules = $supplierType === 'shopee'
+            ? ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || ! $this->isShopeeUrl($value)) {
+                    $fail('The product URL must be a Shopee link.');
+                }
+            }]
+            : ['prohibited'];
+        $shopData = $request->validate([
+            'supplier_type' => ['required', Rule::in(['shopee', 'other'])],
+            'shopee_shop_url' => $shopUrlRules,
+            'shopee_product_url' => $productUrlRules,
         ]);
-        $shopUrl = rtrim($shopData['shopee_shop_url'], '/');
-        $shopUrlHash = hash('sha256', $shopUrl);
-        $existingSupplier = Supplier::query()->where('shopee_shop_url_hash', $shopUrlHash)->first();
+        $shopUrl = $supplierType === 'shopee' ? rtrim($shopData['shopee_shop_url'], '/') : null;
+        $shopUrlHash = $shopUrl ? hash('sha256', $shopUrl) : null;
+        $existingSupplier = $shopUrlHash
+            ? Supplier::query()->where('shopee_shop_url_hash', $shopUrlHash)->first()
+            : null;
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('suppliers', 'name')->ignore($existingSupplier?->id)],
@@ -318,11 +331,6 @@ class ShopController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'website' => ['nullable', 'url:http,https', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'shopee_product_url' => ['required', 'url:http,https', 'max:2048', function (string $attribute, mixed $value, \Closure $fail): void {
-                if (! is_string($value) || ! $this->isShopeeUrl($value)) {
-                    $fail('The product URL must be a Shopee link.');
-                }
-            }],
             'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'unit_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
         ]);
@@ -342,7 +350,7 @@ class ShopController extends Controller
 
         $part->suppliers()->syncWithoutDetaching([
             $supplier->id => [
-                'shopee_product_url' => $data['shopee_product_url'],
+                'shopee_product_url' => $shopData['shopee_product_url'] ?? null,
                 'cost_price' => $data['cost_price'],
                 'unit_price' => $data['unit_price'],
             ],
@@ -354,6 +362,7 @@ class ShopController extends Controller
             'supplier' => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
+                'type' => $supplierType,
                 'shopee_shop_url' => $supplier->shopee_shop_url,
                 'cost_price' => (float) $data['cost_price'],
                 'unit_price' => (float) $data['unit_price'],
@@ -807,32 +816,13 @@ class ShopController extends Controller
 
         return redirect()->route('shop.orders.show', $order)
             ->with('success', $order->tracking_number
-                ? 'Tracking number saved. The customer can now view parcel updates.'
+                ? 'Tracking number saved. The customer can view it under My orders.'
                 : 'Tracking number removed from the order.');
     }
 
     public function customerTracking(): View
     {
-        return view('shop.tracking', [
-            'apiKeyConfigured' => filled(config('services.parcel_tracking.api_key')),
-        ]);
-    }
-
-    public function trackCustomerParcel(Request $request, ParcelTrackingService $tracking): RedirectResponse
-    {
-        $data = $request->validate([
-            'tracking_number' => ['required', 'string', 'min:3', 'max:100'],
-        ]);
-        $number = trim($data['tracking_number']);
-        try {
-            return back()->withInput(['tracking_number' => $number])->with(
-                'customer_tracking_result',
-                $this->cachedParcelTracking($tracking, $number),
-            );
-        } catch (RuntimeException $exception) {
-            return back()->withInput(['tracking_number' => $number])
-                ->with('customer_tracking_error', $exception->getMessage());
-        }
+        return view('shop.tracking');
     }
 
     public function customerOrders(Request $request): View
@@ -852,32 +842,7 @@ class ShopController extends Controller
     {
         $order = $this->customerOwnedOrder($request, $order)->load('items');
 
-        return view('shop.orders.customer-show', [
-            'order' => $order,
-            'tracking' => $this->sessionTrackingForOrder($request, $order),
-        ]);
-    }
-
-    public function refreshCustomerOrderTracking(
-        Request $request,
-        ShopOrder $order,
-        ParcelTrackingService $tracking,
-    ): RedirectResponse {
-        $order = $this->customerOwnedOrder($request, $order);
-        if (blank($order->tracking_number)) {
-            return redirect()->route('shop.my-orders.show', $order)
-                ->with('error', 'Tracking is not available for this order yet.');
-        }
-
-        try {
-            return redirect()->route('shop.my-orders.show', $order)->with(
-                'customer_parcel_tracking',
-                $this->cachedParcelTracking($tracking, $order->tracking_number),
-            );
-        } catch (RuntimeException $exception) {
-            return redirect()->route('shop.my-orders.show', $order)
-                ->with('customer_tracking_error', $exception->getMessage());
-        }
+        return view('shop.orders.customer-show', compact('order'));
     }
 
     private function customerOwnedOrder(Request $request, ShopOrder $order): ShopOrder
@@ -887,24 +852,6 @@ class ShopController extends Controller
         abort_unless($order->user_id === $user->id || $emailMatches, 404);
 
         return $order;
-    }
-
-    private function sessionTrackingForOrder(Request $request, ShopOrder $order): ?array
-    {
-        $tracking = $request->session()->get('customer_parcel_tracking');
-        if (! is_array($tracking)
-            || strcasecmp((string) ($tracking['number'] ?? ''), (string) $order->tracking_number) !== 0) {
-            return null;
-        }
-
-        return $tracking;
-    }
-
-    private function cachedParcelTracking(ParcelTrackingService $tracking, string $number): array
-    {
-        $cacheKey = 'parcel-tracking:'.hash('sha256', strtoupper($number));
-
-        return Cache::remember($cacheKey, now()->addMinutes(5), fn (): array => $tracking->track($number));
     }
 
     public function ordersDatatable(Request $request)

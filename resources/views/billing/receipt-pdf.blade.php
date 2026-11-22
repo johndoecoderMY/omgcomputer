@@ -68,6 +68,7 @@
                 <th class="right">{{ __('billing.pdf.quantity') }}</th>
                 <th class="right">{{ __('billing.pdf.unit_price') }}</th>
                 <th class="right">{{ __('billing.pdf.amount') }}</th>
+                <th class="right">{{ __('billing.pdf.item_discount') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -77,6 +78,7 @@
                     <td class="right">{{ $item->quantity }}</td>
                     <td class="right">RM {{ number_format((float) $item->unit_price, 2) }}</td>
                     <td class="right">RM {{ number_format((float) $item->line_total, 2) }}</td>
+                    <td class="right">{{ (float) $item->discount_amount > 0 ? '- RM '.number_format((float) $item->discount_amount, 2) : '—' }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -85,6 +87,9 @@
     <table class="totals">
         <tbody>
             <tr><td>{{ __('billing.pdf.subtotal') }}</td><td class="right">RM {{ number_format((float) $payment->document->subtotal, 2) }}</td></tr>
+            @if ($payment->document->items->sum('discount_amount') > 0)
+                <tr><td>{{ __('billing.pdf.item_discount') }}</td><td class="right">- RM {{ number_format($payment->document->items->sum('discount_amount'), 2) }}</td></tr>
+            @endif
             @if ((float) $payment->document->discount_amount > 0)
                 <tr><td>{{ __('billing.pdf.discount') }}</td><td class="right">- RM {{ number_format((float) $payment->document->discount_amount, 2) }}</td></tr>
             @endif

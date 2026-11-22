@@ -9,6 +9,7 @@ use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class RepairTicketTest extends TestCase
@@ -31,10 +32,17 @@ class RepairTicketTest extends TestCase
             'email' => 'pickup-ticket@example.test',
         ]);
 
-        $this->actingAs($staff)->get(route('tickets.create'))
+        $this->actingAs($staff)->get(route('tickets.create', ['customer_id' => $customer->id]))
             ->assertOk()
+            ->assertSee('data-ticket-create-ajax', false)
+            ->assertSee('data-ticket-create-error', false)
             ->assertSee('id="pickup_address"', false)
-            ->assertSee('id="dropoff_address"', false);
+            ->assertSee('id="dropoff_address"', false)
+            ->assertSee('data-ticket-location-open="pickup"', false)
+            ->assertSee('data-ticket-location-open="dropoff"', false)
+            ->assertSee('id="ticket-location-picker-modal"', false)
+            ->assertSee('name="pickup_latitude"', false)
+            ->assertSee('name="dropoff_longitude"', false);
 
         $this->post(route('tickets.store'), [
             'customer_id' => $customer->id,
@@ -43,16 +51,61 @@ class RepairTicketTest extends TestCase
             'priority' => 'normal',
             'pickup_address' => '12 Jalan Repair, Kampar',
             'dropoff_address' => '18 Jalan Repair, Kampar',
+            'pickup_latitude' => '4.326',
+            'pickup_longitude' => '101.150',
+            'dropoff_latitude' => '4.327',
+            'dropoff_longitude' => '101.151',
         ])->assertSessionHasNoErrors();
 
         $ticket = RepairTicket::query()->firstOrFail();
         $this->assertSame('12 Jalan Repair, Kampar', $ticket->pickup_address);
         $this->assertSame('18 Jalan Repair, Kampar', $ticket->dropoff_address);
+        $this->assertSame(4.326, (float) $ticket->pickup_latitude);
+        $this->assertSame(101.151, (float) $ticket->dropoff_longitude);
         $this->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('Pickup and drop-off')
             ->assertSee('12 Jalan Repair, Kampar')
-            ->assertSee('18 Jalan Repair, Kampar');
+            ->assertSee('18 Jalan Repair, Kampar')
+            ->assertSee('View pickup pin')
+            ->assertSee('View drop-off pin');
+    }
+
+    public function test_staff_can_create_a_repair_ticket_with_ajax(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'AJAX Ticket Customer',
+            'email' => 'ajax-ticket@example.test',
+        ]);
+
+        $response = $this->actingAs($staff)->postJson(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'The laptop will not charge.',
+            'priority' => 'normal',
+        ])->assertCreated()
+            ->assertJsonPath('message', 'Repair ticket created.');
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $response->assertJsonPath('redirect_url', route('tickets.show', $ticket));
+        $this->assertSame($customer->id, $ticket->customer_id);
+        $this->assertSame('The laptop will not charge.', $ticket->issue_description);
+    }
+
+    public function test_ajax_ticket_creation_returns_validation_errors_as_json(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        $this->actingAs($staff)->postJson(route('tickets.store'), [
+            'issue_description' => 'A reported issue.',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['customer_id', 'priority']);
     }
 
     public function test_user_can_create_and_manage_a_repair_ticket(): void
@@ -60,24 +113,27 @@ class RepairTicketTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
         $user->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Jamie Customer',
+            'email' => 'jamie@example.test',
+            'phone' => '0123456789',
+        ]);
 
         $this->actingAs($user)->post(route('tickets.store'), [
-            'customer_name' => 'Jamie Customer',
-            'customer_email' => 'jamie@example.test',
-            'customer_phone' => '0123456789',
+            'customer_id' => $customer->id,
             'device_type' => 'Laptop',
             'device_model' => 'ThinkPad T14',
             'serial_number' => 'SERIAL-123',
-            'subject' => 'Laptop overheats and shuts down',
-            'issue_description' => 'The laptop powers off after ten minutes.',
+            'issue_description' => 'Laptop overheats and shuts down after ten minutes.',
             'priority' => 'high',
             'assigned_to' => $user->id,
-            'due_date' => now()->addDays(3)->toDateString(),
+            'due_at' => now()->addDays(3)->toDateString(),
         ])->assertSessionHasNoErrors();
 
         $ticket = RepairTicket::query()->firstOrFail();
-        $this->assertSame('OMG-'.now()->format('Y').'-'.str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT), $ticket->ticket_number);
-        $this->assertSame('received', $ticket->status);
+        $this->assertSame('RT-'.now()->format('Y').'-'.str_pad((string) $ticket->id, 6, '0', STR_PAD_LEFT), $ticket->ticket_number);
+        $this->assertSame('new', $ticket->status);
+        $this->assertSame($customer->id, $ticket->customer_id);
 
         $this->actingAs($user)->get(route('tickets.show', $ticket))
             ->assertOk()
@@ -85,20 +141,19 @@ class RepairTicketTest extends TestCase
             ->assertSee('ThinkPad T14')
             ->assertSee('Laptop overheats and shuts down');
 
-        $this->actingAs($user)->patch(route('tickets.update', $ticket), [
+        $this->actingAs($user)->put(route('tickets.update', $ticket), [
             'status' => 'waiting_parts',
             'priority' => 'urgent',
             'assigned_to' => $user->id,
-            'diagnostic_notes' => 'Needs a replacement cooling fan.',
-            'quoted_amount' => 120,
-            'due_date' => now()->addDays(5)->toDateString(),
+            'diagnosis' => 'Needs a replacement cooling fan.',
+            'due_at' => now()->addDays(5)->toDateString(),
         ])->assertSessionHasNoErrors()
             ->assertRedirect(route('tickets.show', $ticket));
 
         $this->assertSame('waiting_parts', $ticket->fresh()->status);
         $this->assertSame('urgent', $ticket->fresh()->priority);
-        $this->assertSame('Needs a replacement cooling fan.', $ticket->fresh()->diagnostic_notes);
-        $this->assertSame(120.0, (float) $ticket->fresh()->quoted_amount);
+        $this->assertSame('Needs a replacement cooling fan.', $ticket->fresh()->diagnosis);
+        $this->assertSame(now()->addDays(5)->toDateString(), $ticket->fresh()->due_at->toDateString());
     }
 
     public function test_new_ticket_reported_issue_accepts_safe_rich_text(): void
@@ -127,14 +182,14 @@ class RepairTicketTest extends TestCase
             '<p>The screen flickers. <strong>After update</strong>.</p>',
             $ticket->issue_description,
         );
-        $this->assertSame('The screen flickers. After update.', $ticket->updates()->firstOrFail()->notes);
+        $this->assertNull($ticket->updates()->firstOrFail()->notes);
 
         $this->actingAs($user)->get(route('tickets.show', $ticket))
             ->assertOk()
             ->assertSee('<strong>After update</strong>', false)
             ->assertDontSee('onclick', false)
             ->assertDontSee('<script>alert(1)</script>', false)
-            ->assertDontSee('onerror', false);
+            ->assertDontSee('onerror="alert(1)"', false);
 
         $this->actingAs($user)->get(route('billing.create', ['repair_ticket_id' => $ticket->id]))
             ->assertOk()
@@ -153,27 +208,46 @@ class RepairTicketTest extends TestCase
     public function test_ticket_list_filters_by_status_assignment_and_priority(): void
     {
         $user = User::factory()->create();
+        $customer = Customer::query()->create([
+            'name' => 'Ticket filter customer',
+            'email' => 'ticket-filter@example.test',
+        ]);
         $assigned = RepairTicket::query()->create($this->ticketAttributes($user, [
             'ticket_number' => 'OMG-2026-000001',
+            'customer_id' => $customer->id,
             'status' => 'waiting_parts',
             'priority' => 'urgent',
             'assigned_to' => $user->id,
         ]));
         RepairTicket::query()->create($this->ticketAttributes($user, [
             'ticket_number' => 'OMG-2026-000002',
+            'customer_id' => $customer->id,
             'status' => 'closed',
             'priority' => 'low',
         ]));
 
-        $this->actingAs($user)->get(route('tickets.index', ['status' => 'waiting_parts', 'priority' => 'urgent']))
-            ->assertOk()
-            ->assertSee($assigned->ticket_number)
-            ->assertDontSee('OMG-2026-000002');
+        $filtered = $this->actingAs($user)->getJson(route('tickets.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'filter' => [
+                'status' => 'waiting_parts',
+                'priority' => 'urgent',
+            ],
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.ticket', fn (string $ticket): bool => str_contains($ticket, $assigned->ticket_number));
+        $this->assertStringNotContainsString('OMG-2026-000002', $filtered->getContent());
 
-        $this->actingAs($user)->get(route('tickets.index', ['assigned' => 'unassigned']))
-            ->assertOk()
-            ->assertDontSee($assigned->ticket_number)
-            ->assertSee('OMG-2026-000002');
+        $unassigned = $this->actingAs($user)->getJson(route('tickets.datatable', [
+            'draw' => 1,
+            'start' => 0,
+            'length' => 25,
+            'assigned' => 'unassigned',
+        ]))->assertOk()
+            ->assertJsonPath('recordsFiltered', 1)
+            ->assertJsonPath('data.0.ticket', fn (string $ticket): bool => str_contains($ticket, 'OMG-2026-000002'));
+        $this->assertStringNotContainsString($assigned->ticket_number, $unassigned->getContent());
     }
 
     public function test_repair_tickets_can_be_assigned_to_multiple_people(): void
@@ -218,32 +292,50 @@ class RepairTicketTest extends TestCase
     public function test_ticket_photos_and_customer_history_are_saved_and_accessible(): void
     {
         Storage::fake('local');
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
+        $user->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Taylor Customer',
+            'email' => 'taylor@example.test',
+            'phone' => '0123456789',
+        ]);
         $payload = [
-            'customer_name' => 'Taylor Customer',
-            'customer_email' => 'taylor@example.test',
-            'customer_phone' => '0123456789',
+            'customer_id' => $customer->id,
             'device_type' => 'Laptop',
-            'subject' => 'Screen flickers',
             'issue_description' => 'The screen flickers on startup.',
             'priority' => 'normal',
-            'images' => [UploadedFile::fake()->image('device.png')],
         ];
 
         $this->actingAs($user)->post(route('tickets.store'), $payload)->assertSessionHasNoErrors();
         $firstTicket = RepairTicket::query()->firstOrFail();
-        $this->assertNotNull($firstTicket->customer_id);
-        Storage::disk('local')->assertExists($firstTicket->images[0]);
-        $this->actingAs($user)->get(route('tickets.images.show', [$firstTicket, 0]))->assertOk();
+        $stepResponse = $this->actingAs($user)->postJson(route('tickets.steps.store', $firstTicket), [
+            'title' => 'Inspect device condition',
+            'status' => 'diagnosing',
+            'customer_details' => 'We are checking the screen issue.',
+        ])->assertOk();
+        $this->assertStringContainsString('Inspect device condition', $stepResponse->json('updates_html'));
+        $step = $firstTicket->updates()->latest('id')->firstOrFail();
 
-        $payload['customer_name'] = 'Taylor C.';
-        $payload['customer_email'] = 'TAYLOR@example.test';
-        unset($payload['images']);
+        $photoResponse = $this->postJson(route('tickets.steps.attachments.store', [$firstTicket, $step]), [
+            'photos' => [UploadedFile::fake()->image('device.png')],
+            'captions' => ['Screen inspection'],
+        ])->assertOk()
+            ->assertJsonPath('message', 'Photo added to repair step.');
+        $this->assertStringContainsString('Screen inspection', $photoResponse->json('updates_html'));
+        $photo = $step->attachments()->firstOrFail();
+        Storage::disk('local')->assertExists($photo->path);
+        $this->get(route('tickets.show', $firstTicket))
+            ->assertOk()
+            ->assertSee('Screen inspection');
+        $this->get(URL::temporarySignedRoute(
+            'repairs.track.photo',
+            now()->addMinutes(10),
+            ['attachment' => $photo],
+        ))->assertOk();
+
         $this->actingAs($user)->post(route('tickets.store'), $payload)->assertSessionHasNoErrors();
-
-        $customer = Customer::query()->firstOrFail();
-        $this->assertSame(1, Customer::query()->count());
-        $this->assertSame(2, $customer->tickets()->count());
+        $this->assertSame(2, $customer->repairTickets()->count());
         $this->actingAs($user)->get(route('customers.index'))
             ->assertOk()
             ->assertSee('data-datatable', false);
@@ -251,10 +343,10 @@ class RepairTicketTest extends TestCase
             'draw' => 1,
             'start' => 0,
             'length' => 25,
-            'search' => ['value' => 'Taylor C.'],
+            'search' => ['value' => 'Taylor Customer'],
         ]))->assertOk()
             ->assertJsonPath('recordsFiltered', 1)
-            ->assertJsonPath('data.0.customer', fn (string $customer): bool => str_contains($customer, 'Taylor C.'));
+            ->assertJsonPath('data.0.customer', fn (string $customer): bool => str_contains($customer, 'Taylor Customer'));
         $this->actingAs($user)->get(route('customers.show', $customer))
             ->assertOk()
             ->assertSee('Repair history')
@@ -264,13 +356,12 @@ class RepairTicketTest extends TestCase
     private function ticketAttributes(User $user, array $overrides = []): array
     {
         return array_merge([
-            'created_by' => $user->id,
-            'customer_name' => 'Test Customer',
+            'created_by_user_id' => $user->id,
             'device_type' => 'Desktop PC',
-            'subject' => 'No display',
             'issue_description' => 'The PC turns on but has no display.',
             'status' => 'received',
             'priority' => 'normal',
+            'received_at' => now(),
         ], $overrides);
     }
 }

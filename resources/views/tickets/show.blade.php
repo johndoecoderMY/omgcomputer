@@ -113,10 +113,14 @@
                 @php
                     $pickupAddress = $ticket->pickup_address ?? $ticket->booking?->pickup_address;
                     $dropoffAddress = $ticket->dropoff_address ?? $ticket->booking?->dropoff_address;
+                    $pickupLatitude = $ticket->pickup_latitude ?? $ticket->booking?->pickup_latitude;
+                    $pickupLongitude = $ticket->pickup_longitude ?? $ticket->booking?->pickup_longitude;
+                    $dropoffLatitude = $ticket->dropoff_latitude ?? $ticket->booking?->dropoff_latitude;
+                    $dropoffLongitude = $ticket->dropoff_longitude ?? $ticket->booking?->dropoff_longitude;
                     $customerDropoffAtShop = (bool) $ticket->booking?->customer_dropoff_at_shop;
                 @endphp
-                @if (! auth()->user()->hasRole('customer') || $customerDropoffAtShop || $pickupAddress || $dropoffAddress || $ticket->booking?->pickup_latitude !== null || $ticket->booking?->dropoff_latitude !== null)
-                    <div class="card mb-3 @if (! $customerDropoffAtShop && ! $pickupAddress && ! $dropoffAddress && $ticket->booking?->pickup_latitude === null && $ticket->booking?->dropoff_latitude === null) d-none @endif" id="ticket-location-card">
+                @if (! auth()->user()->hasRole('customer') || $customerDropoffAtShop || $pickupAddress || $dropoffAddress || $pickupLatitude !== null || $dropoffLatitude !== null)
+                    <div class="card mb-3 @if (! $customerDropoffAtShop && ! $pickupAddress && ! $dropoffAddress && $pickupLatitude === null && $dropoffLatitude === null) d-none @endif" id="ticket-location-card">
                         <div class="card-header fw-semibold">{{ $customerDropoffAtShop ? __('Drop-off and collection') : __('Pickup and drop-off') }}</div>
                         @if ($customerDropoffAtShop)
                             <div class="card-body">
@@ -127,16 +131,16 @@
                             <div class="col-md-6">
                                 <div class="small text-body-secondary">Pickup address</div>
                                 <div class="text-pre-line" id="ticket-pickup-address">{{ $pickupAddress ?: '—' }}</div>
-                                @if ($ticket->booking?->pickup_latitude !== null && $ticket->booking?->pickup_longitude !== null)
-                                    <a href="https://www.openstreetmap.org/?mlat={{ $ticket->booking->pickup_latitude }}&mlon={{ $ticket->booking->pickup_longitude }}#map=16/{{ $ticket->booking->pickup_latitude }}/{{ $ticket->booking->pickup_longitude }}" target="_blank" rel="noopener noreferrer">{{ __('View pickup pin') }}</a>
-                                @endif
+                                <a id="ticket-pickup-map-link"
+                                    href="https://www.openstreetmap.org/?mlat={{ $pickupLatitude }}&mlon={{ $pickupLongitude }}#map=16/{{ $pickupLatitude }}/{{ $pickupLongitude }}"
+                                    target="_blank" rel="noopener noreferrer" @if ($pickupLatitude === null || $pickupLongitude === null) hidden @endif>{{ __('View pickup pin') }}</a>
                             </div>
                             <div class="col-md-6">
                                 <div class="small text-body-secondary">Drop-off address</div>
                                 <div class="text-pre-line" id="ticket-dropoff-address">{{ $dropoffAddress ?: ($pickupAddress ? 'Same as pickup address' : '—') }}</div>
-                                @if ($ticket->booking?->dropoff_latitude !== null && $ticket->booking?->dropoff_longitude !== null)
-                                    <a href="https://www.openstreetmap.org/?mlat={{ $ticket->booking->dropoff_latitude }}&mlon={{ $ticket->booking->dropoff_longitude }}#map=16/{{ $ticket->booking->dropoff_latitude }}/{{ $ticket->booking->dropoff_longitude }}" target="_blank" rel="noopener noreferrer">{{ __('View drop-off pin') }}</a>
-                                @endif
+                                <a id="ticket-dropoff-map-link"
+                                    href="https://www.openstreetmap.org/?mlat={{ $dropoffLatitude }}&mlon={{ $dropoffLongitude }}#map=16/{{ $dropoffLatitude }}/{{ $dropoffLongitude }}"
+                                    target="_blank" rel="noopener noreferrer" @if ($dropoffLatitude === null || $dropoffLongitude === null) hidden @endif>{{ __('View drop-off pin') }}</a>
                             </div>
                         </div>
                         @endif
@@ -296,12 +300,24 @@
                                 <div class="col-md-6">
                                     <label class="form-label" for="workflow-pickup-address">Pickup address</label>
                                     <textarea class="form-control" id="workflow-pickup-address" name="pickup_address"
-                                        rows="2" maxlength="1000">{{ $ticket->pickup_address ?? $ticket->booking?->pickup_address }}</textarea>
+                                        rows="2" maxlength="1000" data-ticket-location-address="pickup">{{ $ticket->pickup_address ?? $ticket->booking?->pickup_address }}</textarea>
+                                    <input type="hidden" name="pickup_latitude" value="{{ $ticket->pickup_latitude ?? $ticket->booking?->pickup_latitude }}"
+                                        data-ticket-location-latitude="pickup">
+                                    <input type="hidden" name="pickup_longitude" value="{{ $ticket->pickup_longitude ?? $ticket->booking?->pickup_longitude }}"
+                                        data-ticket-location-longitude="pickup">
+                                    <div class="small text-body-secondary mt-1" data-ticket-location-preview="pickup">{{ ($ticket->pickup_address ?? $ticket->booking?->pickup_address) ?: 'No address selected' }}</div>
+                                    <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-ticket-location-open="pickup">Choose pickup on map</button>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label" for="workflow-dropoff-address">Drop-off address</label>
                                     <textarea class="form-control" id="workflow-dropoff-address" name="dropoff_address"
-                                        rows="2" maxlength="1000">{{ $ticket->dropoff_address ?? $ticket->booking?->dropoff_address }}</textarea>
+                                        rows="2" maxlength="1000" data-ticket-location-address="dropoff">{{ $ticket->dropoff_address ?? $ticket->booking?->dropoff_address }}</textarea>
+                                    <input type="hidden" name="dropoff_latitude" value="{{ $ticket->dropoff_latitude ?? $ticket->booking?->dropoff_latitude }}"
+                                        data-ticket-location-latitude="dropoff">
+                                    <input type="hidden" name="dropoff_longitude" value="{{ $ticket->dropoff_longitude ?? $ticket->booking?->dropoff_longitude }}"
+                                        data-ticket-location-longitude="dropoff">
+                                    <div class="small text-body-secondary mt-1" data-ticket-location-preview="dropoff">{{ ($ticket->dropoff_address ?? $ticket->booking?->dropoff_address) ?: 'No address selected' }}</div>
+                                    <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-ticket-location-open="dropoff">Choose drop-off on map</button>
                                 </div>
                                 @role('admin')
                                     <div class="col-12">
@@ -393,6 +409,7 @@
             </div>
         </div>
         @endif
+        @include('tickets.partials.location-picker')
 
         <div class="modal fade" id="ticket-step-photo-caption-modal" tabindex="-1"
             aria-labelledby="ticket-step-photo-caption-title" aria-hidden="true">
@@ -964,6 +981,12 @@
                             page.querySelector('#workflow-serial-number').value = result.serial_number || '';
                             page.querySelector('#workflow-pickup-address').value = result.pickup_address || '';
                             page.querySelector('#workflow-dropoff-address').value = result.dropoff_address || '';
+                            page.querySelector('[data-ticket-location-latitude="pickup"]').value = result.pickup_latitude ?? '';
+                            page.querySelector('[data-ticket-location-longitude="pickup"]').value = result.pickup_longitude ?? '';
+                            page.querySelector('[data-ticket-location-latitude="dropoff"]').value = result.dropoff_latitude ?? '';
+                            page.querySelector('[data-ticket-location-longitude="dropoff"]').value = result.dropoff_longitude ?? '';
+                            page.querySelector('[data-ticket-location-preview="pickup"]').textContent = result.pickup_address || 'No address selected';
+                            page.querySelector('[data-ticket-location-preview="dropoff"]').textContent = result.dropoff_address || 'No address selected';
                             page.querySelector('#ticket-device-model').textContent = result.device_model || '';
                             page.querySelector('#ticket-serial-number').textContent = result.serial_number || '—';
                             const pickupAddress = page.querySelector('#ticket-pickup-address');
@@ -972,6 +995,17 @@
                             if (dropoffAddress) {
                                 dropoffAddress.textContent = result.dropoff_address || (result.pickup_address ? 'Same as pickup address' : '—');
                             }
+                            const updateMapLink = (id, latitude, longitude) => {
+                                const link = page.querySelector(`#${id}`);
+                                if (!link) return;
+                                const hasCoordinates = latitude !== null && latitude !== '' && longitude !== null && longitude !== '';
+                                link.hidden = !hasCoordinates;
+                                if (hasCoordinates) {
+                                    link.href = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=16/${latitude}/${longitude}`;
+                                }
+                            };
+                            updateMapLink('ticket-pickup-map-link', result.pickup_latitude, result.pickup_longitude);
+                            updateMapLink('ticket-dropoff-map-link', result.dropoff_latitude, result.dropoff_longitude);
                             const locationCard = page.querySelector('#ticket-location-card');
                             if (locationCard) {
                                 locationCard.classList.toggle(

@@ -19,6 +19,7 @@ class StatusBadge
         'created' => 'info',
         'diagnosing' => 'info',
         'delivered' => 'success',
+        'dropping_off' => 'primary',
         'done' => 'success',
         'draft' => 'secondary',
         'disconnected' => 'secondary',

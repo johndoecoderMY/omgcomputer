@@ -2,6 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Booking;
+use App\Models\Customer;
+use App\Models\Project;
+use App\Models\RepairTicket;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,7 +75,14 @@ class AdminBackupTest extends TestCase
             ->assertSee('name="tables[]"', false)
             ->assertSee('Select all tables')
             ->assertSee('Select account & settings tables')
+            ->assertSee('Select customer and work tables (SQL)')
+            ->assertSee('Uploaded files themselves are included only in full backup archives.')
             ->assertSee('users')
+            ->assertSee('customers')
+            ->assertSee('bookings')
+            ->assertSee('repair_tickets')
+            ->assertSee('projects')
+            ->assertSee('data-customer-export-table="true"', false)
             ->assertSee('email_server_settings')
             ->assertSee('user_email_mailboxes')
             ->assertSee('user accounts, email settings, roles, permissions, and assignments')
@@ -192,6 +203,78 @@ class AdminBackupTest extends TestCase
         $this->assertStringContainsString('INSERT INTO "users"', $sql);
         $this->assertStringNotContainsString('CREATE TABLE', $sql);
         $this->assertStringNotContainsString('DELETE FROM', $sql);
+    }
+
+    public function test_admin_can_export_customer_booking_repair_and_project_records_as_sql(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create(['name' => 'Operations SQL Export']);
+        $admin->assignRole('admin');
+        $customerUser = User::factory()->create([
+            'name' => 'SQL Export Customer Account',
+            'email' => 'sql-export-customer@example.test',
+        ]);
+        $customerUser->assignRole('customer');
+        $project = Project::query()->create([
+            'name' => 'SQL Export Customer Project',
+            'customer_user_id' => $customerUser->id,
+        ]);
+        $customer = Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'SQL Export Customer',
+            'email' => $customerUser->email,
+        ]);
+        Booking::query()->create([
+            'reference' => 'BK-SQL-EXPORT-001',
+            'customer_id' => $customer->id,
+            'customer_name' => $customer->name,
+            'customer_email' => $customer->email,
+            'customer_phone' => '+60112223333',
+            'service_id' => 'basic-troubleshooting',
+            'service_name' => 'Computer/PC Troubleshooting',
+            'starts_at' => now()->addDays(7),
+            'duration_minutes' => 60,
+            'status' => 'pending',
+        ]);
+        RepairTicket::query()->create([
+            'ticket_number' => 'RT-SQL-EXPORT-001',
+            'customer_id' => $customer->id,
+            'project_id' => $project->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'SQL export repair record.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
+        $tables = [
+            'users',
+            'roles',
+            'model_has_roles',
+            'projects',
+            'customers',
+            'bookings',
+            'repair_tickets',
+        ];
+        $response = $this->actingAs($admin)->post(route('admin.backups.export-tables'), [
+            'tables' => $tables,
+            'format' => 'sql',
+        ]);
+        $response->assertOk()->assertHeader('content-type', 'text/plain; charset=UTF-8');
+
+        $sql = $response->streamedContent();
+        foreach (['users', 'roles', 'model_has_roles', 'projects', 'customers', 'bookings', 'repair_tickets'] as $table) {
+            $this->assertStringContainsString('INSERT INTO "'.$table.'"', $sql);
+        }
+        foreach ([
+            'SQL Export Customer Account',
+            'SQL Export Customer Project',
+            'SQL Export Customer',
+            'BK-SQL-EXPORT-001',
+            'RT-SQL-EXPORT-001',
+        ] as $record) {
+            $this->assertStringContainsString($record, $sql);
+        }
     }
 
     public function test_planner_administrator_can_export_all_database_tables_including_account_and_email_data(): void

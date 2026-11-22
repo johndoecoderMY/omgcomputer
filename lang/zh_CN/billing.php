@@ -61,6 +61,7 @@ return [
         'quantity' => '数量',
         'unit_price' => '单价',
         'amount' => '金额',
+        'item_discount' => '单项折扣',
         'subtotal' => '小计',
         'discount' => '折扣',
         'tax' => '税费',

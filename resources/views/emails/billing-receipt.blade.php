@@ -42,6 +42,7 @@
                     <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.quantity') }}</th>
                     <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.unit_price') }}</th>
                     <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.amount') }}</th>
+                    <th scope="col" style="padding:10px 8px;text-align:right;">{{ __('billing.pdf.item_discount') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,6 +52,7 @@
                         <td style="padding:10px 8px;text-align:right;color:#12263f;">{{ $item->quantity }}</td>
                         <td style="padding:10px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $item->unit_price, 2) }}</td>
                         <td style="padding:10px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $item->line_total, 2) }}</td>
+                        <td style="padding:10px 8px;text-align:right;color:#12263f;">{{ (float) $item->discount_amount > 0 ? '- RM '.number_format((float) $item->discount_amount, 2) : '—' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -60,6 +62,12 @@
                 <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.subtotal') }}</td>
                 <td style="padding:5px 8px;text-align:right;color:#12263f;">RM {{ number_format((float) $payment->document->subtotal, 2) }}</td>
             </tr>
+            @if ($payment->document->items->sum('discount_amount') > 0)
+                <tr>
+                    <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.item_discount') }}</td>
+                    <td style="padding:5px 8px;text-align:right;color:#12263f;">- RM {{ number_format($payment->document->items->sum('discount_amount'), 2) }}</td>
+                </tr>
+            @endif
             @if ((float) $payment->document->discount_amount > 0)
                 <tr>
                     <td style="padding:5px 8px;color:#475569;">{{ __('billing.pdf.discount') }}</td>

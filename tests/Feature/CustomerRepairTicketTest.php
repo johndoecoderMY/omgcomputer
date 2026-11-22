@@ -45,6 +45,8 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('data-bs-target="#ticket-step-modal"', false)
             ->assertSee('value="picking_up"', false)
             ->assertSee('>Picking up</option>', false)
+            ->assertSee('value="dropping_off"', false)
+            ->assertSee('>Dropping off</option>', false)
             ->assertSee('value="ready_to_drop_off"', false)
             ->assertSee('>Ready to drop off</option>', false)
             ->assertSee('id="ticket-workflow-modal"', false)
@@ -53,6 +55,8 @@ class CustomerRepairTicketTest extends TestCase
             ->assertSee('id="workflow-serial-number"', false)
             ->assertSee('id="workflow-pickup-address"', false)
             ->assertSee('id="workflow-dropoff-address"', false)
+            ->assertSee('data-ticket-location-open="pickup"', false)
+            ->assertSee('data-ticket-location-open="dropoff"', false)
             ->assertSee('id="step-customer-details"', false)
             ->assertSee('Create quotation')
             ->assertSee('data-project-ajax-modal', false)
@@ -104,6 +108,10 @@ class CustomerRepairTicketTest extends TestCase
             'serial_number' => 'SN-1001',
             'pickup_address' => '12 Jalan Repair, Kampar',
             'dropoff_address' => '18 Jalan Repair, Kampar',
+            'pickup_latitude' => '4.326',
+            'pickup_longitude' => '101.150',
+            'dropoff_latitude' => '4.327',
+            'dropoff_longitude' => '101.151',
         ])->assertOk()
             ->assertJsonPath('status', 'in_repair')
             ->assertJsonPath('priority', 'high')
@@ -113,13 +121,17 @@ class CustomerRepairTicketTest extends TestCase
             ->assertJsonPath('device_model', 'ThinkPad T14')
             ->assertJsonPath('serial_number', 'SN-1001')
             ->assertJsonPath('pickup_address', '12 Jalan Repair, Kampar')
-            ->assertJsonPath('dropoff_address', '18 Jalan Repair, Kampar');
+            ->assertJsonPath('dropoff_address', '18 Jalan Repair, Kampar')
+            ->assertJsonPath('pickup_latitude', '4.3260000')
+            ->assertJsonPath('dropoff_longitude', '101.1510000');
 
         $this->assertStringContainsString('In repair', $workflowResponse->json('status_html'));
         $this->assertSame('ThinkPad T14', $ticket->fresh()->device_model);
         $this->assertSame('SN-1001', $ticket->fresh()->serial_number);
         $this->assertSame('12 Jalan Repair, Kampar', $ticket->fresh()->pickup_address);
         $this->assertSame('18 Jalan Repair, Kampar', $ticket->fresh()->dropoff_address);
+        $this->assertSame(4.326, (float) $ticket->fresh()->pickup_latitude);
+        $this->assertSame(101.151, (float) $ticket->fresh()->dropoff_longitude);
 
         $this->postJson(route('tickets.steps.store', $ticket), [
             'title' => 'A step with photos must be rejected',
@@ -225,6 +237,7 @@ class CustomerRepairTicketTest extends TestCase
         foreach ([
             ['Picking up the laptop', 'picking_up'],
             ['Ready to return the laptop', 'ready_to_drop_off'],
+            ['Dropping off the laptop', 'dropping_off'],
         ] as [$title, $status]) {
             $this->postJson(route('tickets.steps.store', $ticket), [
                 'title' => $title,
@@ -232,7 +245,50 @@ class CustomerRepairTicketTest extends TestCase
             ])->assertOk()
                 ->assertJsonPath('status', $status);
         }
-        $this->assertSame('ready_to_drop_off', $ticket->fresh()->status);
+        $this->assertSame('dropping_off', $ticket->fresh()->status);
+    }
+
+    public function test_no_fault_found_can_be_recorded_without_a_quotation_or_parts(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'No-fault customer',
+            'email' => 'no-fault@example.test',
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'RT-NO-FAULT-001',
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'device_model' => 'ThinkPad T14',
+            'issue_description' => 'Customer reports intermittent slow performance.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($staff)->putJson(route('tickets.update', $ticket), [
+            'status' => 'diagnosing',
+            'priority' => 'normal',
+            'diagnosis' => 'Hardware diagnostics passed; no fault found.',
+        ])->assertOk()
+            ->assertJsonPath('status', 'diagnosing');
+
+        $this->postJson(route('tickets.steps.store', $ticket), [
+            'title' => 'Diagnosis complete - no fault found',
+            'status' => 'ready_for_pickup',
+            'notes' => 'No repair or replacement parts were required.',
+            'customer_details' => 'Testing is complete. No fault was found, and your laptop is ready for collection.',
+        ])->assertOk()
+            ->assertJsonPath('status', 'ready_for_pickup');
+
+        $this->assertSame('Hardware diagnostics passed; no fault found.', $ticket->fresh()->diagnosis);
+        $this->assertDatabaseCount('billing_documents', 0);
+        $this->assertDatabaseCount('inventory_movements', 0);
+        $this->get(route('repairs.track.show', $ticket->ticket_number))
+            ->assertOk()
+            ->assertSee('No fault was found, and your laptop is ready for collection.');
     }
 
     public function test_closed_ticket_only_allows_status_change_for_warranty_follow_up(): void
@@ -713,11 +769,19 @@ class CustomerRepairTicketTest extends TestCase
             ->assertDontSee('Balance RM 120.00');
     }
 
+    public function test_guest_repair_tracking_uses_a_repair_work_hero_image(): void
+    {
+        $this->get(route('repairs.track.form'))
+            ->assertOk()
+            ->assertSee(asset('assets/img/omg/repair-board-work.jpg'), false)
+            ->assertSee('Technician repairing a computer motherboard');
+    }
+
     public function test_homepage_links_to_public_repair_tracking(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Check the latest progress using the service number provided by our shop.')
+            ->assertSee('Have your service number ready to check repair progress.')
             ->assertSee(route('repairs.track.form'), false)
             ->assertDontSee('tracking-email');
     }

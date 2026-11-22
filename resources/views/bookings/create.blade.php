@@ -22,7 +22,7 @@
         .booking-selection-card.is-selected { border-color: rgba(var(--bs-primary-rgb), .35); background: rgba(var(--bs-primary-rgb), .06); }
         .booking-selection-icon { display: grid; width: 2.5rem; height: 2.5rem; flex: 0 0 2.5rem; place-items: center; border-radius: .65rem; background: var(--bs-body-bg); color: var(--bs-primary); font-size: 1.15rem; }
         .booking-selection-value { min-width: 0; }
-        .booking-location-card .card-body { padding: .65rem; }
+        .booking-location-card .card-body { padding: 10px; }
         .booking-location-card.is-active { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem rgba(var(--bs-primary-rgb), .12); }
         .booking-location-preview { overflow-wrap: anywhere; min-height: 1.5rem; }
         #booking-confirmation-map { height: 260px; border-radius: .75rem; background: var(--bs-tertiary-bg); z-index: 0; }
@@ -42,6 +42,17 @@
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
         .booking-location-pin { background: transparent; border: 0; }
+        @media (max-width: 575.98px) {
+            .booking-calendar-card-body { padding: 10px; }
+            .booking-calendar-column { display: none; }
+            #calendar .fc-toolbar { align-items: center; flex-wrap: wrap; gap: .5rem; }
+            #calendar .fc-toolbar-chunk { display: flex; align-items: center; gap: .25rem; }
+            #calendar .fc-toolbar-title { font-size: 1.2rem; }
+            #calendar .fc-button { min-height: 2.5rem; padding: .35rem .5rem; font-size: .875rem; }
+            .booking-calendar-modal .booking-calendar-card { border: 0; box-shadow: none; }
+            .booking-calendar-modal .booking-calendar-card-body { padding: 0; }
+            .booking-calendar-modal .booking-calendar-card-body > .h4 { display: none; }
+        }
     </style>
     @if ($authenticatedBooking)
         <div class="container-fluid py-3">
@@ -74,13 +85,15 @@
                                     action="{{ $authenticatedBooking ? route('bookings.account-store') : route('bookings.store') }}">
                                     @csrf
                                     <div class="row g-4">
-                                        <div class="col-lg-7">
-                                            <div class="card">
-                                                <div class="card-body">
-                                                    <h2 class="h4">{{ __('Choose a date') }}</h2>
-                                                    <p class="form-text text-body-secondary" id="calendar-availability-status"
-                                                        role="status" aria-live="polite">{{ __('Checking appointment availability...') }}</p>
-                                                    <div id="calendar"></div>
+                                        <div class="col-lg-7 booking-calendar-column">
+                                            <div id="booking-calendar-placeholder">
+                                                <div class="card booking-calendar-card" id="booking-calendar-card">
+                                                    <div class="card-body booking-calendar-card-body">
+                                                        <h2 class="h4">{{ __('Choose a date') }}</h2>
+                                                        <p class="form-text text-body-secondary" id="calendar-availability-status"
+                                                            role="status" aria-live="polite">{{ __('Checking appointment availability...') }}</p>
+                                                        <div id="calendar"></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -95,6 +108,9 @@
                                                             <div class="booking-selection-value flex-grow-1">
                                                                 <div class="small text-body-secondary">{{ __('Appointment date') }}</div>
                                                                 <div class="fw-semibold" id="booking-date-summary" role="status" aria-live="polite">{{ __('Choose a date on the calendar') }}</div>
+                                                                <button class="btn btn-sm btn-outline-primary mt-2 d-sm-none"
+                                                                    id="booking-open-calendar" type="button" aria-haspopup="dialog"
+                                                                    aria-controls="booking-calendar-modal">{{ __('Choose a date') }}</button>
                                                             </div>
                                                         </div>
                                                         <div class="booking-selection-card" id="booking-time-card">
@@ -330,6 +346,22 @@
                                     </div>
                                 </div>
 
+                                <div class="modal fade booking-calendar-modal" id="booking-calendar-modal" tabindex="-1"
+                                    aria-labelledby="booking-calendar-modal-title" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h2 class="modal-title h5" id="booking-calendar-modal-title">{{ __('Choose a date') }}</h2>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="{{ __('Close') }}"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div id="booking-calendar-modal-content"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="modal fade" id="booking-times-modal" tabindex="-1"
                                     aria-labelledby="booking-times-title" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
@@ -362,14 +394,14 @@
                                                     <div class="modal-body">
                                                         <p class="form-text">{{ __('Pickup and drop-off are available within :radius km of Kampar.', ['radius' => $serviceAreaRadiusKm]) }}</p>
                                                         <div class="d-flex flex-wrap justify-content-end gap-2 mb-2">
-                                                            <button class="btn btn-sm btn-outline-primary" id="booking-find-address" type="button" disabled>
-                                                                <span class="bi bi-search me-1" aria-hidden="true"></span>{{ __('Fill address from pin') }}
-                                                            </button>
                                                             <button class="btn btn-sm btn-outline-secondary" id="booking-use-location" type="button">
                                                                 <span class="bi bi-crosshair me-1" aria-hidden="true"></span>{{ __('Use my current location') }}
                                                             </button>
                                                         </div>
-                                                        <p class="form-text">{{ __('Address lookup is optional. When you select it, the pin coordinates are sent to OpenStreetMap to find a nearby address.') }}</p>
+                                                        <div class="small mb-2" aria-live="polite">
+                                                            <div class="text-body-secondary" id="booking-location-preview-label">{{ __('Pickup address') }}</div>
+                                                            <div class="fw-semibold text-break" id="booking-location-address-preview">{{ __('No address entered') }}</div>
+                                                        </div>
                                                         <div id="booking-location-map" role="application"
                                                             aria-label="{{ __('Map for selecting a pickup or drop-off location') }}"></div>
                                                         <p class="form-text mb-0 mt-2" id="booking-location-status" role="status" aria-live="polite">
@@ -452,6 +484,11 @@
             <script>
                 document.addEventListener("DOMContentLoaded", function () {
                     const calendarEl = document.getElementById("calendar");
+                    const calendarCard = document.getElementById("booking-calendar-card");
+                    const calendarPlaceholder = document.getElementById("booking-calendar-placeholder");
+                    const calendarModalContent = document.getElementById("booking-calendar-modal-content");
+                    const bookingCalendarModalElement = document.getElementById("booking-calendar-modal");
+                    const openCalendarButton = document.getElementById("booking-open-calendar");
                     const bookingForm = document.getElementById("booking-form");
                     const bookingDate = document.getElementById("booking-date");
                     const bookingTime = document.getElementById("booking-time");
@@ -500,7 +537,8 @@
                     };
                     const activeLocationLabel = document.getElementById("booking-location-active-mode");
                     const useLocationButton = document.getElementById("booking-use-location");
-                    const findAddressButton = document.getElementById("booking-find-address");
+                    const locationAddressPreviewLabel = document.getElementById("booking-location-preview-label");
+                    const locationAddressPreview = document.getElementById("booking-location-address-preview");
                     const requestNotes = document.getElementById("request-notes");
                     const availabilityMessage = document.getElementById("availability-message");
                     const availableTimes = document.getElementById("available-times");
@@ -523,6 +561,7 @@
                     const bookingConfirmationMapElement = document.getElementById("booking-confirmation-map");
                     const bookingConfirmationMapStatus = document.getElementById("booking-confirmation-map-status");
                     const bookingConfirmationSetPickupPin = document.getElementById("booking-confirmation-set-pickup-pin");
+                    const bookingCalendarModal = bootstrap.Modal.getOrCreateInstance(bookingCalendarModalElement);
                     const timesModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-times-modal"));
                     const locationPickerModal = bootstrap.Modal.getOrCreateInstance(locationPickerModalElement);
                     const locationHelpModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("booking-out-of-area-modal"));
@@ -565,6 +604,7 @@
                         pickupAddress: @json(__('Pickup address'), JSON_UNESCAPED_UNICODE),
                         dropoffAddress: @json(__('Drop-off address'), JSON_UNESCAPED_UNICODE),
                     };
+                    const addressLookupRequests = { pickup: 0, dropoff: 0 };
                     let availabilityRequest = 0;
                     let selectedAppointmentDate = bookingDate.value || null;
                     let locationMap = null;
@@ -645,6 +685,8 @@
                         activeLocationLabel.textContent = locationMode === "pickup"
                             ? locationMessages.pickupAddress
                             : locationMessages.dropoffAddress;
+                        locationAddressPreviewLabel.textContent = activeLocationLabel.textContent;
+                        locationAddressPreview.textContent = locationPresentation[locationMode].preview.textContent;
                     }
 
                     function updateDropoffSameAsPickup() {
@@ -670,7 +712,7 @@
                                 locationMarker = null;
                             }
                             showOutOfAreaModal();
-                            return;
+                            return false;
                         }
 
                         const [latitude, longitude] = coordinates;
@@ -686,9 +728,9 @@
 
                         locationInputs[locationMode].latitude.value = latitude.toFixed(7);
                         locationInputs[locationMode].longitude.value = longitude.toFixed(7);
-                        findAddressButton.disabled = false;
                         locationStatus.textContent = `${locationMode === "pickup" ? locationMessages.pickupSet : locationMessages.dropoffSet}: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}.`;
                         updateLocationSummaries();
+                        return true;
                     }
 
                     function showLocationForMode() {
@@ -704,12 +746,10 @@
                         }
 
                         const coordinates = getLocationCoordinates(locationMode);
-                        findAddressButton.disabled = !coordinates;
                         if (coordinates) {
                             if (!isWithinKamparServiceArea(coordinates)) {
                                 locationInputs[locationMode].latitude.value = "";
                                 locationInputs[locationMode].longitude.value = "";
-                                findAddressButton.disabled = true;
                                 if (locationMarker) {
                                     locationMap.removeLayer(locationMarker);
                                     locationMarker = null;
@@ -807,39 +847,20 @@
                     pickupAddress.addEventListener("input", updateLocationSummaries);
                     dropoffAddress.addEventListener("input", updateLocationSummaries);
                     dropoffSameAsPickup.addEventListener("change", updateDropoffSameAsPickup);
-                    useLocationButton.addEventListener("click", function () {
-                        if (!navigator.geolocation) {
-                            locationStatus.textContent = locationMessages.locationUnsupported;
-                            return;
-                        }
 
-                        navigator.geolocation.getCurrentPosition(function (position) {
-                            if (!locationMap) {
-                                initializeLocationMap();
-                            }
-                            if (!locationMap) {
-                                locationStatus.textContent = locationMessages.mapUnavailable;
-                                return;
-                            }
-
-                            const coordinates = [position.coords.latitude, position.coords.longitude];
-                            locationMap.setView(coordinates, 16);
-                            saveLocationPin(coordinates);
-                        }, function () {
-                            locationStatus.textContent = locationMessages.locationDenied;
-                        }, { enableHighAccuracy: true, timeout: 10000 });
-                    });
-
-                    findAddressButton.addEventListener("click", async function () {
-                        const mode = locationMode;
-                        const coordinates = getLocationCoordinates(mode);
+                    async function fillAddressFromPin(mode, coordinates) {
                         if (!coordinates) {
                             locationStatus.textContent = locationMessages.addressLookupFailed;
                             return;
                         }
 
-                        findAddressButton.disabled = true;
-                        locationStatus.textContent = locationMessages.addressLookupPending;
+                        const request = ++addressLookupRequests[mode];
+                        const addressInput = mode === "pickup" ? pickupAddress : dropoffAddress;
+                        const addressBeforeLookup = addressInput.value;
+                        if (locationMode === mode) {
+                            locationStatus.textContent = locationMessages.addressLookupPending;
+                        }
+
                         try {
                             const response = await fetch(@json(route('bookings.reverse-geocode')), {
                                 method: "POST",
@@ -851,24 +872,72 @@
                                 body: JSON.stringify({ latitude: coordinates[0], longitude: coordinates[1] }),
                             });
                             const result = await response.json();
+                            if (request !== addressLookupRequests[mode]) {
+                                return;
+                            }
                             if (!response.ok) {
-                                locationStatus.textContent = response.status === 429
-                                    ? locationMessages.addressLookupRateLimited
-                                    : response.status === 503
-                                        ? locationMessages.addressLookupUnavailable
-                                        : locationMessages.addressLookupFailed;
+                                if (locationMode === mode) {
+                                    locationStatus.textContent = response.status === 429
+                                        ? locationMessages.addressLookupRateLimited
+                                        : response.status === 503
+                                            ? locationMessages.addressLookupUnavailable
+                                            : locationMessages.addressLookupFailed;
+                                }
                                 return;
                             }
 
-                            (mode === "pickup" ? pickupAddress : dropoffAddress).value = result.address;
-                            locationStatus.textContent = locationMessages.addressLookupSuccess;
+                            const currentCoordinates = getLocationCoordinates(mode);
+                            if (!currentCoordinates
+                                || currentCoordinates[0] !== coordinates[0]
+                                || currentCoordinates[1] !== coordinates[1]) {
+                                return;
+                            }
+                            if (addressInput.value === addressBeforeLookup) {
+                                addressInput.value = result.address;
+                            }
                             updateLocationSummaries();
+                            if (locationMode === mode) {
+                                locationStatus.textContent = locationMessages.addressLookupSuccess;
+                            }
                         } catch (error) {
-                            console.error("Could not look up the address for a booking pin.", error);
-                            locationStatus.textContent = locationMessages.addressLookupUnavailable;
-                        } finally {
-                            findAddressButton.disabled = !getLocationCoordinates(locationMode);
+                            if (request === addressLookupRequests[mode]) {
+                                console.error("Could not look up the address for a booking pin.", error);
+                                if (locationMode === mode) {
+                                    locationStatus.textContent = locationMessages.addressLookupUnavailable;
+                                }
+                            }
                         }
+                    }
+
+                    useLocationButton.addEventListener("click", function () {
+                        if (!navigator.geolocation) {
+                            locationStatus.textContent = locationMessages.locationUnsupported;
+                            return;
+                        }
+
+                        useLocationButton.disabled = true;
+                        navigator.geolocation.getCurrentPosition(async function (position) {
+                            try {
+                                if (!locationMap) {
+                                    initializeLocationMap();
+                                }
+                                if (!locationMap) {
+                                    locationStatus.textContent = locationMessages.mapUnavailable;
+                                    return;
+                                }
+
+                                const coordinates = [position.coords.latitude, position.coords.longitude];
+                                locationMap.setView(coordinates, 16);
+                                if (saveLocationPin(coordinates)) {
+                                    await fillAddressFromPin(locationMode, getLocationCoordinates(locationMode));
+                                }
+                            } finally {
+                                useLocationButton.disabled = false;
+                            }
+                        }, function () {
+                            locationStatus.textContent = locationMessages.locationDenied;
+                            useLocationButton.disabled = false;
+                        }, { enableHighAccuracy: true, timeout: 10000 });
                     });
 
                     function updateDeviceDetails() {
@@ -1152,6 +1221,7 @@
                         timeZone: "UTC",
                         now: @json($calendarNow),
                         initialView: "dayGridMonth",
+                        height: "auto",
                         weekends: false,
                         events: availabilityEventsUrl,
                         loading: function (isLoading) {
@@ -1210,8 +1280,34 @@
                             selectedAppointmentDate = info.dateStr;
                             info.dayEl.classList.add("booking-date-selected");
                             bookingDate.value = info.dateStr;
+                            await closeBookingCalendar();
                             await loadAvailableTimes(info.dateStr, true);
                         }
+                    });
+
+                    function openBookingCalendar() {
+                        calendarModalContent.append(calendarCard);
+                        bookingCalendarModal.show();
+                    }
+
+                    function closeBookingCalendar() {
+                        if (!bookingCalendarModalElement.classList.contains("show")) {
+                            return Promise.resolve();
+                        }
+
+                        return new Promise(function (resolve) {
+                            bookingCalendarModalElement.addEventListener("hidden.bs.modal", resolve, { once: true });
+                            bookingCalendarModal.hide();
+                        });
+                    }
+
+                    openCalendarButton.addEventListener("click", openBookingCalendar);
+                    bookingCalendarModalElement.addEventListener("shown.bs.modal", function () {
+                        calendar.updateSize();
+                    });
+                    bookingCalendarModalElement.addEventListener("hidden.bs.modal", function () {
+                        calendarPlaceholder.append(calendarCard);
+                        calendar.updateSize();
                     });
 
                     async function loadAvailableTimes(date, clearSelection) {
@@ -1288,6 +1384,8 @@
                         appointmentSelectionError.hidden = false;
                         if (bookingDate.value) {
                             changeTimeButton.focus();
+                        } else if (window.matchMedia("(max-width: 575.98px)").matches) {
+                            openBookingCalendar();
                         } else {
                             calendarEl.scrollIntoView({ behavior: "smooth", block: "center" });
                         }

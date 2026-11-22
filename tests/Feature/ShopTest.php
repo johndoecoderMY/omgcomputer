@@ -364,6 +364,9 @@ class ShopTest extends TestCase
             ->assertSee('Shopee product URL')
             ->assertSee('Shopee shop account URL')
             ->assertSee('Supplier name')
+            ->assertSee('id="new-supplier-type" name="supplier_type"', false)
+            ->assertSee('value="shopee">Shopee marketplace', false)
+            ->assertSee('value="other">Other supplier', false)
             ->assertSee('Contact person')
             ->assertSee('Email')
             ->assertSee('Phone')
@@ -371,7 +374,7 @@ class ShopTest extends TestCase
             ->assertSee('Notes')
             ->assertSee('Cost price (RM)')
             ->assertSee('Unit price (RM)')
-            ->assertSee('Add another Shopee supplier')
+            ->assertSee('Add another supplier')
             ->assertSee('Min selling price (RM)')
             ->assertSee('Max selling price (RM)')
             ->assertSee('Manage builder parts')
@@ -548,6 +551,7 @@ class ShopTest extends TestCase
         $part->suppliers()->attach($existingSupplier->id);
 
         $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'supplier_type' => 'shopee',
             'name' => 'Builder Shopee supplier',
             'contact_name' => 'Alex Tan',
             'email' => 'alex@example.test',
@@ -602,6 +606,7 @@ class ShopTest extends TestCase
             ]);
 
         $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'supplier_type' => 'shopee',
             'name' => 'Another builder supplier',
             'shopee_product_url' => 'https://shopee.com.my/Another-item-i.987.654',
             'shopee_shop_url' => 'https://shopee.com.my/shop/987654',
@@ -609,7 +614,48 @@ class ShopTest extends TestCase
             'unit_price' => 250,
         ])->assertCreated()->assertJsonCount(3, 'supplier_ids');
 
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'supplier_type' => 'shopee',
+            'name' => 'Builder Shopee supplier',
+            'shopee_product_url' => 'https://shopee.com.my/Another-item-i.123.789',
+            'shopee_shop_url' => 'https://shopee.com.my/shop/123456/',
+            'cost_price' => 125,
+            'unit_price' => 165,
+        ])->assertCreated()
+            ->assertJsonPath('supplier.id', $supplier->id)
+            ->assertJsonCount(3, 'supplier_ids');
+
         $this->assertSame(3, $part->fresh()->suppliers()->count());
+        $this->assertDatabaseCount('suppliers', 3);
+    }
+
+    public function test_custom_pc_builder_can_link_a_non_shopee_supplier(): void
+    {
+        $staff = $this->staffUser();
+        $part = CustomPcComponent::query()->create([
+            'name' => 'Local supplier component',
+            'type' => 'cpu',
+        ]);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.supplier', $part), [
+            'supplier_type' => 'other',
+            'name' => 'Local parts supplier',
+            'website' => 'https://local-supplier.example.test',
+            'cost_price' => 80,
+            'unit_price' => 100,
+        ])->assertCreated()
+            ->assertJsonPath('supplier.type', 'other')
+            ->assertJsonPath('supplier.shopee_shop_url', null)
+            ->assertJsonPath('supplier.cost_price', 80)
+            ->assertJsonPath('supplier.unit_price', 100);
+
+        $supplier = Supplier::query()->firstOrFail();
+        $this->assertNull($supplier->shopee_shop_url);
+        $this->assertSame(1, $part->fresh()->suppliers()->count());
+        $this->assertNull(DB::table('custom_pc_component_supplier')
+            ->where('custom_pc_component_id', $part->id)
+            ->where('supplier_id', $supplier->id)
+            ->value('shopee_product_url'));
     }
 
     public function test_adding_supplier_from_builder_validates_supplier_details(): void
@@ -1041,6 +1087,7 @@ class ShopTest extends TestCase
         $this->assertSame(2, $product->fresh()->stock_quantity);
         $this->assertSame($customer->id, $order->customer_id);
         $this->assertSame($user->id, $order->user_id);
+        $this->assertSame('1 Main Street', $order->customer_address);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
             && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
             && $request['brand_id'] === 'test-brand');
@@ -1058,7 +1105,10 @@ class ShopTest extends TestCase
         ]))->assertOk()
             ->assertJsonPath('recordsTotal', 1)
             ->assertJsonPath('data.0.order', fn (string $orderLink): bool => str_contains($orderLink, $order->order_number));
-        $this->get(route('shop.orders.show', $order))->assertOk()->assertSee($user->name);
+        $this->get(route('shop.orders.show', $order))
+            ->assertOk()
+            ->assertSee($user->name)
+            ->assertSee('1 Main Street');
         $this->get(route('shop.orders.status-board'))->assertOk()->assertSee('data-datatable', false);
         $this->getJson(route('shop.orders.status-board.datatable', [
             'draw' => 1,
@@ -1184,7 +1234,7 @@ class ShopTest extends TestCase
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
     }
 
-    public function test_customer_can_refresh_tracking_only_for_their_own_orders(): void
+    public function test_customer_can_view_manual_tracking_for_their_own_orders_without_a_courier_lookup(): void
     {
         $this->seed(PlannerRoleSeeder::class);
         $customer = User::factory()->create();
@@ -1216,68 +1266,36 @@ class ShopTest extends TestCase
             'subtotal' => 100,
             'total' => 100,
         ]);
-        config([
-            'services.parcel_tracking.api_key' => 'server-only-test-key',
-            'services.parcel_tracking.api_url' => 'https://api.17track.net',
-        ]);
-        Http::fakeSequence()
-            ->push(['code' => 0, 'data' => ['accepted' => [['number' => 'MY-CUSTOMER-TRACK-201', 'carrier' => 3011]], 'rejected' => []]])
-            ->push(['code' => 0, 'data' => ['accepted' => [[
-                'number' => 'MY-CUSTOMER-TRACK-201',
-                'track_info' => [
-                    'latest_status' => ['status' => 'InTransit'],
-                    'latest_event' => ['description' => 'Parcel departed sorting center'],
-                    'tracking' => ['providers' => [[
-                        'provider' => ['name' => 'Pos Malaysia'],
-                        'events' => [[
-                            'time_iso' => '2026-10-25T02:00:00+08:00',
-                            'location' => 'Kuala Lumpur',
-                            'description' => 'Parcel departed sorting center',
-                        ]],
-                    ]]],
-                ],
-            ]], 'rejected' => []]]);
+        Http::fake();
 
         $this->actingAs($customer)->get(route('shop.my-orders.index'))
             ->assertOk()
             ->assertSee($order->order_number)
             ->assertDontSee($otherOrder->order_number);
-        $this->post(route('shop.my-orders.tracking', $order))
-            ->assertRedirect(route('shop.my-orders.show', $order));
         $this->get(route('shop.my-orders.show', $order))
             ->assertOk()
             ->assertSee('MY-CUSTOMER-TRACK-201')
-            ->assertSee('Parcel departed sorting center')
-            ->assertDontSee('server-only-test-key');
+            ->assertSee('Live tracking updates are not available here.')
+            ->assertDontSee('Refresh tracking');
+        $this->post('/shop/my-orders/'.$order->id.'/tracking')->assertNotFound();
         $this->get(route('shop.my-orders.show', $otherOrder))->assertNotFound();
+        Http::assertNothingSent();
     }
 
-    public function test_customer_can_look_up_a_parcel_from_the_tracking_page(): void
+    public function test_tracking_page_explains_manual_tracking_without_a_third_party_lookup(): void
     {
         $this->seed(PlannerRoleSeeder::class);
         $customer = User::factory()->create();
         $customer->assignRole('customer');
-        config([
-            'services.parcel_tracking.api_key' => 'server-only-test-key',
-            'services.parcel_tracking.api_url' => 'https://api.17track.net',
-        ]);
-        Http::fakeSequence()
-            ->push(['code' => 0, 'data' => ['accepted' => [['number' => 'MY-LOOKUP-301']], 'rejected' => []]])
-            ->push(['code' => 0, 'data' => ['accepted' => [[
-                'number' => 'MY-LOOKUP-301',
-                'track_info' => ['latest_status' => ['status' => 'Delivered'], 'tracking' => ['providers' => []]],
-            ]], 'rejected' => []]]);
+        Http::fake();
 
         $this->actingAs($customer)->get(route('shop.tracking'))
             ->assertOk()
-            ->assertSee('Track a parcel');
-        $this->post(route('shop.tracking.lookup'), ['tracking_number' => 'MY-LOOKUP-301'])
-            ->assertRedirect(route('shop.tracking'));
-        $this->get(route('shop.tracking'))
-            ->assertOk()
-            ->assertSee('MY-LOOKUP-301')
-            ->assertSee('Delivered')
-            ->assertDontSee('server-only-test-key');
+            ->assertSee('Track a parcel')
+            ->assertSee('we’ll add the tracking number to its details')
+            ->assertSee('We do not fetch live tracking updates here.');
+        $this->post('/shop/tracking', ['tracking_number' => 'MY-LOOKUP-301'])->assertMethodNotAllowed();
+        Http::assertNothingSent();
     }
 
     public function test_shop_demo_seeder_populates_sample_orders_idempotently(): void

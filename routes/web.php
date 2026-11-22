@@ -446,12 +446,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/checkout', 'checkout')->name('checkout');
         Route::post('/checkout', 'placeOrder')->name('checkout.place');
         Route::get('/tracking', 'customerTracking')->name('tracking');
-        Route::post('/tracking', 'trackCustomerParcel')->middleware('throttle:5,1')->name('tracking.lookup');
         Route::get('/my-orders', 'customerOrders')->name('my-orders.index');
         Route::get('/my-orders/{order}', 'customerOrder')->name('my-orders.show');
-        Route::post('/my-orders/{order}/tracking', 'refreshCustomerOrderTracking')
-            ->middleware('throttle:5,1')
-            ->name('my-orders.tracking');
     });
 
     Route::prefix('billing')->name('billing.')->controller(BillingController::class)->group(function (): void {

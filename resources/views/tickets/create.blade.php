@@ -22,7 +22,9 @@
         :back-url="$booking ? route('bookings.show', $booking) : route('tickets.index')"
         :back-label="$booking ? 'Back to booking' : 'Back to tickets'" />
     @if ($errors->any())<div class="alert alert-danger"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
-    <form class="card p-2" method="POST" action="{{ route('tickets.store') }}" data-offline-draft="ticket-create">@csrf
+    <form class="card p-2" method="POST" action="{{ route('tickets.store') }}" data-offline-draft="ticket-create" data-ticket-create-ajax>
+        @csrf
+        <div class="alert alert-danger d-none mb-0" role="alert" data-ticket-create-error></div>
         @if ($booking)<input type="hidden" name="booking_id" value="{{ $booking->id }}">@endif
         <div class="card-body row g-3">
         <div class="col-md-6">
@@ -49,8 +51,37 @@
         <div class="col-md-4"><label class="form-label" for="device_type">Device type</label><select class="form-select" id="device_type" name="device_type"><option value="">Select type</option>@foreach (['Laptop', 'Desktop PC', 'Workstation', 'Other', 'Computer'] as $deviceType)<option value="{{ $deviceType }}" @selected(old('device_type', $ticket->device_type) === $deviceType)>{{ $deviceType }}</option>@endforeach</select></div>
         <div class="col-md-4"><label class="form-label" for="device_model">Make / model</label><input class="form-control" id="device_model" name="device_model" value="{{ old('device_model', $ticket->device_model) }}" maxlength="255"></div>
         <div class="col-md-4"><label class="form-label" for="serial_number">Serial number</label><input class="form-control" id="serial_number" name="serial_number" value="{{ old('serial_number') }}" maxlength="255"></div>
-        <div class="col-md-6"><label class="form-label" for="pickup_address">Pickup address <span class="text-body-secondary">(optional)</span></label><textarea class="form-control" id="pickup_address" name="pickup_address" rows="2" maxlength="1000">{{ old('pickup_address', $ticket->pickup_address) }}</textarea></div>
-        <div class="col-md-6"><label class="form-label" for="dropoff_address">Drop-off address <span class="text-body-secondary">(optional)</span></label><textarea class="form-control" id="dropoff_address" name="dropoff_address" rows="2" maxlength="1000">{{ old('dropoff_address', $ticket->dropoff_address) }}</textarea><div class="form-text">Leave blank if it is the same as the pickup address.</div></div>
+        <div class="col-md-6">
+            <label class="form-label" for="pickup_address">Pickup address <span class="text-body-secondary">(optional)</span></label>
+            <textarea class="form-control" id="pickup_address" name="pickup_address" rows="2" maxlength="1000"
+                data-ticket-location-address="pickup">{{ old('pickup_address', $ticket->pickup_address) }}</textarea>
+            <input type="hidden" name="pickup_latitude" value="{{ old('pickup_latitude', $ticket->pickup_latitude) }}"
+                data-ticket-location-latitude="pickup">
+            <input type="hidden" name="pickup_longitude" value="{{ old('pickup_longitude', $ticket->pickup_longitude) }}"
+                data-ticket-location-longitude="pickup">
+            <div class="booking-location-preview small text-body-secondary mt-1" data-ticket-location-preview="pickup">
+                {{ old('pickup_address', $ticket->pickup_address) ?: 'No address selected' }}
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-ticket-location-open="pickup">
+                <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>Choose pickup on map
+            </button>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="dropoff_address">Drop-off address <span class="text-body-secondary">(optional)</span></label>
+            <textarea class="form-control" id="dropoff_address" name="dropoff_address" rows="2" maxlength="1000"
+                data-ticket-location-address="dropoff">{{ old('dropoff_address', $ticket->dropoff_address) }}</textarea>
+            <input type="hidden" name="dropoff_latitude" value="{{ old('dropoff_latitude', $ticket->dropoff_latitude) }}"
+                data-ticket-location-latitude="dropoff">
+            <input type="hidden" name="dropoff_longitude" value="{{ old('dropoff_longitude', $ticket->dropoff_longitude) }}"
+                data-ticket-location-longitude="dropoff">
+            <div class="booking-location-preview small text-body-secondary mt-1" data-ticket-location-preview="dropoff">
+                {{ old('dropoff_address', $ticket->dropoff_address) ?: 'No address selected' }}
+            </div>
+            <button class="btn btn-sm btn-outline-primary mt-2" type="button" data-ticket-location-open="dropoff">
+                <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>Choose drop-off on map
+            </button>
+            <div class="form-text">Leave blank if it is the same as the pickup address.</div>
+        </div>
         @role('admin')
             <div class="col-md-6"><label class="form-label" for="assignees">Assign people</label><input type="hidden" name="assignees_present" value="1"><select class="form-select js-user-search" id="assignees" name="assignees[]" multiple data-placeholder="Search and select people">@foreach ($users as $user)<option value="{{ $user->id }}" @selected(in_array((string) $user->id, array_map('strval', old('assignees', [])), true))>{{ $user->name }}</option>@endforeach</select></div>
         @endrole
@@ -224,6 +255,7 @@
         </script>
     @endunless
     </form>
+    @include('tickets.partials.location-picker')
 </div>
 @endsection
 
@@ -293,6 +325,63 @@
                 }
 
                 textarea.value = editable.innerHTML;
+            });
+
+            const createError = form.querySelector('[data-ticket-create-error]');
+            const submitButton = form.querySelector('[type="submit"]');
+            form.addEventListener('submit', async (event) => {
+                if (event.defaultPrevented) {
+                    return;
+                }
+
+                event.preventDefault();
+                if (form.dataset.ajaxSubmitting === 'true') {
+                    return;
+                }
+
+                form.dataset.ajaxSubmitting = 'true';
+                createError?.classList.add('d-none');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = 'Creating ticket…';
+                }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: new FormData(form),
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        const validationMessages = Object.values(result.errors || {}).flat();
+                        throw new Error(validationMessages.join(' ') || result.message || 'The ticket could not be created.');
+                    }
+
+                    if (window.offlineDrafts) {
+                        await window.offlineDrafts.clear(form).catch((error) => {
+                            console.error('Unable to clear the saved ticket draft.', error);
+                        });
+                    }
+                    window.location.assign(result.redirect_url);
+                } catch (error) {
+                    if (createError) {
+                        createError.textContent = error instanceof Error
+                            ? error.message
+                            : 'The ticket could not be created. Please try again.';
+                        createError.classList.remove('d-none');
+                    }
+                } finally {
+                    form.dataset.ajaxSubmitting = 'false';
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'Create ticket';
+                    }
+                }
             });
 
             textarea.hidden = true;

@@ -31,6 +31,7 @@
     <meta name="twitter:title" content="@yield('og_title', $pageTitle)">
     <meta name="twitter:description" content="{{ $metaDescription }}">
     <meta name="twitter:image" content="{{ $socialImage }}">
+    <script src="{{ asset('assets/js/config.js') }}"></script>
 
     <!-- ===============================================--><!--    Favicons--><!-- ===============================================-->
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/img/omg/apple-touch-icon.png') }}">

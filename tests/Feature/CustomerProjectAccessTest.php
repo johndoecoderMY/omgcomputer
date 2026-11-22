@@ -158,7 +158,7 @@ class CustomerProjectAccessTest extends TestCase
             ->assertSee('Laptop diagnosis')
             ->assertDontSee('Private appointment')
             ->assertSee('Contact us')
-            ->assertSee(route('contact'), false)
+            ->assertSee(route('customer.contact'), false)
             ->assertSee('Upcoming appointments');
 
         $response = $this->getJson(route('projects.datatable', [

@@ -33,6 +33,11 @@
                     Choose tables, file format, and SQL import options. For a full pre-migration restore, use
                     <strong>Run backup now</strong>.
                 </p>
+                <p class="small text-body-secondary mt-2 mb-0">
+                    The customer and work-data preset includes account roles, customer profiles, bookings, repair history,
+                    project planning, linked billing, and attachment metadata. SQL exports contain sensitive records; store them
+                    securely. Uploaded files themselves are included only in full backup archives.
+                </p>
             </div>
             <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#table-export-modal">
                 <i class="bi bi-file-earmark-arrow-down me-2" aria-hidden="true"></i>Export tables
@@ -115,6 +120,9 @@
                                 <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="accounts">
                                     Select account &amp; settings tables
                                 </button>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="customer-data">
+                                    Select customer and work tables (SQL)
+                                </button>
                                 <button class="btn btn-sm btn-outline-secondary" type="button" data-select-export-tables="none">
                                     Clear selection
                                 </button>
@@ -128,6 +136,7 @@
                                                 <input class="form-check-input" type="checkbox" name="tables[]"
                                                     id="export-table-{{ $loop->index }}" value="{{ $table }}"
                                                     data-account-export-table="{{ in_array($table, $accountTables, true) ? 'true' : 'false' }}"
+                                                    data-customer-export-table="{{ $customerDataTables->containsStrict($table) ? 'true' : 'false' }}"
                                                     @checked(in_array($table, $selectedTables, true))>
                                                 <label class="form-check-label" for="export-table-{{ $loop->index }}">
                                                     {{ $table }}
@@ -152,27 +161,34 @@
     </div>
     @push('scripts')
         <script>
-            document.querySelectorAll('[data-select-export-tables]').forEach((button) => {
-                button.addEventListener('click', () => {
-                    const selection = button.dataset.selectExportTables;
-                    document.querySelectorAll('input[name="tables[]"]').forEach((checkbox) => {
-                        checkbox.checked = selection === 'all' ||
-                            (selection === 'accounts' && checkbox.dataset.accountExportTable === 'true');
-                    });
-                });
-            });
-
             const sqlExportOptions = document.querySelector('[data-sql-export-options]');
-            if (sqlExportOptions) {
-                const updateSqlExportOptions = () => {
-                    const sqlSelected = document.querySelector('#table-export-format-sql').checked;
-                    sqlExportOptions.hidden = !sqlSelected;
-                };
+            const sqlFormatOption = document.querySelector('#table-export-format-sql');
+            const updateSqlExportOptions = () => {
+                if (sqlExportOptions && sqlFormatOption) {
+                    sqlExportOptions.hidden = !sqlFormatOption.checked;
+                }
+            };
+            if (sqlExportOptions && sqlFormatOption) {
                 document.querySelectorAll('input[name="format"]').forEach((radio) => {
                     radio.addEventListener('change', updateSqlExportOptions);
                 });
                 updateSqlExportOptions();
             }
+
+            document.querySelectorAll('[data-select-export-tables]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const selection = button.dataset.selectExportTables;
+                    document.querySelectorAll('input[name="tables[]"]').forEach((checkbox) => {
+                        checkbox.checked = selection === 'all' ||
+                            (selection === 'accounts' && checkbox.dataset.accountExportTable === 'true') ||
+                            (selection === 'customer-data' && checkbox.dataset.customerExportTable === 'true');
+                    });
+                    if (selection === 'customer-data' && sqlFormatOption) {
+                        sqlFormatOption.checked = true;
+                        updateSqlExportOptions();
+                    }
+                });
+            });
 
             @if ($errors->any())
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('table-export-modal')).show();

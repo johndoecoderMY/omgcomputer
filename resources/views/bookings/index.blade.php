@@ -138,6 +138,12 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="mb-3 d-none" id="booking-cancellation-reason-group">
+                            <label class="form-label" for="booking-cancellation-reason">Cancellation reason</label>
+                            <textarea class="form-control" id="booking-cancellation-reason"
+                                name="cancellation_reason" rows="3" maxlength="1000" disabled></textarea>
+                            <div class="form-text">Optional. Staff can record why this booking was cancelled.</div>
+                        </div>
                         @if (auth()->user()->hasRole('admin'))
                             <div>
                                 <label class="form-label" for="booking-assigned-to">Assigned staff</label>
@@ -169,6 +175,8 @@
                 const modal = document.getElementById('booking-status-modal');
                 const form = document.getElementById('booking-status-form');
                 const statusSelect = document.getElementById('booking-status-value');
+                const cancellationReasonGroup = document.getElementById('booking-cancellation-reason-group');
+                const cancellationReasonInput = document.getElementById('booking-cancellation-reason');
                 const assigneeSelect = document.getElementById('booking-assigned-to');
                 const reference = modal?.querySelector('[data-booking-modal-reference]');
                 const errorAlert = modal?.querySelector('[data-booking-update-error]');
@@ -185,11 +193,20 @@
 
                     form.action = trigger.dataset.bookingUpdateUrl;
                     statusSelect.value = trigger.dataset.bookingStatus || '';
+                    cancellationReasonInput.value = trigger.dataset.bookingCancellationReason || '';
+                    updateCancellationReasonVisibility();
                     if (assigneeSelect) assigneeSelect.value = trigger.dataset.bookingAssignedTo || '';
                     reference.textContent = trigger.dataset.bookingReference || '';
                     errorAlert.textContent = '';
                     errorAlert.classList.add('d-none');
                 });
+
+                const updateCancellationReasonVisibility = () => {
+                    const isCancelled = statusSelect.value === 'cancelled';
+                    cancellationReasonGroup.classList.toggle('d-none', !isCancelled);
+                    cancellationReasonInput.disabled = !isCancelled;
+                };
+                statusSelect.addEventListener('change', updateCancellationReasonVisibility);
 
                 form.addEventListener('submit', async (event) => {
                     event.preventDefault();
