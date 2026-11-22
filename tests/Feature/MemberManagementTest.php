@@ -353,6 +353,7 @@ class MemberManagementTest extends TestCase
         $member = User::factory()->create(['email' => 'reset.member@example.test']);
         $member->assignRole('member');
         Notification::fake();
+        config(['mail.default' => 'smtp']);
 
         $this->actingAs($member)
             ->post(route('admin.users.password-reset.request', $member))
@@ -369,6 +370,25 @@ class MemberManagementTest extends TestCase
             ->assertSessionHas('success', 'An account password reset link was sent to reset.member@example.test.');
 
         Notification::assertSentTo($member, ResetPassword::class);
+    }
+
+    public function test_account_reset_is_not_reported_as_sent_when_mailer_only_logs_messages(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $this->actingAs($admin);
+        Notification::fake();
+        config(['mail.default' => 'log']);
+
+        $this->get(route('members.show', $member))->assertOk();
+        $this->post(route('admin.users.password-reset.request', $member))
+            ->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('warning', 'Outgoing email is not configured for delivery. Set up SMTP in Email settings and retry.');
+
+        Notification::assertNothingSent();
     }
 
     public function test_admin_can_reset_a_members_cpanel_password_without_changing_the_account_password(): void

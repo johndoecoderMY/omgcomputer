@@ -317,7 +317,21 @@ class AdminUserController extends Controller
     {
         abort_unless($user->hasRole('member') && ! $user->hasAnyRole(['admin', 'customer']), 404);
 
-        $status = Password::sendResetLink(['email' => $user->email]);
+        if (in_array(config('mail.default'), ['log', 'array', 'null'], true)) {
+            return back()->with('warning', 'Outgoing email is not configured for delivery. Set up SMTP in Email settings and retry.');
+        }
+
+        try {
+            $status = Password::sendResetLink(['email' => $user->email]);
+        } catch (TransportExceptionInterface $exception) {
+            Log::warning('Account password reset email could not be delivered.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+
+            return back()->with('warning', 'The password reset email could not be delivered. Check the outgoing SMTP settings.');
+        }
+
         if ($status === Password::RESET_LINK_SENT) {
             return back()->with('success', 'An account password reset link was sent to '.$user->email.'.');
         }
