@@ -172,7 +172,10 @@ class MemberManagementTest extends TestCase
             ->assertSee('Preferred email name')
             ->assertSee('firstname.lastname')
             ->assertSee('@example.test')
-            ->assertSee('Automatically connected to the OMGComputer inbox')
+            ->assertSee('data-use-member-name', false)
+            ->assertSee('id="skip_mailbox"', false)
+            ->assertSee('Set up mailbox later')
+            ->assertSee('provisioned and connected automatically')
             ->assertSee('Mailbox quota:')
             ->assertSee('Unlimited');
         Http::fake([
@@ -242,6 +245,37 @@ class MemberManagementTest extends TestCase
             'email' => $member->email,
             'password' => 'Strong-password-123!',
         ])->assertRedirect(route('dashboard', absolute: false));
+    }
+
+    public function test_member_creation_can_skip_mailbox_provisioning_for_manual_setup_later(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+        Notification::fake();
+        Mail::fake();
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake();
+
+        $this->post(route('admin.users.store'), [
+            'name' => 'Manual Mailbox Member',
+            'email' => 'manual.member@example.test',
+            'skip_mailbox' => '1',
+        ])->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'Mailbox setup was skipped'));
+
+        $member = User::query()->where('email', 'manual.member@example.test')->firstOrFail();
+        $this->assertNull($member->emailMailbox);
+        Http::assertNothingSent();
+        Mail::assertSent(MemberInvitationMail::class, fn (MemberInvitationMail $mail): bool => $mail->hasTo($member->email));
     }
 
     public function test_admin_can_create_a_missing_mailbox_from_the_member_profile_once(): void

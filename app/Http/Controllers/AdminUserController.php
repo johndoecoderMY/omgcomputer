@@ -124,6 +124,7 @@ class AdminUserController extends Controller
     {
         $isMember = $roleName === 'member';
         $cpanelEnabled = $isMember && $provisioner->configured();
+        $skipMailbox = $cpanelEnabled && $request->boolean('skip_mailbox');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -133,10 +134,10 @@ class AdminUserController extends Controller
                 'email',
                 'max:255',
                 Rule::unique('users', 'email'),
-                function (string $attribute, mixed $value, \Closure $fail) use ($request, $cpanelEnabled): void {
+                function (string $attribute, mixed $value, \Closure $fail) use ($request, $cpanelEnabled, $skipMailbox): void {
                     $mailboxUsername = trim((string) $request->input('mailbox_username'));
                     $mailboxEmail = $mailboxUsername.'@'.config('services.cpanel.email_domain');
-                    if ($cpanelEnabled && $mailboxUsername !== '' && strcasecmp((string) $value, $mailboxEmail) === 0) {
+                    if ($cpanelEnabled && ! $skipMailbox && $mailboxUsername !== '' && strcasecmp((string) $value, $mailboxEmail) === 0) {
                         $fail('Use a separate personal contact email so the member can verify their address and set up their account.');
                     }
                 },
@@ -145,8 +146,9 @@ class AdminUserController extends Controller
             'address' => ['nullable', 'string', 'max:2000'],
             'team_ids' => ['nullable', 'array'],
             'team_ids.*' => ['required', 'integer', 'distinct', 'exists:teams,id'],
+            'skip_mailbox' => $isMember ? ['sometimes', 'boolean'] : ['prohibited'],
             'mailbox_username' => [
-                Rule::requiredIf($cpanelEnabled),
+                Rule::requiredIf($cpanelEnabled && ! $skipMailbox),
                 'nullable',
                 'string',
                 'max:64',
@@ -162,7 +164,7 @@ class AdminUserController extends Controller
 
         $user = DB::transaction(function () use ($data, $role, $accountPassword): User {
             $user = User::query()->create([
-                ...collect($data)->except(['password', 'team_ids', 'mailbox_username'])->all(),
+                ...collect($data)->except(['password', 'team_ids', 'mailbox_username', 'skip_mailbox'])->all(),
                 'password' => Hash::make($accountPassword),
                 'force_password_change' => true,
             ]);
@@ -178,7 +180,7 @@ class AdminUserController extends Controller
         }
 
         $warnings = [];
-        if ($cpanelEnabled) {
+        if ($cpanelEnabled && ! $skipMailbox) {
             try {
                 $mailboxPassword = Str::random(64);
                 while (hash_equals($accountPassword, $mailboxPassword)) {
@@ -194,7 +196,7 @@ class AdminUserController extends Controller
                 ]);
                 $warnings[] = $exception->getMessage();
             }
-        } else {
+        } elseif (! $cpanelEnabled) {
             $warnings[] = 'cPanel provisioning is not configured; create the mailbox manually if the member needs one.';
         }
 
@@ -202,8 +204,12 @@ class AdminUserController extends Controller
             $warnings[] = 'The account was created, but the email verification and password setup link could not be sent to the personal contact email.';
         }
 
-        $response = redirect()->route('admin.users.edit', $user)
-            ->with('success', 'Member account created. An email verification and password setup link was sent to the personal contact email; no password was emailed.');
+        $successMessage = 'Member account created. An email verification and password setup link was sent to the personal contact email; no password was emailed.';
+        if ($skipMailbox) {
+            $successMessage .= ' Mailbox setup was skipped; the member can connect a mailbox later from Email settings.';
+        }
+
+        $response = redirect()->route('admin.users.edit', $user)->with('success', $successMessage);
 
         return $warnings === [] ? $response : $response->with('warning', implode(' ', $warnings));
     }

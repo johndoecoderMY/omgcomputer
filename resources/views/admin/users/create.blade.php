@@ -54,12 +54,25 @@
                         <div class="input-group">
                             <input class="form-control" id="mailbox_username" name="mailbox_username" value="{{ old('mailbox_username') }}"
                                 maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._+-]*[A-Za-z0-9]|[A-Za-z0-9]"
-                                placeholder="firstname.lastname" aria-describedby="mailbox-username-help" required>
+                                placeholder="firstname.lastname" aria-describedby="mailbox-username-help"
+                                @disabled(old('skip_mailbox')) @required(! old('skip_mailbox'))>
                             <span class="input-group-text">{{ '@'.config('services.cpanel.email_domain') }}</span>
                         </div>
                         <div class="form-text">Choose the part before @ for the member's work email.</div>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2 small text-body-secondary" id="mailbox-username-help">
-                            <span><span class="bi bi-envelope-check me-1" aria-hidden="true"></span>Automatically connected to the OMGComputer inbox</span>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-use-member-name>
+                                <span class="bi bi-person-vcard me-1" aria-hidden="true"></span>Use member name
+                            </button>
+                            <input class="btn-check" id="skip_mailbox" name="skip_mailbox" type="checkbox" value="1"
+                                @checked(old('skip_mailbox')) aria-controls="mailbox_username">
+                            <label class="btn btn-sm btn-outline-secondary" for="skip_mailbox">
+                                <span class="bi bi-envelope-slash me-1" aria-hidden="true"></span>Set up mailbox later
+                            </label>
+                        </div>
+                        <div class="form-text mt-2" id="mailbox-setup-status" aria-live="polite">
+                            The mailbox will be provisioned and connected automatically.
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2 small text-body-secondary" id="mailbox-username-help" data-mailbox-provisioning-details>
                             <span class="badge rounded-pill bg-body-secondary text-body border">
                                 Mailbox quota: {{ (int) config('services.cpanel.email_quota') === 0 ? 'Unlimited' : number_format((int) config('services.cpanel.email_quota')).' MB' }}
                             </span>
@@ -97,3 +110,44 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (() => {
+            const nameInput = document.getElementById('name');
+            const mailboxInput = document.getElementById('mailbox_username');
+            const useNameButton = document.querySelector('[data-use-member-name]');
+            const skipMailbox = document.getElementById('skip_mailbox');
+            const setupStatus = document.getElementById('mailbox-setup-status');
+            const provisioningDetails = document.querySelector('[data-mailbox-provisioning-details]');
+
+            if (!nameInput || !mailboxInput || !useNameButton || !skipMailbox || !setupStatus || !provisioningDetails) {
+                return;
+            }
+
+            useNameButton.addEventListener('click', () => {
+                mailboxInput.value = nameInput.value
+                    .normalize('NFKD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '.')
+                    .replace(/^\.+|\.+$/g, '')
+                    .slice(0, 64)
+                    .replace(/\.+$/g, '');
+            });
+
+            const updateMailboxSetup = () => {
+                mailboxInput.disabled = skipMailbox.checked;
+                mailboxInput.required = !skipMailbox.checked;
+                useNameButton.disabled = skipMailbox.checked;
+                provisioningDetails.hidden = skipMailbox.checked;
+                setupStatus.textContent = skipMailbox.checked
+                    ? 'No mailbox will be created. The member can connect one later from Email settings.'
+                    : 'The mailbox will be provisioned and connected automatically.';
+            };
+
+            skipMailbox.addEventListener('change', updateMailboxSetup);
+            updateMailboxSetup();
+        })();
+    </script>
+@endpush
