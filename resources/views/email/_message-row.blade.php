@@ -28,9 +28,9 @@
             </form>
         </div>
     </div>
-    <div class="col col-md-9 col-xxl-10">
-        <div class="row">
-            <div class="col-md-4 col-xl-3 col-xxl-2 ps-md-0 mb-1 mb-md-0">
+    <div class="col">
+        <div class="row align-items-center g-1">
+            <div class="col-12 col-md-4 col-xl-3 ps-md-0 mb-1 mb-md-0">
                 <div class="d-flex position-relative align-items-center">
                     <span class="avatar avatar-s bg-body-secondary text-primary fw-bold d-inline-flex align-items-center justify-content-center" aria-hidden="true">{{ str($message['from'] ?: '?')->trim()->substr(0, 1)->upper() }}</span>
                     <a class="flex-1 ms-2 email-sender inbox-link stretched-link {{ $message['seen'] ? '' : 'fw-bold' }}"

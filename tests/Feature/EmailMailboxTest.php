@@ -85,7 +85,11 @@ class EmailMailboxTest extends TestCase
             ->assertSee('Repair booking confirmation')
             ->assertSee('Customer <customer@example.test>')
             ->assertSee('data-detail-url="'.route('email.show', 25).'"', false)
-            ->assertSee('href="'.route('email.show', 25).'"', false);
+            ->assertSee('href="'.route('email.show', 25).'"', false)
+            ->assertSee('id="unread-email-count" aria-label="Unread email count">1</span>', false)
+            ->assertSee('class="col-12 col-md-4 col-xl-3 ps-md-0 mb-1 mb-md-0"', false)
+            ->assertSee('id="email-page-size"', false)
+            ->assertSee('id="email-page-controls"', false);
 
         $this->actingAs($admin)->get(route('email.show', 25))
             ->assertOk()
@@ -157,7 +161,7 @@ class EmailMailboxTest extends TestCase
 
         $remoteHtml = $method->invoke($service, '<p>Email</p>', true);
         $this->assertStringContainsString('img-src data: https:', $remoteHtml);
-        $this->assertStringContainsString("default-src &#039;none&#039;", $remoteHtml);
+        $this->assertStringContainsString('default-src &#039;none&#039;', $remoteHtml);
     }
 
     public function test_inline_cid_image_references_are_replaced_with_embedded_image_data(): void

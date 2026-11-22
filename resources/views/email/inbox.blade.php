@@ -25,7 +25,7 @@
     <div class="card email-inbox" data-poll-url="{{ route('email.poll') }}"
         data-action-url="{{ url('/email') }}" data-bulk-url="{{ route('email.bulk-action') }}"
         data-csrf="{{ csrf_token() }}" data-mailbox-email="{{ auth()->user()->emailMailbox?->email }}">
-        <div class="card-header">
+        <div class="card-header email-inbox-toolbar">
             <div class="row align-items-center g-2">
                 <div class="col d-flex align-items-center flex-wrap">
                     <div class="form-check mb-0 d-none d-sm-block">
@@ -87,9 +87,12 @@
             <div class="alert alert-warning d-none m-3 mb-0" id="email-inbox-error" role="alert"></div>
         @endif
 
-        <div class="card-body fs-10 border-top p-0" id="emails" aria-live="polite">
+        <div class="card-body border-top p-0" id="emails" aria-live="polite">
             <div id="unread-emails">
-                <h2 class="h6 fs-9 px-3 pt-3 pb-2 mb-0 border-bottom">Unread</h2>
+                <h2 class="h6 px-3 py-3 mb-0 border-bottom email-section-heading">
+                    <span>Unread</span>
+                    <span class="badge rounded-pill text-bg-primary ms-2" id="unread-email-count" aria-label="Unread email count">{{ count(array_filter($messages, fn ($message) => ! ($message['seen'] ?? true))) }}</span>
+                </h2>
                 @foreach ($messages as $message)
                     @unless ($message['seen'])
                         @include('email._message-row', ['message' => $message])
@@ -97,7 +100,10 @@
                 @endforeach
             </div>
             <div id="read-emails">
-                <h2 class="h6 fs-9 px-3 pt-3 pb-2 mb-0 border-bottom">Everything else</h2>
+                <h2 class="h6 px-3 py-3 mb-0 border-bottom email-section-heading">
+                    <span>Everything else</span>
+                    <span class="badge rounded-pill bg-body-secondary text-body ms-2" id="read-email-count" aria-label="Read email count">{{ count(array_filter($messages, fn ($message) => $message['seen'] ?? false)) }}</span>
+                </h2>
                 @foreach ($messages as $message)
                     @if ($message['seen'])
                         @include('email._message-row', ['message' => $message])
@@ -116,21 +122,70 @@
                 </div>
             @endif
         </div>
+        <div class="email-pagination d-flex flex-wrap align-items-center justify-content-between gap-3 px-3 py-3 border-top">
+            <div class="d-flex align-items-center gap-2">
+                <label class="small text-body-secondary mb-0" for="email-page-size">Rows per page</label>
+                <select class="form-select form-select-sm" id="email-page-size" aria-label="Rows per page" style="width: auto">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+                <span class="small text-body-secondary ms-2" id="email-page-status" role="status"></span>
+            </div>
+            <nav aria-label="Inbox pages">
+                <div class="btn-group btn-group-sm" id="email-page-controls" role="group" aria-label="Inbox pages"></div>
+            </nav>
+        </div>
     </div>
 </div>
 
 <style>
-    .email-inbox .email-row { position: relative; }
+    .email-inbox { overflow: hidden; }
+    .email-inbox .email-inbox-toolbar { background: var(--falcon-card-bg, #fff); }
+    .email-inbox .email-section-heading {
+        display: flex;
+        align-items: center;
+        background: var(--falcon-gray-100, #f9fafd);
+    }
+    .email-inbox .email-row {
+        position: relative;
+        align-items: center;
+        min-height: 68px;
+        font-size: .9375rem;
+        transition: background-color .15s ease-in-out;
+    }
     .email-inbox [data-email-row] { cursor: pointer; }
-    .email-inbox .email-row:hover { background-color: var(--falcon-body-bg, #fff); }
-    .email-inbox .email-row-unread { background-color: var(--falcon-body-bg, #fff); }
-    .email-inbox .email-row-read { background-color: var(--falcon-tertiary-bg, #f8f9fa); }
+    .email-inbox .email-row-unread {
+        background: var(--falcon-card-bg, #fff);
+        box-shadow: inset 3px 0 var(--falcon-primary, #f34303);
+    }
+    .email-inbox .email-row-read { background: var(--falcon-gray-100, #f9fafd); }
+    .email-inbox .email-row:hover { background: var(--falcon-gray-200, #edf2f9); }
     .email-inbox .email-row-actions { opacity: 0; transition: opacity .15s ease-in-out; }
     .email-inbox .email-row:hover .email-row-actions,
     .email-inbox .email-row:focus-within .email-row-actions { opacity: 1; }
-    .email-inbox .email-sender { width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .email-inbox .email-subject { overflow-wrap: anywhere; }
+    .email-inbox .email-sender,
+    .email-inbox .email-subject {
+        display: block;
+        overflow: hidden;
+        color: var(--falcon-body-color, #344050);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .email-inbox .email-row-read .email-sender,
+    .email-inbox .email-row-read .email-subject { color: var(--falcon-gray-700, #5e6e82); }
+    .email-inbox .email-sender:hover,
+    .email-inbox .email-subject:hover { color: var(--falcon-primary, #f34303); }
+    .email-inbox .email-row time { white-space: nowrap; }
+    .email-inbox .email-row .form-check-input { cursor: pointer; }
+    .email-inbox .email-pagination { background: var(--falcon-card-bg, #fff); }
     @media (hover: none) { .email-inbox .email-row-actions { opacity: 1; } }
+    @media (max-width: 575.98px) {
+        .email-inbox .email-row { min-height: 76px; padding-block: .75rem !important; }
+        .email-inbox .email-row .col-md-4 { min-width: 0; }
+        .email-inbox .email-row > .col-auto:last-child { align-self: flex-start; }
+        .email-inbox .email-pagination { justify-content: center !important; }
+    }
 </style>
 
 <script>
@@ -147,10 +202,17 @@
         const emptyState = document.getElementById('empty-emails');
         const bulkActions = document.getElementById('email-bulk-actions');
         const countLabel = document.getElementById('email-count');
+        const unreadCountLabel = document.getElementById('unread-email-count');
+        const readCountLabel = document.getElementById('read-email-count');
+        const pageSizeSelect = document.getElementById('email-page-size');
+        const pageStatus = document.getElementById('email-page-status');
+        const pageControls = document.getElementById('email-page-controls');
         const selectAll = document.getElementById('select-all-emails');
         const mailboxEmail = (inbox.dataset.mailboxEmail || '').toLowerCase();
         let currentFilter = 'all';
         let currentFilterLabel = 'All';
+        let currentPage = 1;
+        let pageSize = Number(pageSizeSelect.value);
         let refreshing = false;
         const knownMessageIds = new Set(
             [...rows.querySelectorAll('[data-email-row]')].map((row) => row.dataset.uid),
@@ -226,11 +288,11 @@
             row.append(selectCol);
 
             const contentCol = document.createElement('div');
-            contentCol.className = 'col col-md-9 col-xxl-10';
+            contentCol.className = 'col';
             const contentRow = document.createElement('div');
-            contentRow.className = 'row';
+            contentRow.className = 'row align-items-center g-1';
             const senderCol = document.createElement('div');
-            senderCol.className = 'col-md-4 col-xl-3 col-xxl-2 ps-md-0 mb-1 mb-md-0';
+            senderCol.className = 'col-12 col-md-4 col-xl-3 ps-md-0 mb-1 mb-md-0';
             const senderWrap = document.createElement('div');
             senderWrap.className = 'd-flex position-relative align-items-center';
             const avatar = textNode('span', 'avatar avatar-s bg-body-secondary text-primary fw-bold d-inline-flex align-items-center justify-content-center', (message.from || '?').trim().charAt(0).toUpperCase());
@@ -244,6 +306,7 @@
             contentRow.append(senderCol);
 
             const subjectCol = document.createElement('div');
+            subjectCol.className = 'col';
             const subjectLink = document.createElement('a');
             subjectLink.className = `d-block inbox-link email-subject${message.seen ? '' : ' fw-bold'}`;
             subjectLink.href = `${inbox.dataset.actionUrl.replace(/\/$/, '')}/${message.uid}`;
@@ -268,12 +331,48 @@
                 if (currentFilter === 'to-me') return mailboxEmail !== '' && row.dataset.to.includes(mailboxEmail);
                 return true;
             });
-            [...unreadSection.children, ...readSection.children].forEach((row) => {
-                if (row.matches?.('[data-email-row]')) row.classList.toggle('d-none', !matching.includes(row));
+            const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
+            currentPage = Math.min(currentPage, pageCount);
+            const pageStart = (currentPage - 1) * pageSize;
+            const visibleRows = new Set(matching.slice(pageStart, pageStart + pageSize));
+            const visibleUnread = [];
+            const visibleRead = [];
+            matching.forEach((row) => {
+                const isVisible = visibleRows.has(row);
+                row.classList.toggle('d-none', !isVisible);
+                if (!isVisible) return;
+                (row.dataset.seen === '0' ? visibleUnread : visibleRead).push(row);
             });
-            unreadSection.classList.toggle('d-none', currentFilter === 'read' || ![...unreadSection.querySelectorAll('[data-email-row]')].some((row) => !row.classList.contains('d-none')));
-            readSection.classList.toggle('d-none', currentFilter === 'unread' || ![...readSection.querySelectorAll('[data-email-row]')].some((row) => !row.classList.contains('d-none')));
+            unreadSection.classList.toggle('d-none', visibleUnread.length === 0);
+            readSection.classList.toggle('d-none', visibleRead.length === 0);
             emptyState.classList.toggle('d-none', matching.length > 0);
+            pageStatus.textContent = matching.length === 0
+                ? 'Showing 0 of 0'
+                : `Showing ${pageStart + 1}-${Math.min(pageStart + pageSize, matching.length)} of ${matching.length}`;
+
+            pageControls.replaceChildren();
+            pageControls.classList.toggle('d-none', pageCount <= 1);
+            const addPageButton = (label, page, disabled = false, active = false) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `btn ${active ? 'btn-primary' : 'btn-outline-secondary'}`;
+                button.textContent = label;
+                button.disabled = disabled;
+                if (active) button.setAttribute('aria-current', 'page');
+                button.addEventListener('click', () => {
+                    currentPage = page;
+                    applyFilter();
+                    updateSelection();
+                });
+                pageControls.append(button);
+            };
+            addPageButton('Previous', currentPage - 1, currentPage === 1);
+            const firstPage = Math.max(1, Math.min(currentPage - 2, pageCount - 4));
+            const lastPage = Math.min(pageCount, firstPage + 4);
+            for (let page = firstPage; page <= lastPage; page += 1) {
+                addPageButton(String(page), page, false, page === currentPage);
+            }
+            addPageButton('Next', currentPage + 1, currentPage === pageCount);
         };
 
         const updateSelection = () => {
@@ -321,6 +420,7 @@
                     return true;
                 });
                 if (newMessages.length > 0) {
+                    currentPage = 1;
                     const latestMessage = newMessages[0];
                     const singleMessage = newMessages.length === 1;
                     const summary = singleMessage
@@ -342,6 +442,8 @@
                 unreadSection.prepend(unreadHeading);
                 readSection.prepend(readHeading);
                 countLabel.textContent = `${payload.messages.length} message${payload.messages.length === 1 ? '' : 's'}`;
+                unreadCountLabel.textContent = String(payload.messages.filter((message) => !message.seen).length);
+                readCountLabel.textContent = String(payload.messages.filter((message) => message.seen).length);
                 errorAlert.classList.add('d-none');
                 refreshStatus.textContent = `Updated ${new Date(payload.checked_at).toLocaleTimeString()}`;
                 applyFilter();
@@ -378,10 +480,17 @@
             option.addEventListener('click', () => {
                 currentFilter = option.dataset.filter;
                 currentFilterLabel = option.textContent.trim();
+                currentPage = 1;
                 document.getElementById('email-filter-label').textContent = currentFilterLabel;
                 applyFilter();
                 updateSelection();
             });
+        });
+        pageSizeSelect.addEventListener('change', () => {
+            pageSize = Number(pageSizeSelect.value);
+            currentPage = 1;
+            applyFilter();
+            updateSelection();
         });
         document.querySelectorAll('[data-bulk-action]').forEach((button) => {
             button.addEventListener('click', () => {
@@ -414,6 +523,8 @@
 
         const existingRows = [...rows.querySelectorAll('[data-email-row]')];
         countLabel.textContent = `${existingRows.length} message${existingRows.length === 1 ? '' : 's'}`;
+        unreadCountLabel.textContent = String(existingRows.filter((row) => row.dataset.seen === '0').length);
+        readCountLabel.textContent = String(existingRows.filter((row) => row.dataset.seen === '1').length);
         refreshStatus.textContent = 'Auto-refresh every 30 seconds';
         applyFilter();
         updateSelection();

@@ -70,7 +70,7 @@ class PasswordResetTest extends TestCase
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['force_password_change' => true]);
 
         $this->post('/forgot-password', ['email' => $user->email]);
 
@@ -88,6 +88,12 @@ class PasswordResetTest extends TestCase
 
             return true;
         });
+
+        $this->assertFalse($user->fresh()->force_password_change);
+        $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('dashboard'));
     }
 
     public function test_password_reset_keeps_the_cpanel_mailbox_password_separate(): void
