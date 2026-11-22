@@ -329,9 +329,11 @@ class ShopController extends Controller
             'sku' => ['nullable', 'string', 'max:100', 'unique:custom_pc_components,sku'],
             'type' => ['required', Rule::in($componentTypes)],
             'description' => ['nullable', 'string', 'max:5000'],
-            'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
-            'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
+            'cost_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
+            'selling_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
         ]);
+        $data['cost_price'] = $data['cost_price'] ?? 0;
+        $data['selling_price'] = $data['selling_price'] ?? 0;
         $part = CustomPcComponent::query()->create($data);
 
         return response()->json([

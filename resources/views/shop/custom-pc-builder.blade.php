@@ -106,7 +106,7 @@
                                                 <div class="component-selection mt-2" aria-live="polite">
                                                     @if ($selectedComponent)
                                                         <strong class="component-selected-name d-block text-body-emphasis">{{ $selectedComponent->name }}</strong>
-                                                        <span class="small text-body-secondary">Builder catalogue · RM {{ number_format((float) $selectedComponent->selling_price, 2) }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}</span>
+                                                        <span class="small text-body-secondary">Builder catalogue · {{ (float) $selectedComponent->selling_price > 0 ? 'RM '.number_format((float) $selectedComponent->selling_price, 2) : 'No customer price set' }} · {{ $selectedComponentSupplier ?: 'No supplier linked' }}</span>
                                                     @else
                                                         <span class="small text-body-secondary">No component selected</span>
                                                     @endif
@@ -325,19 +325,19 @@
                             <textarea class="form-control" id="new-component-description" name="description" rows="2" maxlength="3000" placeholder="Add any other details, compatibility notes, or source information"></textarea>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="new-component-cost">Our estimated cost (RM)</label>
-                            <input class="form-control" id="new-component-cost" name="cost_price" type="number" min="0" max="99999999" step="0.01" value="0" required>
+                            <label class="form-label" for="new-component-cost">Our estimated cost (RM, optional)</label>
+                            <input class="form-control" id="new-component-cost" name="cost_price" type="number" min="0" max="99999999" step="0.01" placeholder="Add later">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label" for="new-component-price">Customer price (RM)</label>
-                            <input class="form-control" id="new-component-price" name="selling_price" type="number" min="0" max="99999999" step="0.01" value="0" required>
+                            <label class="form-label" for="new-component-price">Customer price (RM, optional)</label>
+                            <input class="form-control" id="new-component-price" name="selling_price" type="number" min="0" max="99999999" step="0.01" placeholder="Add later">
                         </div>
                         <div class="col-12 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div id="component-create-status" class="small" role="status" aria-live="polite"></div>
                             <button class="btn btn-primary" type="submit">Add to builder catalogue</button>
                         </div>
                     </form>
-                    <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Add suppliers and pricing after saving a part.</p>
+                    <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Prices are optional here and can be added later; enter a customer price and our cost before creating a quotation.</p>
                 </details>
                 <section id="component-supplier-form-panel" class="border rounded p-3 mt-4 d-none" aria-labelledby="component-supplier-form-title">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -868,7 +868,8 @@
             }
             const selectionDetails = document.createElement('div');
             selectionDetails.className = 'small text-body-secondary mt-1';
-            selectionDetails.textContent = `Builder catalogue · RM ${Number(option.dataset.price || 0).toFixed(2)} · ${option.dataset.supplier || 'No supplier linked'}`;
+            const sellingPrice = Number(option.dataset.price || 0);
+            selectionDetails.textContent = `Builder catalogue · ${sellingPrice > 0 ? `RM ${sellingPrice.toFixed(2)}` : 'No customer price set'} · ${option.dataset.supplier || 'No supplier linked'}`;
             selection.append(identity, selectionDetails);
 
             target.replaceChildren();
@@ -890,8 +891,6 @@
         };
 
         const updateCompatibility = () => {
-            let incompatibleSelectionChanged = false;
-
             builds.querySelectorAll('.pc-build').forEach((build) => {
                 const rows = rowsForBuild(build);
                 const motherboardOption = rows
@@ -903,17 +902,8 @@
                     const select = row.querySelector('.component-select');
                     [...select.options].forEach((option) => {
                         if (option.dataset.type !== 'cpu') return;
-                        option.disabled = Boolean(motherboardOption) && (
-                            !motherboardSocket
-                            || !option.dataset.socket
-                            || option.dataset.socket.trim().toLowerCase() !== motherboardSocket
-                        );
-                        if (option.selected && option.disabled) {
-                            select.value = '';
-                            row.querySelector('.component-cost').value = '';
-                            row.querySelector('.component-price').value = '';
-                            incompatibleSelectionChanged = true;
-                        }
+                        const cpuSocket = option.dataset.socket?.trim().toLowerCase();
+                        option.disabled = Boolean(motherboardSocket && cpuSocket && cpuSocket !== motherboardSocket && !option.selected);
                     });
                     updateComponentSpecifications(row);
                 });
@@ -922,13 +912,22 @@
                 if (!motherboardOption) {
                     compatibilityMessage.textContent = 'Select a motherboard to filter processors by socket. Add a “Socket: …” line to component descriptions to enable compatibility matching.';
                 } else if (!motherboardSocket) {
-                    compatibilityMessage.textContent = 'This motherboard has no socket specification. Add a “Socket: …” line to its description before selecting a processor.';
+                    compatibilityMessage.textContent = 'This motherboard has no socket specification. CPUs remain selectable, but compatibility cannot be checked until you add “Socket: …” to the motherboard specs.';
                 } else {
-                    compatibilityMessage.textContent = `Processors in this PC are filtered to socket ${motherboardOption.dataset.socket}. Check the motherboard manufacturer’s CPU support list and BIOS requirements before purchase.`;
+                    const selectedCpu = rows
+                        .map((row) => row.querySelector('.component-select').selectedOptions[0])
+                        .find((option) => option?.dataset.type === 'cpu');
+                    const selectedCpuSocket = selectedCpu?.dataset.socket?.trim();
+                    if (selectedCpu && !selectedCpuSocket) {
+                        compatibilityMessage.textContent = `The selected CPU has no socket specification. Add “Socket: …” to its specs to verify compatibility with ${motherboardOption.dataset.socket}.`;
+                    } else if (selectedCpuSocket && selectedCpuSocket.toLowerCase() !== motherboardSocket) {
+                        compatibilityMessage.textContent = `The selected ${selectedCpuSocket} CPU does not match the ${motherboardOption.dataset.socket} motherboard. Select a compatible processor before creating a quotation.`;
+                    } else {
+                        compatibilityMessage.textContent = `CPU choices with a different known socket are disabled. Check the motherboard manufacturer’s CPU support list and BIOS requirements before purchase.`;
+                    }
                 }
             });
 
-            return incompatibleSelectionChanged;
         };
 
         const getSelectedParts = (build) => rowsForBuild(build).flatMap((row) => {

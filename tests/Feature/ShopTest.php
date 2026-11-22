@@ -686,7 +686,7 @@ class ShopTest extends TestCase
             ->assertOk()
             ->assertSee('component-selected-name', false)
             ->assertSee('MSI RTX 5060 Ti 8G INSPIRE 2X')
-            ->assertSee('Builder catalogue · RM 0.00 · No supplier linked');
+            ->assertSee('Builder catalogue · No customer price set · No supplier linked');
     }
 
     public function test_staff_can_add_supplier_from_custom_pc_builder_and_link_component(): void
@@ -855,6 +855,29 @@ class ShopTest extends TestCase
             'type' => 'gpu',
         ]);
         $this->assertDatabaseMissing('inventory_parts', ['sku' => 'BUILDER-ONLY-GPU-1']);
+    }
+
+    public function test_builder_component_can_be_saved_without_cost_or_customer_price(): void
+    {
+        $staff = $this->staffUser();
+
+        $response = $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.store'), [
+            'name' => 'Unpriced builder CPU',
+            'sku' => 'BUILDER-UNPRICED-CPU-1',
+            'type' => 'cpu',
+            'description' => 'Brand: AMD',
+        ])->assertCreated()
+            ->assertJsonPath('name', 'Unpriced builder CPU')
+            ->assertJsonPath('cost_price', 0)
+            ->assertJsonPath('selling_price', 0);
+
+        $this->assertDatabaseHas('custom_pc_components', [
+            'id' => $response->json('id'),
+            'name' => 'Unpriced builder CPU',
+            'cost_price' => 0,
+            'selling_price' => 0,
+        ]);
+        $this->assertDatabaseMissing('inventory_parts', ['sku' => 'BUILDER-UNPRICED-CPU-1']);
     }
 
     public function test_builder_catalog_parts_can_be_edited_and_deleted_without_removing_quoted_parts(): void
