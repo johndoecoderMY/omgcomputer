@@ -180,7 +180,12 @@ class AdminUserController extends Controller
         $warnings = [];
         if ($cpanelEnabled) {
             try {
-                $mailbox = $provisioner->provision($data['mailbox_username'], $accountPassword);
+                $mailboxPassword = Str::random(64);
+                while (hash_equals($accountPassword, $mailboxPassword)) {
+                    $mailboxPassword = Str::random(64);
+                }
+
+                $mailbox = $provisioner->provision($data['mailbox_username'], $mailboxPassword);
                 $user->emailMailbox()->create($mailbox);
             } catch (\RuntimeException $exception) {
                 Log::warning('cPanel mailbox provisioning failed for a new member.', [
@@ -272,7 +277,12 @@ class AdminUserController extends Controller
 
         try {
             $accountPassword = Str::random(64);
-            $mailbox = $provisioner->provision(strtolower($data['mailbox_username']), $accountPassword);
+            $mailboxPassword = Str::random(64);
+            while (hash_equals($accountPassword, $mailboxPassword)) {
+                $mailboxPassword = Str::random(64);
+            }
+
+            $mailbox = $provisioner->provision(strtolower($data['mailbox_username']), $mailboxPassword);
             $user->emailMailbox()->create($mailbox);
             $user->forceFill([
                 'password' => Hash::make($accountPassword),
@@ -291,10 +301,10 @@ class AdminUserController extends Controller
         if ($status !== Password::RESET_LINK_SENT) {
             return back()
                 ->with('success', 'OMG Computer mailbox created for '.$user->name.'.')
-                ->with('warning', 'The mailbox password now matches a temporary app password, but a password reset link could not be sent. Ask the member to use Forgot password before signing in to email.');
+                ->with('warning', 'The cPanel mailbox password is separate from the app password. A password reset link could not be sent, so ask the member to use Forgot password before signing in.');
         }
 
-        return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'. A password reset link was sent so the member can set matching app and mailbox passwords.');
+        return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'. A password reset link was sent so the member can set their separate app password.');
     }
 
     private function sendMemberInvitation(User $user): bool

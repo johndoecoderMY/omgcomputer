@@ -14,6 +14,11 @@
     @if (session('mailbox_settings_error'))
         <div class="alert alert-danger" role="alert">{{ session('mailbox_settings_error') }}</div>
     @endif
+    @if ($mailboxPasswordMatchesAccount)
+        <div class="alert alert-warning" role="alert">
+            Your saved cPanel mailbox password currently matches your OMG Computer sign-in password. Enter a different password below to separate them.
+        </div>
+    @endif
     @if ($errors->any())
         <div class="alert alert-danger" role="alert">
             <p class="fw-semibold mb-1">Please correct the following:</p>
@@ -40,7 +45,7 @@
                         autocomplete="new-password" maxlength="1000"
                         placeholder="{{ $mailbox ? 'Saved; leave blank to keep the current password' : 'Enter your cPanel mailbox password' }}"
                         {{ $mailbox ? '' : 'required' }}>
-                    <div class="form-text">Stored encrypted. Your password is never shown after saving.</div>
+                    <div class="form-text">Use a password different from your OMG Computer sign-in password. Saving updates managed cPanel mailboxes too; for other mailboxes, change the password in cPanel before saving here. Stored encrypted and never shown after saving.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label" for="mailbox-signature">Email signature</label>

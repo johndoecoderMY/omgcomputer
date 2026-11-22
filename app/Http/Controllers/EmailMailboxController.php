@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerMessageTemplate;
 use App\Models\UserEmailMailbox;
+use App\Services\CpanelEmailProvisioner;
 use App\Services\EmailMailboxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\File;
 use Illuminate\View\View;
@@ -78,17 +80,34 @@ class EmailMailboxController extends Controller
 
     public function mailboxSettings(Request $request): View
     {
+        $mailbox = $request->user()->emailMailbox;
+
         return view('email.mailbox-settings', [
-            'mailbox' => $request->user()->emailMailbox,
+            'mailbox' => $mailbox,
+            'mailboxPasswordMatchesAccount' => $mailbox
+                && Hash::check($mailbox->password, $request->user()->password),
         ]);
     }
 
-    public function updateMailboxSettings(Request $request): RedirectResponse
+    public function updateMailboxSettings(Request $request, CpanelEmailProvisioner $provisioner): RedirectResponse
     {
         $mailbox = $request->user()->emailMailbox;
+        $mailboxPasswordMatchesAccount = $mailbox
+            && Hash::check($mailbox->password, $request->user()->password);
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255'],
-            'password' => [Rule::requiredIf(! $mailbox), 'nullable', 'string', 'max:1000'],
+            'password' => [
+                Rule::requiredIf(! $mailbox || $mailboxPasswordMatchesAccount),
+                'nullable',
+                'string',
+                'max:1000',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request, $mailbox): void {
+                    $mailboxPassword = filled($value) ? (string) $value : $mailbox?->password;
+                    if ($mailboxPassword !== null && Hash::check($mailboxPassword, $request->user()->password)) {
+                        $fail('Your cPanel mailbox password must be different from your OMG Computer account password.');
+                    }
+                },
+            ],
             'signature' => ['nullable', 'string', 'max:5000'],
         ]);
 
@@ -96,11 +115,19 @@ class EmailMailboxController extends Controller
         $mailbox->email = $data['email'];
         $mailbox->signature = $data['signature'] ?? null;
         if (filled($data['password'] ?? null)) {
+            if ($provisioner->managesMailbox($data['email'])) {
+                try {
+                    $provisioner->setMailboxPassword($data['email'], $data['password']);
+                } catch (RuntimeException $exception) {
+                    return back()->withInput()->with('mailbox_settings_error', $exception->getMessage());
+                }
+            }
+
             $mailbox->password = $data['password'];
         }
         $request->user()->emailMailbox()->save($mailbox);
 
-        return back()->with('mailbox_settings_success', 'Your mailbox connection was saved. The password is encrypted and never displayed.');
+        return back()->with('mailbox_settings_success', 'Your mailbox connection was saved with a separate cPanel password. The password is encrypted and never displayed.');
     }
 
     public function testMailboxConnection(Request $request, EmailMailboxService $mailbox): RedirectResponse

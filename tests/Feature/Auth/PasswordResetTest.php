@@ -5,7 +5,6 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -91,7 +90,7 @@ class PasswordResetTest extends TestCase
         });
     }
 
-    public function test_password_reset_updates_the_connected_mailbox_password(): void
+    public function test_password_reset_keeps_the_cpanel_mailbox_password_separate(): void
     {
         Notification::fake();
         $user = User::factory()->create();
@@ -99,19 +98,7 @@ class PasswordResetTest extends TestCase
             'email' => 'member@example.test',
             'password' => 'old-mailbox-password',
         ]);
-        config([
-            'services.cpanel.enabled' => true,
-            'services.cpanel.host' => 'cpanel.example.test',
-            'services.cpanel.port' => 2083,
-            'services.cpanel.username' => 'cpanel-user',
-            'services.cpanel.api_token' => 'private-api-token',
-            'services.cpanel.email_domain' => 'example.test',
-        ]);
-        Http::fake([
-            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
-                'result' => ['status' => 1],
-            ]),
-        ]);
+        Http::fake();
         $token = Password::createToken($user);
 
         $this->post(route('password.store'), [
@@ -122,7 +109,26 @@ class PasswordResetTest extends TestCase
         ])->assertRedirect(route('login'));
 
         $this->assertTrue(Hash::check('Reset-password-2026!', $user->fresh()->password));
-        $this->assertSame('Reset-password-2026!', $user->fresh()->emailMailbox->password);
-        Http::assertSent(fn (Request $request): bool => $request['password'] === 'Reset-password-2026!');
+        $this->assertSame('old-mailbox-password', $user->fresh()->emailMailbox->password);
+        Http::assertNothingSent();
+    }
+
+    public function test_password_reset_rejects_the_cpanel_mailbox_password(): void
+    {
+        $user = User::factory()->create();
+        $user->emailMailbox()->create([
+            'email' => 'member@example.test',
+            'password' => 'Reset-password-2026!',
+        ]);
+        $token = Password::createToken($user);
+
+        $this->post(route('password.store'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'Reset-password-2026!',
+            'password_confirmation' => 'Reset-password-2026!',
+        ])->assertSessionHasErrors('password');
+
+        $this->assertTrue(Hash::check('password', $user->fresh()->password));
     }
 }

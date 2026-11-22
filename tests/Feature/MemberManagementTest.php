@@ -172,6 +172,7 @@ class MemberManagementTest extends TestCase
             ->assertSee('Preferred email name')
             ->assertSee('firstname.lastname')
             ->assertSee('@example.test')
+            ->assertSee('automatically provisions and connects this mailbox')
             ->assertSee('Mailbox quota: unlimited.');
         Http::fake([
             'https://cpanel.example.test:2083/execute/Email/list_pops*' => Http::response([
@@ -196,7 +197,7 @@ class MemberManagementTest extends TestCase
 
         $member = User::query()->where('email', 'personal@example.test')->firstOrFail();
         $this->assertSame('provisioned.member@example.test', $member->emailMailbox->email);
-        $this->assertTrue(Hash::check($member->emailMailbox->password, $member->password));
+        $this->assertFalse(Hash::check($member->emailMailbox->password, $member->password));
         $this->assertNotSame(
             $member->emailMailbox->password,
             DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),
@@ -232,10 +233,9 @@ class MemberManagementTest extends TestCase
         $member->refresh();
         $this->assertNotNull($member->email_verified_at);
         $this->assertFalse($member->force_password_change);
-        $this->assertSame('Strong-password-123!', $member->emailMailbox->password);
-        Http::assertSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
-            && $request['email'] === 'provisioned.member'
-            && $request['domain'] === 'example.test'
+        $this->assertNotSame('Strong-password-123!', $member->emailMailbox->password);
+        $this->assertFalse(Hash::check($member->emailMailbox->password, $member->password));
+        Http::assertNotSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
             && $request['password'] === 'Strong-password-123!');
         $this->post(route('login'), [
             'email' => $member->email,
@@ -285,12 +285,12 @@ class MemberManagementTest extends TestCase
         $this->post(route('admin.users.mailbox.create', $member), [
             'mailbox_username' => 'mailbox.member',
         ])->assertRedirect(route('members.show', $member))
-            ->assertSessionHas('success', 'OMG Computer mailbox created for Mailbox Member. A password reset link was sent so the member can set matching app and mailbox passwords.');
+            ->assertSessionHas('success', 'OMG Computer mailbox created for Mailbox Member. A password reset link was sent so the member can set their separate app password.');
 
         $member->refresh();
         $this->assertSame('mailbox.member@example.test', $member->emailMailbox->email);
         $this->assertTrue($member->force_password_change);
-        $this->assertTrue(Hash::check($member->emailMailbox->password, $member->password));
+        $this->assertFalse(Hash::check($member->emailMailbox->password, $member->password));
         $this->assertNotSame(
             $member->emailMailbox->password,
             DB::table('user_email_mailboxes')->where('user_id', $member->id)->value('password'),

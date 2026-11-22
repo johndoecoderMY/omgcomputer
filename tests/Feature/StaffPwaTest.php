@@ -58,6 +58,8 @@ class StaffPwaTest extends TestCase
         $this->assertStringContainsString('In Safari, tap Share, then Add to Home Screen.', $appScript);
         $this->assertStringContainsString('void playNotificationSoundOnce(notification.id);', $appScript);
         $this->assertStringNotContainsString("if (notification.title === 'New booking received')", $appScript);
+        $this->assertStringContainsString('const pendingNotificationSoundIds = new Set();', $appScript);
+        $this->assertStringContainsString('void flushPendingNotificationSounds();', $appScript);
         $this->assertLessThan(
             strpos($appScript, "notificationsChannel.notification((notification) => {"),
             strpos($appScript, "window.addEventListener('beforeinstallprompt'"),

@@ -7,10 +7,13 @@ use App\Models\EmailServerSetting;
 use App\Models\User;
 use App\Services\EmailMailboxService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Mailer;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Mockery;
 use Mockery\MockInterface;
@@ -395,7 +398,8 @@ class EmailMailboxTest extends TestCase
             ->get(route('email.mailbox-settings'))
             ->assertOk()
             ->assertSee('My cPanel mailbox')
-            ->assertSee('Email signature');
+            ->assertSee('Email signature')
+            ->assertSee('different from your OMG Computer sign-in password');
         $this->actingAs($member)
             ->get(route('email.compose'))
             ->assertOk()
@@ -404,6 +408,11 @@ class EmailMailboxTest extends TestCase
         $this->actingAs($member)
             ->get(route('email.settings'))
             ->assertForbidden();
+
+        $this->actingAs($member)->put(route('email.mailbox-settings.update'), [
+            'email' => 'member@example.test',
+            'password' => 'password',
+        ])->assertSessionHasErrors('password');
 
         $this->actingAs($member)->put(route('email.mailbox-settings.update'), [
             'email' => 'member@example.test',
@@ -435,6 +444,65 @@ class EmailMailboxTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasNoErrors();
         $this->assertSame('personal-mail-secret', User::query()->findOrFail($member->id)->emailMailbox->password);
+    }
+
+    public function test_legacy_mailbox_password_matching_the_account_is_flagged_and_must_be_changed(): void
+    {
+        Role::findOrCreate('member', 'web');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $member->emailMailbox()->create([
+            'email' => 'member@example.test',
+            'password' => 'password',
+        ]);
+
+        $this->actingAs($member)
+            ->get(route('email.mailbox-settings'))
+            ->assertOk()
+            ->assertSee('currently matches your OMG Computer sign-in password');
+
+        $this->actingAs($member)->put(route('email.mailbox-settings.update'), [
+            'email' => 'member@example.test',
+            'password' => '',
+        ])->assertSessionHasErrors('password');
+    }
+
+    public function test_user_can_change_the_cpanel_password_without_changing_the_account_password(): void
+    {
+        Role::findOrCreate('member', 'web');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $member->emailMailbox()->create([
+            'email' => 'member@example.test',
+            'password' => 'old-mailbox-secret',
+        ]);
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
+                'result' => ['status' => 1],
+            ]),
+        ]);
+
+        $this->actingAs($member)->put(route('email.mailbox-settings.update'), [
+            'email' => 'member@example.test',
+            'password' => 'new-mailbox-secret',
+        ])->assertRedirect()
+            ->assertSessionHas('mailbox_settings_success');
+
+        $member->refresh();
+        $this->assertSame('new-mailbox-secret', $member->emailMailbox->password);
+        $this->assertFalse(Hash::check('new-mailbox-secret', $member->password));
+        Http::assertSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
+            && $request['email'] === 'member'
+            && $request['domain'] === 'example.test'
+            && $request['password'] === 'new-mailbox-secret');
     }
 
     private function admin(): User

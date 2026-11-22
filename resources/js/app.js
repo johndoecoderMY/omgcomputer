@@ -183,6 +183,8 @@ let notificationAudioContext = null;
 let notificationAudioUnlocked = false;
 let notificationSoundErrorLogged = false;
 const notificationSoundTabId = `${Date.now()}-${Math.random()}`;
+const pendingNotificationSoundIds = new Set();
+let flushPendingNotificationSounds = () => {};
 const logNotificationSoundError = (error) => {
     if (notificationSoundErrorLogged) {
         return;
@@ -249,11 +251,18 @@ if (userId) {
             return;
         }
 
+        if (notificationAudioUnlocked && notificationAudioContext?.state === 'running') {
+            return;
+        }
+
         try {
             notificationAudioContext ||= new window.AudioContext();
             notificationAudioContext.resume()
                 .then(() => {
                     notificationAudioUnlocked = notificationAudioContext?.state === 'running';
+                    if (notificationAudioUnlocked) {
+                        void flushPendingNotificationSounds();
+                    }
                 })
                 .catch((error) => {
                     logNotificationSoundError(error);
@@ -262,8 +271,8 @@ if (userId) {
             logNotificationSoundError(error);
         }
     };
-    document.addEventListener('pointerdown', unlockNotificationAudio, { once: true, passive: true });
-    document.addEventListener('keydown', unlockNotificationAudio, { once: true });
+    document.addEventListener('pointerdown', unlockNotificationAudio, { passive: true });
+    document.addEventListener('keydown', unlockNotificationAudio);
 }
 const readPlayedNotificationIds = () => {
     try {
@@ -277,6 +286,13 @@ const readPlayedNotificationIds = () => {
 const playNotificationSoundOnce = async (notificationId) => {
     const id = typeof notificationId === 'string' ? notificationId : '';
     if (!notificationSoundStorageKey || !id) {
+        return;
+    }
+
+    if (!notificationAudioUnlocked) {
+        if (pendingNotificationSoundIds.size < 20) {
+            pendingNotificationSoundIds.add(id);
+        }
         return;
     }
 
@@ -335,6 +351,23 @@ const playNotificationSoundOnce = async (notificationId) => {
         }
     } catch (error) {
         logNotificationSoundError(error);
+    }
+};
+let isFlushingNotificationSounds = false;
+flushPendingNotificationSounds = async () => {
+    if (!notificationAudioUnlocked || isFlushingNotificationSounds) {
+        return;
+    }
+
+    isFlushingNotificationSounds = true;
+    try {
+        while (notificationAudioUnlocked && pendingNotificationSoundIds.size > 0) {
+            const [notificationId] = pendingNotificationSoundIds;
+            pendingNotificationSoundIds.delete(notificationId);
+            await playNotificationSoundOnce(notificationId);
+        }
+    } finally {
+        isFlushingNotificationSounds = false;
     }
 };
 window.playAppNotificationSoundOnce = playNotificationSoundOnce;

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +13,15 @@ class CpanelEmailProvisioner
     public function configured(): bool
     {
         return (bool) config('services.cpanel.enabled');
+    }
+
+    public function managesMailbox(string $email): bool
+    {
+        $parts = explode('@', $email);
+
+        return $this->configured()
+            && count($parts) === 2
+            && strcasecmp($parts[1], (string) config('services.cpanel.email_domain')) === 0;
     }
 
     /**
@@ -105,16 +113,9 @@ class CpanelEmailProvisioner
         ];
     }
 
-    public function syncUserPassword(User $user, string $password): void
+    public function setMailboxPassword(string $email, string $password): void
     {
-        $mailbox = $user->emailMailbox;
-        if (! $mailbox) {
-            return;
-        }
-
-        $this->updateMailboxPassword($mailbox->email, $password);
-        $mailbox->password = $password;
-        $mailbox->save();
+        $this->updateMailboxPassword($email, $password);
     }
 
     private function updateMailboxPassword(string $email, string $password): void

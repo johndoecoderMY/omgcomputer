@@ -49,7 +49,7 @@
                     <div class="form-text" id="mailbox-username-help">
                         Choose the preferred part before @ for the member's work email.
                         Mailbox quota: {{ (int) config('services.cpanel.email_quota') === 0 ? 'unlimited' : number_format((int) config('services.cpanel.email_quota')).' MB' }}.
-                        The mailbox is provisioned by cPanel UAPI; its generated password is stored encrypted for OMGComputer inbox access.
+                        cPanel automatically provisions and connects this mailbox to the OMGComputer inbox using a separate generated password stored encrypted.
                     </div>
                 </div>
             @endif
