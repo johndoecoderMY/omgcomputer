@@ -595,12 +595,37 @@ class IntegrationTestPagesTest extends TestCase
             ->assertOk()
             ->assertSee('Notification & Email Tests')
             ->assertSee('Send test notification')
+            ->assertSee('data-notification-test-form', false)
+            ->assertSee('data-notification-test-result', false)
             ->assertSee($admin->email);
 
         $this->actingAs($admin)->post(route('reports.integrations.notifications.send'))
             ->assertRedirect(route('reports.integrations.notifications'));
 
         Notification::assertSentTo($admin, IntegrationTestNotification::class, fn (IntegrationTestNotification $notification): bool => $notification->title === 'Test notification');
+    }
+
+    public function test_admin_can_send_a_test_notification_over_ajax_and_get_its_id(): void
+    {
+        $admin = User::factory()->create();
+        Role::findOrCreate('admin', 'web');
+        $admin->assignRole('admin');
+        Notification::fake();
+
+        $response = $this->actingAs($admin)->postJson(route('reports.integrations.notifications.send'));
+
+        $response->assertOk()
+            ->assertJsonStructure(['success', 'message', 'notification_id'])
+            ->assertJsonPath('success', true);
+
+        $notificationId = $response->json('notification_id');
+        $this->assertIsString($notificationId);
+        $this->assertNotSame('', $notificationId);
+        Notification::assertSentTo(
+            $admin,
+            IntegrationTestNotification::class,
+            fn (IntegrationTestNotification $notification): bool => $notification->id === $notificationId,
+        );
     }
 
     public function test_admin_can_send_a_test_email_to_their_own_account(): void

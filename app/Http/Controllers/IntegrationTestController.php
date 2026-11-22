@@ -17,11 +17,13 @@ use App\Services\CpanelEmailProvisioner;
 use App\Services\MailSettingsService;
 use App\Services\ParcelTrackingService;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -75,18 +77,26 @@ class IntegrationTestController extends Controller
         ]);
     }
 
-    public function sendTestNotification(Request $request): RedirectResponse
+    public function sendTestNotification(Request $request): JsonResponse|RedirectResponse
     {
-        $request->user()->notify(new IntegrationTestNotification(
+        $notification = new IntegrationTestNotification(
             'Test notification',
             'Your workspace notifications are working.',
             route('notifications.index'),
-        ));
+        );
+        $notification->id = (string) Str::uuid();
+        $request->user()->notify($notification);
 
-        return back()->with('notification_test_result', [
+        $result = [
             'success' => true,
             'message' => 'A test notification was sent to your account.',
-        ]);
+        ];
+
+        if ($request->expectsJson()) {
+            return response()->json($result + ['notification_id' => $notification->id]);
+        }
+
+        return back()->with('notification_test_result', $result);
     }
 
     public function sendTestEmail(Request $request, MailSettingsService $mailSettings): RedirectResponse
