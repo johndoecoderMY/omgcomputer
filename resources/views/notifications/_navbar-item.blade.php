@@ -1,4 +1,4 @@
-<div class="list-group-item p-0" data-notification-item>
+<div class="list-group-item p-0" data-notification-item data-notification-id="{{ $notification->id }}">
     <a class="notification notification-flush {{ $notification->read_at ? '' : 'notification-unread' }}"
         href="{{ route('notifications.read', $notification) }}">
         <div class="notification-avatar">

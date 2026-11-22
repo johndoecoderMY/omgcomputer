@@ -694,6 +694,188 @@ if (userId && beamsInstanceId && beamsAuthUrl) {
     });
 }
 
+const shownNotificationIds = new Set(
+    Array.from(document.querySelectorAll('#navbar-notifications-list [data-notification-id]'))
+        .map((item) => item.dataset.notificationId)
+        .filter((id) => Boolean(id)),
+);
+const addAppNotificationToMenu = (notification) => {
+    const id = typeof notification?.id === 'string' ? notification.id : '';
+    if (!id) {
+        console.error('Received a notification without an ID.');
+        return;
+    }
+    if (shownNotificationIds.has(id)) {
+        return;
+    }
+
+    shownNotificationIds.add(id);
+    void playNotificationSoundOnce(id);
+
+    const list = document.getElementById('navbar-notifications-list');
+    const count = document.getElementById('unread-notifications-count');
+    if (count) {
+        const unreadCount = Number.parseInt(count.textContent, 10) || 0;
+        const nextUnreadCount = unreadCount + 1;
+        count.textContent = nextUnreadCount > 99 ? '99+' : String(nextUnreadCount);
+        count.setAttribute('aria-label', `${nextUnreadCount} unread notifications`);
+        count.classList.remove('d-none');
+        const notificationLink = document.getElementById('navbarDropdownNotification');
+        notificationLink?.classList.add(
+            'notification-indicator',
+            'notification-indicator-primary',
+            'notification-indicator-fill',
+        );
+        notificationLink?.setAttribute('aria-label', `Notifications, ${nextUnreadCount} unread`);
+    }
+
+    document.querySelectorAll('[data-notification-read-all] button[type="submit"]').forEach((button) => {
+        button.disabled = false;
+    });
+
+    if (!list) {
+        return;
+    }
+
+    document.getElementById('navbar-notifications-empty')?.remove();
+
+    let group = list.querySelector('.list-group');
+    if (!group) {
+        group = document.createElement('div');
+        group.className = 'list-group list-group-flush fw-normal fs-10';
+        list.append(group);
+    }
+
+    if (!group.querySelector('[data-notification-new-title]')) {
+        const title = document.createElement('div');
+        title.className = 'list-group-title border-bottom px-3 py-2';
+        title.dataset.notificationNewTitle = '';
+        title.textContent = 'NEW';
+        group.prepend(title);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'list-group-item p-0';
+    wrapper.dataset.notificationItem = '';
+    wrapper.dataset.notificationId = id;
+    const item = document.createElement('a');
+    item.className = 'notification notification-flush notification-unread';
+    item.href = `${readPrefix}/${encodeURIComponent(id)}/read`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'notification-avatar';
+    const avatarSize = document.createElement('div');
+    avatarSize.className = 'avatar avatar-2xl me-3';
+    const avatarName = document.createElement('div');
+    avatarName.className = 'avatar-name rounded-circle bg-primary-subtle text-primary';
+    const bell = document.createElement('span');
+    bell.className = 'bi bi-bell';
+    bell.setAttribute('aria-hidden', 'true');
+    avatarName.append(bell);
+    avatarSize.append(avatarName);
+    avatar.append(avatarSize);
+
+    const body = document.createElement('div');
+    body.className = 'notification-body';
+    const paragraph = document.createElement('p');
+    paragraph.className = 'mb-1';
+    const heading = document.createElement('strong');
+    heading.textContent = typeof notification.title === 'string' && notification.title
+        ? notification.title
+        : 'Workspace update';
+    const message = typeof notification.message === 'string' ? ` ${notification.message}` : '';
+    paragraph.append(heading, document.createTextNode(message));
+    const time = document.createElement('span');
+    time.className = 'notification-time';
+    const bellIcon = document.createElement('span');
+    bellIcon.className = 'bi bi-bell me-2 text-primary';
+    bellIcon.setAttribute('aria-hidden', 'true');
+    const timeText = document.createElement('span');
+    timeText.textContent = 'Just now';
+    time.append(bellIcon, timeText);
+    body.append(paragraph, time);
+
+    item.append(avatar, body);
+    wrapper.append(item);
+    group.insertBefore(wrapper, group.children[1] || null);
+    group.querySelectorAll('[data-notification-item]').forEach((entry, index) => {
+        if (index > 5) entry.remove();
+    });
+};
+
+document.addEventListener('submit', async (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches('[data-notification-test-form]')) {
+        return;
+    }
+
+    event.preventDefault();
+    const button = form.querySelector('[type="submit"]');
+    if (button?.disabled) {
+        return;
+    }
+
+    const label = form.querySelector('[data-notification-test-label]');
+    const status = document.querySelector('[data-notification-test-result]');
+    const defaultLabel = label?.textContent || '';
+    const showStatus = (message, type) => {
+        if (!status) {
+            return;
+        }
+        status.textContent = message;
+        status.className = `alert alert-${type} mt-3`;
+    };
+
+    if (button) {
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+    }
+    if (label) {
+        label.textContent = 'Sending...';
+    }
+    showStatus('Sending test notification...', 'info');
+
+    try {
+        const response = await fetch(form.action, {
+            method: form.method || 'POST',
+            body: new FormData(form),
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+        let payload;
+        try {
+            payload = await response.json();
+        } catch {
+            throw new Error(`Could not send test notification (HTTP ${response.status}).`);
+        }
+
+        if (!response.ok || payload?.success !== true) {
+            const errors = Object.values(payload?.errors || {}).flat();
+            throw new Error(errors.join('\n') || payload?.message || 'The test notification could not be sent.');
+        }
+        if (!payload?.notification || typeof payload.notification.id !== 'string') {
+            throw new Error('The notification was sent, but its details could not be displayed. Refresh the page to see it.');
+        }
+
+        addAppNotificationToMenu(payload.notification);
+        showStatus(payload.message || 'A test notification was sent to your account.', 'success');
+    } catch (error) {
+        console.error('Could not send test notification.', error);
+        showStatus(error instanceof Error ? error.message : 'The test notification could not be sent.', 'danger');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        }
+        if (label) {
+            label.textContent = defaultLabel;
+        }
+    }
+});
+
 if (userId && pusherKey && pusherCluster && csrfToken) {
     window.Echo = new Echo({
         broadcaster: 'pusher',
@@ -713,89 +895,7 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
         console.error('Pusher notification channel subscription failed.', error);
     });
     notificationsChannel.notification((notification) => {
-        void playNotificationSoundOnce(notification.id);
-
-        const list = document.getElementById('navbar-notifications-list');
-        const count = document.getElementById('unread-notifications-count');
-
-        if (count) {
-            const unreadCount = Number.parseInt(count.textContent, 10) || 0;
-            const nextUnreadCount = unreadCount + 1;
-            count.textContent = nextUnreadCount > 99 ? '99+' : String(nextUnreadCount);
-            count.setAttribute('aria-label', `${nextUnreadCount} unread notifications`);
-            count.classList.remove('d-none');
-            const notificationLink = document.getElementById('navbarDropdownNotification');
-            notificationLink?.classList.add(
-                'notification-indicator',
-                'notification-indicator-primary',
-                'notification-indicator-fill',
-            );
-            notificationLink?.setAttribute('aria-label', `Notifications, ${nextUnreadCount} unread`);
-        }
-
-        if (list) {
-            document.getElementById('navbar-notifications-empty')?.remove();
-
-            let group = list.querySelector('.list-group');
-            if (!group) {
-                group = document.createElement('div');
-                group.className = 'list-group list-group-flush fw-normal fs-10';
-                list.append(group);
-            }
-
-            if (!group.querySelector('[data-notification-new-title]')) {
-                const title = document.createElement('div');
-                title.className = 'list-group-title border-bottom px-3 py-2';
-                title.dataset.notificationNewTitle = '';
-                title.textContent = 'NEW';
-                group.prepend(title);
-            }
-
-            const wrapper = document.createElement('div');
-            wrapper.className = 'list-group-item p-0';
-            wrapper.dataset.notificationItem = '';
-            const item = document.createElement('a');
-            item.className = 'notification notification-flush notification-unread';
-            item.href = `${readPrefix}/${encodeURIComponent(notification.id)}/read`;
-
-            const avatar = document.createElement('div');
-            avatar.className = 'notification-avatar';
-            const avatarSize = document.createElement('div');
-            avatarSize.className = 'avatar avatar-2xl me-3';
-            const avatarName = document.createElement('div');
-            avatarName.className = 'avatar-name rounded-circle bg-primary-subtle text-primary';
-            const bell = document.createElement('span');
-            bell.className = 'bi bi-bell';
-            bell.setAttribute('aria-hidden', 'true');
-            avatarName.append(bell);
-            avatarSize.append(avatarName);
-            avatar.append(avatarSize);
-
-            const body = document.createElement('div');
-            body.className = 'notification-body';
-            const paragraph = document.createElement('p');
-            paragraph.className = 'mb-1';
-            const heading = document.createElement('strong');
-            heading.textContent = notification.title || 'Workspace update';
-            paragraph.append(heading, document.createTextNode(` ${notification.message || ''}`));
-            const time = document.createElement('span');
-            time.className = 'notification-time';
-            const bellIcon = document.createElement('span');
-            bellIcon.className = 'bi bi-bell me-2 text-primary';
-            bellIcon.setAttribute('aria-hidden', 'true');
-            const timeText = document.createElement('span');
-            timeText.textContent = 'Just now';
-            time.append(bellIcon, timeText);
-            body.append(paragraph, time);
-
-            item.append(avatar, body);
-            wrapper.append(item);
-            group.insertBefore(wrapper, group.children[1] || null);
-            group.querySelectorAll('[data-notification-item]').forEach((entry, index) => {
-                if (index > 5) entry.remove();
-            });
-        }
-
+        addAppNotificationToMenu(notification);
     });
 } else if (userId) {
     console.error('Realtime notifications could not start because Pusher or CSRF configuration is missing.');

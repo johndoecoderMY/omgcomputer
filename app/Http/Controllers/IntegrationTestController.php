@@ -93,7 +93,15 @@ class IntegrationTestController extends Controller
         ];
 
         if ($request->expectsJson()) {
-            return response()->json($result + ['notification_id' => $notification->id]);
+            return response()->json($result + [
+                'notification_id' => $notification->id,
+                'notification' => [
+                    'id' => $notification->id,
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'url' => $notification->url,
+                ],
+            ]);
         }
 
         return back()->with('notification_test_result', $result);

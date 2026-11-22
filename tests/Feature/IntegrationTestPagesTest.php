@@ -615,12 +615,20 @@ class IntegrationTestPagesTest extends TestCase
         $response = $this->actingAs($admin)->postJson(route('reports.integrations.notifications.send'));
 
         $response->assertOk()
-            ->assertJsonStructure(['success', 'message', 'notification_id'])
-            ->assertJsonPath('success', true);
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'notification_id',
+                'notification' => ['id', 'title', 'message', 'url'],
+            ])
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('notification.title', 'Test notification')
+            ->assertJsonPath('notification.message', 'Your workspace notifications are working.');
 
         $notificationId = $response->json('notification_id');
         $this->assertIsString($notificationId);
         $this->assertNotSame('', $notificationId);
+        $this->assertSame($notificationId, $response->json('notification.id'));
         Notification::assertSentTo(
             $admin,
             IntegrationTestNotification::class,
