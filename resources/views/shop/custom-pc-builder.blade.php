@@ -116,7 +116,7 @@
                                             <td><input class="form-control component-quantity" type="number" min="1" max="100000" value="{{ $line['quantity'] ?? 1 }}" aria-label="{{ $label }} quantity"></td>
                                             <td><input class="form-control component-cost" type="number" min="0" max="99999999" step="0.01" value="{{ $line['unit_cost'] ?? '' }}" placeholder="Enter our cost" aria-label="{{ $label }} our unit cost" required></td>
                                             <td><input class="form-control component-price" type="number" min="0" max="99999999" step="0.01" value="{{ $line['unit_price'] ?? '' }}" placeholder="Use RM selling price" aria-label="{{ $label }} customer unit price"></td>
-                                            <td><button class="btn btn-outline-secondary remove-component" type="button" aria-label="Remove {{ strtolower($label) }} section"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
+                                            <td><button class="btn btn-outline-secondary remove-component" type="button" aria-label="Remove {{ strtolower($label) }} section" title="Remove component"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m4 4 8 8M12 4 4 12"></path></svg></button></td>
                                         </tr>
                                     @endforeach
                                 @endforeach
@@ -282,6 +282,66 @@
                             <label class="form-label" for="catalog-gpu-memory">GPU memory</label>
                             <input class="form-control" id="catalog-gpu-memory" name="gpu_memory" maxlength="80" placeholder="e.g. 12 GB" disabled>
                         </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="cpu">
+                            <label class="form-label" for="catalog-cpu-socket">CPU socket</label>
+                            <input class="form-control" id="catalog-cpu-socket" name="cpu_socket" maxlength="80" placeholder="e.g. AM5" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="cpu">
+                            <label class="form-label" for="catalog-cpu-cores">CPU cores</label>
+                            <input class="form-control" id="catalog-cpu-cores" name="cpu_cores" maxlength="80" placeholder="e.g. 8" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="motherboard">
+                            <label class="form-label" for="catalog-motherboard-socket">Motherboard socket</label>
+                            <input class="form-control" id="catalog-motherboard-socket" name="motherboard_socket" maxlength="80" placeholder="e.g. AM5" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="motherboard">
+                            <label class="form-label" for="catalog-motherboard-memory">Memory type</label>
+                            <input class="form-control" id="catalog-motherboard-memory" name="motherboard_memory" maxlength="80" placeholder="e.g. DDR5" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="storage">
+                            <label class="form-label" for="catalog-storage-capacity">Storage capacity</label>
+                            <input class="form-control" id="catalog-storage-capacity" name="storage_capacity" maxlength="80" placeholder="e.g. 1 TB" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="storage">
+                            <label class="form-label" for="catalog-storage-interface">Storage interface</label>
+                            <input class="form-control" id="catalog-storage-interface" name="storage_interface" maxlength="80" placeholder="e.g. NVMe" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="power_supply">
+                            <label class="form-label" for="catalog-power-wattage">Power output</label>
+                            <input class="form-control" id="catalog-power-wattage" name="power_wattage" maxlength="80" placeholder="e.g. 750 W" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="power_supply">
+                            <label class="form-label" for="catalog-power-form-factor">PSU form factor</label>
+                            <input class="form-control" id="catalog-power-form-factor" name="power_form_factor" maxlength="80" placeholder="e.g. ATX" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="case">
+                            <label class="form-label" for="catalog-case-form-factor">Case form factor</label>
+                            <input class="form-control" id="catalog-case-form-factor" name="case_form_factor" maxlength="80" placeholder="e.g. Mid-tower" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="cooling">
+                            <label class="form-label" for="catalog-cooling-socket">Cooler socket support</label>
+                            <input class="form-control" id="catalog-cooling-socket" name="cooling_socket" maxlength="80" placeholder="e.g. AM5" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="cooling">
+                            <label class="form-label" for="catalog-cooling-type">Cooling type</label>
+                            <input class="form-control" id="catalog-cooling-type" name="cooling_type" maxlength="80" placeholder="e.g. Air cooler" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="operating_system">
+                            <label class="form-label" for="catalog-operating-system-license">License</label>
+                            <input class="form-control" id="catalog-operating-system-license" name="operating_system_license" maxlength="80" placeholder="e.g. Retail" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="software">
+                            <label class="form-label" for="catalog-software-license">License or term</label>
+                            <input class="form-control" id="catalog-software-license" name="software_license" maxlength="80" placeholder="e.g. 12-month subscription" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="peripheral">
+                            <label class="form-label" for="catalog-peripheral-connector">Connector</label>
+                            <input class="form-control" id="catalog-peripheral-connector" name="peripheral_connector" maxlength="80" placeholder="e.g. USB-C" disabled>
+                        </div>
+                        <div class="col-md-4 d-none" data-component-spec-filter="other">
+                            <label class="form-label" for="catalog-other-specification">Specification</label>
+                            <input class="form-control" id="catalog-other-specification" name="other_specification" maxlength="80" placeholder="Search any part specification" disabled>
+                        </div>
                     </div>
                     <div class="col-12 d-flex justify-content-end">
                         <button class="btn btn-primary" type="submit">Search parts</button>
@@ -431,7 +491,7 @@
         <td><input class="form-control component-quantity" type="number" min="1" max="100000" value="1" aria-label="Component quantity"></td>
         <td><input class="form-control component-cost" type="number" min="0" max="99999999" step="0.01" placeholder="Enter our cost" aria-label="Component our unit cost" required></td>
         <td><input class="form-control component-price" type="number" min="0" max="99999999" step="0.01" placeholder="Use RM selling price" aria-label="Component customer unit price"></td>
-        <td><button class="btn btn-outline-secondary remove-component" type="button" aria-label="Remove component"><i class="bi bi-x-lg" aria-hidden="true"></i></button></td>
+        <td><button class="btn btn-outline-secondary remove-component" type="button" aria-label="Remove component" title="Remove component"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m4 4 8 8M12 4 4 12"></path></svg></button></td>
     </tr>
 </template>
 

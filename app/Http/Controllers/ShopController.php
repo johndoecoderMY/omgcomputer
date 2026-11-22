@@ -249,6 +249,21 @@ class ShopController extends Controller
             'ram_speed' => ['nullable', 'string', 'max:80'],
             'ram_capacity' => ['nullable', 'string', 'max:80'],
             'gpu_memory' => ['nullable', 'string', 'max:80'],
+            'cpu_socket' => ['nullable', 'string', 'max:80'],
+            'cpu_cores' => ['nullable', 'string', 'max:80'],
+            'motherboard_socket' => ['nullable', 'string', 'max:80'],
+            'motherboard_memory' => ['nullable', 'string', 'max:80'],
+            'storage_capacity' => ['nullable', 'string', 'max:80'],
+            'storage_interface' => ['nullable', 'string', 'max:80'],
+            'power_wattage' => ['nullable', 'string', 'max:80'],
+            'power_form_factor' => ['nullable', 'string', 'max:80'],
+            'case_form_factor' => ['nullable', 'string', 'max:80'],
+            'cooling_socket' => ['nullable', 'string', 'max:80'],
+            'cooling_type' => ['nullable', 'string', 'max:80'],
+            'operating_system_license' => ['nullable', 'string', 'max:80'],
+            'software_license' => ['nullable', 'string', 'max:80'],
+            'peripheral_connector' => ['nullable', 'string', 'max:80'],
+            'other_specification' => ['nullable', 'string', 'max:80'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -267,6 +282,26 @@ class ShopController extends Controller
             ->when(($filters['category'] ?? null) === 'ram' && filled($filters['ram_speed'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['ram_speed'].'%'))
             ->when(($filters['category'] ?? null) === 'ram' && filled($filters['ram_capacity'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['ram_capacity'].'%'))
             ->when(($filters['category'] ?? null) === 'gpu' && filled($filters['gpu_memory'] ?? null), fn (Builder $parts) => $parts->where('description', 'like', '%'.$filters['gpu_memory'].'%'));
+
+        $specificationFilters = [
+            'cpu' => ['cpu_socket', 'cpu_cores'],
+            'motherboard' => ['motherboard_socket', 'motherboard_memory'],
+            'storage' => ['storage_capacity', 'storage_interface'],
+            'power_supply' => ['power_wattage', 'power_form_factor'],
+            'case' => ['case_form_factor'],
+            'cooling' => ['cooling_socket', 'cooling_type'],
+            'operating_system' => ['operating_system_license'],
+            'software' => ['software_license'],
+            'peripheral' => ['peripheral_connector'],
+            'other' => ['other_specification'],
+        ];
+        foreach ($specificationFilters as $type => $filterNames) {
+            foreach ($filterNames as $filterName) {
+                if (($filters['category'] ?? null) === $type && filled($filters[$filterName] ?? null)) {
+                    $query->where('description', 'like', '%'.$filters[$filterName].'%');
+                }
+            }
+        }
 
         $supplierFilter = $filters['supplier'] ?? 'all';
         if ($supplierFilter === 'assigned') {

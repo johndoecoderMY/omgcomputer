@@ -362,6 +362,8 @@ class ShopTest extends TestCase
             ->assertSee('Software / Microsoft')
             ->assertSee('Add another PC')
             ->assertSee('Add component')
+            ->assertSee('title="Remove component"', false)
+            ->assertSee('viewBox="0 0 16 16"', false)
             ->assertSee('Search parts')
             ->assertSee('Shopee product URL')
             ->assertSee('Shopee shop account URL')
@@ -660,6 +662,68 @@ class ShopTest extends TestCase
             ->assertSee('catalog-ram-speed', false)
             ->assertSee('catalog-ram-capacity', false)
             ->assertSee('catalog-gpu-memory', false);
+    }
+
+    public function test_custom_pc_builder_filters_specifications_for_cpu_storage_and_other_parts(): void
+    {
+        $staff = $this->staffUser();
+        $am5Cpu = CustomPcComponent::query()->create([
+            'name' => '8-core AM5 processor',
+            'type' => 'cpu',
+            'description' => "Socket: AM5\nCores: 8",
+        ]);
+        CustomPcComponent::query()->create([
+            'name' => '6-core LGA1700 processor',
+            'type' => 'cpu',
+            'description' => "Socket: LGA1700\nCores: 6",
+        ]);
+        $nvmeDrive = CustomPcComponent::query()->create([
+            'name' => '1 TB NVMe drive',
+            'type' => 'storage',
+            'description' => "Capacity: 1 TB\nInterface: PCIe 4.0 x4 NVMe",
+        ]);
+        CustomPcComponent::query()->create([
+            'name' => '512 GB SATA drive',
+            'type' => 'storage',
+            'description' => "Capacity: 512 GB\nInterface: SATA",
+        ]);
+        $atxPowerSupply = CustomPcComponent::query()->create([
+            'name' => '750 W ATX power supply',
+            'type' => 'power_supply',
+            'description' => "Continuous output: 750 W\nForm factor: ATX",
+        ]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'cpu',
+            'cpu_socket' => 'AM5',
+            'cpu_cores' => '8',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $am5Cpu->name]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'storage',
+            'storage_capacity' => '1 TB',
+            'storage_interface' => 'NVMe',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $nvmeDrive->name]);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', [
+            'category' => 'power_supply',
+            'power_wattage' => '750 W',
+            'power_form_factor' => 'ATX',
+        ]))->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonFragment(['name' => $atxPowerSupply->name]);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee('catalog-storage-capacity', false)
+            ->assertSee('catalog-storage-interface', false)
+            ->assertSee('catalog-motherboard-memory', false)
+            ->assertSee('catalog-peripheral-connector', false)
+            ->assertSee('catalog-case-form-factor', false);
     }
 
     public function test_custom_pc_builder_shows_selected_component_name_prominently(): void
