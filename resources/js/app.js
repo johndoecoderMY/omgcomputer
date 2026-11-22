@@ -679,9 +679,7 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
         console.error('Pusher notification channel subscription failed.', error);
     });
     notificationsChannel.notification((notification) => {
-        if (notification.title === 'New booking received') {
-            void playNotificationSoundOnce(notification.id);
-        }
+        void playNotificationSoundOnce(notification.id);
 
         const list = document.getElementById('navbar-notifications-list');
         const count = document.getElementById('unread-notifications-count');
