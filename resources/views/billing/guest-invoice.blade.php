@@ -62,7 +62,12 @@
                     @if ($chipEnabled && $hasValidCustomerEmail)
                         <form method="POST" action="{{ route('billing.guest.chip.checkout', [$document, request()->route('token')]) }}">
                             @csrf
-                            <p class="mb-2">{{ __("Continue to CHIP to pay the outstanding balance. Available payment methods, including QR or DuitNow, depend on the merchant's CHIP settings.") }}</p>
+                            <p class="mb-2">{{ __('Outstanding balance: RM :balance.', ['balance' => number_format($document->balance, 2)]) }}</p>
+                            <label class="form-label" for="guest-chip-payment-amount">{{ __('Payment amount (RM)') }}</label>
+                            <input class="form-control mb-3" id="guest-chip-payment-amount" name="amount" type="number" min="0.01"
+                                max="{{ number_format($document->balance, 2, '.', '') }}" step="0.01"
+                                value="{{ number_format($document->balance, 2, '.', '') }}" required>
+                            <p class="small text-body-secondary">{{ __("Choose any amount up to the balance. Available payment methods depend on the channels enabled for the merchant's CHIP account.") }}</p>
                             <button class="btn btn-primary w-100" type="submit">
                                 <span class="bi bi-shield-check me-2" aria-hidden="true"></span>{{ __('Continue to secure payment') }}
                             </button>

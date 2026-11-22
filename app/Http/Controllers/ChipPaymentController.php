@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -27,7 +28,7 @@ class ChipPaymentController extends Controller
             ? $document->customer_email
             : $request->user()->email;
 
-        return $this->startCheckout($document, $chip, $request->user()->id, $clientEmail);
+        return $this->startCheckout($document, $request, $chip, $request->user()->id, $clientEmail);
     }
 
     public function counterCheckout(BillingDocument $document, Request $request, ChipCollect $chip): RedirectResponse
@@ -37,7 +38,7 @@ class ChipPaymentController extends Controller
         $clientEmail = filter_var($document->customer_email, FILTER_VALIDATE_EMAIL);
         abort_unless($clientEmail, 422, 'A valid customer email is required for CHIP checkout.');
 
-        return $this->startCheckout($document, $chip, $request->user()->id, $clientEmail);
+        return $this->startCheckout($document, $request, $chip, $request->user()->id, $clientEmail);
     }
 
     public function createGuestPaymentLink(
@@ -79,12 +80,17 @@ class ChipPaymentController extends Controller
             ->header('Cache-Control', 'no-store, private');
     }
 
-    public function guestCheckout(BillingDocument $document, string $token, ChipCollect $chip): RedirectResponse
+    public function guestCheckout(
+        BillingDocument $document,
+        string $token,
+        Request $request,
+        ChipCollect $chip,
+    ): RedirectResponse
     {
         $this->authorizeGuestInvoiceLink($document, $token);
         abort_unless(filter_var($document->customer_email, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required for CHIP checkout.');
 
-        return $this->startCheckout($document, $chip, null, $document->customer_email, true);
+        return $this->startCheckout($document, $request, $chip, null, $document->customer_email, true);
     }
 
     public function callback(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): Response
@@ -169,6 +175,7 @@ class ChipPaymentController extends Controller
 
     private function startCheckout(
         BillingDocument $document,
+        Request $request,
         ChipCollect $chip,
         ?int $userId,
         string $clientEmail,
@@ -177,15 +184,30 @@ class ChipPaymentController extends Controller
         abort_unless($chip->isConfigured() && $this->isPayableInvoice($document), 422, 'This invoice is not eligible for CHIP checkout.');
         abort_unless(filter_var($clientEmail, FILTER_VALIDATE_EMAIL), 422, 'A valid customer email is required for CHIP checkout.');
 
-        $testMode = $chip->isTestMode();
-        $attempt = BillingPaymentAttempt::query()->create([
-            'uuid' => (string) Str::uuid(),
-            'billing_document_id' => $document->id,
-            'user_id' => $userId,
-            'amount' => $document->balance,
-            'chip_test_mode' => $testMode,
-            'status' => 'pending',
+        $data = $request->validate([
+            'amount' => ['nullable', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999'],
         ]);
+        $testMode = $chip->isTestMode();
+        $attempt = DB::transaction(function () use ($data, $document, $testMode, $userId): BillingPaymentAttempt {
+            $lockedDocument = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
+            abort_unless($this->isPayableInvoice($lockedDocument), 422, 'This invoice is not eligible for CHIP checkout.');
+
+            $amount = round((float) ($data['amount'] ?? $lockedDocument->balance), 2);
+            if ($amount > $lockedDocument->balance) {
+                throw ValidationException::withMessages([
+                    'amount' => 'The payment amount cannot exceed the outstanding balance.',
+                ]);
+            }
+
+            return BillingPaymentAttempt::query()->create([
+                'uuid' => (string) Str::uuid(),
+                'billing_document_id' => $lockedDocument->id,
+                'user_id' => $userId,
+                'amount' => $amount,
+                'chip_test_mode' => $testMode,
+                'status' => 'pending',
+            ]);
+        });
 
         try {
             $response = $chip->createPurchase([

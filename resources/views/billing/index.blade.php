@@ -29,7 +29,7 @@
         @endrole
     </x-page-header>
 
-    <div class="alert alert-info"><strong>Quotation first:</strong> send the quotation and wait for customer acceptance before converting it to an invoice. Invoices require full payment; partial payments are not currently supported.</div>
+    <div class="alert alert-info"><strong>Quotation first:</strong> send the quotation and wait for customer acceptance before converting it to an invoice. Record one or more payments against the invoice; each payment reduces its outstanding balance.</div>
     @if (session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
 
     @php($activeBillingFilters = (int) request()->filled('type') + (int) request()->filled('status'))

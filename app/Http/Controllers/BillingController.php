@@ -1193,7 +1193,7 @@ class BillingController extends Controller
         abort_unless($request->user()->hasRole('admin'), 403);
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
+            'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999'],
             'method' => ['required', 'in:cash,card,bank_transfer,online,other'],
             'reference' => ['nullable', 'string', 'max:255'],
             'paid_at' => ['nullable', 'date', 'required_without:received_at'],
@@ -1208,8 +1208,8 @@ class BillingController extends Controller
             abort_if($locked->type !== 'invoice' || ! in_array($locked->status, ['issued', 'partial', 'part_paid'], true), 422, 'This invoice cannot accept a payment.');
             $amount = round((float) $data['amount'], 2);
             $balance = round((float) $locked->total - (float) $locked->paid_amount, 2);
-            if (abs($amount - $balance) >= 0.01) {
-                throw ValidationException::withMessages(['amount' => 'Partial payments are not supported. Record the full outstanding balance.']);
+            if ($amount > $balance) {
+                throw ValidationException::withMessages(['amount' => 'The payment amount cannot exceed the outstanding balance.']);
             }
 
             $payment = $locked->payments()->create([

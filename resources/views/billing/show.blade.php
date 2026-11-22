@@ -152,7 +152,22 @@
         </div>
             @if (auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
                 <div class="col-lg-4">
-                    <div class="card mb-3"><div class="card-header fw-semibold">Pay securely with CHIP</div><form method="POST" action="{{ route('billing.chip.checkout', $document) }}">@csrf<div class="card-body"><p>Pay the full outstanding balance of <strong>RM {{ number_format($document->balance, 2) }}</strong>.</p><div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available payment options"><span class="badge text-bg-light border"><span class="bi bi-qr-code-scan me-1" aria-hidden="true"></span>QR pay</span><span class="badge text-bg-light border">DuitNow</span><span class="badge text-bg-light border">Online banking</span><span class="badge text-bg-light border">Card</span></div><small class="text-body-secondary d-block">Available QR, DuitNow and online methods depend on the payment channels enabled for this CHIP merchant account. Partial payments are not currently supported.</small></div><div class="card-footer"><button class="btn btn-primary w-100"><span class="bi bi-shield-check me-2" aria-hidden="true"></span>Continue to CHIP checkout</button></div></form></div>
+                    <div class="card mb-3">
+                        <div class="card-header fw-semibold">Pay securely with CHIP</div>
+                        <form method="POST" action="{{ route('billing.chip.checkout', $document) }}">
+                            @csrf
+                            <div class="card-body">
+                                <p>Outstanding balance: <strong>RM {{ number_format($document->balance, 2) }}</strong>.</p>
+                                <label class="form-label" for="chip-payment-amount">Payment amount (RM)</label>
+                                <input class="form-control mb-3" id="chip-payment-amount" name="amount" type="number" min="0.01"
+                                    max="{{ number_format($document->balance, 2, '.', '') }}" step="0.01"
+                                    value="{{ number_format($document->balance, 2, '.', '') }}" required>
+                                <div class="d-flex flex-wrap gap-2 mb-3" aria-label="Available payment options"><span class="badge text-bg-light border"><span class="bi bi-qr-code-scan me-1" aria-hidden="true"></span>QR pay</span><span class="badge text-bg-light border">DuitNow</span><span class="badge text-bg-light border">Online banking</span><span class="badge text-bg-light border">Card</span></div>
+                                <small class="text-body-secondary d-block">Choose any amount up to the balance. Available payment methods depend on the channels enabled for your CHIP merchant account.</small>
+                            </div>
+                            <div class="card-footer"><button class="btn btn-primary w-100"><span class="bi bi-shield-check me-2" aria-hidden="true"></span>Continue to CHIP checkout</button></div>
+                        </form>
+                    </div>
                 </div>
             @endif
             @if (! auth()->user()->hasRole('customer') && $chipEnabled && $document->type === 'invoice' && in_array($document->status, ['issued', 'partial', 'part_paid'], true) && $document->balance > 0)
@@ -163,7 +178,11 @@
                         @csrf
                         <div class="card-body">
                             @if (filter_var($document->customer_email, FILTER_VALIDATE_EMAIL))
-                                <p class="mb-0">Open CHIP hosted checkout on this device for <strong>RM {{ number_format($document->balance, 2) }}</strong>. Show the checkout to the customer; available methods, including QR or DuitNow, depend on your CHIP merchant settings.</p>
+                                <label class="form-label" for="counter-chip-payment-amount">Payment amount (RM)</label>
+                                <input class="form-control" id="counter-chip-payment-amount" name="amount" type="number" min="0.01"
+                                    max="{{ number_format($document->balance, 2, '.', '') }}" step="0.01"
+                                    value="{{ number_format($document->balance, 2, '.', '') }}" required>
+                                <p class="small text-body-secondary mt-2 mb-0">Enter an amount up to RM {{ number_format($document->balance, 2) }}. Show the CHIP checkout to the customer to select an available payment method.</p>
                             @else
                                 <p class="text-warning-emphasis mb-0">Add a valid customer email to the invoice before starting CHIP checkout.</p>
                             @endif
@@ -216,15 +235,15 @@
             @if (auth()->user()->hasRole('admin') && in_array($document->status, ['issued', 'partial', 'part_paid'], true))
                 <div class="col-lg-6">
                     <div class="card h-100">
-                        <div class="card-header fw-semibold">Record full payment</div>
+                        <div class="card-header fw-semibold">Record payment</div>
                         <form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">
                             @csrf
                             <div class="card-body">
-                                <label class="form-label" for="amount">Outstanding balance (RM)</label>
+                                <label class="form-label" for="amount">Payment amount (RM)</label>
                                 <input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01"
                                     max="{{ $document->balance }}" step="0.01"
-                                    value="{{ number_format($document->balance, 2, '.', '') }}" readonly required>
-                                <div class="form-text mb-3">Partial payments are not currently supported. Record the full outstanding balance.</div>
+                                    value="{{ number_format($document->balance, 2, '.', '') }}" required>
+                                <div class="form-text mb-3">Enter the amount received, up to the outstanding balance of RM {{ number_format($document->balance, 2) }}. The remaining balance stays due.</div>
                                 <label class="form-label" for="method">Method</label>
                                 <select class="form-select mb-3" id="method" name="method" required>
                                     @foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)
@@ -246,7 +265,7 @@
                                 </select>
                             </div>
                             <div class="card-footer">
-                                <button class="btn btn-primary w-100">Record full payment</button>
+                                <button class="btn btn-primary w-100">Record payment</button>
                             </div>
                         </form>
                     </div>

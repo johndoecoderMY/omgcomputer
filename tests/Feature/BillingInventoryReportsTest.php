@@ -1072,9 +1072,10 @@ class BillingInventoryReportsTest extends TestCase
         ];
         $invoicePage = $this->actingAs($user)->get(route('billing.documents.show', $quote))
             ->assertOk()
-            ->assertSee('Record full payment')
+            ->assertSee('Record payment')
             ->assertSee('Payment history')
-            ->assertSee('Partial payments are not currently supported.');
+            ->assertSee('The remaining balance stays due.')
+            ->assertDontSee('Partial payments are not currently supported.');
         $this->assertSame(2, substr_count($invoicePage->getContent(), 'class="col-lg-6"'));
         $documentHtml = new \DOMDocument;
         @$documentHtml->loadHTML($invoicePage->getContent());
@@ -1087,15 +1088,23 @@ class BillingInventoryReportsTest extends TestCase
 
         $paymentData['amount'] = 10;
         $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
-            ->assertSessionHasErrors('amount');
-        $this->assertSame('issued', $quote->fresh()->status);
-        $this->assertSame(20.0, $quote->fresh()->balance_due);
+            ->assertRedirect(route('billing.documents.show', $quote));
+        $this->assertSame('partial', $quote->fresh()->status);
+        $this->assertSame(10.0, $quote->fresh()->balance_due);
+        $this->assertSame(1, $quote->payments()->count());
 
-        $paymentData['amount'] = 20;
+        $paymentData['amount'] = 10.01;
+        $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
+            ->assertSessionHasErrors('amount');
+        $this->assertSame('partial', $quote->fresh()->status);
+        $this->assertSame(10.0, $quote->fresh()->balance_due);
+
+        $paymentData['amount'] = 10;
         $this->actingAs($user)->post(route('billing.documents.payments.store', $quote), $paymentData)
             ->assertRedirect(route('billing.documents.show', $quote));
         $this->assertSame('paid', $quote->fresh()->status);
         $this->assertSame(0.0, $quote->fresh()->balance_due);
+        $this->assertSame(2, $quote->payments()->count());
         $this->assertSame(1, InventoryMovement::query()->where('type', 'used')->count());
         $payment = $quote->payments()->firstOrFail();
         $this->actingAs($user)->get(route('billing.documents.show', $quote))
@@ -1164,8 +1173,19 @@ class BillingInventoryReportsTest extends TestCase
         ]);
         $document = $this->createIssuedInvoice($project, 125.50);
 
+        $this->actingAs($customer)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('id="chip-payment-amount"', false)
+            ->assertSee('Choose any amount up to the balance.')
+            ->assertSee('DuitNow');
+
         $this->actingAs($customer)
-            ->post(route('billing.chip.checkout', $document))
+            ->from(route('billing.documents.show', $document))
+            ->post(route('billing.chip.checkout', $document), ['amount' => 125.51])
+            ->assertSessionHasErrors('amount');
+
+        $this->actingAs($customer)
+            ->post(route('billing.chip.checkout', $document), ['amount' => 25.50])
             ->assertRedirect('https://gate.chip-in.asia/checkout/123');
         $this->actingAs($customer)
             ->post(route('billing.documents.payments.store', $document), [
@@ -1179,13 +1199,13 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('pending', $attempt->status);
         $this->assertSame('chip-purchase-123', $attempt->provider_purchase_id);
         $this->assertTrue($attempt->chip_test_mode);
-        $this->assertSame(125.50, (float) $attempt->amount);
+        $this->assertSame(25.50, (float) $attempt->amount);
         $this->assertSame(0.0, (float) $document->fresh()->paid_amount);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
             && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
             && $request['purchase']['currency'] === 'MYR'
             && $request['brand_id'] === 'test-brand'
-            && $request['purchase']['products'][0]['price'] === 12550
+            && $request['purchase']['products'][0]['price'] === 2550
             && str_starts_with($request['reference'], $document->number.'-')
             && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
     }
@@ -1211,16 +1231,17 @@ class BillingInventoryReportsTest extends TestCase
             ->get(route('billing.documents.show', $document))
             ->assertOk()
             ->assertSee('Take payment at the counter with CHIP')
+            ->assertSee('id="counter-chip-payment-amount"', false)
             ->assertSee('Share a guest payment link');
 
         $this->actingAs($staff)
-            ->post(route('billing.chip.counter', $document))
+            ->post(route('billing.chip.counter', $document), ['amount' => 25])
             ->assertRedirect('https://gate.chip-in.asia/checkout/counter');
 
         $attempt = BillingPaymentAttempt::query()->firstOrFail();
         $this->assertSame($staff->id, $attempt->user_id);
         $this->assertSame($document->id, $attempt->billing_document_id);
-        $this->assertSame(75.0, (float) $attempt->amount);
+        $this->assertSame(25.0, (float) $attempt->amount);
         $this->assertSame('pending', $attempt->status);
     }
 
@@ -1255,8 +1276,9 @@ class BillingInventoryReportsTest extends TestCase
             ->assertOk()
             ->assertSee($document->number)
             ->assertSee('Secure invoice payment')
+            ->assertSee('Payment amount (RM)')
             ->assertDontSee($document->customer_email);
-        $this->post(route('billing.guest.chip.checkout', [$document, $token]))
+        $this->post(route('billing.guest.chip.checkout', [$document, $token]), ['amount' => 35])
             ->assertRedirect('https://gate.chip-in.asia/checkout/guest');
 
         $attempt = BillingPaymentAttempt::query()->firstOrFail();
@@ -1270,7 +1292,8 @@ class BillingInventoryReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Payment confirmed');
         $this->assertSame('paid', $attempt->fresh()->status);
-        $this->assertSame(85.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame(35.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame('partial', $document->fresh()->status);
         $this->assertDatabaseCount('billing_payments', 1);
         Mail::assertSent(
             BillingReceiptMail::class,
@@ -1450,7 +1473,7 @@ class BillingInventoryReportsTest extends TestCase
         $attempt = BillingPaymentAttempt::query()->create([
             'uuid' => (string) Str::uuid(),
             'billing_document_id' => $document->id,
-            'amount' => 40,
+            'amount' => 15,
             'provider_purchase_id' => 'chip-purchase-456',
             'chip_test_mode' => true,
             'status' => 'pending',
@@ -1477,10 +1500,47 @@ class BillingInventoryReportsTest extends TestCase
         $callback()->assertOk();
 
         $this->assertSame('paid', $attempt->fresh()->status);
-        $this->assertSame('paid', $document->fresh()->status);
-        $this->assertSame(40.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame('partial', $document->fresh()->status);
+        $this->assertSame(15.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame(25.0, $document->fresh()->balance);
         $this->assertDatabaseCount('billing_payments', 1);
         Mail::assertSentCount(1);
+
+        $secondAttempt = BillingPaymentAttempt::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'billing_document_id' => $document->id,
+            'amount' => 25,
+            'provider_purchase_id' => 'chip-purchase-789',
+            'chip_test_mode' => true,
+            'status' => 'pending',
+        ]);
+        $secondBody = json_encode(['id' => 'chip-purchase-789'], JSON_THROW_ON_ERROR);
+        $this->mock(ChipCollect::class, function ($mock) use ($secondBody): void {
+            $mock->shouldReceive('verifyCallback')->twice()->with($secondBody, 'valid-signature', true)->andReturnTrue();
+            $mock->shouldReceive('purchase')->twice()->with('chip-purchase-789', true)->andReturn([
+                'id' => 'chip-purchase-789',
+                'status' => 'paid',
+            ]);
+        });
+        $secondCallback = fn () => $this->call(
+            'POST',
+            route('webhooks.chip.collect', $secondAttempt->uuid),
+            [],
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json', 'HTTP_X_SIGNATURE' => 'valid-signature'],
+            $secondBody,
+        );
+
+        $secondCallback()->assertOk();
+        $secondCallback()->assertOk();
+
+        $this->assertSame('paid', $secondAttempt->fresh()->status);
+        $this->assertSame('paid', $document->fresh()->status);
+        $this->assertSame(40.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame(0.0, $document->fresh()->balance);
+        $this->assertDatabaseCount('billing_payments', 2);
+        Mail::assertSentCount(2);
     }
 
     public function test_chip_callback_rejects_invalid_signatures(): void

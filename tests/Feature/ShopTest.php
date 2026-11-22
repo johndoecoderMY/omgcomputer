@@ -93,7 +93,9 @@ class ShopTest extends TestCase
             ->assertSee('>List</span>', false)
             ->assertSee('>Builder</span>', false)
             ->assertSee('<li class="breadcrumb-item"><a href="'.route('shop.custom-pc-builder').'">Custom PC</a></li>', false)
-            ->assertSee('<li class="breadcrumb-item active" aria-current="page">List</li>', false);
+            ->assertSee('<li class="breadcrumb-item active" aria-current="page">List</li>', false)
+            ->assertDontSee('Plan a PC build')
+            ->assertDontSee('Back to custom PC builder');
     }
 
     public function test_guests_can_browse_the_read_only_shop_grid_and_product_details(): void

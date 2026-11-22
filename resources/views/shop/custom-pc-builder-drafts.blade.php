@@ -5,8 +5,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Shop" title="Saved PC build drafts"
-        description="A shared planning list of what to build and who each PC is for."
-        :back-url="route('shop.custom-pc-builder')" :back-label="'Back to custom PC builder'" />
+        description="A shared planning list of what to build and who each PC is for." />
 
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -73,11 +72,6 @@
         @if ($drafts->hasPages())
             <div class="card-footer">{{ $drafts->links() }}</div>
         @endif
-    </div>
-    <div class="mt-3">
-        <a class="btn btn-primary" href="{{ route('shop.custom-pc-builder') }}">
-            <i class="bi bi-plus me-1" aria-hidden="true"></i>Plan a PC build
-        </a>
     </div>
 </div>
 @endsection

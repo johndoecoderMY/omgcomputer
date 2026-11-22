@@ -198,7 +198,7 @@
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="project-payment">
-                    <span><strong>Invoice / full payment:</strong> Verify the customer can pay the full outstanding invoice through test-mode CHiP, or staff can record a full cash/bank/card payment. Confirm partial payment is rejected and the paid balance/status updates correctly.</span>
+                    <span><strong>Invoice / partial payments:</strong> Verify a customer can make a CHIP payment for an amount below the balance, then make another payment for the remainder. Confirm each payment creates its own receipt and the invoice balance/status updates correctly.</span>
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="project-access">
@@ -218,7 +218,7 @@
             <div class="list-group list-group-flush">
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="receipt-manual">
-                    <span><strong>Manual payment:</strong> Record a full payment on a test invoice. Verify a uniquely numbered receipt appears in payment history and on the Payment receipts page, and the PDF shows the correct customer, invoice, date, method, reference, and amount.</span>
+                    <span><strong>Manual payment:</strong> Record a partial payment and then the remaining balance on a test invoice. Verify each uniquely numbered receipt appears in payment history and on the Payment receipts page, and the PDF shows the correct customer, invoice, date, method, reference, and amount.</span>
                 </label>
                 <label class="list-group-item d-flex gap-3">
                     <input class="form-check-input self-test-check" type="checkbox" data-test-id="receipt-chip">
