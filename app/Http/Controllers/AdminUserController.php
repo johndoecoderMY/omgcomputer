@@ -313,6 +313,53 @@ class AdminUserController extends Controller
         return back()->with('success', 'OMG Computer mailbox created for '.$user->name.'. A password reset link was sent so the member can set their separate app password.');
     }
 
+    public function requestPasswordReset(User $user): RedirectResponse
+    {
+        abort_unless($user->hasRole('member') && ! $user->hasAnyRole(['admin', 'customer']), 404);
+
+        $status = Password::sendResetLink(['email' => $user->email]);
+        if ($status === Password::RESET_LINK_SENT) {
+            return back()->with('success', 'An account password reset link was sent to '.$user->email.'.');
+        }
+
+        return back()->with('warning', 'The account password reset link could not be sent: '.__($status));
+    }
+
+    public function resetMailboxPassword(User $user, CpanelEmailProvisioner $provisioner): RedirectResponse
+    {
+        abort_unless($user->hasRole('member') && ! $user->hasAnyRole(['admin', 'customer']), 404);
+
+        $mailbox = $user->emailMailbox;
+        if (! $mailbox) {
+            return back()->with('warning', 'This member does not have a linked email mailbox.');
+        }
+
+        if (! $provisioner->managesMailbox($mailbox->email)) {
+            return back()->with('warning', 'This mailbox cannot be reset through the configured cPanel connection.');
+        }
+
+        $password = Str::random(64);
+        while (Hash::check($password, $user->password)) {
+            $password = Str::random(64);
+        }
+
+        try {
+            $provisioner->setMailboxPassword($mailbox->email, $password);
+        } catch (\RuntimeException $exception) {
+            Log::warning('cPanel mailbox password reset failed from a member profile.', [
+                'user_id' => $user->id,
+                'exception' => $exception::class,
+            ]);
+
+            return back()->with('warning', $exception->getMessage());
+        }
+
+        $mailbox->password = $password;
+        $mailbox->save();
+
+        return back()->with('success', 'The cPanel mailbox password was reset. The member can set a new separate password from Email settings after signing in.');
+    }
+
     private function sendMemberInvitation(User $user): bool
     {
         $token = Password::createToken($user);

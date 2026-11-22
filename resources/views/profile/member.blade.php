@@ -119,6 +119,28 @@
                                     <p class="small text-body-secondary mb-0">No mailbox is linked. Configure cPanel email provisioning to create one here.</p>
                                 @endif
                             </div>
+                            <div class="col-12 border-top pt-3">
+                                <h3 class="h6">Password recovery</h3>
+                                <p class="small text-body-secondary">The account password and mailbox password are separate.</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <form method="POST" action="{{ route('admin.users.password-reset.request', $user) }}">
+                                        @csrf
+                                        <button class="btn btn-outline-primary" type="submit">Send account password reset link</button>
+                                    </form>
+                                    @if ($user->emailMailbox && $canResetMailboxPassword)
+                                        <form method="POST" action="{{ route('admin.users.mailbox-password-reset', $user) }}"
+                                            onsubmit="return confirm('Reset this member\'s cPanel mailbox password?');">
+                                            @csrf
+                                            <button class="btn btn-outline-warning" type="submit">Reset cPanel mailbox password</button>
+                                        </form>
+                                    @endif
+                                </div>
+                                @if ($user->emailMailbox && ! $canResetMailboxPassword)
+                                    <p class="small text-body-secondary mt-2 mb-0">This mailbox is not managed by the configured cPanel connection, so its password must be reset through its email provider.</p>
+                                @elseif ($user->emailMailbox && $canResetMailboxPassword)
+                                    <p class="small text-body-secondary mt-2 mb-0">After the reset, the member can sign in and set a new mailbox password from Email settings. The generated password is not displayed.</p>
+                                @endif
+                            </div>
                         @endif
                     </div>
                 </div>

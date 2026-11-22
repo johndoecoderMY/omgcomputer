@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Customer;
 use App\Models\User;
+use App\Services\CpanelEmailProvisioner;
 use App\Support\DataTableQueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class ProfileController extends Controller
         ]);
     }
 
-    public function showMember(User $member): View|RedirectResponse
+    public function showMember(User $member, CpanelEmailProvisioner $provisioner): View|RedirectResponse
     {
         if (auth()->id() === $member->id) {
             return redirect()->route('profile.edit');
@@ -48,7 +49,9 @@ class ProfileController extends Controller
             'customerRecord' => $customerRecord,
             'canManageAccount' => auth()->user()->hasRole('admin'),
             'isCustomerAccount' => $isCustomerAccount,
-            'cpanelProvisioningEnabled' => (bool) config('services.cpanel.enabled'),
+            'cpanelProvisioningEnabled' => $provisioner->configured(),
+            'canResetMailboxPassword' => $member->emailMailbox
+                && $provisioner->managesMailbox($member->emailMailbox->email),
         ]);
     }
 

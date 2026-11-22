@@ -345,6 +345,118 @@ class MemberManagementTest extends TestCase
             ->assertSee('mailbox.member@example.test');
     }
 
+    public function test_admin_can_request_an_account_password_reset_from_the_member_profile(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create(['email' => 'reset.member@example.test']);
+        $member->assignRole('member');
+        Notification::fake();
+
+        $this->actingAs($member)
+            ->post(route('admin.users.password-reset.request', $member))
+            ->assertForbidden();
+
+        $this->actingAs($admin);
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertSee('Password recovery')
+            ->assertSee('Send account password reset link');
+
+        $this->post(route('admin.users.password-reset.request', $member))
+            ->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('success', 'An account password reset link was sent to reset.member@example.test.');
+
+        Notification::assertSentTo($member, ResetPassword::class);
+    }
+
+    public function test_admin_can_reset_a_members_cpanel_password_without_changing_the_account_password(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create([
+            'email' => 'reset.member.personal@example.test',
+            'password' => Hash::make('separate-account-password'),
+        ]);
+        $member->assignRole('member');
+        $member->emailMailbox()->create([
+            'email' => 'reset.member@example.test',
+            'password' => 'old-mailbox-password',
+        ]);
+        $this->actingAs($admin);
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
+                'result' => ['status' => 1],
+            ]),
+        ]);
+
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertSee('Reset cPanel mailbox password');
+
+        $this->post(route('admin.users.mailbox-password-reset', $member))
+            ->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('success', 'The cPanel mailbox password was reset. The member can set a new separate password from Email settings after signing in.');
+
+        $member->refresh();
+        $newMailboxPassword = $member->emailMailbox->password;
+        $this->assertNotSame('old-mailbox-password', $newMailboxPassword);
+        $this->assertFalse(Hash::check($newMailboxPassword, $member->password));
+        $this->assertTrue(Hash::check('separate-account-password', $member->password));
+        Http::assertSent(fn (HttpRequest $request): bool => str_ends_with($request->url(), '/execute/Email/passwd_pop')
+            && $request['email'] === 'reset.member'
+            && $request['domain'] === 'example.test'
+            && $request['password'] === $newMailboxPassword);
+
+        $this->get(route('members.show', $member))
+            ->assertOk()
+            ->assertDontSee($newMailboxPassword);
+    }
+
+    public function test_failed_cpanel_password_reset_keeps_the_saved_mailbox_password(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $member->emailMailbox()->create([
+            'email' => 'member@example.test',
+            'password' => 'old-mailbox-password',
+        ]);
+        $this->actingAs($admin);
+        config([
+            'services.cpanel.enabled' => true,
+            'services.cpanel.host' => 'cpanel.example.test',
+            'services.cpanel.port' => 2083,
+            'services.cpanel.username' => 'cpanel-user',
+            'services.cpanel.api_token' => 'private-api-token',
+            'services.cpanel.email_domain' => 'example.test',
+        ]);
+        Http::fake([
+            'https://cpanel.example.test:2083/execute/Email/passwd_pop' => Http::response([
+                'result' => ['status' => 0],
+            ]),
+        ]);
+
+        $this->get(route('members.show', $member))->assertOk();
+        $this->post(route('admin.users.mailbox-password-reset', $member))
+            ->assertRedirect(route('members.show', $member))
+            ->assertSessionHas('warning', 'cPanel could not synchronize the mailbox password. Check the Email UAPI permissions and mailbox settings.');
+
+        $this->assertSame('old-mailbox-password', $member->fresh()->emailMailbox->password);
+    }
+
     public function test_member_creation_reports_cpanel_uapi_rejection_without_hiding_the_error(): void
     {
         $this->seed(PlannerRoleSeeder::class);

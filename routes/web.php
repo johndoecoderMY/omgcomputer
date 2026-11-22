@@ -309,6 +309,8 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::post('/{user}/mailbox', 'createMailbox')->middleware(['role:admin', 'throttle:5,1'])->name('mailbox.create');
+        Route::post('/{user}/password-reset', 'requestPasswordReset')->middleware(['role:admin', 'throttle:5,1'])->name('password-reset.request');
+        Route::post('/{user}/mailbox-password-reset', 'resetMailboxPassword')->middleware(['role:admin', 'throttle:5,1'])->name('mailbox-password-reset');
         Route::get('/{user}/edit', 'edit')->name('edit');
         Route::put('/{user}/permissions', 'updatePermissions')->name('permissions.update');
         Route::put('/{user}', 'update')->name('update');
