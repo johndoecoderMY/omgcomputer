@@ -11,6 +11,7 @@
     $routeName = \Illuminate\Support\Facades\Route::currentRouteName() ?? '';
     $isCustomer = auth()->user()->hasRole('customer');
     $sidebarSection = match (true) {
+        str_starts_with($routeName, 'shop.custom-pc-builder') => 'Manage',
         str_starts_with($routeName, 'tickets.') => null,
         str_starts_with($routeName, 'bookings.') => null,
         str_starts_with($routeName, 'booking-time-slots.') => null,
@@ -50,6 +51,16 @@
         default => null,
     };
     $sidebarBreadcrumbs = match (true) {
+        str_starts_with($routeName, 'shop.custom-pc-builder.drafts.') => [
+            ['label' => 'Shop', 'url' => route('shop.products.index')],
+            ['label' => 'Custom PC', 'url' => route('shop.custom-pc-builder')],
+            ['label' => 'List'],
+        ],
+        str_starts_with($routeName, 'shop.custom-pc-builder') => [
+            ['label' => 'Shop', 'url' => route('shop.products.index')],
+            ['label' => 'Custom PC'],
+            ['label' => 'Builder'],
+        ],
         str_starts_with($routeName, 'tickets.') && $isCustomer => [
             ['label' => 'My Tickets', 'url' => route('tickets.index')],
         ],

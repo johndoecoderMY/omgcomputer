@@ -74,6 +74,28 @@ class ShopTest extends TestCase
         $this->actingAs($this->staffUser())->get(route('shop.cart'))->assertForbidden();
     }
 
+    public function test_custom_pc_builder_and_list_are_nested_under_shop_with_correct_breadcrumbs(): void
+    {
+        $staff = $this->staffUser();
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder'))
+            ->assertOk()
+            ->assertSee(route('shop.custom-pc-builder.drafts.index'), false)
+            ->assertSee('>Custom PC</span>', false)
+            ->assertSee('>Builder</span>', false)
+            ->assertSee('<li class="breadcrumb-item"><a href="'.route('shop.products.index').'">Shop</a></li>', false)
+            ->assertSee('<li class="breadcrumb-item">Custom PC</li>', false)
+            ->assertSee('<li class="breadcrumb-item active" aria-current="page">Builder</li>', false);
+
+        $this->actingAs($staff)->get(route('shop.custom-pc-builder.drafts.index'))
+            ->assertOk()
+            ->assertSee(route('shop.custom-pc-builder'), false)
+            ->assertSee('>List</span>', false)
+            ->assertSee('>Builder</span>', false)
+            ->assertSee('<li class="breadcrumb-item"><a href="'.route('shop.custom-pc-builder').'">Custom PC</a></li>', false)
+            ->assertSee('<li class="breadcrumb-item active" aria-current="page">List</li>', false);
+    }
+
     public function test_guests_can_browse_the_read_only_shop_grid_and_product_details(): void
     {
         $availablePart = InventoryPart::query()->create([

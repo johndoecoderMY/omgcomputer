@@ -365,7 +365,16 @@
                             </div>
                         </a>
                         <ul class="nav collapse" id="shopMenu">
-                            <li class="nav-item"><a class="nav-link" href="{{ route('shop.custom-pc-builder') }}"><span class="nav-link-text ps-1">Custom PC builder</span></a></li>
+                            <li class="nav-item">
+                                <a class="nav-link dropdown-indicator" href="#customPcMenu" role="button" data-bs-toggle="collapse"
+                                    aria-expanded="false" aria-controls="customPcMenu">
+                                    <span class="nav-link-text ps-1">Custom PC</span>
+                                </a>
+                                <ul class="nav collapse" id="customPcMenu">
+                                    <li class="nav-item"><a class="nav-link" href="{{ route('shop.custom-pc-builder.drafts.index') }}"><span class="nav-link-text ps-1">List</span></a></li>
+                                    <li class="nav-item"><a class="nav-link" href="{{ route('shop.custom-pc-builder') }}"><span class="nav-link-text ps-1">Builder</span></a></li>
+                                </ul>
+                            </li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('shop.products.index') }}"><span class="nav-link-text ps-1">Products</span></a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('shop.products.grid') }}"><span class="nav-link-text ps-1">Product grid</span></a></li>
                             <li class="nav-item"><a class="nav-link" href="{{ route('shop.orders.index') }}"><span class="nav-link-text ps-1">Orders</span></a></li>
