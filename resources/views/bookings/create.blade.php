@@ -4,7 +4,9 @@
 
 @push('styles')
     <link rel="stylesheet" href="{{ asset('vendors/leaflet/leaflet.css') }}">
-    @vite('resources/css/booking-phone.css')
+    @unless ($authenticatedBooking)
+        @vite('resources/css/booking-phone.css')
+    @endunless
 @endpush
 
 @section('content')
@@ -145,10 +147,9 @@
                                                     <div class="mb-3">
                                                         <label class="form-label" for="customer-phone">{{ __('Phone') }} <span
                                                                 class="text-danger" aria-hidden="true">*</span></label>
-                                                        <input class="form-control" id="customer-phone" type="tel"
-                                                            name="customer_phone"
-                                                            value="{{ old('customer_phone', $authenticatedBooking ? auth()->user()->phone : '') }}"
-                                                            required autocomplete="tel" inputmode="tel">
+                                                        <x-phone-input id="customer-phone" name="customer_phone"
+                                                            :value="old('customer_phone', $authenticatedBooking ? auth()->user()->phone : '')"
+                                                            required />
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label" for="service-id">{{ __('Service') }} <span
@@ -478,7 +479,9 @@
 @endsection
 
         @push('scripts')
-            @vite('resources/js/booking-phone.js')
+            @unless ($authenticatedBooking)
+                @vite('resources/js/booking-phone.js')
+            @endunless
             <script src="{{ asset('vendors/leaflet/leaflet.js') }}"></script>
             <script src="{{ asset('vendors/fullcalendar/index.global.min.js') }}"></script>
             <script>
@@ -1081,7 +1084,7 @@
                         bookingConfirmationTime.textContent = bookingTimeSummary.textContent;
                         addConfirmationDetail(confirmationLabels.fullName, document.getElementById("customer-name").value.trim());
                         addConfirmationDetail(confirmationLabels.email, document.getElementById("customer-email").value.trim());
-                        addConfirmationDetail(confirmationLabels.phone, document.getElementById("customer-phone").value.trim());
+                        addConfirmationDetail(confirmationLabels.phone, window.getInternationalPhoneNumber?.(document.getElementById("customer-phone")) || document.getElementById("customer-phone").value.trim());
                         addConfirmationDetail(
                             confirmationLabels.service,
                             serviceSelect.options[serviceSelect.selectedIndex].textContent.trim(),

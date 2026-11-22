@@ -1,6 +1,9 @@
    <!-- ===============================================--><!--    JavaScripts--><!-- ===============================================-->
     <script src="{{ asset('vendors/popper/popper.min.js') }}"></script>
     <script src="{{ asset('vendors/bootstrap/bootstrap.min.js') }}"></script>
+    <script src="{{ asset('vendors/anchorjs/anchor.min.js') }}"></script>
+    <script src="{{ asset('vendors/is/is.min.js') }}"></script>
+    <script src="{{ asset('vendors/lodash/lodash.min.js') }}"></script>
     <script src="{{ asset('assets/js/theme.js') }}"></script>
     <script>
         (() => {

@@ -4,6 +4,7 @@ import Alpine from 'alpinejs';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import * as PusherPushNotifications from '@pusher/push-notifications-web';
+import './booking-phone';
 
 window.Alpine = Alpine;
 window.Pusher = Pusher;

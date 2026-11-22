@@ -34,7 +34,7 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label" for="phone">Phone</label>
-                <input class="form-control" id="phone" name="phone" value="{{ old('phone') }}" maxlength="50">
+                <x-phone-input id="phone" name="phone" :value="old('phone')" maxlength="50" />
             </div>
             @if ($accountType !== 'customers')
                 <div class="col-md-6">

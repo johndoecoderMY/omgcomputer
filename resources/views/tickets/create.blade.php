@@ -137,8 +137,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="new_customer_phone">Phone <span class="text-body-secondary">(optional)</span></label>
-                            <input class="form-control" id="new_customer_phone" maxlength="64"
-                                data-offline-draft-field="new_customer_phone">
+                            <x-phone-input id="new_customer_phone" maxlength="64"
+                                data-offline-draft-field="new_customer_phone" />
                         </div>
                         <div>
                             <label class="form-label" for="new_customer_company">Company <span class="text-body-secondary">(optional)</span></label>
@@ -217,7 +217,7 @@
                             body: JSON.stringify({
                                 name: customerName.value.trim(),
                                 email: customerEmail.value.trim() || null,
-                                phone: customerPhone.value.trim() || null,
+                                phone: window.getInternationalPhoneNumber?.(customerPhone) || customerPhone.value.trim() || null,
                                 company: customerCompany.value.trim() || null,
                             }),
                         });

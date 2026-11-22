@@ -155,7 +155,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="customer_phone">Phone</label>
-                            <input class="form-control" id="customer_phone" name="customer_phone" value="{{ old('customer_phone') }}" maxlength="64">
+                            <x-phone-input id="customer_phone" name="customer_phone" :value="old('customer_phone')" maxlength="64" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="due_date">Quotation valid until</label>
@@ -336,7 +336,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="new-supplier-phone">Phone</label>
-                            <input class="form-control" id="new-supplier-phone" name="phone" type="text" maxlength="50">
+                            <x-phone-input id="new-supplier-phone" name="phone" maxlength="50" />
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="new-supplier-website">Website</label>
@@ -1122,10 +1122,18 @@
             if (!supplierPart) return;
 
             const submitButton = supplierForm.querySelector('button[type="submit"]');
+            const supplierPhone = supplierForm.querySelector('[data-phone-input]');
             submitButton.disabled = true;
             supplierStatus.textContent = 'Saving supplier and linking part…';
             supplierStatus.className = 'small text-body-secondary';
             const supplierUrl = picker.dataset.supplierUrl.replace('__PART__', String(supplierPart.id));
+            const supplierFormData = new FormData(supplierForm);
+            if (supplierPhone) {
+                supplierFormData.set(
+                    'phone',
+                    window.getInternationalPhoneNumber?.(supplierPhone) || supplierPhone.value.trim(),
+                );
+            }
 
             try {
                 const response = await fetch(supplierUrl, {
@@ -1134,7 +1142,7 @@
                         Accept: 'application/json',
                         'X-CSRF-TOKEN': supplierForm.querySelector('input[name="_token"]').value,
                     },
-                    body: new FormData(supplierForm),
+                    body: supplierFormData,
                 });
                 const result = await response.json();
                 if (!response.ok) {

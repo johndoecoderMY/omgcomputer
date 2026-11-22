@@ -105,6 +105,7 @@ Route::post('/track-repair', [RepairTicketController::class, 'track'])
 Route::get('/sitemap.xml', function () {
     $urls = collect([
         ['loc' => url('/')],
+        ['loc' => route('bookings.create')],
         ['loc' => route('shop.public')],
         ['loc' => route('custom-pc-builder.public')],
         ['loc' => route('website-previews.index')],

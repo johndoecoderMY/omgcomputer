@@ -68,7 +68,7 @@
             @endif
             <div class="col-md-6"><label class="form-label" for="customer_name">Customer name</label><input class="form-control" id="customer_name" name="customer_name" value="{{ old('customer_name', $document->customer_name) }}" required></div>
             <div class="col-md-3"><label class="form-label" for="customer_email">Email</label><input class="form-control" id="customer_email" name="customer_email" type="email" value="{{ old('customer_email', $document->customer_email) }}"></div>
-            <div class="col-md-3"><label class="form-label" for="customer_phone">Phone</label><input class="form-control" id="customer_phone" name="customer_phone" value="{{ old('customer_phone', $document->customer_phone) }}"></div>
+            <div class="col-md-3"><label class="form-label" for="customer_phone">Phone</label><x-phone-input id="customer_phone" name="customer_phone" :value="old('customer_phone', $document->customer_phone)" /></div>
             <div class="col-md-6"><label class="form-label" for="customer_address">Billing address</label><textarea class="form-control" id="customer_address" name="customer_address" rows="2">{{ old('customer_address', $document->customer_address) }}</textarea></div>
             <div class="col-md-3"><label class="form-label" for="issue_date">Issue date</label><input class="form-control" id="issue_date" name="issue_date" type="date" value="{{ old('issue_date', $document->issue_date?->format('Y-m-d') ?? now('Asia/Kuala_Lumpur')->toDateString()) }}" required></div>
             <div class="col-md-3"><label class="form-label" for="due_date">Due date</label><input class="form-control" id="due_date" name="due_date" type="date" value="{{ old('due_date', $document->due_date?->format('Y-m-d')) }}">@if ($project && $type !== 'invoice')<div class="form-text">Quotation/payment date, separate from the project target date.</div>@endif</div>
@@ -175,6 +175,15 @@
     </form>
 <script>
 const initializeBillingCreateForm = () => {
+const setCustomerPhone = (value) => {
+    const phoneInput = document.getElementById('customer_phone');
+    if (window.setPhoneInputValue) {
+        window.setPhoneInputValue(phoneInput, value || '');
+    } else if (phoneInput) {
+        phoneInput.value = value || '';
+    }
+};
+
 (() => {
     const customerRecipientSelect = document.getElementById('customer-recipient');
     if (!customerRecipientSelect) return;
@@ -183,7 +192,7 @@ const initializeBillingCreateForm = () => {
         const option = customerRecipientSelect.selectedOptions[0];
         document.getElementById('customer_name').value = option.dataset.name || '';
         document.getElementById('customer_email').value = option.dataset.email || '';
-        document.getElementById('customer_phone').value = option.dataset.phone || '';
+        setCustomerPhone(option.dataset.phone || '');
         document.getElementById('customer_address').value = option.dataset.address || '';
     });
 })();
@@ -196,7 +205,7 @@ const initializeBillingCreateForm = () => {
         const option = recipientSelect.selectedOptions[0];
         document.getElementById('customer_name').value = option.dataset.name || '';
         document.getElementById('customer_email').value = option.dataset.email || '';
-        document.getElementById('customer_phone').value = option.dataset.phone || '';
+        setCustomerPhone(option.dataset.phone || '');
         document.getElementById('customer_address').value = option.dataset.address || '';
     });
 })();

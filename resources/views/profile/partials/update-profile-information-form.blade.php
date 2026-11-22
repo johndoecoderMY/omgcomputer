@@ -29,8 +29,8 @@
         </div>
         <div class="col-md-6">
             <label class="form-label" for="phone">Phone number</label>
-            <input class="form-control @error('phone') is-invalid @enderror" id="phone" name="phone"
-                value="{{ old('phone', $user->phone) }}" maxlength="50" autocomplete="tel">
+            <x-phone-input class="@error('phone') is-invalid @enderror" id="phone" name="phone"
+                :value="old('phone', $user->phone)" maxlength="50" />
             @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
         <div class="col-12">

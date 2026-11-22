@@ -38,6 +38,7 @@
      <link href="{{ asset('assets/css/theme.min.css') }}" rel="stylesheet" id="style-default">
      <link href="{{ asset('assets/css/user.min.css') }}" rel="stylesheet" id="user-style-default">
      @vite('resources/css/icons.css')
+     @vite('resources/css/booking-phone.css')
      <link href="{{ asset('vendors/select2/select2.min.css') }}" rel="stylesheet">
      <link href="{{ asset('vendors/select2-bootstrap-5-theme/select2-bootstrap-5-theme.min.css') }}" rel="stylesheet">
      <style>
