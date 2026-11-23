@@ -21,6 +21,9 @@
     <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
     <meta name="description" content="{{ $metaDescription }}">
     <meta name="robots" content="@yield('meta_robots', 'index,follow')">
+    @if (filled(config('services.meta.domain_verification')))
+        <meta name="facebook-domain-verification" content="{{ config('services.meta.domain_verification') }}">
+    @endif
     <link rel="canonical" href="{{ $canonicalUrl }}">
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:title" content="@yield('og_title', $pageTitle)">

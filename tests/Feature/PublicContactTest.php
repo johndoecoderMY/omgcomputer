@@ -44,6 +44,15 @@ class PublicContactTest extends TestCase
             ->assertSee('Have your service number ready to check repair progress.');
     }
 
+    public function test_meta_domain_verification_tag_is_included_when_configured(): void
+    {
+        config(['services.meta.domain_verification' => 'meta-verification-code']);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('<meta name="facebook-domain-verification" content="meta-verification-code">', false);
+    }
+
     public function test_public_contact_section_hides_default_placeholder_email(): void
     {
         config(['mail.from.address' => 'hello@example.com']);

@@ -57,6 +57,7 @@ return [
     'meta' => [
         'app_id' => env('META_APP_ID'),
         'app_secret' => env('META_APP_SECRET'),
+        'domain_verification' => env('META_DOMAIN_VERIFICATION'),
         'access_token' => env('META_ACCESS_TOKEN'),
         'ad_account_id' => env('META_AD_ACCOUNT_ID'),
         'page_id' => env('META_PAGE_ID'),
