@@ -17,6 +17,19 @@ class PublicContactTest extends TestCase
         $this->assertStringContainsString('Sitemap: https://omgcomputer.my/sitemap.xml', $robots);
     }
 
+    public function test_public_pages_are_hidden_from_search_by_default_and_can_be_reenabled(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex,follow">', false);
+
+        config(['seo.indexing_enabled' => true]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="index,follow">', false);
+    }
+
     public function test_public_contact_section_shows_configured_email_as_a_mailto_link(): void
     {
         config(['mail.from.address' => 'support@omgcomputer.my']);

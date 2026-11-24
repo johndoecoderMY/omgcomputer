@@ -20,7 +20,7 @@
     @endphp
     <title>{{ str_ends_with($pageTitle, '| OMG Computer') || $pageTitle === 'OMG Computer' ? $pageTitle : $pageTitle.' | OMG Computer' }}</title>
     <meta name="description" content="{{ $metaDescription }}">
-    <meta name="robots" content="@yield('meta_robots', 'index,follow')">
+    <meta name="robots" content="@yield('meta_robots', config('seo.indexing_enabled') ? 'index,follow' : 'noindex,follow')">
     @if (filled(config('services.meta.domain_verification')))
         <meta name="facebook-domain-verification" content="{{ config('services.meta.domain_verification') }}">
     @endif
