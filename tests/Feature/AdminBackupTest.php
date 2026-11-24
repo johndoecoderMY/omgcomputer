@@ -45,7 +45,7 @@ class AdminBackupTest extends TestCase
         ]);
     }
 
-    public function test_only_planner_administrators_can_view_and_download_backups(): void
+    public function test_members_can_view_and_export_backups_while_administrators_can_download_archives(): void
     {
         $this->seed(PlannerRoleSeeder::class);
         Storage::fake('backup_test');
@@ -56,10 +56,15 @@ class AdminBackupTest extends TestCase
 
         $member = User::factory()->create();
         $member->assignRole('member');
-        $this->actingAs($member)->get(route('admin.backups.index'))->assertForbidden();
-        $this->post(route('admin.backups.export-tables'))->assertForbidden();
+        $this->actingAs($member)->get(route('admin.backups.index'))
+            ->assertOk()
+            ->assertSee(route('admin.backups.index'))
+            ->assertSee(route('admin.maintenance.index'));
+        $this->post(route('admin.backups.export-tables'), ['tables' => ['users']])
+            ->assertOk()
+            ->assertHeader('content-type', 'application/zip');
         $this->get(route('admin.backups.download', ['disk' => 'backup_test', 'backup' => 'private.zip']))
-            ->assertForbidden();
+            ->assertNotFound();
 
         $admin = User::factory()->create();
         $admin->assignRole('admin');
@@ -71,7 +76,8 @@ class AdminBackupTest extends TestCase
             ->assertSee('Storage available')
             ->assertSee('Export selected database tables')
             ->assertSee('class="modal-dialog modal-xl modal-dialog-scrollable"', false)
-            ->assertSee('<form class="modal-content" method="POST" action="'.route('admin.backups.export-tables').'">', false)
+            ->assertSee('<form class="modal-content" method="POST" action="'.route('admin.backups.export-tables').'"', false)
+            ->assertSee('data-native-download', false)
             ->assertSee('name="tables[]"', false)
             ->assertSee('Select all tables')
             ->assertSee('Select account & settings tables')

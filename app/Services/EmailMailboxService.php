@@ -46,7 +46,7 @@ class EmailMailboxService
             : rtrim($body)."\n\n--\n".$signature;
 
         try {
-            $mailer->raw($messageBody, function (Message $message) use ($user, $mailbox, $recipients, $subject, $attachments): void {
+            $mailer->raw($messageBody, function (Message $message) use ($user, $mailbox, $recipients, $subject, $attachments, $body, $signature, $messageBody): void {
                 $message->from($mailbox->email, $user->name)
                     ->subject($subject);
 
@@ -59,6 +59,26 @@ class EmailMailboxService
                     $filename = str_replace(["\r", "\n"], '_', basename($originalFilename));
                     $message->attach($attachment->getRealPath(), ['as' => $filename]);
                 }
+
+                $bannerCid = $signature === ''
+                    ? null
+                    : $message->embed(public_path('assets/img/omg/banner/omg-computer-banner-preview.png'));
+                $htmlBody = nl2br(e(rtrim($body)), false);
+                $htmlSignature = $signature === ''
+                    ? ''
+                    : '<table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;margin-top:18px;">'
+                        .'<tr><td style="padding:0 0 10px;border-top:1px solid #dbe3ea;font-family:Arial,sans-serif;font-size:14px;line-height:20px;color:#1f2937;">'
+                        .'<div style="padding-top:10px;white-space:pre-line;">'.e($signature).'</div>'
+                        .'</td></tr>'
+                        .'<tr><td style="padding:0;"><img src="'.$bannerCid.'" alt="OMG Computer - Repair, Support, Web" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;"></td></tr>'
+                        .'</table>';
+
+                $html = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#1f2937;">'
+                    .$htmlBody
+                    .$htmlSignature
+                    .'</div>';
+
+                $message->getSymfonyMessage()->text($messageBody)->html($html);
             });
         } catch (TransportExceptionInterface $exception) {
             Log::warning('Outgoing mailbox email failed.', [

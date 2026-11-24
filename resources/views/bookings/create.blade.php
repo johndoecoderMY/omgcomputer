@@ -14,6 +14,7 @@
         $bookingHelpWhatsappUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I am not sure which service to book. Can you help me choose?');
         $bookingLocationHelpWhatsappUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, my pickup or drop-off location is outside the Kampar service area. Can you advise me?');
         $bookingLocationHelpEmailUrl = 'mailto:support@omgcomputer.my?subject=' . rawurlencode('Pickup or drop-off outside Kampar') . '&body=' . rawurlencode('My pickup or drop-off location is outside the Kampar service area. Can you advise me?');
+        $bookingContactPhone = trim((string) ($contactPhone ?? ''));
     @endphp
     <style>
         .booking-help-section { background: #0b1727; }
@@ -37,13 +38,30 @@
         #calendar .booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
         #calendar .booking-date-available .fc-daygrid-day-number { color: #166534; font-weight: 600; }
         #calendar .booking-date-selected .fc-daygrid-day-frame { background: rgba(255, 75, 11, .12); box-shadow: inset 0 0 0 2px #ff4b0b; border-radius: .5rem; }
-        #calendar .booking-date-selected .fc-daygrid-day-number { color: #fff !important; background: #ff4b0b; font-weight: 700; }
+        #calendar .booking-date-selected .fc-daygrid-day-number { color: #212529 !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
         #calendar .fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b; border-radius: .5rem; }
         #calendar .fc-day-today.booking-date-available .fc-daygrid-day-frame { background: #dcfce7; }
         #calendar .fc-day-today.booking-date-unavailable .fc-daygrid-day-frame { background: #f1f3f5; }
-        #calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b; font-weight: 700; border-radius: 50%; }
-        #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important; }
+        #calendar .fc-day-today .fc-daygrid-day-number { font-weight: 700; background: transparent !important; }
+        #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #212529 !important; background: #ffb51b !important; }
         #calendar .booking-date-selected.fc-day-today .fc-daygrid-day-frame { box-shadow: inset 0 0 0 2px #ffb51b, inset 0 0 0 4px #ff4b0b; }
+        html[data-bs-theme="dark"] #calendar {
+            --fc-border-color: #334155;
+            --fc-page-bg-color: #111f30;
+            --fc-neutral-bg-color: #172638;
+            --fc-neutral-text-color: #a9bdd5;
+            color: #d7e2ee;
+        }
+        html[data-bs-theme="dark"] #calendar .fc-scrollgrid,
+        html[data-bs-theme="dark"] #calendar .fc-scrollgrid td,
+        html[data-bs-theme="dark"] #calendar .fc-scrollgrid th { border-color: #334155; }
+        html[data-bs-theme="dark"] #calendar .booking-date-unavailable .fc-daygrid-day-frame { background: #172638; color: #8190a3; }
+        html[data-bs-theme="dark"] #calendar .booking-date-unavailable .fc-daygrid-day-number { color: #8190a3; background: transparent; }
+        html[data-bs-theme="dark"] #calendar .booking-date-available .fc-daygrid-day-frame { background: #153b2d; color: #d0f2dc; }
+        html[data-bs-theme="dark"] #calendar .booking-date-available .fc-daygrid-day-number { color: #86efac; }
+        html[data-bs-theme="dark"] #calendar .fc-day-today.booking-date-available .fc-daygrid-day-frame { background: #153b2d; }
+        html[data-bs-theme="dark"] #calendar .fc-day-today.booking-date-unavailable .fc-daygrid-day-frame { background: #172638; }
+        html[data-bs-theme="dark"] #calendar .booking-date-available.booking-date-selected .fc-daygrid-day-frame { background: rgba(255, 75, 11, .16); }
         .booking-location-pin { background: transparent; border: 0; }
         @media (max-width: 575.98px) {
             .booking-calendar-card-body { padding: 10px; }
@@ -71,6 +89,7 @@
                                 <div class="col-lg-10">
                                     <h1 class="mb-2">{{ __('Book an appointment') }}</h1>
                                     <p class="mb-4">{{ __('Choose a date, select an available time, and tell us about your device.') }}</p>
+                                    <p class="text-body-secondary mb-4">{{ __('Online booking is available for computer troubleshooting and FYP consultations. For custom website, online shop, or other project inquiries, contact us to discuss your requirements.') }}</p>
                 @endif
 
                                 @if ($errors->any())
@@ -472,6 +491,11 @@
                                 <a class="btn btn-success rounded-pill px-4" href="{{ $bookingHelpWhatsappUrl }}" target="_blank" rel="noopener noreferrer">
                                     <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Message us on WhatsApp') }}
                                 </a>
+                                @if ($bookingContactPhone !== '')
+                                    <a class="btn btn-outline-light rounded-pill px-4" href="tel:{{ preg_replace('/[^0-9+]/', '', $bookingContactPhone) }}">
+                                        <span class="bi bi-telephone me-2" aria-hidden="true"></span>{{ __('Call us') }}
+                                    </a>
+                                @endif
                             </div>
                         </div>
                     </div>

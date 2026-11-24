@@ -306,6 +306,23 @@ class EmailMailboxTest extends TestCase
             $attachment->getRealPath(),
             ['as' => 'document.pdf'],
         )->andReturnSelf();
+        $message->shouldReceive('embed')->once()
+            ->with(public_path('assets/img/omg/banner/omg-computer-banner-preview.png'))
+            ->andReturn('cid:omg-computer-banner');
+
+        $symfonyMessage = Mockery::mock(\Symfony\Component\Mime\Email::class);
+        $symfonyMessage->shouldReceive('text')->once()
+            ->with("Please see attached.\n\n--\nJane Doe\nCustomer Support")
+            ->andReturnSelf();
+        $symfonyMessage->shouldReceive('html')->once()
+            ->with(Mockery::on(function (string $html): bool {
+                return str_contains($html, 'Jane Doe')
+                    && str_contains($html, 'Customer Support')
+                    && str_contains($html, 'cid:omg-computer-banner')
+                    && str_contains($html, 'Please see attached.');
+            }))
+            ->andReturnSelf();
+        $message->shouldReceive('getSymfonyMessage')->once()->andReturn($symfonyMessage);
 
         $mailer = Mockery::mock(Mailer::class);
         $mailer->shouldReceive('raw')->once()

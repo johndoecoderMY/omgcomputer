@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Customer;
+use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
 use Database\Seeders\PlannerRoleSeeder;
@@ -69,6 +70,90 @@ class RepairTicketTest extends TestCase
             ->assertSee('18 Jalan Repair, Kampar')
             ->assertSee('View pickup pin')
             ->assertSee('View drop-off pin');
+    }
+
+    public function test_staff_can_create_a_face_to_face_repair_ticket_without_a_customer_account(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        $this->actingAs($staff)
+            ->get(route('tickets.create'))
+            ->assertOk()
+            ->assertSee('Face-to-face / walk-in customer')
+            ->assertSee('name="face_to_face"', false)
+            ->assertSee('data-ticket-face-to-face-message', false)
+            ->assertSee('data-ticket-face-to-face-address', false);
+
+        $this->actingAs($staff)->post(route('tickets.store'), [
+            'face_to_face' => '1',
+            'device_type' => 'Desktop PC',
+            'issue_description' => 'Walk-in customer needs a desktop check.',
+            'priority' => 'normal',
+            'face_to_face_name' => 'Walk-in Customer',
+            'face_to_face_nickname' => 'Walkie',
+            'face_to_face_phone' => '+60123456789',
+            'pickup_address' => 'Should not be stored',
+            'dropoff_address' => 'Should not be stored',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $this->assertNull($ticket->customer_id);
+        $this->assertSame('Walk-in Customer', $ticket->face_to_face_name);
+        $this->assertSame('Walkie', $ticket->face_to_face_nickname);
+        $this->assertSame('+60123456789', $ticket->face_to_face_phone);
+        $this->assertNull($ticket->pickup_address);
+        $this->assertNull($ticket->dropoff_address);
+        $this->get(route('tickets.show', $ticket))
+            ->assertOk()
+            ->assertSee('Walk-in Customer')
+            ->assertSee('+60123456789');
+
+        $this->actingAs($staff)->post(route('tickets.customer.store', $ticket), [
+            'name' => 'Walk-in Customer',
+            'nickname' => 'Walkie',
+            'phone' => '+60123456789',
+            'email' => 'walkin@example.test',
+        ])->assertRedirect(route('tickets.show', $ticket));
+
+        $ticket->refresh();
+        $this->assertNotNull($ticket->customer_id);
+        $this->assertNull($ticket->face_to_face_phone);
+        $this->assertNull($ticket->face_to_face_email);
+        $this->assertDatabaseHas('customers', [
+            'id' => $ticket->customer_id,
+            'name' => 'Walk-in Customer',
+            'nickname' => 'Walkie',
+            'email' => 'walkin@example.test',
+        ]);
+    }
+
+    public function test_face_to_face_ticket_requires_a_phone_or_email(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+
+        $this->actingAs($staff)->post(route('tickets.store'), [
+            'face_to_face' => '1',
+            'device_type' => 'Laptop',
+            'issue_description' => 'Walk-in customer did not provide contact details.',
+            'priority' => 'normal',
+        ])
+            ->assertSessionHasErrors(['face_to_face_contact']);
+
+        $this->actingAs($staff)->post(route('tickets.store'), [
+            'face_to_face' => '1',
+            'face_to_face_email' => 'walkin@example.test',
+            'device_type' => 'Laptop',
+            'issue_description' => 'Walk-in customer provided an email.',
+            'priority' => 'normal',
+        ])
+            ->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->latest('id')->firstOrFail();
+        $this->assertSame('walkin@example.test', $ticket->face_to_face_email);
     }
 
     public function test_staff_can_create_a_repair_ticket_with_ajax(): void
@@ -248,6 +333,35 @@ class RepairTicketTest extends TestCase
             ->assertJsonPath('recordsFiltered', 1)
             ->assertJsonPath('data.0.ticket', fn (string $ticket): bool => str_contains($ticket, 'OMG-2026-000002'));
         $this->assertStringNotContainsString($assigned->ticket_number, $unassigned->getContent());
+    }
+
+    public function test_repair_ticket_details_only_show_a_project_when_one_is_linked(): void
+    {
+        $user = User::factory()->create();
+        $customer = Customer::query()->create([
+            'name' => 'Project link customer',
+            'email' => 'project-link@example.test',
+        ]);
+        $unlinkedTicket = RepairTicket::query()->create($this->ticketAttributes($user, [
+            'ticket_number' => 'OMG-2026-000003',
+            'customer_id' => $customer->id,
+        ]));
+
+        $this->actingAs($user)->get(route('tickets.show', $unlinkedTicket))
+            ->assertOk()
+            ->assertDontSee('<div class="small text-body-secondary">Project</div>', false);
+
+        $project = Project::query()->create(['name' => 'Hardware refresh']);
+        $linkedTicket = RepairTicket::query()->create($this->ticketAttributes($user, [
+            'ticket_number' => 'OMG-2026-000004',
+            'customer_id' => $customer->id,
+            'project_id' => $project->id,
+        ]));
+
+        $this->get(route('tickets.show', $linkedTicket))
+            ->assertOk()
+            ->assertSee('<div class="small text-body-secondary">Project</div>', false)
+            ->assertSee('Hardware refresh');
     }
 
     public function test_repair_tickets_can_be_assigned_to_multiple_people(): void

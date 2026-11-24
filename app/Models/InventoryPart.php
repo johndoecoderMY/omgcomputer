@@ -43,6 +43,7 @@ class InventoryPart extends Model
         'type',
         'supplier_id',
         'description',
+        'images',
         'catalog_price',
         'catalog_currency',
         'cost_price',
@@ -59,6 +60,7 @@ class InventoryPart extends Model
             'selling_price' => 'decimal:2',
             'catalog_price' => 'decimal:2',
             'is_for_sale' => 'boolean',
+            'images' => 'array',
         ];
     }
 
@@ -77,6 +79,16 @@ class InventoryPart extends Model
         return $this->belongsToMany(Supplier::class)
             ->withPivot('shopee_product_url', 'cost_price', 'unit_price')
             ->withTimestamps();
+    }
+
+    public function upgradeOptions(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'inventory_part_upgrade_options',
+            'base_inventory_part_id',
+            'upgrade_inventory_part_id',
+        )->withTimestamps();
     }
 
     public function specifications(): array

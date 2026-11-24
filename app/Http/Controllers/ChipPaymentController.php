@@ -9,6 +9,7 @@ use App\Models\CustomerMessageTemplate;
 use App\Services\BillingReceiptService;
 use App\Services\ChipCollect;
 use App\Services\GuestInvoicePaymentLinkService;
+use App\Services\WorkspaceNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,12 @@ class ChipPaymentController extends Controller
         return $this->startCheckout($document, $request, $chip, null, $document->customer_email, true);
     }
 
-    public function callback(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): Response
+    public function callback(
+        BillingPaymentAttempt $attempt,
+        Request $request,
+        ChipCollect $chip,
+        WorkspaceNotifier $notifier,
+    ): Response
     {
         abort_unless($chip->verifyCallback(
             $request->getContent(),
@@ -113,18 +119,23 @@ class ChipPaymentController extends Controller
         $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
         abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
         abort_unless(($purchase['status'] ?? null) === 'paid', 409, 'CHIP has not confirmed this purchase as paid.');
-        $this->recordVerifiedPayment($attempt);
+        $this->recordVerifiedPayment($attempt, $notifier);
 
         return response('', Response::HTTP_OK);
     }
 
-    public function return(BillingPaymentAttempt $attempt, Request $request, ChipCollect $chip): RedirectResponse
+    public function return(
+        BillingPaymentAttempt $attempt,
+        Request $request,
+        ChipCollect $chip,
+        WorkspaceNotifier $notifier,
+    ): RedirectResponse
     {
         $attempt->load('document');
         $this->authorizeAttemptReturn($request, $attempt);
 
         if ($attempt->status === 'paid') {
-            $receiptEmailed = $this->recordVerifiedPayment($attempt);
+            $receiptEmailed = $this->recordVerifiedPayment($attempt, $notifier);
 
             return redirect()->route('billing.documents.show', $attempt->document)
                 ->with('success', $receiptEmailed
@@ -136,7 +147,7 @@ class ChipPaymentController extends Controller
             $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
             abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
             if (($purchase['status'] ?? null) === 'paid') {
-                $receiptEmailed = $this->recordVerifiedPayment($attempt);
+                $receiptEmailed = $this->recordVerifiedPayment($attempt, $notifier);
 
                 return redirect()->route('billing.documents.show', $attempt->document)
                     ->with('success', $receiptEmailed
@@ -149,19 +160,23 @@ class ChipPaymentController extends Controller
             ->with('info', 'CHIP has not confirmed this payment yet. The invoice will update when payment is confirmed.');
     }
 
-    public function guestReturn(BillingPaymentAttempt $attempt, ChipCollect $chip): Response
+    public function guestReturn(
+        BillingPaymentAttempt $attempt,
+        ChipCollect $chip,
+        WorkspaceNotifier $notifier,
+    ): Response
     {
         abort_unless($attempt->user_id === null, 404);
         $attempt->load('document');
         $receiptEmailed = false;
 
         if ($attempt->status === 'paid') {
-            $receiptEmailed = $this->recordVerifiedPayment($attempt);
+            $receiptEmailed = $this->recordVerifiedPayment($attempt, $notifier);
         } elseif ($attempt->provider_purchase_id) {
             $purchase = $chip->purchase($attempt->provider_purchase_id, $attempt->chip_test_mode);
             abort_unless(($purchase['id'] ?? null) === $attempt->provider_purchase_id, 502, 'CHIP returned a different purchase.');
             if (($purchase['status'] ?? null) === 'paid') {
-                $receiptEmailed = $this->recordVerifiedPayment($attempt);
+                $receiptEmailed = $this->recordVerifiedPayment($attempt, $notifier);
                 $attempt->refresh();
             }
         }
@@ -294,15 +309,17 @@ class ChipPaymentController extends Controller
         abort_unless((int) $attempt->user_id === (int) $user->id, 404);
     }
 
-    private function recordVerifiedPayment(BillingPaymentAttempt $attempt): bool
+    private function recordVerifiedPayment(BillingPaymentAttempt $attempt, WorkspaceNotifier $notifier): bool
     {
-        $payment = DB::transaction(function () use ($attempt): ?BillingPayment {
+        [$payment, $newlyRecorded] = DB::transaction(function () use ($attempt): array {
             $lockedAttempt = BillingPaymentAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
             if ($lockedAttempt->status === 'paid') {
-                return BillingPayment::query()
+                $existingPayment = BillingPayment::query()
                     ->where('billing_document_id', $lockedAttempt->billing_document_id)
                     ->where('reference', 'CHIP '.$lockedAttempt->provider_purchase_id)
                     ->first();
+
+                return [$existingPayment, false];
             }
 
             $document = BillingDocument::query()->lockForUpdate()->findOrFail($lockedAttempt->billing_document_id);
@@ -326,12 +343,28 @@ class ChipPaymentController extends Controller
                 'paid_at' => $paidAt,
             ]);
 
-            return $payment;
+            return [$payment, true];
         });
 
-        return $payment
-            ? app(BillingReceiptService::class)->emailReceipt($payment)
-            : false;
+        if (! $payment) {
+            return false;
+        }
+
+        if ($newlyRecorded) {
+            $notifier->notifyAdmins(
+                $payment->user,
+                'Invoice payment received',
+                sprintf(
+                    '%s received RM %s via %s.',
+                    $payment->document->number,
+                    number_format((float) $payment->amount, 2),
+                    __('billing.pdf.payment_method_'.$payment->method),
+                ),
+                route('billing.documents.show', $payment->document),
+            );
+        }
+
+        return app(BillingReceiptService::class)->emailReceipt($payment);
     }
 
     private function authorizeCustomerDocument(Request $request, BillingDocument $document): void

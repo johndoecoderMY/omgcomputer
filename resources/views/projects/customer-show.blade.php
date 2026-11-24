@@ -336,6 +336,84 @@
         </div>
     </div>
 
+    <div class="card mb-4" aria-labelledby="customer-project-approvals-heading">
+        <div class="card-header bg-body">
+            <h2 class="h5 mb-0" id="customer-project-approvals-heading">Approvals</h2>
+        </div>
+        <div class="list-group list-group-flush">
+            @forelse ($project->approvals as $approval)
+                <article class="list-group-item">
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <div>
+                            <h3 class="h6 mb-1">{{ $approval->title }}</h3>
+                            <span class="badge text-bg-light border">{{ ucfirst(str_replace('_', ' ', $approval->type)) }}</span>
+                        </div>
+                        <span class="badge text-bg-light border">{{ str_replace('_', ' ', ucfirst($approval->status)) }}</span>
+                    </div>
+                    @if ($approval->description)<p class="mt-2 mb-2">{{ $approval->description }}</p>@endif
+                    @if ($approval->customer_response)<p class="small mb-2"><strong>Response:</strong> {{ $approval->customer_response }}</p>@endif
+                    @if ($approval->status === 'pending')
+                        <form method="POST" action="{{ route('projects.enhancements.approvals.respond', [$project, $approval]) }}" class="row g-2 mt-2">
+                            @csrf @method('PATCH')
+                            <div class="col-md-4">
+                                <select class="form-select form-select-sm" name="status" required>
+                                    <option value="approved">Approve</option>
+                                    <option value="changes_requested">Request changes</option>
+                                    <option value="rejected">Reject</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><input class="form-control form-control-sm" name="customer_response" placeholder="Comment"></div>
+                            <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">Submit</button></div>
+                        </form>
+                    @endif
+                </article>
+            @empty
+                <p class="list-group-item text-body-secondary mb-0">No approvals are pending or previously submitted.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="card mb-4" aria-labelledby="customer-project-documents-heading">
+        <div class="card-header bg-body">
+            <h2 class="h5 mb-0" id="customer-project-documents-heading">Project documents</h2>
+        </div>
+        <div class="list-group list-group-flush">
+            @forelse ($project->projectDocuments as $document)
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2"
+                    href="{{ route('projects.enhancements.documents.download', [$project, $document]) }}">
+                    <span>
+                        <strong>{{ $document->title }}</strong>
+                        <span class="badge text-bg-light border ms-1">{{ ucfirst($document->category) }}</span>
+                    </span>
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                </a>
+            @empty
+                <p class="list-group-item text-body-secondary mb-0">No documents have been shared yet.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="card mb-4" aria-labelledby="customer-project-feedback-heading">
+        <div class="card-header bg-body">
+            <h2 class="h5 mb-0" id="customer-project-feedback-heading">Service feedback</h2>
+        </div>
+        <div class="card-body">
+            @php $existingFeedback = $project->feedback->first(); @endphp
+            <form method="POST" action="{{ route('projects.enhancements.feedback.store', $project) }}">
+                @csrf
+                <label class="form-label" for="project-feedback-rating">Rating</label>
+                <select class="form-select mb-3" id="project-feedback-rating" name="rating" required>
+                    @for ($rating = 5; $rating >= 1; $rating--)
+                        <option value="{{ $rating }}" @selected(($existingFeedback?->rating ?? 5) === $rating)>{{ $rating }} - {{ $rating === 5 ? 'Excellent' : ($rating === 1 ? 'Poor' : 'Rating '.$rating) }}</option>
+                    @endfor
+                </select>
+                <label class="form-label" for="project-feedback-comment">Comment</label>
+                <textarea class="form-control mb-3" id="project-feedback-comment" name="comment" rows="3" maxlength="5000">{{ $existingFeedback?->comment }}</textarea>
+                <button class="btn btn-primary">{{ $existingFeedback ? 'Update feedback' : 'Submit feedback' }}</button>
+            </form>
+        </div>
+    </div>
+
     @include('projects._billing-documents', ['project' => $project, 'billingDocuments' => $billingDocuments, 'canManageBilling' => false])
 
     @if ($project->links->isNotEmpty())

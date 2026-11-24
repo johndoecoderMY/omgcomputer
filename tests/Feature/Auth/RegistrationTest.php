@@ -48,4 +48,17 @@ class RegistrationTest extends TestCase
         ]);
         Notification::assertSentTo($user, VerifyEmail::class);
     }
+
+    public function test_registration_rejects_email_addresses_longer_than_the_database_column(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+
+        $this->post('/register', [
+            'name' => 'Long Email User',
+            'email' => str_repeat('a', 180).'@example.test',
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertDatabaseMissing('users', ['name' => 'Long Email User']);
+    }
 }

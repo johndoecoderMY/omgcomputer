@@ -8,6 +8,30 @@ use RuntimeException;
 
 class CsvPcPartsSeeder extends Seeder
 {
+    private const PRE_2018_CPU_ARCHITECTURES = [
+        'bulldozer',
+        'coffee lake',
+        'core',
+        'excavator',
+        'haswell',
+        'haswell refresh',
+        'ivy bridge',
+        'jaguar',
+        'k10',
+        'kaby lake',
+        'lynx',
+        'nehalem',
+        'piledriver',
+        'puma+',
+        'sandy bridge',
+        'skylake',
+        'steamroller',
+        'westmere',
+        'wolfdale',
+        'yorkfield',
+        'zen',
+    ];
+
     private const PART_TYPES = [
         'case-accessory' => 'other',
         'case-fan' => 'cooling',
@@ -75,6 +99,7 @@ class CsvPcPartsSeeder extends Seeder
             }
 
             $batch = [];
+            $excludedSkus = [];
             $recordNumber = 0;
             $rowNumber = 1;
 
@@ -94,8 +119,19 @@ class CsvPcPartsSeeder extends Seeder
                 }
 
                 $recordNumber++;
+                $sku = sprintf('CSV-%s-%06d', strtoupper($source), $recordNumber);
+                if (! $this->isRelevantPart($source, $record)) {
+                    $excludedSkus[] = $sku;
+                    if (count($excludedSkus) === 500) {
+                        $this->deleteExcludedParts($excludedSkus);
+                        $excludedSkus = [];
+                    }
+
+                    continue;
+                }
+
                 $batch[] = [
-                    'sku' => sprintf('CSV-%s-%06d', strtoupper($source), $recordNumber),
+                    'sku' => $sku,
                     'type' => $type,
                     'name' => $record['name'],
                     'description' => $this->formatDescription(basename($file), $headers, $record),
@@ -114,9 +150,50 @@ class CsvPcPartsSeeder extends Seeder
             if ($batch !== []) {
                 $this->upsertBatch($batch);
             }
+            if ($excludedSkus !== []) {
+                $this->deleteExcludedParts($excludedSkus);
+            }
         } finally {
             fclose($handle);
         }
+    }
+
+    private function isRelevantPart(string $source, array $record): bool
+    {
+        return match ($source) {
+            'cpu' => ! in_array(
+                strtolower(trim((string) ($record['microarchitecture'] ?? ''))),
+                self::PRE_2018_CPU_ARCHITECTURES,
+                true,
+            ),
+            'video-card' => ! $this->isPre2018GraphicsCard((string) ($record['chipset'] ?? '')),
+            'motherboard' => $this->isCurrentMotherboard($record),
+            'memory' => ! $this->isLegacyMemory($record),
+            default => true,
+        };
+    }
+
+    private function isPre2018GraphicsCard(string $chipset): bool
+    {
+        return preg_match('/\b(?:GTX|GT|GTS)\s*(?:[6-9]\d{2}|10\d{2})\b/i', $chipset) === 1
+            || preg_match('/\bRadeon\s+(?:HD|R[3579]\s*\d{3}|RX\s*(?:[34]\d{2}|5[0-8]\d))\b/i', $chipset) === 1;
+    }
+
+    private function isCurrentMotherboard(array $record): bool
+    {
+        $socket = strtoupper(trim((string) ($record['socket'] ?? '')));
+        if (in_array($socket, ['AM4', 'AM5', 'LGA1200', 'LGA1700', 'LGA1851', 'STRX4'], true)) {
+            return true;
+        }
+
+        return $socket === 'LGA1151'
+            && preg_match('/\b(?:B360|B365|H310|H370|Q370|Z370|Z390)(?:M|I)?\b/i', (string) ($record['name'] ?? '')) === 1;
+    }
+
+    private function isLegacyMemory(array $record): bool
+    {
+        return preg_match('/\bDDR[123]\b/i', (string) ($record['name'] ?? '')) === 1
+            || preg_match('/^\s*[123]\s*,/', (string) ($record['speed'] ?? '')) === 1;
     }
 
     private function formatDescription(string $filename, array $headers, array $record): string
@@ -143,5 +220,10 @@ class CsvPcPartsSeeder extends Seeder
             ['sku'],
             ['name', 'type', 'description', 'catalog_price', 'catalog_currency', 'updated_at'],
         );
+    }
+
+    private function deleteExcludedParts(array $skus): void
+    {
+        DB::table('custom_pc_components')->whereIn('sku', $skus)->delete();
     }
 }

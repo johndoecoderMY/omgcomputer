@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\BookingTimeSlot;
+use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
@@ -66,6 +67,7 @@ class BookingController extends Controller
         return view('bookings.create', [
             'services' => $services,
             'authenticatedBooking' => $authenticatedBooking,
+            'contactPhone' => CompanyProfile::current()->phone,
             'deviceDetailsServiceId' => 'basic-troubleshooting',
             'serviceAreaCenter' => self::KAMPAR_CENTER,
             'serviceAreaRadiusKm' => self::KAMPAR_SERVICE_RADIUS_KM,
@@ -103,9 +105,13 @@ class BookingController extends Controller
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
             $dateString = $date->toDateString();
             $booked = $bookedSlots->get($dateString, []);
+            $minimumStart = $date->isSameDay($now) ? $now->copy()->addHour() : $now;
             $hasAvailability = collect($slotsByDay->get($date->dayOfWeek, []))
-                ->contains(fn (string $slot): bool => ! in_array($slot, $booked, true)
-                    && $date->copy()->setTimeFromTimeString($slot)->gt($now));
+                ->contains(function (string $slot) use ($booked, $date, $minimumStart): bool {
+                    $slotStart = $date->copy()->setTimeFromTimeString($slot);
+
+                    return ! in_array($slot, $booked, true) && $slotStart->gte($minimumStart);
+                });
 
             if ($hasAvailability) {
                 $events[] = [
@@ -190,7 +196,7 @@ class BookingController extends Controller
     {
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:255'],
-            'customer_email' => ['required', 'email', 'max:255'],
+            'customer_email' => ['required', 'email', 'max:191'],
             'customer_phone' => ['required', 'string', 'max:64'],
             'service_id' => [
                 'required',
@@ -643,11 +649,12 @@ class BookingController extends Controller
             ->map(fn (Booking $booking): string => $booking->starts_at->setTimezone(self::TIMEZONE)->format('H:i'))
             ->all();
         $now = Carbon::now(self::TIMEZONE);
+        $minimumStart = $localDate->isSameDay($now) ? $now->copy()->addHour() : $now;
 
-        return array_values(array_filter($slots, function (string $slot) use ($booked, $localDate, $now): bool {
+        return array_values(array_filter($slots, function (string $slot) use ($booked, $localDate, $minimumStart): bool {
             $slotTime = $localDate->copy()->setTimeFromTimeString($slot);
 
-            return ! in_array($slot, $booked, true) && $slotTime->gt($now);
+            return ! in_array($slot, $booked, true) && $slotTime->gte($minimumStart);
         }));
     }
 

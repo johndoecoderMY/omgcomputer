@@ -239,17 +239,53 @@
                         <form method="POST" action="{{ route('billing.documents.payments.store', $document) }}">
                             @csrf
                             <div class="card-body">
-                                <label class="form-label" for="amount">Payment amount (RM)</label>
-                                <input class="form-control mb-2" id="amount" name="amount" type="number" min="0.01"
-                                    max="{{ $document->balance }}" step="0.01"
-                                    value="{{ number_format($document->balance, 2, '.', '') }}" required>
-                                <div class="form-text mb-3">Enter the amount received, up to the outstanding balance of RM {{ number_format($document->balance, 2) }}. The remaining balance stays due.</div>
-                                <label class="form-label" for="method">Method</label>
-                                <select class="form-select mb-3" id="method" name="method" required>
-                                    @foreach (['cash', 'card', 'bank_transfer', 'online', 'other'] as $method)
-                                        <option value="{{ $method }}">{{ str_replace('_', ' ', ucfirst($method)) }}</option>
-                                    @endforeach
-                                </select>
+                                <div data-invoice-payment-splits>
+                                    <div data-payment-rows>
+                                        <div class="row g-2 align-items-end mb-3" data-payment-row>
+                                            <div class="col">
+                                                <label class="form-label" for="payment-amount-0">Payment 1 amount (RM)</label>
+                                                <input class="form-control" id="payment-amount-0" name="payments[0][amount]" type="number" min="0.01"
+                                                    max="{{ number_format($document->balance, 2, '.', '') }}" step="0.01"
+                                                    value="{{ number_format($document->balance, 2, '.', '') }}" required>
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label" for="payment-method-0">Method</label>
+                                                <select class="form-select" id="payment-method-0" name="payments[0][method]" required>
+                                                    @foreach (\App\Models\BillingPayment::METHODS as $method)
+                                                        <option value="{{ $method }}">{{ __('billing.pdf.payment_method_'.$method) }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-auto"></div>
+                                        </div>
+                                    </div>
+                                    <template data-payment-row-template>
+                                        <div class="row g-2 align-items-end mb-3" data-payment-row>
+                                            <div class="col">
+                                                <label class="form-label" for="payment-amount-__INDEX__">Payment __NUMBER__ amount (RM)</label>
+                                                <input class="form-control" id="payment-amount-__INDEX__" name="payments[__INDEX__][amount]" type="number" min="0.01"
+                                                    max="{{ number_format($document->balance, 2, '.', '') }}" step="0.01" required>
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label" for="payment-method-__INDEX__">Method</label>
+                                                <select class="form-select" id="payment-method-__INDEX__" name="payments[__INDEX__][method]" required>
+                                                    @foreach (\App\Models\BillingPayment::METHODS as $method)
+                                                        <option value="{{ $method }}">{{ __('billing.pdf.payment_method_'.$method) }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-auto">
+                                                <button class="btn btn-outline-danger" type="button" data-remove-payment-row aria-label="Remove payment method">
+                                                    <span class="bi bi-x-lg" aria-hidden="true"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <button class="btn btn-sm btn-outline-secondary mb-3" type="button" data-add-payment-row>
+                                        <span class="bi bi-plus-lg me-1" aria-hidden="true"></span>Add another payment method
+                                    </button>
+                                </div>
+                                <div class="form-text mb-3">Enter each amount received. The remaining balance stays due. Combined payment amounts cannot exceed the outstanding balance of RM {{ number_format($document->balance, 2) }}.</div>
                                 <label class="form-label" for="reference">Reference</label>
                                 <input class="form-control mb-3" id="reference" name="reference" maxlength="255">
                                 <label class="form-label" for="receipt-delivery">Receipt email</label>
@@ -281,7 +317,7 @@
                                 @forelse ($document->payments as $payment)
                                     <tr>
                                         <td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td>
-                                        <td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td>
+                                        <td>{{ __('billing.pdf.payment_method_'.$payment->method) }}</td>
                                         <td>{{ $payment->reference ?: '—' }}</td>
                                         <td class="text-end">RM {{ number_format($payment->amount, 2) }}</td>
                                         <td>

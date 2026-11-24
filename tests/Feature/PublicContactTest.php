@@ -45,6 +45,8 @@ class PublicContactTest extends TestCase
             ->assertSee('Message us on WhatsApp')
             ->assertSee(route('bookings.create'), false)
             ->assertSee('Book a service')
+            ->assertSee('Online bookings are for computer troubleshooting and FYP consultations.')
+            ->assertSee('Discuss a website or online shop project')
             ->assertSee('Book and drop off')
             ->assertSee('Review the diagnosis and quote')
             ->assertSee('Collect your device')

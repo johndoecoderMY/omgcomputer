@@ -155,6 +155,12 @@ class ProjectController extends Controller
                 ])->orderBy('inventory_parts.name'),
                 'estimateItems' => fn ($items) => $items->orderBy('category')->orderBy('description'),
                 'assignees:id,name',
+                'approvals' => fn ($approvals) => $approvals->latest(),
+                'projectDocuments' => fn ($documents) => $documents
+                    ->where('visible_to_customer', true)
+                    ->latest(),
+                'feedback' => fn ($feedback) => $feedback
+                    ->where('customer_user_id', $request->user()->id),
                 'tasks' => fn ($tasks) => $tasks->whereNull('parent_task_id')
                     ->with(['assignees:id,name', 'subtasks.assignees:id,name'])
                     ->orderBy('created_at'),

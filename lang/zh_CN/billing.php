@@ -95,6 +95,8 @@ return [
         'payment_method_card' => '银行卡',
         'payment_method_bank_transfer' => '银行转账',
         'payment_method_online' => '线上付款',
+        'payment_method_duitnow' => 'DuitNow',
+        'payment_method_spaylater' => 'SPayLater',
         'payment_method_other' => '其他',
     ],
     'project_terms' => [

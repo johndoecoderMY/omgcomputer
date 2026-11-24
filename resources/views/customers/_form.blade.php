@@ -4,6 +4,7 @@
     <div class="card-body row g-3">
         @if ($errors->any())<div class="col-12"><div class="alert alert-danger mb-0"><ul class="mb-0">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
         <div class="col-md-6"><label class="form-label" for="name">Customer name</label><input class="form-control" id="name" name="name" value="{{ old('name', $customer->name) }}" required maxlength="255"></div>
+        <div class="col-md-6"><label class="form-label" for="nickname">Nickname <span class="text-body-secondary">(optional)</span></label><input class="form-control" id="nickname" name="nickname" value="{{ old('nickname', $customer->nickname) }}" maxlength="255"></div>
         <div class="col-md-6"><label class="form-label" for="company">Company <span class="text-body-secondary">(optional)</span></label><input class="form-control" id="company" name="company" value="{{ old('company', $customer->company) }}" maxlength="255"></div>
         <div class="col-md-6"><label class="form-label" for="email">Email</label><input class="form-control" id="email" name="email" type="email" value="{{ old('email', $customer->email) }}" maxlength="255"></div>
         <div class="col-md-6"><label class="form-label" for="phone">Phone</label><x-phone-input id="phone" name="phone" :value="old('phone', $customer->phone)" maxlength="64" /></div>

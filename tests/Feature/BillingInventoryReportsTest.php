@@ -6,6 +6,7 @@ use App\Mail\BillingReceiptMail;
 use App\Mail\InvoiceMail;
 use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
+use App\Models\BillingPayment;
 use App\Models\BillingPaymentAttempt;
 use App\Models\ChipSetting;
 use App\Models\Customer;
@@ -15,12 +16,14 @@ use App\Models\ProductService;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\User;
+use App\Notifications\WorkspaceNotification;
 use App\Services\ChipCollect;
 use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -149,6 +152,65 @@ class BillingInventoryReportsTest extends TestCase
             ->get(route('billing.receipts.pdf', $payment))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_staff_can_split_an_invoice_payment_across_cash_duitnow_and_spaylater(): void
+    {
+        Notification::fake();
+        $admin = $this->adminUser();
+        $notifiedAdmin = User::factory()->create(['email' => 'billing-notifications@omgcomputer.my']);
+        $notifiedAdmin->assignRole('admin');
+        $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Split payment project']), 1200);
+
+        $this->actingAs($admin)->get(route('billing.documents.show', $document))
+            ->assertOk()
+            ->assertSee('DuitNow')
+            ->assertSee('SPayLater')
+            ->assertSee('name="payments[0][amount]"', false)
+            ->assertSee('Add another payment method');
+
+        $this->actingAs($admin)->post(route('billing.documents.payments.store', $document), [
+            'payments' => [
+                ['amount' => 500, 'method' => 'cash'],
+                ['amount' => 701, 'method' => 'spaylater'],
+            ],
+            'paid_at' => now()->toDateString(),
+            'receipt_delivery' => 'preview',
+        ])->assertSessionHasErrors('payments');
+        $this->assertSame(0, $document->payments()->count());
+        $this->assertSame(1200.0, $document->fresh()->balance_due);
+
+        $this->actingAs($admin)->post(route('billing.documents.payments.store', $document), [
+            'payments' => [
+                ['amount' => 500, 'method' => 'cash'],
+                ['amount' => 300, 'method' => 'duitnow'],
+                ['amount' => 400, 'method' => 'spaylater'],
+            ],
+            'paid_at' => now()->toDateString(),
+            'receipt_delivery' => 'preview',
+        ])->assertRedirect(route('billing.documents.show', $document))
+            ->assertSessionHas('success', 'Payments recorded. Preview and send each receipt from payment history.');
+
+        $this->assertSame('paid', $document->fresh()->status);
+        $this->assertSame(1200.0, (float) $document->fresh()->paid_amount);
+        $this->assertSame(
+            [
+                ['cash', 500.0],
+                ['duitnow', 300.0],
+                ['spaylater', 400.0],
+            ],
+            $document->payments()->orderBy('id')->get(['method', 'amount'])
+                ->map(fn (BillingPayment $payment): array => [$payment->method, (float) $payment->amount])
+                ->all(),
+        );
+        Notification::assertSentTo(
+            $notifiedAdmin,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'Invoice payment received'
+                && str_contains($notification->message, 'RM 1,200.00')
+                && str_contains($notification->message, 'Cash, DuitNow, SPayLater')
+                && in_array('mail', $notification->via($notifiedAdmin), true),
+        );
     }
 
     public function test_staff_can_send_and_preview_invoice_in_selected_language(): void
@@ -1467,7 +1529,11 @@ class BillingInventoryReportsTest extends TestCase
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void
     {
         Mail::fake();
+        Notification::fake();
+        $this->seed(PlannerRoleSeeder::class);
         ChipSetting::setTestMode(true);
+        $notifiedAdmin = User::factory()->create(['email' => 'billing-notifications@omgcomputer.my']);
+        $notifiedAdmin->assignRole('admin');
         $project = Project::query()->create(['name' => 'Callback project']);
         $document = $this->createIssuedInvoice($project, 40);
         $attempt = BillingPaymentAttempt::query()->create([
@@ -1505,6 +1571,9 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(25.0, $document->fresh()->balance);
         $this->assertDatabaseCount('billing_payments', 1);
         Mail::assertSentCount(1);
+        $firstPaymentNotifications = Notification::sent($notifiedAdmin, WorkspaceNotification::class);
+        $this->assertCount(1, $firstPaymentNotifications);
+        $this->assertSame('Invoice payment received', $firstPaymentNotifications->first()->title);
 
         $secondAttempt = BillingPaymentAttempt::query()->create([
             'uuid' => (string) Str::uuid(),
@@ -1541,6 +1610,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(0.0, $document->fresh()->balance);
         $this->assertDatabaseCount('billing_payments', 2);
         Mail::assertSentCount(2);
+        $this->assertCount(2, Notification::sent($notifiedAdmin, WorkspaceNotification::class));
     }
 
     public function test_chip_callback_rejects_invalid_signatures(): void

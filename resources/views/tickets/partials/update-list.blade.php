@@ -7,17 +7,19 @@
                     <x-status-badge :status="$update->status"
                         :label="$statuses[$update->status] ?? ucfirst($update->status)" />
                 </div>
-                <div class="small text-body-secondary text-end">
-                    {{ $update->created_at->format('M j, Y g:i A') }}<br>{{ $update->user?->name ?? 'System' }}
+                <div class="d-flex flex-column align-items-end gap-2">
+                    <div class="small text-body-secondary text-end">
+                        {{ $update->created_at->format('M j, Y g:i A') }}<br>{{ $update->user?->name ?? 'System' }}
+                    </div>
+                    @unless (auth()->user()->hasRole('customer'))
+                        <button class="btn btn-sm btn-outline-primary text-nowrap" type="button"
+                            data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal-{{ $update->id }}"
+                            aria-label="Add photo to {{ $update->title }}">
+                            <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
+                        </button>
+                    @endunless
                 </div>
             </div>
-            @unless (auth()->user()->hasRole('customer'))
-                <button class="btn btn-sm btn-outline-primary mt-2" type="button"
-                    data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal-{{ $update->id }}"
-                    aria-label="Add photo to {{ $update->title }}">
-                    <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
-                </button>
-            @endunless
             @if ($update->notes)
                 <p class="text-pre-line mt-2 mb-0">{{ $update->notes }}</p>
             @endif
@@ -106,7 +108,7 @@
                                     aria-live="polite">
                                 </div>
                             </div>
-                            <div class="modal-footer">
+                            <div class="modal-footer justify-content-end">
                                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                                 <button class="btn btn-primary" type="submit">Add photo</button>
                             </div>

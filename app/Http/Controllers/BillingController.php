@@ -22,6 +22,7 @@ use App\Services\ChipCollect;
 use App\Services\GuestInvoicePaymentLinkService;
 use App\Services\InventoryStock;
 use App\Services\MailSettingsService;
+use App\Services\WorkspaceNotifier;
 use App\Support\DataTableQueryBuilder;
 use App\Support\RepairTicketIssueSanitizer;
 use App\Support\StatusBadge;
@@ -1188,13 +1189,16 @@ class BillingController extends Controller
         return back()->with('success', 'Receipt '.$payment->receipt_number.' was emailed to '.$data['email'].'.');
     }
 
-    public function storePayment(BillingDocument $document, Request $request): RedirectResponse
+    public function storePayment(BillingDocument $document, Request $request, WorkspaceNotifier $notifier): RedirectResponse
     {
         abort_unless($request->user()->hasRole('admin'), 403);
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999'],
-            'method' => ['required', 'in:cash,card,bank_transfer,online,other'],
+            'amount' => ['required_without:payments', 'nullable', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999'],
+            'method' => ['required_with:amount', 'nullable', Rule::in(BillingPayment::METHODS)],
+            'payments' => ['required_without:amount', 'array', 'min:1', 'max:10'],
+            'payments.*.amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:99999999'],
+            'payments.*.method' => ['required', Rule::in(BillingPayment::METHODS)],
             'reference' => ['nullable', 'string', 'max:255'],
             'paid_at' => ['nullable', 'date', 'required_without:received_at'],
             'received_at' => ['nullable', 'date', 'required_without:paid_at'],
@@ -1203,46 +1207,84 @@ class BillingController extends Controller
             'receipt_delivery' => ['nullable', Rule::in(['send', 'preview'])],
         ]);
 
-        $payment = DB::transaction(function () use ($document, $request, $data): BillingPayment {
+        $paymentLines = $data['payments'] ?? [[
+            'amount' => $data['amount'],
+            'method' => $data['method'],
+        ]];
+        $payments = DB::transaction(function () use ($document, $request, $data, $paymentLines): Collection {
             $locked = BillingDocument::query()->lockForUpdate()->findOrFail($document->id);
             abort_if($locked->type !== 'invoice' || ! in_array($locked->status, ['issued', 'partial', 'part_paid'], true), 422, 'This invoice cannot accept a payment.');
-            $amount = round((float) $data['amount'], 2);
-            $balance = round((float) $locked->total - (float) $locked->paid_amount, 2);
-            if ($amount > $balance) {
-                throw ValidationException::withMessages(['amount' => 'The payment amount cannot exceed the outstanding balance.']);
+            $amountCents = array_sum(array_map(
+                fn (array $line): int => (int) round((float) $line['amount'] * 100),
+                $paymentLines,
+            ));
+            $balanceCents = (int) round(((float) $locked->total - (float) $locked->paid_amount) * 100);
+            if ($amountCents > $balanceCents) {
+                $field = array_key_exists('payments', $data) ? 'payments' : 'amount';
+                $message = array_key_exists('payments', $data)
+                    ? 'The combined payment amounts cannot exceed the outstanding balance.'
+                    : 'The payment amount cannot exceed the outstanding balance.';
+                throw ValidationException::withMessages([$field => $message]);
             }
 
-            $payment = $locked->payments()->create([
-                'amount' => $amount,
-                'method' => $data['method'],
-                'reference' => $data['reference'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'user_id' => $request->user()->id,
-                'paid_at' => $data['paid_at'] ?? $data['received_at'] ?? now(),
-            ]);
-            $locked->paid_amount = round((float) $locked->paid_amount + $amount, 2);
+            $payments = new Collection;
+            foreach ($paymentLines as $line) {
+                $payments->push($locked->payments()->create([
+                    'amount' => round((float) $line['amount'], 2),
+                    'method' => $line['method'],
+                    'reference' => $data['reference'] ?? null,
+                    'notes' => $data['notes'] ?? null,
+                    'user_id' => $request->user()->id,
+                    'paid_at' => $data['paid_at'] ?? $data['received_at'] ?? now(),
+                ]));
+            }
+            $locked->paid_amount = round((float) $locked->paid_amount + ($amountCents / 100), 2);
             $locked->status = $locked->paid_amount >= $locked->total ? 'paid' : 'partial';
             $locked->save();
 
-            return $payment;
+            return $payments;
         });
+
+        $paymentTotal = $payments->sum(fn (BillingPayment $payment): float => (float) $payment->amount);
+        $paymentMethods = $payments->pluck('method')->unique()->map(
+            fn (string $method): string => __('billing.pdf.payment_method_'.$method),
+        )->join(', ');
+        $notifier->notifyAdmins(
+            $request->user(),
+            'Invoice payment received',
+            sprintf(
+                '%s received RM %s via %s.',
+                $document->number,
+                number_format($paymentTotal, 2),
+                $paymentMethods,
+            ),
+            route('billing.documents.show', $document),
+        );
 
         if (($data['receipt_delivery'] ?? 'send') === 'preview') {
             return redirect()
                 ->route('billing.documents.show', $document)
-                ->with('success', 'Payment recorded. Preview and send the receipt from payment history.');
+                ->with('success', $payments->count() === 1
+                    ? 'Payment recorded. Preview and send the receipt from payment history.'
+                    : 'Payments recorded. Preview and send each receipt from payment history.');
         }
 
-        $emailSent = app(BillingReceiptService::class)->emailReceipt(
+        $receiptService = app(BillingReceiptService::class);
+        $sentCount = $payments->filter(fn (BillingPayment $payment): bool => $receiptService->emailReceipt(
             $payment,
             locale: $data['receipt_locale'] ?? app()->getLocale(),
-        );
+        ))->count();
+        $allReceiptsSent = $sentCount === $payments->count();
+        $successMessage = $payments->count() === 1
+            ? 'Payment recorded and the receipt was emailed to the customer.'
+            : 'Payments recorded and receipts were emailed to the customer.';
+        $failureMessage = $payments->count() === 1
+            ? 'Payment recorded, but the receipt could not be emailed. It is still available to view and print.'
+            : 'Payments recorded, but one or more receipts could not be emailed. They are still available to view and print.';
 
         return redirect()
             ->route('billing.documents.show', $document)
-            ->with($emailSent ? 'success' : 'info', $emailSent
-                ? 'Payment recorded and the receipt was emailed to the customer.'
-                : 'Payment recorded, but the receipt could not be emailed. It is still available to view and print.');
+            ->with($allReceiptsSent ? 'success' : 'info', $allReceiptsSent ? $successMessage : $failureMessage);
     }
 
     public function void(BillingDocument $document, Request $request, InventoryStock $stock): RedirectResponse

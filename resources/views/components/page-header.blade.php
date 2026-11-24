@@ -24,6 +24,8 @@
         str_starts_with($routeName, 'departments.'),
         str_starts_with($routeName, 'admin.users.'),
         str_starts_with($routeName, 'admin.access.') => 'Members & organization',
+        str_starts_with($routeName, 'admin.company-profile.') => 'Manage',
+        str_starts_with($routeName, 'social-media.') => 'Manage',
         str_starts_with($routeName, 'development.flowcharts.'),
         str_starts_with($routeName, 'admin.backups.'),
         str_starts_with($routeName, 'products.'),
@@ -112,6 +114,14 @@
         str_starts_with($routeName, 'admin.users.'),
         str_starts_with($routeName, 'admin.access.') => [
             ['label' => 'Members & organization', 'url' => route('admin.users.index')],
+        ],
+        str_starts_with($routeName, 'admin.company-profile.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Company Profile'],
+        ],
+        str_starts_with($routeName, 'social-media.') => [
+            ['label' => 'Manage'],
+            ['label' => 'Social Media', 'url' => route('social-media.index')],
         ],
         str_starts_with($routeName, 'development.flowcharts.') => [
             ['label' => 'Manage'],

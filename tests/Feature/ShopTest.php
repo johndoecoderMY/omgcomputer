@@ -21,7 +21,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ShopTest extends TestCase
@@ -233,6 +235,119 @@ class ShopTest extends TestCase
             ->assertDontSee(asset('assets/img/omg/computer-repair-placeholder.svg'), false);
     }
 
+    public function test_staff_can_upload_multiple_product_photos_for_the_shop_gallery(): void
+    {
+        Storage::fake('public');
+        $staff = $this->staffUser();
+
+        $this->actingAs($staff)->post(route('shop.products.store'), [
+            'name' => 'Gallery-ready gaming PC',
+            'sku' => 'PC-GALLERY-001',
+            'type' => 'ready_built_pc',
+            'cost_price' => 1800,
+            'selling_price' => 2299,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_for_sale' => '1',
+            'images' => [
+                UploadedFile::fake()->image('front.jpg'),
+                UploadedFile::fake()->image('side.png'),
+            ],
+        ])->assertRedirect(route('shop.products.index'));
+
+        $product = InventoryPart::query()->where('sku', 'PC-GALLERY-001')->firstOrFail();
+        $this->assertCount(2, $product->images);
+        foreach ($product->images as $image) {
+            Storage::disk('public')->assertExists($image);
+        }
+
+        $this->get(route('shop.public.products.show', $product))
+            ->assertOk()
+            ->assertSee('data-gallery="product-'.$product->id.'"', false)
+            ->assertSee('data-bs-slide="next"', false)
+            ->assertSee(Storage::disk('public')->url($product->images[0]), false)
+            ->assertSee(Storage::disk('public')->url($product->images[1]), false);
+
+        $this->actingAs($staff)->put(route('shop.products.update', $product), [
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'type' => $product->type,
+            'cost_price' => $product->cost_price,
+            'selling_price' => $product->selling_price,
+            'reorder_level' => $product->reorder_level,
+            'is_for_sale' => '1',
+            'remove_images' => [$product->images[0]],
+        ])->assertRedirect(route('shop.products.show', $product));
+
+        $this->assertCount(1, $product->fresh()->images);
+        Storage::disk('public')->assertMissing($product->images[0]);
+    }
+
+    public function test_ready_built_pc_offers_in_stock_component_upgrades_that_are_added_to_the_cart(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+        $supplier = Supplier::query()->create(['name' => 'Upgrade options supplier']);
+        $pc = InventoryPart::query()->create([
+            'name' => 'Upgradeable gaming PC',
+            'sku' => 'PC-UPGRADE-001',
+            'type' => 'ready_built_pc',
+            'supplier_id' => $supplier->id,
+            'selling_price' => 2000,
+            'cost_price' => 1500,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+        $ram = InventoryPart::query()->create([
+            'name' => '32 GB RAM kit',
+            'sku' => 'UPGRADE-RAM-01',
+            'type' => 'ram',
+            'supplier_id' => $supplier->id,
+            'selling_price' => 180,
+            'cost_price' => 100,
+            'stock_quantity' => 3,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+        $gpu = InventoryPart::query()->create([
+            'name' => 'RTX upgrade graphics card',
+            'sku' => 'UPGRADE-GPU-01',
+            'type' => 'gpu',
+            'supplier_id' => $supplier->id,
+            'selling_price' => 650,
+            'cost_price' => 500,
+            'stock_quantity' => 0,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+        $pc->upgradeOptions()->attach([$ram->id, $gpu->id]);
+
+        $this->get(route('shop.public.products.show', $pc))
+            ->assertOk()
+            ->assertSee('Upgrade options')
+            ->assertSee('32 GB RAM kit')
+            ->assertDontSee('RTX upgrade graphics card');
+
+        $this->actingAs($customer)->postJson(route('shop.cart.add', $pc), [
+            'quantity' => 1,
+            'upgrade_ids' => ['ram' => $ram->id, 'gpu' => $gpu->id],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('upgrade_ids');
+        $this->assertSame([], session('shop_cart', []));
+
+        $this->actingAs($customer)->postJson(route('shop.cart.add', $pc), [
+            'quantity' => 1,
+            'upgrade_ids' => ['ram' => $ram->id],
+        ])->assertOk()
+            ->assertJsonPath('cartCount', 2);
+        $this->assertSame([
+            $pc->id => 1,
+            $ram->id => 1,
+        ], session('shop_cart'));
+    }
+
     public function test_public_site_links_to_the_shop_grid_and_legacy_list_redirects_there(): void
     {
         $this->get('/')
@@ -295,11 +410,75 @@ class ShopTest extends TestCase
     public function test_staff_can_list_a_ready_built_pc_for_sale(): void
     {
         $staff = $this->staffUser();
+        $supplier = Supplier::query()->create(['name' => 'Complete PC supplier']);
+        $ramUpgrade = InventoryPart::query()->create([
+            'name' => 'Complete PC 32 GB RAM upgrade',
+            'sku' => 'PC-OFFICE-RAM-UPGRADE',
+            'type' => 'ram',
+            'supplier_id' => $supplier->id,
+            'cost_price' => 75,
+            'selling_price' => 120,
+            'stock_quantity' => 4,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+        $gpuUpgrade = InventoryPart::query()->create([
+            'name' => 'Complete PC graphics upgrade',
+            'sku' => 'PC-OFFICE-GPU-UPGRADE',
+            'type' => 'gpu',
+            'supplier_id' => $supplier->id,
+            'cost_price' => 300,
+            'selling_price' => 450,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+        $unrelatedUpgrade = InventoryPart::query()->create([
+            'name' => 'Unrelated RAM option',
+            'sku' => 'PC-OTHER-RAM',
+            'type' => 'ram',
+            'cost_price' => 25,
+            'selling_price' => 50,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_for_sale' => true,
+        ]);
+
+        $this->actingAs($staff)->get(route('shop.products.create'))
+            ->assertOk()
+            ->assertSee('For a complete PC sourced from one supplier')
+            ->assertSee('Complete PC supplier')
+            ->assertSee('Supplier upgrade options');
+
+        $this->actingAs($staff)->getJson(route('shop.products.upgrade-options', [
+            'supplier_id' => $supplier->id,
+            'q' => 'Complete PC',
+        ]))->assertOk()
+            ->assertJsonCount(2, 'results')
+            ->assertJsonFragment(['id' => $ramUpgrade->id])
+            ->assertJsonFragment(['id' => $gpuUpgrade->id])
+            ->assertJsonMissing(['id' => $unrelatedUpgrade->id]);
+
+        $this->actingAs($staff)->from(route('shop.products.create'))->post(route('shop.products.store'), [
+            'name' => 'Invalid supplier upgrade PC',
+            'sku' => 'PC-OFFICE-INVALID',
+            'type' => 'ready_built_pc',
+            'supplier_id' => $supplier->id,
+            'upgrade_option_ids' => [$unrelatedUpgrade->id],
+            'cost_price' => 1000,
+            'selling_price' => 1300,
+            'stock_quantity' => 1,
+            'reorder_level' => 0,
+        ])->assertRedirect(route('shop.products.create'))
+            ->assertSessionHasErrors('upgrade_option_ids');
+        $this->assertDatabaseMissing('inventory_parts', ['sku' => 'PC-OFFICE-INVALID']);
 
         $this->actingAs($staff)->post(route('shop.products.store'), [
             'name' => 'Office PC package',
             'sku' => 'PC-OFFICE-001',
             'type' => 'ready_built_pc',
+            'supplier_id' => $supplier->id,
+            'upgrade_option_ids' => [$ramUpgrade->id, $gpuUpgrade->id],
             'description' => 'A ready-built desktop for office work.',
             'cost_price' => 1400,
             'selling_price' => 1799,
@@ -311,15 +490,65 @@ class ShopTest extends TestCase
         $this->assertDatabaseHas('inventory_parts', [
             'sku' => 'PC-OFFICE-001',
             'type' => 'ready_built_pc',
+            'supplier_id' => $supplier->id,
             'is_for_sale' => true,
             'stock_quantity' => 3,
         ]);
+        $product = InventoryPart::query()->where('sku', 'PC-OFFICE-001')->firstOrFail();
+        $this->assertDatabaseHas('inventory_part_supplier', [
+            'inventory_part_id' => $product->id,
+            'supplier_id' => $supplier->id,
+        ]);
+        $this->assertDatabaseHas('inventory_part_upgrade_options', [
+            'base_inventory_part_id' => $product->id,
+            'upgrade_inventory_part_id' => $ramUpgrade->id,
+        ]);
+        $this->assertDatabaseHas('inventory_part_upgrade_options', [
+            'base_inventory_part_id' => $product->id,
+            'upgrade_inventory_part_id' => $gpuUpgrade->id,
+        ]);
+        $this->actingAs($staff)->get(route('shop.products.show', $product))
+            ->assertOk()
+            ->assertSee('Complete PC supplier');
+        $this->actingAs($staff)->get(route('shop.products.edit', $product))
+            ->assertOk()
+            ->assertSee('Complete PC 32 GB RAM upgrade')
+            ->assertSee('Complete PC graphics upgrade');
 
         $this->get(route('shop.public', ['type' => 'ready_built_pc']))
             ->assertOk()
             ->assertSee('Office PC package')
             ->assertSee('RM 1,799.00')
             ->assertSee('Get a custom PC quote');
+        $this->get(route('shop.public.products.show', $product))
+            ->assertOk()
+            ->assertSee('Complete PC 32 GB RAM upgrade')
+            ->assertSee('Complete PC graphics upgrade')
+            ->assertDontSee('Unrelated RAM option');
+
+        $this->actingAs($staff)->post(route('billing.store'), [
+            'type' => 'quotation',
+            'customer_name' => 'PC resale customer',
+            'customer_email' => 'pc-resale@example.test',
+            'issue_date' => now()->toDateString(),
+            'tax_rate' => 0,
+            'items' => [[
+                'inventory_part_id' => $product->id,
+                'quantity' => 1,
+                'unit_cost' => 1400,
+                'unit_price' => 1799,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('billing_documents', [
+            'customer_email' => 'pc-resale@example.test',
+            'total' => 1799,
+        ]);
+        $this->assertDatabaseHas('billing_document_items', [
+            'inventory_part_id' => $product->id,
+            'unit_cost' => 1400,
+            'unit_price' => 1799,
+        ]);
     }
 
     public function test_inventory_parts_stay_out_of_builder_and_catalog_parts_can_be_quoted(): void
@@ -386,23 +615,19 @@ class ShopTest extends TestCase
             ->assertSee('Software / Microsoft')
             ->assertSee('Add another PC')
             ->assertSee('Add component')
+            ->assertSee('id="whatsapp-build-message"', false)
+            ->assertSee('id="copy-whatsapp-message"', false)
+            ->assertSee('Copy WhatsApp message')
             ->assertSee('title="Remove component"', false)
             ->assertSee('viewBox="0 0 16 16"', false)
             ->assertSee('Search parts')
-            ->assertSee('Shopee product URL')
-            ->assertSee('Shopee shop account URL')
-            ->assertSee('Supplier name')
-            ->assertSee('id="new-supplier-type" name="supplier_type"', false)
-            ->assertSee('value="shopee">Shopee marketplace', false)
-            ->assertSee('value="other">Other supplier', false)
-            ->assertSee('Contact person')
-            ->assertSee('Email')
-            ->assertSee('Phone')
-            ->assertSee('Website')
-            ->assertSee('Notes')
-            ->assertSee('Cost price (RM)')
-            ->assertSee('Unit price (RM)')
-            ->assertSee('Add another supplier')
+            ->assertSee('id="new-marketplace" name="marketplace"', false)
+            ->assertSee('value="shopee">Shopee', false)
+            ->assertSee('value="lazada">Lazada', false)
+            ->assertSee('value="tiktok_shop">TikTok Shop', false)
+            ->assertSee('Category (optional)')
+            ->assertSee('name="url"', false)
+            ->assertSee('Add marketplace link')
             ->assertSee('Min selling price (RM)')
             ->assertSee('Max selling price (RM)')
             ->assertSee('Common specifications')
@@ -926,6 +1151,41 @@ class ShopTest extends TestCase
             ->where('custom_pc_component_id', $part->id)
             ->where('supplier_id', $supplier->id)
             ->value('shopee_product_url'));
+    }
+
+    public function test_custom_pc_builder_can_add_marketplace_links_with_optional_category(): void
+    {
+        $staff = $this->staffUser();
+        $part = CustomPcComponent::query()->create([
+            'name' => 'Marketplace link component',
+            'type' => 'gpu',
+        ]);
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.marketplace-link', $part), [
+            'marketplace' => 'lazada',
+            'url' => 'https://www.lazada.com.my/products/example.html',
+            'category' => 'gpu',
+        ])->assertCreated()
+            ->assertJsonPath('link.marketplace', 'lazada')
+            ->assertJsonPath('link.url', 'https://www.lazada.com.my/products/example.html')
+            ->assertJsonPath('link.category', 'gpu');
+
+        $this->actingAs($staff)->postJson(route('shop.custom-pc-builder.components.marketplace-link', $part), [
+            'marketplace' => 'shopee',
+            'url' => 'https://shopee.com.my/product/123',
+        ])->assertCreated()
+            ->assertJsonPath('link.marketplace', 'shopee')
+            ->assertJsonPath('link.category', null);
+
+        $this->assertDatabaseCount('custom_pc_component_marketplace_links', 2);
+        $this->assertDatabaseCount('suppliers', 0);
+
+        $this->actingAs($staff)->getJson(route('shop.custom-pc-builder.components', ['category' => 'gpu']))
+            ->assertOk()
+            ->assertJsonPath('data.0.marketplace_links.0.marketplace', 'lazada')
+            ->assertJsonPath('data.0.marketplace_links.0.category', 'gpu')
+            ->assertJsonPath('data.0.marketplace_links.1.marketplace', 'shopee')
+            ->assertJsonPath('data.0.marketplace_links.1.category', null);
     }
 
     public function test_adding_supplier_from_builder_validates_supplier_details(): void

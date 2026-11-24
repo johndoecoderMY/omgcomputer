@@ -20,7 +20,7 @@
 @section('content')
 <div class="container-fluid py-3">
     <x-page-header eyebrow="Shop" title="Custom PC builder"
-        description="Search the component catalog, add your own RM quote prices, and prepare a draft quotation."
+        description="Search the component catalog, add your own RM quote prices, and share a build with your customer."
         :back-url="route('shop.products.index')" :back-label="'Back to shop products'" />
     <div class="d-flex justify-content-end mb-3">
         <a class="btn btn-outline-primary" href="{{ route('shop.custom-pc-builder.drafts.index') }}">
@@ -43,7 +43,7 @@
                     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div>
                             <h2 class="h5 mb-1">Build components</h2>
-                            <p class="small text-body-secondary mb-0">Create one or more PCs in a single quotation. Search all parts, including catalog items with no stock; enter a manual RM quote price when needed. Starter profiles suggest targets only and never select parts or set prices. CPU and motherboard compatibility is checked separately for each PC.</p>
+                            <p class="small text-body-secondary mb-0">Build one or more PCs, then copy a customer-ready WhatsApp message or create a quotation. Search all parts, including catalog items with no stock; enter a manual RM quote price when needed. Starter profiles suggest targets only and never select parts or set prices. CPU and motherboard compatibility is checked separately for each PC.</p>
                         </div>
                         <button class="btn btn-sm btn-outline-primary" type="button" id="add-pc-build">
                             <i class="bi bi-plus me-1" aria-hidden="true"></i>Add another PC
@@ -185,8 +185,11 @@
             </div>
             <div class="col-xl-4">
                 <div class="card">
-                    <div class="card-header fw-semibold">Quotation estimate</div>
+                    <div class="card-header fw-semibold">Build estimate</div>
                     <div class="card-body">
+                        <label class="form-label fw-semibold" for="whatsapp-build-message">WhatsApp message</label>
+                        <textarea class="form-control font-monospace small mb-2" id="whatsapp-build-message" rows="12" readonly placeholder="Select components to prepare a customer-ready message."></textarea>
+                        <div id="whatsapp-copy-status" class="small text-body-secondary mb-3" role="status" aria-live="polite"></div>
                         <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><span id="build-subtotal">RM 0.00</span></div>
                         <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                             <label class="form-label mb-0" for="discount_amount">Discount (RM)</label>
@@ -199,9 +202,12 @@
                         <div class="d-flex justify-content-between mb-2"><span>Tax ({{ number_format((float) old('tax_rate', $draft?->form_data['tax_rate'] ?? $taxRate), 2) }}%)</span><span id="build-tax">RM 0.00</span></div>
                         <hr>
                         <div class="d-flex justify-content-between fw-bold"><span>Total</span><span id="build-total">RM 0.00</span></div>
-                        <p class="small text-body-secondary mt-3 mb-0">Save a build draft to continue planning later, or create a quotation to review in Billing before sending it to the customer.</p>
+                        <p class="small text-body-secondary mt-3 mb-0">Copy the WhatsApp message for a quick customer update, save a build draft to continue planning later, or create a quotation to review in Billing.</p>
                     </div>
                     <div class="card-footer d-grid gap-2">
+                        <button class="btn btn-success" type="button" id="copy-whatsapp-message" disabled>
+                            <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>Copy WhatsApp message
+                        </button>
                         <button class="btn btn-outline-primary" type="submit" formnovalidate
                             data-save-build-draft
                             formaction="{{ $draft ? route('shop.custom-pc-builder.drafts.update', $draft) : route('shop.custom-pc-builder.drafts.store') }}">
@@ -229,7 +235,7 @@
 <div class="modal fade" id="component-picker" tabindex="-1" aria-labelledby="component-picker-title" aria-hidden="true"
     data-search-url="{{ $componentSearchUrl }}"
     data-component-store-url="{{ $componentStoreUrl }}"
-    data-supplier-url="{{ route('shop.custom-pc-builder.components.supplier', ['part' => '__PART__']) }}">
+    data-marketplace-link-url="{{ route('shop.custom-pc-builder.components.marketplace-link', ['part' => '__PART__']) }}">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -400,71 +406,40 @@
                     </form>
                     <p class="small text-body-secondary mt-2 mb-0">This catalogue is separate from tracked inventory. Prices are optional here and can be added later; enter a customer price and our cost before creating a quotation.</p>
                 </details>
-                <section id="component-supplier-form-panel" class="border rounded p-3 mt-4 d-none" aria-labelledby="component-supplier-form-title">
+                <section id="component-marketplace-link-panel" class="border rounded p-3 mt-4 d-none" aria-labelledby="component-marketplace-link-title">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="h6 mb-0" id="component-supplier-form-title">Add supplier for <span id="component-supplier-part-name"></span></h3>
-                        <button class="btn btn-sm btn-outline-secondary" id="component-supplier-cancel" type="button">Back to parts</button>
+                        <h3 class="h6 mb-0" id="component-marketplace-link-title">Add marketplace link for <span id="component-marketplace-link-part-name"></span></h3>
+                        <button class="btn btn-sm btn-outline-secondary" id="component-marketplace-link-cancel" type="button">Back to parts</button>
                     </div>
-                    <form id="component-supplier-form" class="row g-3">
+                    <form id="component-marketplace-link-form" class="row g-3">
                         @csrf
                         <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-type">Supplier type</label>
-                            <select class="form-select" id="new-supplier-type" name="supplier_type" required>
-                                <option value="shopee">Shopee marketplace</option>
-                                <option value="other">Other supplier</option>
+                            <label class="form-label" for="new-marketplace">Marketplace</label>
+                            <select class="form-select" id="new-marketplace" name="marketplace" required>
+                                <option value="shopee">Shopee</option>
+                                <option value="lazada">Lazada</option>
+                                <option value="tiktok_shop">TikTok Shop</option>
+                                <option value="other">Other marketplace</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="new-marketplace-category">Category (optional)</label>
+                            <select class="form-select" id="new-marketplace-category" name="category">
+                                <option value="">No category</option>
+                                @foreach (array_merge($componentTypes, $additionalComponentTypes) as $type => $label)
+                                    <option value="{{ $type }}">{{ $label }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-12">
-                            <h4 class="h6 mb-0">Supplier details</h4>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-name">Supplier name</label>
-                            <input class="form-control" id="new-supplier-name" name="name" type="text" maxlength="255" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-contact">Contact person</label>
-                            <input class="form-control" id="new-supplier-contact" name="contact_name" type="text" maxlength="255">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-email">Email</label>
-                            <input class="form-control" id="new-supplier-email" name="email" type="email" maxlength="255">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-phone">Phone</label>
-                            <x-phone-input id="new-supplier-phone" name="phone" maxlength="50" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-website">Website</label>
-                            <input class="form-control" id="new-supplier-website" name="website" type="url" maxlength="255">
-                        </div>
-                        <div class="col-md-6" data-supplier-type-fields="shopee">
-                            <label class="form-label" for="new-supplier-shop-url">Shopee shop account URL</label>
-                            <input class="form-control" id="new-supplier-shop-url" name="shopee_shop_url" type="url" maxlength="2048" placeholder="https://shopee.com.my/..." required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" for="new-supplier-notes">Notes</label>
-                            <textarea class="form-control" id="new-supplier-notes" name="notes" rows="2" maxlength="2000"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <h4 class="h6 mb-0">Part listing and pricing</h4>
-                        </div>
-                        <div class="col-md-6" data-supplier-type-fields="shopee">
-                            <label class="form-label" for="new-supplier-product-url">Shopee product URL</label>
-                            <input class="form-control" id="new-supplier-product-url" name="shopee_product_url" type="url" maxlength="2048" placeholder="https://shopee.com.my/..." required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-cost-price">Cost price (RM)</label>
-                            <input class="form-control" id="new-supplier-cost-price" name="cost_price" type="number" min="0" max="99999999" step="0.01" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" for="new-supplier-unit-price">Unit price (RM)</label>
-                            <input class="form-control" id="new-supplier-unit-price" name="unit_price" type="number" min="0" max="99999999" step="0.01" required>
+                            <label class="form-label" for="new-marketplace-url">Product link</label>
+                            <input class="form-control" id="new-marketplace-url" name="url" type="url" maxlength="2048" placeholder="https://..." required>
                         </div>
                         <div class="col-12 d-flex justify-content-end">
-                            <button class="btn btn-primary" type="submit">Add and link supplier</button>
+                            <button class="btn btn-primary" type="submit">Add marketplace link</button>
                         </div>
                         <div class="col-12">
-                            <div id="component-supplier-status" class="small" role="status" aria-live="polite"></div>
+                            <div id="component-marketplace-link-status" class="small" role="status" aria-live="polite"></div>
                         </div>
                     </form>
                 </section>
@@ -513,12 +488,11 @@
         const componentCreateForm = document.getElementById('component-create-form');
         const componentCreateType = document.getElementById('new-component-type');
         const componentSpecFields = document.getElementById('new-component-spec-fields');
-        const supplierPanel = document.getElementById('component-supplier-form-panel');
-        const supplierForm = document.getElementById('component-supplier-form');
-        const supplierType = supplierForm.querySelector('select[name="supplier_type"]');
-        const supplierStatus = document.getElementById('component-supplier-status');
+        const marketplaceLinkPanel = document.getElementById('component-marketplace-link-panel');
+        const marketplaceLinkForm = document.getElementById('component-marketplace-link-form');
+        const marketplaceLinkStatus = document.getElementById('component-marketplace-link-status');
         let activeRow = null;
-        let supplierPart = null;
+        let marketplaceLinkPart = null;
         let currentPage = 1;
         let lastPage = 1;
         let searchRequest = 0;
@@ -537,17 +511,6 @@
             searchParts();
         });
         updateComponentSpecFilters();
-        const updateSupplierTypeFields = () => {
-            const isShopee = supplierType.value === 'shopee';
-            supplierForm.querySelectorAll('[data-supplier-type-fields="shopee"]').forEach((field) => {
-                field.classList.toggle('d-none', !isShopee);
-                field.querySelectorAll('input').forEach((input) => {
-                    input.disabled = !isShopee;
-                });
-            });
-        };
-        supplierType.addEventListener('change', updateSupplierTypeFields);
-        updateSupplierTypeFields();
         const allRows = () => [...builds.querySelectorAll('.component-line')];
         const rowsForBuild = (build) => [...build.querySelectorAll('.component-line')];
 
@@ -570,6 +533,13 @@
             software: 'Software / Microsoft',
             peripheral: 'Peripheral',
             other: 'Other',
+        };
+
+        const marketplaceLabels = {
+            shopee: 'Shopee',
+            lazada: 'Lazada',
+            tiktok_shop: 'TikTok Shop',
+            other: 'Other marketplace',
         };
 
         const componentSpecificationFields = {
@@ -1174,6 +1144,69 @@
             workTarget.textContent = workEstimate;
         };
 
+        const updateWhatsAppMessage = (subtotal, discount, tax, total) => {
+            const messageField = document.getElementById('whatsapp-build-message');
+            const copyButton = document.getElementById('copy-whatsapp-message');
+            const copyStatus = document.getElementById('whatsapp-copy-status');
+            const messageLines = [];
+            let selectedCount = 0;
+            let unpricedCount = 0;
+
+            builds.querySelectorAll('.pc-build').forEach((build, index) => {
+                const selectedRows = rowsForBuild(build).filter((row) => row.querySelector('.component-select').value);
+                if (selectedRows.length === 0) return;
+
+                selectedCount += selectedRows.length;
+                messageLines.push(`\n*PC ${index + 1}*`);
+                selectedRows.forEach((row) => {
+                    const option = row.querySelector('.component-select').selectedOptions[0];
+                    const quantity = Number(row.querySelector('.component-quantity').value) || 1;
+                    const priceInput = row.querySelector('.component-price');
+                    const unitPrice = priceInput.value === '' ? Number(option?.dataset.price || 0) : Number(priceInput.value);
+                    const category = row.querySelector('.component-category').textContent.trim();
+                    const price = unitPrice > 0
+                        ? `RM ${(unitPrice * quantity).toFixed(2)}`
+                        : 'Price to be confirmed';
+
+                    if (unitPrice <= 0) unpricedCount += 1;
+                    messageLines.push(`- ${category}: ${option.textContent.trim()} × ${quantity} — ${price}`);
+                });
+            });
+
+            copyButton.disabled = selectedCount === 0;
+            copyStatus.textContent = '';
+            copyStatus.className = 'small text-body-secondary mb-3';
+            if (selectedCount === 0) {
+                messageField.value = '';
+                return;
+            }
+
+            const customerName = form.querySelector('[name="customer_name"]').value.trim() || 'there';
+            const buildName = form.querySelector('[name="build_name"]').value.trim();
+            const intendedUse = form.querySelector('[name="intended_use"]').value.trim();
+            const subtotalLabel = unpricedCount > 0 ? 'Subtotal for priced items' : 'Subtotal';
+            const totalLabel = unpricedCount > 0
+                ? `Estimated total for priced items only (${unpricedCount} item${unpricedCount === 1 ? '' : 's'} still need pricing)`
+                : `Estimated total including ${taxRate.toFixed(2)}% tax`;
+            const pricingLines = [`${subtotalLabel}: RM ${subtotal.toFixed(2)}`];
+            if (discount > 0) pricingLines.push(`Discount: RM ${discount.toFixed(2)}`);
+            pricingLines.push(
+                `Tax (${taxRate.toFixed(2)}%): RM ${tax.toFixed(2)}`,
+                `*${totalLabel}: RM ${total.toFixed(2)}*`,
+            );
+
+            const message = [`Hi ${customerName}, here's the proposed ${buildName || 'custom PC build'}:`];
+            if (intendedUse) message.push(`For: ${intendedUse}`);
+            message.push(
+                ...messageLines,
+                '',
+                ...pricingLines,
+                '',
+                'Let me know if you would like any changes.',
+            );
+            messageField.value = message.join('\n');
+        };
+
         const updateEstimate = () => {
             let subtotal = 0;
             let costTotal = 0;
@@ -1202,6 +1235,7 @@
             document.getElementById('build-gross-profit').textContent = `RM ${(taxableSubtotal - costTotal).toFixed(2)}`;
             document.getElementById('build-tax').textContent = `RM ${tax.toFixed(2)}`;
             document.getElementById('build-total').textContent = `RM ${(taxableSubtotal + tax).toFixed(2)}`;
+            updateWhatsAppMessage(subtotal, discount, tax, taxableSubtotal + tax);
             builds.querySelectorAll('.pc-build').forEach(updatePerformanceEstimate);
         };
 
@@ -1335,11 +1369,26 @@
                             productLink.href = offer.product_url;
                             productLink.target = '_blank';
                             productLink.rel = 'noopener noreferrer';
-                            productLink.textContent = 'Shopee product';
+                            productLink.textContent = 'Supplier product';
                             productLink.className = 'ms-2';
                             offerDetails.append(productLink);
                         }
                         details.append(offerDetails);
+                    });
+
+                    (part.marketplace_links || []).forEach((link) => {
+                        const linkDetails = document.createElement('div');
+                        linkDetails.className = 'small text-body-secondary mt-1';
+                        const productLink = document.createElement('a');
+                        productLink.href = link.url;
+                        productLink.target = '_blank';
+                        productLink.rel = 'noopener noreferrer';
+                        const marketplaceLabel = marketplaceLabels[link.marketplace] || 'Marketplace';
+                        productLink.textContent = link.category
+                            ? `${marketplaceLabel} · ${categoryLabels[link.category] || link.category}`
+                            : marketplaceLabel;
+                        linkDetails.append(productLink);
+                        details.append(linkDetails);
                     });
 
                     const pricing = document.createElement('div');
@@ -1363,27 +1412,26 @@
 
                     const actions = document.createElement('div');
                     actions.className = 'col-12 col-sm-6 col-lg-2 d-flex flex-wrap gap-2 justify-content-sm-end';
-                    const addSupplier = document.createElement('button');
-                    addSupplier.type = 'button';
-                    addSupplier.className = 'btn btn-sm btn-outline-secondary';
-                    addSupplier.textContent = 'Add another supplier';
-                    addSupplier.setAttribute('aria-label', `Add a supplier for ${part.name}`);
-                    addSupplier.addEventListener('click', () => {
-                        supplierPart = part;
-                        document.getElementById('component-supplier-part-name').textContent = part.name;
-                        supplierStatus.textContent = '';
-                        supplierStatus.className = 'small';
-                        supplierPanel.classList.remove('d-none');
+                    const addMarketplaceLink = document.createElement('button');
+                    addMarketplaceLink.type = 'button';
+                    addMarketplaceLink.className = 'btn btn-sm btn-outline-secondary';
+                    addMarketplaceLink.textContent = 'Add marketplace link';
+                    addMarketplaceLink.setAttribute('aria-label', `Add a marketplace link for ${part.name}`);
+                    addMarketplaceLink.addEventListener('click', () => {
+                        marketplaceLinkPart = part;
+                        document.getElementById('component-marketplace-link-part-name').textContent = part.name;
+                        marketplaceLinkStatus.textContent = '';
+                        marketplaceLinkStatus.className = 'small';
+                        marketplaceLinkPanel.classList.remove('d-none');
                         document.getElementById('component-search-form').classList.add('d-none');
                         searchStatus.classList.add('d-none');
                         searchResults.classList.add('d-none');
                         document.querySelector('#component-picker .d-flex.justify-content-between.align-items-center.mt-3').classList.add('d-none');
-                        supplierForm.reset();
-                        supplierForm.querySelector('input[name="_token"]').value =
-                            document.querySelector('meta[name="csrf-token"]')?.content || supplierForm.querySelector('input[name="_token"]').value;
-                        updateSupplierTypeFields();
+                        marketplaceLinkForm.reset();
+                        marketplaceLinkForm.querySelector('input[name="_token"]').value =
+                            document.querySelector('meta[name="csrf-token"]')?.content || marketplaceLinkForm.querySelector('input[name="_token"]').value;
                     });
-                    actions.append(addSupplier);
+                    actions.append(addMarketplaceLink);
                     const choose = document.createElement('button');
                     choose.type = 'button';
                     choose.className = 'btn btn-sm btn-primary';
@@ -1401,65 +1449,51 @@
             }
         };
 
-        document.getElementById('component-supplier-cancel').addEventListener('click', () => {
-            supplierPanel.classList.add('d-none');
+        document.getElementById('component-marketplace-link-cancel').addEventListener('click', () => {
+            marketplaceLinkPanel.classList.add('d-none');
             document.getElementById('component-search-form').classList.remove('d-none');
             searchStatus.classList.remove('d-none');
             searchResults.classList.remove('d-none');
             document.querySelector('#component-picker .d-flex.justify-content-between.align-items-center.mt-3').classList.remove('d-none');
         });
 
-        supplierForm.addEventListener('submit', async (event) => {
+        marketplaceLinkForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (!supplierPart) return;
+            if (!marketplaceLinkPart) return;
 
-            const submitButton = supplierForm.querySelector('button[type="submit"]');
-            const supplierPhone = supplierForm.querySelector('[data-phone-input]');
+            const submitButton = marketplaceLinkForm.querySelector('button[type="submit"]');
             submitButton.disabled = true;
-            supplierStatus.textContent = 'Saving supplier and linking part…';
-            supplierStatus.className = 'small text-body-secondary';
-            const supplierUrl = picker.dataset.supplierUrl.replace('__PART__', String(supplierPart.id));
-            const supplierFormData = new FormData(supplierForm);
-            if (supplierPhone) {
-                supplierFormData.set(
-                    'phone',
-                    window.getInternationalPhoneNumber?.(supplierPhone) || supplierPhone.value.trim(),
-                );
-            }
+            marketplaceLinkStatus.textContent = 'Saving marketplace link…';
+            marketplaceLinkStatus.className = 'small text-body-secondary';
+            const linkUrl = picker.dataset.marketplaceLinkUrl.replace('__PART__', String(marketplaceLinkPart.id));
+            const linkFormData = new FormData(marketplaceLinkForm);
 
             try {
-                const response = await fetch(supplierUrl, {
+                const response = await fetch(linkUrl, {
                     method: 'POST',
                     headers: {
                         Accept: 'application/json',
-                        'X-CSRF-TOKEN': supplierForm.querySelector('input[name="_token"]').value,
+                        'X-CSRF-TOKEN': marketplaceLinkForm.querySelector('input[name="_token"]').value,
                     },
-                    body: supplierFormData,
+                    body: linkFormData,
                 });
                 const result = await response.json();
                 if (!response.ok) {
                     const validationMessage = Object.values(result.errors || {}).flat()[0];
-                    throw new Error(validationMessage || result.message || 'The supplier could not be saved.');
+                    throw new Error(validationMessage || result.message || 'The marketplace link could not be saved.');
                 }
 
-                supplierPart.supplier = result.suppliers;
-                supplierPart.supplier_ids = result.supplier_ids;
-                const supplierFilter = document.getElementById('catalog-supplier');
-                if (![...supplierFilter.options].some((option) => option.value === String(result.supplier.id))) {
-                    supplierFilter.add(new Option(result.supplier.name, result.supplier.id));
-                }
-                supplierFilter.value = String(result.supplier.id);
-                supplierStatus.textContent = `${result.supplier.name} was added to ${supplierPart.name}.`;
-                supplierStatus.className = 'small text-success';
-                supplierPanel.classList.add('d-none');
+                marketplaceLinkStatus.textContent = `${marketplaceLabels[result.link.marketplace] || 'Marketplace'} link was added to ${marketplaceLinkPart.name}.`;
+                marketplaceLinkStatus.className = 'small text-success';
+                marketplaceLinkPanel.classList.add('d-none');
                 document.getElementById('component-search-form').classList.remove('d-none');
                 searchStatus.classList.remove('d-none');
                 searchResults.classList.remove('d-none');
                 document.querySelector('#component-picker .d-flex.justify-content-between.align-items-center.mt-3').classList.remove('d-none');
                 await searchParts();
             } catch (error) {
-                supplierStatus.textContent = error.message || 'The supplier could not be saved. Try again.';
-                supplierStatus.className = 'small text-danger';
+                marketplaceLinkStatus.textContent = error.message || 'The marketplace link could not be saved. Try again.';
+                marketplaceLinkStatus.className = 'small text-danger';
             } finally {
                 submitButton.disabled = false;
             }
@@ -1523,7 +1557,7 @@
                     throw new Error(validationMessage || result.message || 'The part could not be added.');
                 }
 
-                status.textContent = `${result.name} was added to the builder catalogue. Add a supplier below if needed.`;
+                status.textContent = `${result.name} was added to the builder catalogue. You can add a marketplace link if needed.`;
                 status.className = 'small text-success';
                 createForm.reset();
                 Object.keys(componentSpecValues).forEach((type) => delete componentSpecValues[type]);
@@ -1532,11 +1566,11 @@
                 createForm.querySelector('input[name="_token"]').value =
                     document.querySelector('meta[name="csrf-token"]')?.content || createForm.querySelector('input[name="_token"]').value;
                 selectPart(result, false);
-                supplierPart = result;
-                document.getElementById('component-supplier-part-name').textContent = result.name;
-                supplierStatus.textContent = '';
-                supplierStatus.className = 'small';
-                supplierPanel.classList.remove('d-none');
+                marketplaceLinkPart = result;
+                document.getElementById('component-marketplace-link-part-name').textContent = result.name;
+                marketplaceLinkStatus.textContent = '';
+                marketplaceLinkStatus.className = 'small';
+                marketplaceLinkPanel.classList.remove('d-none');
                 document.getElementById('component-search-form').classList.add('d-none');
                 searchStatus.classList.add('d-none');
                 searchResults.classList.add('d-none');
@@ -1698,7 +1732,29 @@
             if (event.target.matches('.component-cost')) event.target.setCustomValidity('');
             updateEstimate();
         });
+        form.querySelectorAll('[name="customer_name"], [name="build_name"], [name="intended_use"]').forEach((input) => {
+            input.addEventListener('input', updateEstimate);
+        });
         form.querySelector('[name="discount_amount"]').addEventListener('input', updateEstimate);
+        document.getElementById('copy-whatsapp-message').addEventListener('click', async () => {
+            const messageField = document.getElementById('whatsapp-build-message');
+            const status = document.getElementById('whatsapp-copy-status');
+            try {
+                await navigator.clipboard.writeText(messageField.value);
+                status.className = 'small text-success mb-3';
+                status.textContent = 'Message copied. Paste it into WhatsApp to send to your customer.';
+            } catch {
+                messageField.focus();
+                messageField.select();
+                if (typeof document.execCommand === 'function' && document.execCommand('copy')) {
+                    status.className = 'small text-success mb-3';
+                    status.textContent = 'Message copied. Paste it into WhatsApp to send to your customer.';
+                } else {
+                    status.className = 'small text-danger mb-3';
+                    status.textContent = 'Could not copy automatically. Select and copy the message above.';
+                }
+            }
+        });
 
         setNames();
         updateCompatibility();

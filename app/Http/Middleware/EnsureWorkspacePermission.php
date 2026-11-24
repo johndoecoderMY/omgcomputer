@@ -207,6 +207,9 @@ class EnsureWorkspacePermission
         if (str_starts_with($name, 'admin.backups.')) {
             return 'backups.manage';
         }
+        if (str_starts_with($name, 'admin.maintenance.')) {
+            return 'maintenance.manage';
+        }
         if (str_starts_with($name, 'reports.integrations.') || str_starts_with($name, 'marketplace-shops.')) {
             return 'integrations.manage';
         }

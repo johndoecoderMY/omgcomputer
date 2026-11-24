@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Backup\KeepLastTenStrategy;
 use Spatie\Backup\Notifications\Notifiable;
 use Spatie\Backup\Notifications\Notifications\BackupHasFailedNotification;
 use Spatie\Backup\Notifications\Notifications\BackupWasSuccessfulNotification;
@@ -7,7 +8,6 @@ use Spatie\Backup\Notifications\Notifications\CleanupHasFailedNotification;
 use Spatie\Backup\Notifications\Notifications\CleanupWasSuccessfulNotification;
 use Spatie\Backup\Notifications\Notifications\HealthyBackupWasFoundNotification;
 use Spatie\Backup\Notifications\Notifications\UnhealthyBackupWasFoundNotification;
-use Spatie\Backup\Tasks\Cleanup\Strategies\DefaultStrategy;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumAgeInDays;
 use Spatie\Backup\Tasks\Monitor\HealthChecks\MaximumStorageInMegabytes;
 
@@ -333,7 +333,7 @@ return [
          * No matter how you configure it the default strategy will never
          * delete the newest backup.
          */
-        'strategy' => DefaultStrategy::class,
+        'strategy' => KeepLastTenStrategy::class,
 
         'default_strategy' => [
             /*

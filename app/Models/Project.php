@@ -162,6 +162,46 @@ class Project extends Model
         return $this->morphMany(Attachment::class, 'attachable')->latest();
     }
 
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ProjectApproval::class);
+    }
+
+    public function projectDocuments(): HasMany
+    {
+        return $this->hasMany(ProjectDocument::class);
+    }
+
+    public function feedback(): HasMany
+    {
+        return $this->hasMany(ProjectFeedback::class);
+    }
+
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(ProjectChecklist::class)->orderBy('sort_order');
+    }
+
+    public function risks(): HasMany
+    {
+        return $this->hasMany(ProjectRisk::class)->latest();
+    }
+
+    public function retentionPolicy(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ProjectRetentionPolicy::class);
+    }
+
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(ProjectTimeEntry::class);
+    }
+
+    public function costEntries(): HasMany
+    {
+        return $this->hasMany(ProjectCostEntry::class);
+    }
+
     public function flowCharts(): BelongsToMany
     {
         return $this->belongsToMany(FlowChart::class)->withTimestamps();

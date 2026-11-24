@@ -252,7 +252,12 @@ class RepairTicketController extends Controller
                 e($ticket->ticket_number),
                 e($ticket->received_at->format('M j, Y')),
             ))
-            ->addColumn('customer_name', fn (RepairTicket $ticket): string => $ticket->customer->name)
+            ->addColumn('customer_name', fn (RepairTicket $ticket): string =>
+                ($ticket->customer
+                    ? $ticket->customer->name.($ticket->customer->nickname ? ' ('.$ticket->customer->nickname.')' : '')
+                    : ($ticket->face_to_face_name
+                        ? $ticket->face_to_face_name.($ticket->face_to_face_nickname ? ' ('.$ticket->face_to_face_nickname.')' : '')
+                        : 'Face-to-face customer')))
             ->addColumn('device', fn (RepairTicket $ticket): string => $ticket->device_model ?: $ticket->device_type ?: '—')
             ->addColumn('project_name', fn (RepairTicket $ticket): string => $ticket->project?->name ?: '—')
             ->addColumn('status_label', fn (RepairTicket $ticket): string => (string) StatusBadge::make(
@@ -320,8 +325,18 @@ class RepairTicketController extends Controller
         ]);
 
         $data = $request->validate([
-            'customer_id' => ['required_without:booking_id', 'nullable', 'integer', 'exists:customers,id'],
+            'customer_id' => [
+                Rule::requiredIf(fn (): bool => ! $request->boolean('face_to_face') && ! $request->filled('booking_id')),
+                'nullable',
+                'integer',
+                'exists:customers,id',
+            ],
             'booking_id' => ['nullable', 'integer', 'exists:bookings,id'],
+            'face_to_face' => ['nullable', 'boolean'],
+            'face_to_face_name' => ['nullable', 'string', 'max:255'],
+            'face_to_face_nickname' => ['nullable', 'string', 'max:255'],
+            'face_to_face_email' => ['nullable', 'email', 'max:255'],
+            'face_to_face_phone' => ['nullable', 'string', 'max:64'],
             'assigned_to' => ['nullable', 'integer', new AssignableUser],
             'assignees' => ['sometimes', 'array'],
             'assignees.*' => ['integer', 'distinct', new AssignableUser],
@@ -344,6 +359,31 @@ class RepairTicketController extends Controller
                 $data[$addressField] = '';
             }
         }
+        $faceToFace = (bool) ($data['face_to_face'] ?? false);
+        unset($data['face_to_face']);
+        if ($faceToFace) {
+            if (! trim((string) ($data['face_to_face_email'] ?? '')) && ! trim((string) ($data['face_to_face_phone'] ?? ''))) {
+                throw ValidationException::withMessages([
+                    'face_to_face_contact' => 'Enter a contact number or email for the face-to-face customer.',
+                ]);
+            }
+            $data['pickup_address'] = null;
+            $data['dropoff_address'] = null;
+            $data['pickup_latitude'] = null;
+            $data['pickup_longitude'] = null;
+            $data['dropoff_latitude'] = null;
+            $data['dropoff_longitude'] = null;
+        } else {
+            $data['face_to_face_name'] = null;
+            $data['face_to_face_nickname'] = null;
+            $data['face_to_face_email'] = null;
+            $data['face_to_face_phone'] = null;
+        }
+        if (! $faceToFace && ! ($data['booking_id'] ?? null) && ! ($data['customer_id'] ?? null)) {
+            throw ValidationException::withMessages([
+                'customer_id' => 'Select a customer or choose face-to-face.',
+            ]);
+        }
         if (mb_strlen(html_entity_decode(strip_tags($data['issue_description']), ENT_QUOTES | ENT_HTML5, 'UTF-8')) > 5000) {
             throw ValidationException::withMessages([
                 'issue_description' => 'The reported issue may not be greater than 5000 characters.',
@@ -354,7 +394,7 @@ class RepairTicketController extends Controller
         $assignees = $this->assigneeIds($request, $data);
         unset($data['assignees'], $data['assignees_present'], $data['assigned_to']);
 
-        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId): RepairTicket {
+        $ticket = DB::transaction(function () use ($data, $request, $assignees, $bookingId, $faceToFace): RepairTicket {
             $booking = $bookingId
                 ? Booking::query()->with('customer')->lockForUpdate()->findOrFail($bookingId)
                 : null;
@@ -374,7 +414,9 @@ class RepairTicketController extends Controller
                 );
                 $booking->update(['customer_id' => $customer->id]);
             }
-            $customer ??= Customer::query()->findOrFail($data['customer_id']);
+            if (! $customer && ! $faceToFace) {
+                $customer = Customer::query()->findOrFail($data['customer_id']);
+            }
             $data['pickup_address'] ??= $booking?->pickup_address;
             $data['dropoff_address'] ??= $booking?->dropoff_address;
             foreach (['pickup_latitude', 'pickup_longitude', 'dropoff_latitude', 'dropoff_longitude'] as $coordinateField) {
@@ -384,7 +426,7 @@ class RepairTicketController extends Controller
             }
             $ticket = RepairTicket::create([
                 ...$data,
-                'customer_id' => $customer->id,
+                'customer_id' => $customer?->id,
                 'assigned_to' => $assignees[0] ?? null,
                 'created_by_user_id' => $request->user()->id,
                 'ticket_number' => 'TEMP-'.Str::upper(Str::random(12)),
@@ -432,9 +474,62 @@ class RepairTicketController extends Controller
         return redirect()->route('tickets.show', $ticket)->with('success', 'Repair ticket created.');
     }
 
+    public function createCustomerFromTicket(Request $request, RepairTicket $ticket): RedirectResponse
+    {
+        abort_if(auth()->user()->hasRole('customer'), 403);
+        abort_if($ticket->customer_id !== null, 409, 'This ticket is already linked to a customer record.');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'nickname' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:191'],
+            'phone' => ['nullable', 'string', 'max:64'],
+            'company' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $customer = null;
+        $email = trim((string) ($data['email'] ?? ''));
+        $phone = trim((string) ($data['phone'] ?? ''));
+
+        if ($email !== '') {
+            $customer = Customer::query()
+                ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower($email)])
+                ->first();
+        }
+        if (! $customer && $phone !== '') {
+            $customer = Customer::query()
+                ->whereRaw('LOWER(TRIM(phone)) = ?', [strtolower($phone)])
+                ->first();
+        }
+
+        $customer ??= Customer::query()->create([
+            'name' => $data['name'],
+            'nickname' => trim((string) ($data['nickname'] ?? '')) ?: null,
+            'email' => $email !== '' ? $email : null,
+            'phone' => $phone !== '' ? $phone : null,
+            'company' => trim((string) ($data['company'] ?? '')) ?: null,
+        ]);
+        $nickname = trim((string) ($data['nickname'] ?? ''));
+        if ($customer->nickname === null && $nickname !== '') {
+            $customer->update(['nickname' => $nickname]);
+        }
+
+        $ticket->update([
+            'customer_id' => $customer->id,
+            'face_to_face_name' => null,
+            'face_to_face_nickname' => null,
+            'face_to_face_email' => null,
+            'face_to_face_phone' => null,
+        ]);
+
+        return redirect()->route('tickets.show', $ticket)
+            ->with('success', 'Customer record created and linked to this repair ticket.');
+    }
+
     public function show(Request $request, RepairTicket $ticket): View
     {
         if ($request->user()->hasRole('customer')) {
+            abort_if(! $ticket->customer_id, 404);
             abort_unless(
                 strtolower(trim((string) $ticket->customer()->value('email'))) === strtolower(trim($request->user()->email)),
                 404,

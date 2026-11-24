@@ -12,8 +12,8 @@
     <div class="row g-3">
         <div class="col-lg-5">
             <div class="card h-100">
-                <div class="card-body d-flex align-items-center justify-content-center bg-body-tertiary text-primary" style="min-height: 18rem">
-                    <i class="bi bi-box2 bi-5x" aria-hidden="true"></i>
+                <div class="card-body d-flex align-items-center justify-content-center bg-body-tertiary" style="min-height: 18rem">
+                    @include('shop.public.products._gallery', ['product' => $product])
                 </div>
             </div>
         </div>
@@ -30,6 +30,7 @@
                     <p class="text-pre-line">{{ $product->description ?: 'No product description provided.' }}</p>
                     <dl class="row mb-0">
                         <dt class="col-sm-4">SKU</dt><dd class="col-sm-8">{{ $product->sku ?: '—' }}</dd>
+                        <dt class="col-sm-4">Supplier</dt><dd class="col-sm-8">{{ $product->supplier?->name ?: '—' }}</dd>
                         <dt class="col-sm-4">Reorder level</dt><dd class="col-sm-8">{{ $product->reorder_level }}</dd>
                     </dl>
                 </div>

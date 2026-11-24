@@ -19,8 +19,10 @@ class MerchantDocumentChecklistTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole('admin');
 
-        $this->actingAs($admin)
-            ->get(route('admin.merchant-document-checklist'))
+        $response = $this->actingAs($admin)
+            ->get(route('admin.merchant-document-checklist'));
+
+        $response
             ->assertOk()
             ->assertSee('Merchant document checklist')
             ->assertSee('Home-based business')
@@ -36,6 +38,17 @@ class MerchantDocumentChecklistTest extends TestCase
             ->assertSee(route('admin.company-profile.edit'), false)
             ->assertSee('Progress is saved in this browser only.')
             ->assertDontSee('type="file"', false);
+
+        $sidebar = substr(
+            $response->getContent(),
+            strpos($response->getContent(), 'id="navbarVerticalNav"'),
+        );
+        $selfTestPosition = strpos($sidebar, route('self-test.index'));
+        $merchantDocumentPosition = strpos($sidebar, route('admin.merchant-document-checklist'));
+
+        $this->assertIsInt($selfTestPosition);
+        $this->assertIsInt($merchantDocumentPosition);
+        $this->assertTrue($selfTestPosition < $merchantDocumentPosition);
 
         $staff = User::factory()->create();
         $this->actingAs($staff)->get(route('admin.merchant-document-checklist'))->assertForbidden();

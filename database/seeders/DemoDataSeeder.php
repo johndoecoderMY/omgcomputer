@@ -52,6 +52,30 @@ class DemoDataSeeder extends Seeder
             ],
         );
 
+        $rm2Products = [
+            ['sku' => 'DEMO-RM2-001', 'name' => 'RM2 Demo Cable Tie', 'type' => 'other'],
+            ['sku' => 'DEMO-RM2-002', 'name' => 'RM2 Demo USB Dust Plug', 'type' => 'peripheral'],
+            ['sku' => 'DEMO-RM2-003', 'name' => 'RM2 Demo Screen Cloth', 'type' => 'other'],
+            ['sku' => 'DEMO-RM2-004', 'name' => 'RM2 Demo Cable Label', 'type' => 'other'],
+            ['sku' => 'DEMO-RM2-005', 'name' => 'RM2 Demo Mousepad', 'type' => 'peripheral'],
+        ];
+
+        foreach ($rm2Products as $product) {
+            InventoryPart::query()->updateOrCreate(
+                ['sku' => $product['sku']],
+                [
+                    'name' => $product['name'],
+                    'type' => $product['type'],
+                    'description' => 'Example RM2 shop product for testing checkout and payments.',
+                    'cost_price' => 1,
+                    'selling_price' => 2,
+                    'stock_quantity' => 100,
+                    'reorder_level' => 10,
+                    'is_for_sale' => true,
+                ],
+            );
+        }
+
         $customer = Customer::query()->firstOrCreate(
             ['email' => 'avery.tan@example.test'],
             [

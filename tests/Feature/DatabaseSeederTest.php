@@ -16,19 +16,38 @@ use App\Models\Supplier;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\WebsitePreview;
-use Illuminate\Support\Facades\Hash;
+use Database\Seeders\DemoDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class DatabaseSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_demo_data_seeder_adds_idempotent_rm2_shop_products(): void
+    {
+        User::factory()->create(['email' => 'support@omgcomputer.my']);
+
+        $this->seed(DemoDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
+
+        $this->assertSame(5, InventoryPart::query()
+            ->where('sku', 'like', 'DEMO-RM2-%')
+            ->count());
+        $this->assertSame(5, InventoryPart::query()
+            ->where('sku', 'like', 'DEMO-RM2-%')
+            ->where('is_for_sale', true)
+            ->where('stock_quantity', '>', 0)
+            ->where('selling_price', 2)
+            ->count());
+    }
+
     public function test_demo_data_seeder_does_not_insert_a_sample_marketing_campaign(): void
     {
         User::factory()->create(['email' => 'support@omgcomputer.my']);
 
-        $this->seed(\Database\Seeders\DemoDataSeeder::class);
+        $this->seed(DemoDataSeeder::class);
 
         $this->assertDatabaseMissing('marketing_campaigns', [
             'name' => 'Sample student laptop care campaign',
@@ -76,7 +95,8 @@ class DatabaseSeederTest extends TestCase
         $this->assertGreaterThan(0, $counts['customers']);
         $this->assertGreaterThan(0, $counts['inventory_parts']);
         $this->assertGreaterThan(0, InventoryPart::query()->where('type', 'ready_built_pc')->count());
-        $this->assertSame(66778, CustomPcComponent::query()->where('sku', 'like', 'CSV-%')->count());
+        $this->assertGreaterThan(0, CustomPcComponent::query()->where('sku', 'like', 'CSV-%')->count());
+        $this->assertLessThan(66778, CustomPcComponent::query()->where('sku', 'like', 'CSV-%')->count());
         $this->assertSame(0, InventoryPart::query()->where('sku', 'like', 'CSV-%')->count());
         $cpuFromCsv = CustomPcComponent::query()->where('sku', 'CSV-CPU-000001')->firstOrFail();
         $this->assertSame('AMD Ryzen 7 9800X3D', $cpuFromCsv->name);

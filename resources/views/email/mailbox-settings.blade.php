@@ -51,7 +51,14 @@
                     <label class="form-label" for="mailbox-signature">Email signature</label>
                     <textarea class="form-control" id="mailbox-signature" name="signature" rows="5" maxlength="5000"
                         placeholder="Your name&#10;Your role&#10;OMG Computer">{{ old('signature', $mailbox?->signature) }}</textarea>
-                    <div class="form-text">This plain-text signature is automatically added to the bottom of emails you send. Leave blank to omit it.</div>
+                    <div class="form-text">This signature is added to the bottom of emails you send, followed by the OMG Computer brand banner. Leave blank to send without a signature or banner.</div>
+                    <div class="mt-3">
+                        <div class="small text-body-secondary mb-2">OMG Computer banner</div>
+                        <img src="{{ asset('assets/img/omg/banner/omg-computer-banner-preview.png') }}"
+                            alt="OMG Computer - Repair, Support, Web"
+                            class="img-fluid rounded border"
+                            style="max-width:600px;">
+                    </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button class="btn btn-primary" type="submit">

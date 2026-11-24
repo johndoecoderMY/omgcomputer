@@ -190,6 +190,14 @@
                                 </div>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('admin.merchant-document-checklist') }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="nav-link-icon"><span class="bi bi-list-check"></span></span>
+                                    <span class="nav-link-text ps-1">Merchant document checklist</span>
+                                </div>
+                            </a>
+                        </li>
                     @endrole
 
                     {{-- Bookings --}}
@@ -676,12 +684,6 @@
                                 <span class="nav-link-text ps-1">Company Profile</span>
                             </div>
                         </a>
-                        <a class="nav-link" href="{{ route('admin.merchant-document-checklist') }}">
-                            <div class="d-flex align-items-center">
-                                <span class="nav-link-icon"><span class="bi bi-list-check"></span></span>
-                                <span class="nav-link-text ps-1">Merchant document checklist</span>
-                            </div>
-                        </a>
                         <a class="nav-link" href="{{ route('reports.integrations.tracking') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-truck"></span></span>
@@ -704,7 +706,7 @@
                     @endrole
 
                     {{-- System administration --}}
-                    @role('admin')
+                    @if (auth()->user()->can('backups.manage') || auth()->user()->can('maintenance.manage'))
                     <li class="nav-item">
                         <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
                             <div class="col-auto navbar-vertical-label">System</div>
@@ -712,20 +714,24 @@
                                 <hr class="mb-0 navbar-vertical-divider">
                             </div>
                         </div>
+                        @can('backups.manage')
                         <a class="nav-link" href="{{ route('admin.backups.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-database"></span></span>
                                 <span class="nav-link-text ps-1">Backups</span>
                             </div>
                         </a>
+                        @endcan
+                        @can('maintenance.manage')
                         <a class="nav-link" href="{{ route('admin.maintenance.index') }}">
                             <div class="d-flex align-items-center">
                                 <span class="nav-link-icon"><span class="bi bi-tools"></span></span>
                                 <span class="nav-link-text ps-1">System maintenance</span>
                             </div>
                         </a>
+                        @endcan
                     </li>
-                    @endrole
+                    @endif
 
                     {{-- Personal workspace --}}
                     <li class="nav-item">

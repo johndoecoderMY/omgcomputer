@@ -555,6 +555,9 @@
                 if (!document.body.hasAttribute('data-notifications-user') || !form || event.defaultPrevented) {
                     return;
                 }
+                if (form.hasAttribute('data-native-download')) {
+                    return;
+                }
                 if (form.dataset.nativeSubmitting === 'true') {
                     event.preventDefault();
                     return;

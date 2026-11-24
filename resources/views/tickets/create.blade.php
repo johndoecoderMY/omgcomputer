@@ -28,6 +28,12 @@
         @if ($booking)<input type="hidden" name="booking_id" value="{{ $booking->id }}">@endif
         <div class="card-body row g-3">
         <div class="col-md-6">
+            <div class="alert alert-info d-none mb-0" data-ticket-face-to-face-message>
+                <span class="bi bi-shop me-1" aria-hidden="true"></span>
+                Face-to-face / walk-in customer: pickup and drop-off are handled at the shop.
+            </div>
+        </div>
+        <div class="col-md-6" data-ticket-face-to-face-address>
             <label class="form-label" for="customer_id">Customer</label>
             @if ($booking && ! $booking->customer)
                 <div class="form-control h-auto">
@@ -46,12 +52,55 @@
                     @endforeach
                 </select>
                 @if ($booking)<input type="hidden" name="customer_id" value="{{ $ticket->customer_id }}">@endif
+                @unless ($booking)
+                    <input type="hidden" name="face_to_face" value="0">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="face_to_face" name="face_to_face" value="1"
+                            @checked(old('face_to_face') == '1')>
+                        <label class="form-check-label" for="face_to_face">
+                            Face-to-face / walk-in customer <span class="text-body-secondary">(optional)</span>
+                        </label>
+                        <div class="form-text">Create the ticket without linking it to a customer account.</div>
+                    </div>
+                    <div class="row g-2 mt-2 d-none" data-ticket-face-to-face-contact>
+                        <div class="col-md-4">
+                            <label class="form-label" for="face_to_face_name">Customer name <span class="text-body-secondary">(optional)</span></label>
+                            <input class="form-control" id="face_to_face_name" name="face_to_face_name" maxlength="255"
+                                value="{{ old('face_to_face_name') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="face_to_face_nickname">Nickname <span class="text-body-secondary">(optional)</span></label>
+                            <input class="form-control" id="face_to_face_nickname" name="face_to_face_nickname" maxlength="255"
+                                value="{{ old('face_to_face_nickname') }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="face_to_face_phone">Contact number <span class="text-body-secondary">(optional)</span></label>
+                            <x-phone-input id="face_to_face_phone" name="face_to_face_phone"
+                                :value="old('face_to_face_phone')" maxlength="64" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="face_to_face_email">Email <span class="text-body-secondary">(optional)</span></label>
+                            <input class="form-control" id="face_to_face_email" name="face_to_face_email" type="email" maxlength="255"
+                                value="{{ old('face_to_face_email') }}">
+                        </div>
+                        <div class="col-12 form-text">Provide at least a contact number or email.</div>
+                        @error('face_to_face_contact')
+                            <div class="col-12 text-danger small">{{ $message }}</div>
+                        @enderror
+                    </div>
+                @endunless
             @endif
         </div>
         <div class="col-md-4"><label class="form-label" for="device_type">Device type</label><select class="form-select" id="device_type" name="device_type"><option value="">Select type</option>@foreach (['Laptop', 'Desktop PC', 'Workstation', 'Other', 'Computer'] as $deviceType)<option value="{{ $deviceType }}" @selected(old('device_type', $ticket->device_type) === $deviceType)>{{ $deviceType }}</option>@endforeach</select></div>
         <div class="col-md-4"><label class="form-label" for="device_model">Make / model</label><input class="form-control" id="device_model" name="device_model" value="{{ old('device_model', $ticket->device_model) }}" maxlength="255"></div>
         <div class="col-md-4"><label class="form-label" for="serial_number">Serial number</label><input class="form-control" id="serial_number" name="serial_number" value="{{ old('serial_number') }}" maxlength="255"></div>
-        <div class="col-md-6">
+        <div class="col-md-12 d-none" data-ticket-face-to-face-message>
+            <div class="alert alert-info mb-0">
+                <span class="bi bi-shop me-1" aria-hidden="true"></span>
+                Face-to-face / walk-in customer: pickup and drop-off are handled at the shop.
+            </div>
+        </div>
+        <div class="col-md-6" data-ticket-face-to-face-address>
             <label class="form-label" for="pickup_address">Pickup address <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="pickup_address" name="pickup_address" rows="2" maxlength="1000"
                 data-ticket-location-address="pickup">{{ old('pickup_address', $ticket->pickup_address) }}</textarea>
@@ -66,7 +115,7 @@
                 <span class="bi bi-geo-alt me-1" aria-hidden="true"></span>Choose pickup on map
             </button>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6" data-ticket-face-to-face-address>
             <label class="form-label" for="dropoff_address">Drop-off address <span class="text-body-secondary">(optional)</span></label>
             <textarea class="form-control" id="dropoff_address" name="dropoff_address" rows="2" maxlength="1000"
                 data-ticket-location-address="dropoff">{{ old('dropoff_address', $ticket->dropoff_address) }}</textarea>
@@ -165,6 +214,40 @@
                 const saveButton = document.getElementById('save-new-customer');
                 const modal = window.bootstrap.Modal.getOrCreateInstance(modalElement);
                 let customerSaved = false;
+                const faceToFace = document.getElementById('face_to_face');
+                if (faceToFace) {
+                    const syncFaceToFace = () => {
+                        customerSelect.disabled = faceToFace.checked;
+                        customerSelect.required = !faceToFace.checked;
+                        if (faceToFace.checked) {
+                            customerSelect.value = '';
+                        }
+                        document.querySelectorAll('[data-ticket-face-to-face-address]').forEach((addressField) => {
+                            addressField.classList.toggle('d-none', faceToFace.checked);
+                        });
+                        document.querySelectorAll('[data-ticket-face-to-face-message]').forEach((message) => {
+                            message.classList.toggle('d-none', !faceToFace.checked);
+                        });
+                        document.querySelectorAll('[data-ticket-face-to-face-contact]').forEach((contact) => {
+                            contact.classList.toggle('d-none', !faceToFace.checked);
+                        });
+                        if (faceToFace.checked) {
+                            ['pickup', 'dropoff'].forEach((location) => {
+                                document.querySelector(`[data-ticket-location-address="${location}"]`)?.removeAttribute('name');
+                                document.querySelector(`[data-ticket-location-latitude="${location}"]`)?.removeAttribute('name');
+                                document.querySelector(`[data-ticket-location-longitude="${location}"]`)?.removeAttribute('name');
+                            });
+                        } else {
+                            ['pickup', 'dropoff'].forEach((location) => {
+                                document.querySelector(`[data-ticket-location-address="${location}"]`)?.setAttribute('name', `${location}_address`);
+                                document.querySelector(`[data-ticket-location-latitude="${location}"]`)?.setAttribute('name', `${location}_latitude`);
+                                document.querySelector(`[data-ticket-location-longitude="${location}"]`)?.setAttribute('name', `${location}_longitude`);
+                            });
+                        }
+                    };
+                    faceToFace.addEventListener('change', syncFaceToFace);
+                    syncFaceToFace();
+                }
 
                 customerSelect.addEventListener('change', () => {
                     if (customerSelect.value === '__new_customer__') {

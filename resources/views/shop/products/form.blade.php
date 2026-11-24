@@ -7,7 +7,7 @@
     <x-page-header eyebrow="E-commerce" :title="$editing ? 'Edit shop product' : 'Add shop product'"
         :back-url="$editing ? route('shop.products.show', $product) : route('shop.products.index')"
         :back-label="$editing ? 'Back to product' : 'Back to products'" />
-    <form class="card" method="POST" action="{{ $editing ? route('shop.products.update', $product) : route('shop.products.store') }}">
+    <form class="card" method="POST" enctype="multipart/form-data" action="{{ $editing ? route('shop.products.update', $product) : route('shop.products.store') }}">
         @csrf
         @if ($editing) @method('PUT') @endif
         <div class="card-body">
@@ -31,6 +31,30 @@
                     </select>
                     <div class="form-text">To list a completed desktop, choose “Ready-built PC” and enable the shop listing below.</div>
                     @error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="supplier_id">Supplier</label>
+                    <select class="form-select @error('supplier_id') is-invalid @enderror" id="supplier_id" name="supplier_id">
+                        <option value="">No supplier linked</option>
+                        @foreach ($suppliers as $supplier)
+                            <option value="{{ $supplier->id }}" @selected((string) old('supplier_id', $product->supplier_id) === (string) $supplier->id)>{{ $supplier->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">For a complete PC sourced from one supplier, record their cost here and resell it as a ready-built PC.</div>
+                    @error('supplier_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-12 d-none" id="upgrade-options-field">
+                    <label class="form-label" for="upgrade_option_ids">Supplier upgrade options</label>
+                    <select class="form-select @error('upgrade_option_ids') is-invalid @enderror @error('upgrade_option_ids.*') is-invalid @enderror"
+                        id="upgrade_option_ids" name="upgrade_option_ids[]" multiple
+                        data-search-url="{{ route('shop.products.upgrade-options') }}">
+                        @foreach ($selectedUpgradeOptions as $option)
+                            <option value="{{ $option->id }}" selected>{{ $option->name }} · {{ $types[$option->type] ?? $option->type }}</option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Choose the in-stock parts this supplier offers as customer-selectable upgrades. Customers can pick one option per category; each selected part is added at its listed price.</div>
+                    @error('upgrade_option_ids')<div class="text-danger small">{{ $message }}</div>@enderror
+                    @error('upgrade_option_ids.*')<div class="text-danger small">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
                     <label class="form-label" for="cost_price">Cost price (RM)</label>
@@ -66,6 +90,30 @@
                     @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-12">
+                    <label class="form-label" for="images">Product photos</label>
+                    <input class="form-control @error('images') is-invalid @enderror @error('images.*') is-invalid @enderror" id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                    <div class="form-text">The gallery can contain up to 10 JPEG, PNG, or WebP images (5 MB each). New photos are added to the product gallery.</div>
+                    @error('images')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @error('images.*')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    @if ($editing && count($product->images ?? []))
+                        <div class="row g-3 mt-1">
+                            @foreach ($product->images as $image)
+                                <div class="col-6 col-md-3">
+                                    <div class="border rounded p-2 h-100">
+                                        <a class="glightbox d-block mb-2" href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($image) }}" data-gallery="product-{{ $product->id }}">
+                                            <img class="img-fluid rounded" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($image) }}" alt="{{ $product->name }}" style="height: 8rem; width: 100%; object-fit: cover">
+                                        </a>
+                                        <div class="form-check">
+                                            <input class="form-check-input" id="remove-image-{{ $loop->index }}" name="remove_images[]" type="checkbox" value="{{ $image }}" @checked(in_array($image, old('remove_images', []), true))>
+                                            <label class="form-check-label small" for="remove-image-{{ $loop->index }}">Remove photo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+                <div class="col-12">
                     <div class="form-check">
                         <input class="form-check-input" id="is_for_sale" name="is_for_sale" type="checkbox" value="1" @checked(old('is_for_sale', $product->is_for_sale))>
                         <label class="form-check-label" for="is_for_sale">List this item in the shop product grid</label>
@@ -80,4 +128,41 @@
         </div>
     </form>
 </div>
+<script>
+(() => {
+    const type = document.getElementById('type');
+    const supplier = document.getElementById('supplier_id');
+    const upgradeField = document.getElementById('upgrade-options-field');
+    const upgradeSelect = window.jQuery('#upgrade_option_ids');
+    if (!type || !supplier || !upgradeField || !upgradeSelect.length) return;
+
+    const updateVisibility = () => upgradeField.classList.toggle('d-none', type.value !== 'ready_built_pc');
+    updateVisibility();
+    type.addEventListener('change', () => {
+        updateVisibility();
+        if (type.value !== 'ready_built_pc') upgradeSelect.val(null).trigger('change');
+    });
+
+    upgradeSelect.select2({
+        theme: 'bootstrap-5',
+        width: '100%',
+        placeholder: 'Search the selected supplier’s upgrade parts',
+        minimumInputLength: 2,
+        ajax: {
+            url: upgradeSelect.data('search-url'),
+            dataType: 'json',
+            delay: 250,
+            data: (params) => ({ q: params.term, supplier_id: supplier.value }),
+            processResults: (payload) => payload,
+        },
+    });
+
+    const updateSupplierAvailability = () => upgradeSelect.prop('disabled', !supplier.value);
+    updateSupplierAvailability();
+    supplier.addEventListener('change', () => {
+        upgradeSelect.val(null).trigger('change');
+        updateSupplierAvailability();
+    });
+})();
+</script>
 @endsection

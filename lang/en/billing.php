@@ -95,6 +95,8 @@ return [
         'payment_method_card' => 'Card',
         'payment_method_bank_transfer' => 'Bank transfer',
         'payment_method_online' => 'Online',
+        'payment_method_duitnow' => 'DuitNow',
+        'payment_method_spaylater' => 'SPayLater',
         'payment_method_other' => 'Other',
     ],
     'project_terms' => [

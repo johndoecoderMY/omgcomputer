@@ -44,7 +44,7 @@ class AdminAccessController extends Controller
             'selectedRole' => $selectedRole,
             'selectedRoleDescription' => match ($selectedRole?->name) {
                 'admin' => 'Full administrative access to manage users, roles, and workspace settings.',
-                'member' => 'Staff access to tickets, own or assigned projects and tasks, customer records, and read-only workspace sections.',
+                'member' => 'Broad staff access to workspace operations. Account administration, system settings, and integration tests remain admin-only.',
                 'customer' => 'Read-only access to tickets, bookings, projects, and project-linked billing documents.',
                 default => '',
             },

@@ -37,7 +37,7 @@
                             <td>{{ $payment->paid_at->format('M j, Y g:i A') }}</td>
                             @unless (auth()->user()->hasRole('customer'))<td>{{ $payment->document->customer_name }}</td>@endunless
                             <td><a href="{{ route('billing.documents.show', $payment->document) }}">{{ $payment->document->number }}</a></td>
-                            <td>{{ str_replace('_', ' ', ucfirst($payment->method)) }}</td>
+                            <td>{{ __('billing.pdf.payment_method_'.$payment->method) }}</td>
                             <td class="text-end">RM {{ number_format((float) $payment->amount, 2) }}</td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-primary" href="{{ route('billing.receipts.pdf', $payment) }}" target="_blank" rel="noopener">

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mail\BookingConfirmedMail;
 use App\Models\Booking;
 use App\Models\BookingTimeSlot;
+use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\ProductService;
 use App\Models\RepairTicket;
@@ -199,16 +200,24 @@ class BookingTest extends TestCase
 
     public function test_public_booking_lists_only_the_two_enabled_customer_services(): void
     {
+        CompanyProfile::query()->create([
+            'id' => 'primary',
+            'phone' => '0104224350',
+        ]);
         ProductService::query()->whereKey('laptop-cleaning')->update(['is_active' => true]);
 
         $this->get(route('bookings.create'))
             ->assertOk()
+            ->assertSee('Online booking is available for computer troubleshooting and FYP consultations.')
+            ->assertSee('custom website, online shop, or other project inquiries')
             ->assertSee('booking-help-section', false)
             ->assertSee('Not sure what to pick?')
             ->assertSee('We’ll help you find the right service.')
             ->assertSee('Just contact us')
             ->assertSee('Email us')
             ->assertSee('Message us on WhatsApp')
+            ->assertSee('Call us')
+            ->assertSee('href="tel:0104224350"', false)
             ->assertDontSee('Choose a booking time')
             ->assertDontSee('Ask us on WhatsApp')
             ->assertSee('Computer/PC Troubleshooting')
@@ -1007,8 +1016,12 @@ class BookingTest extends TestCase
             ->assertSee('#dcfce7', false)
             ->assertSee('.fc-day-today', false)
             ->assertSee('#ffb51b', false)
-            ->assertSee('#calendar .fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b', false)
-            ->assertSee('#calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #fff !important; background: #ffb51b !important', false)
+            ->assertSee('#calendar .booking-date-selected .fc-daygrid-day-number { color: #212529 !important; background: #ffb51b', false)
+            ->assertSee('#calendar .fc-day-today .fc-daygrid-day-number { font-weight: 700; background: transparent !important; }', false)
+            ->assertSee('#calendar .booking-date-selected.fc-day-today .fc-daygrid-day-number { color: #212529 !important; background: #ffb51b !important', false)
+            ->assertSee('html[data-bs-theme="dark"] #calendar .booking-date-unavailable .fc-daygrid-day-frame', false)
+            ->assertSee('html[data-bs-theme="dark"] #calendar .booking-date-available .fc-daygrid-day-frame', false)
+            ->assertSee('html[data-bs-theme="dark"] #calendar .booking-date-available.booking-date-selected .fc-daygrid-day-frame', false)
             ->assertSee('booking-date-unavailable', false)
             ->assertSee('if (!availableAppointmentDates.has(info.dateStr))', false)
             ->assertSee('booking-date-selected', false)
@@ -1050,6 +1063,36 @@ class BookingTest extends TestCase
             ->assertJsonPath('0.color', '#dcfce7')
             ->assertJsonMissing(['title' => 'Available'])
             ->assertJsonMissing(['start' => $date->copy()->next(Carbon::SUNDAY)->toDateString()]);
+    }
+
+    public function test_today_only_offers_booking_times_at_least_one_hour_ahead(): void
+    {
+        $now = Carbon::parse('2026-11-23 10:30:00', 'Asia/Kuala_Lumpur');
+        Carbon::setTestNow($now);
+        BookingTimeSlot::query()->create([
+            'day_of_week' => $now->dayOfWeek,
+            'start_time' => '11:30',
+        ]);
+
+        try {
+            $this->getJson(route('bookings.availability', ['date' => $now->toDateString()]))
+                ->assertOk()
+                ->assertJsonPath('slots', ['11:30', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']);
+
+            $tomorrow = $now->copy()->addDay();
+            $this->getJson(route('bookings.availability', ['date' => $tomorrow->toDateString()]))
+                ->assertOk()
+                ->assertJsonPath('slots.0', '09:00')
+                ->assertJsonPath('slots.8', '17:00');
+
+            $this->getJson(route('bookings.events', [
+                'start' => $now->format('Y-m-d\T00:00:00\Z'),
+                'end' => $now->copy()->addDay()->format('Y-m-d\T00:00:00\Z'),
+            ]))->assertOk()
+                ->assertJsonFragment(['start' => $now->toDateString(), 'available' => true]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_customer_can_book_from_the_authenticated_page_and_identity_comes_from_the_account(): void

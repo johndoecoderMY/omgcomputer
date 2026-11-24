@@ -60,7 +60,7 @@ class CustomerController extends Controller
             ->addColumn('customer', fn (Customer $customer): string => sprintf(
                 '<a class="fw-semibold" href="%s">%s</a>%s',
                 e(route('customers.show', $customer)),
-                e($customer->name),
+                e($customer->name.($customer->nickname ? ' ('.$customer->nickname.')' : '')),
                 ($customer->company ? '<div class="small text-body-secondary">'.e($customer->company).'</div>' : '')
                     .($customer->warning
                         ? '<div class="small text-warning-emphasis fw-semibold"><span class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></span>'
@@ -99,7 +99,8 @@ class CustomerController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('customers', 'email')],
+            'nickname' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:191', Rule::unique('customers', 'email')],
             'phone' => ['nullable', 'string', 'max:64'],
             'company' => ['nullable', 'string', 'max:255'],
         ]);
@@ -108,7 +109,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'id' => $customer->id,
-            'text' => $customer->name.($customer->company ? ' · '.$customer->company : ''),
+            'text' => $customer->name.($customer->nickname ? ' ('.$customer->nickname.')' : '').($customer->company ? ' · '.$customer->company : ''),
         ], 201);
     }
 
@@ -166,7 +167,8 @@ class CustomerController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255', Rule::unique('customers', 'email')->ignore($customer?->id)],
+            'nickname' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:191', Rule::unique('customers', 'email')->ignore($customer?->id)],
             'phone' => ['nullable', 'string', 'max:64'],
             'company' => ['nullable', 'string', 'max:255'],
             'project_id' => ['nullable', 'integer', 'exists:projects,id'],

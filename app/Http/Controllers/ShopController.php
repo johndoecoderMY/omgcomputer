@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\CustomPcBuildDraft;
 use App\Models\CustomPcComponent;
+use App\Models\CustomPcMarketplaceLink;
 use App\Models\InventoryMovement;
 use App\Models\InventoryPart;
 use App\Models\ShopOrder;
@@ -19,10 +20,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -31,6 +34,8 @@ use Yajra\DataTables\Facades\DataTables;
 class ShopController extends Controller
 {
     private const CART_KEY = 'shop_cart';
+
+    private const PRODUCT_UPGRADE_TYPES = ['cpu', 'gpu', 'ram', 'storage'];
 
     public function products(): View
     {
@@ -85,6 +90,16 @@ class ShopController extends Controller
         return view('shop.public.products.show', [
             'product' => $product,
             'types' => InventoryPart::TYPES,
+            'upgradeOptions' => $product->type === 'ready_built_pc'
+                ? $product->upgradeOptions()
+                    ->where('is_for_sale', true)
+                    ->where('stock_quantity', '>', 0)
+                    ->whereIn('type', self::PRODUCT_UPGRADE_TYPES)
+                    ->orderBy('type')
+                    ->orderBy('name')
+                    ->get()
+                    ->groupBy('type')
+                : collect(),
             'relatedProducts' => InventoryPart::query()
                 ->where('is_for_sale', true)
                 ->where('stock_quantity', '>', 0)
@@ -268,7 +283,7 @@ class ShopController extends Controller
         ]);
 
         $query = CustomPcComponent::query()
-            ->with('suppliers:id,name')
+            ->with(['suppliers:id,name', 'marketplaceLinks'])
             ->whereIn('type', $this->customPcBuilderComponentTypes())
             ->when($filters['category'] ?? null, fn (Builder $parts, string $type) => $parts->where('type', $type))
             ->when($filters['search'] ?? null, function (Builder $parts, string $search): void {
@@ -340,6 +355,12 @@ class ShopController extends Controller
                         'product_url' => $supplier->pivot?->shopee_product_url,
                         'cost_price' => $supplier->pivot?->cost_price === null ? null : (float) $supplier->pivot->cost_price,
                         'unit_price' => $supplier->pivot?->unit_price === null ? null : (float) $supplier->pivot->unit_price,
+                    ])->values(),
+                    'marketplace_links' => $part->marketplaceLinks->map(fn (CustomPcMarketplaceLink $link): array => [
+                        'id' => $link->id,
+                        'marketplace' => $link->marketplace,
+                        'url' => $link->url,
+                        'category' => $link->category,
                     ])->values(),
                     'socket' => $part->specification('Socket'),
                     'specifications' => $part->specifications(),
@@ -513,6 +534,29 @@ class ShopController extends Controller
         ], 201);
     }
 
+    public function storeCustomPcBuilderMarketplaceLink(Request $request, CustomPcComponent $part): JsonResponse
+    {
+        abort_unless(in_array($part->type, $this->customPcBuilderComponentTypes(), true), 404);
+
+        $data = $request->validate([
+            'marketplace' => ['required', Rule::in(['shopee', 'lazada', 'tiktok_shop', 'other'])],
+            'url' => ['required', 'url:http,https', 'max:2048'],
+            'category' => ['nullable', Rule::in($this->customPcBuilderComponentTypes())],
+        ]);
+
+        $link = $part->marketplaceLinks()->create($data);
+
+        return response()->json([
+            'message' => 'Marketplace link added to the builder component.',
+            'link' => [
+                'id' => $link->id,
+                'marketplace' => $link->marketplace,
+                'url' => $link->url,
+                'category' => $link->category,
+            ],
+        ], 201);
+    }
+
     private function isShopeeUrl(string $url): bool
     {
         $host = parse_url($url, PHP_URL_HOST);
@@ -611,25 +655,66 @@ class ShopController extends Controller
         ];
     }
 
-    public function createProduct(): View
+    public function createProduct(Request $request): View
     {
+        $product = new InventoryPart(['type' => 'other', 'stock_quantity' => 0, 'reorder_level' => 0]);
+
         return view('shop.products.form', [
-            'product' => new InventoryPart(['type' => 'other', 'stock_quantity' => 0, 'reorder_level' => 0]),
+            'product' => $product,
             'editing' => false,
             'types' => InventoryPart::TYPES,
+            'suppliers' => Supplier::query()->orderBy('name')->get(),
+            'selectedUpgradeOptions' => $this->selectedProductUpgradeOptions($request, $product),
         ]);
+    }
+
+    public function productUpgradeOptions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'supplier_id' => ['required', 'integer', 'exists:suppliers,id'],
+            'q' => ['required', 'string', 'min:2', 'max:100'],
+        ]);
+        $search = trim($data['q']);
+
+        $results = InventoryPart::query()
+            ->where('supplier_id', $data['supplier_id'])
+            ->where('is_for_sale', true)
+            ->where('stock_quantity', '>', 0)
+            ->whereIn('type', self::PRODUCT_UPGRADE_TYPES)
+            ->where(function (Builder $query) use ($search): void {
+                $query->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('sku', 'like', '%'.$search.'%');
+            })
+            ->orderBy('type')
+            ->orderBy('name')
+            ->limit(30)
+            ->get(['id', 'name', 'sku', 'type', 'selling_price'])
+            ->map(fn (InventoryPart $part): array => [
+                'id' => $part->id,
+                'text' => sprintf(
+                    '%s · %s · RM %s',
+                    $part->name,
+                    InventoryPart::TYPES[$part->type] ?? $part->type,
+                    number_format((float) $part->selling_price, 2),
+                ),
+            ])
+            ->values();
+
+        return response()->json(['results' => $results]);
     }
 
     public function storeProduct(Request $request): RedirectResponse
     {
         $data = $this->validateProduct($request);
         $openingStock = $data['stock_quantity'];
-        unset($data['stock_quantity']);
+        $upgradeOptionIds = $data['upgrade_option_ids'] ?? [];
+        unset($data['stock_quantity'], $data['images'], $data['remove_images'], $data['upgrade_option_ids']);
         $data['is_for_sale'] = $request->boolean('is_for_sale');
         $data['type'] ??= 'other';
 
-        DB::transaction(function () use ($data, $openingStock, $request): void {
+        $product = DB::transaction(function () use ($data, $openingStock, $upgradeOptionIds, $request): InventoryPart {
             $product = InventoryPart::query()->create([...$data, 'stock_quantity' => $openingStock]);
+            $product->upgradeOptions()->sync($upgradeOptionIds);
             if ($openingStock > 0) {
                 $product->movements()->create([
                     'user_id' => $request->user()->id,
@@ -639,13 +724,18 @@ class ShopController extends Controller
                     'note' => 'Opening stock for shop product.',
                 ]);
             }
+
+            return $product;
         });
+        $this->updateProductImages($product, $request);
 
         return redirect()->route('shop.products.index')->with('success', 'Shop product added.');
     }
 
     public function showProduct(InventoryPart $product): View
     {
+        $product->load('supplier');
+
         return view('shop.products.show', compact('product'));
     }
 
@@ -665,22 +755,27 @@ class ShopController extends Controller
         return redirect()->route('shop.cart')->with('success', 'Product added to cart.');
     }
 
-    public function editProduct(InventoryPart $product): View
+    public function editProduct(InventoryPart $product, Request $request): View
     {
         return view('shop.products.form', [
             'product' => $product,
             'editing' => true,
             'types' => InventoryPart::TYPES,
+            'suppliers' => Supplier::query()->orderBy('name')->get(),
+            'selectedUpgradeOptions' => $this->selectedProductUpgradeOptions($request, $product),
         ]);
     }
 
     public function updateProduct(Request $request, InventoryPart $product): RedirectResponse
     {
         $data = $this->validateProduct($request, $product);
-        unset($data['stock_quantity']);
+        $upgradeOptionIds = $data['upgrade_option_ids'] ?? [];
+        unset($data['stock_quantity'], $data['images'], $data['remove_images'], $data['upgrade_option_ids']);
         $data['is_for_sale'] = $request->boolean('is_for_sale');
         $data['type'] ??= $product->type;
         $product->update($data);
+        $product->upgradeOptions()->sync($upgradeOptionIds);
+        $this->updateProductImages($product, $request);
 
         return redirect()->route('shop.products.show', $product)->with('success', 'Shop product updated.');
     }
@@ -729,15 +824,58 @@ class ShopController extends Controller
     public function addToCart(Request $request, InventoryPart $product): RedirectResponse|JsonResponse
     {
         abort_unless($product->is_for_sale, 404);
-        $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:10000']]);
+        $data = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:10000'],
+            'upgrade_ids' => ['nullable', 'array', 'max:4'],
+            'upgrade_ids.*' => ['nullable', 'integer', 'distinct', 'exists:inventory_parts,id'],
+        ]);
         $cart = $request->session()->get(self::CART_KEY, []);
-        $quantity = (int) ($cart[$product->id] ?? 0) + (int) $data['quantity'];
+        $quantityToAdd = (int) $data['quantity'];
+        $quantity = (int) ($cart[$product->id] ?? 0) + $quantityToAdd;
         if ($quantity > $product->stock_quantity) {
             throw ValidationException::withMessages([
                 'quantity' => "Only {$product->stock_quantity} of {$product->name} are currently in stock.",
             ]);
         }
+
+        $upgradeIds = array_map(
+            'intval',
+            array_values(array_filter($data['upgrade_ids'] ?? [], fn (mixed $id): bool => filled($id))),
+        );
+        if ($upgradeIds !== [] && $product->type !== 'ready_built_pc') {
+            throw ValidationException::withMessages([
+                'upgrade_ids' => 'Upgrade options are only available for ready-built PCs.',
+            ]);
+        }
+
+        $upgrades = collect();
+        if ($upgradeIds !== []) {
+            $upgrades = $product->upgradeOptions()
+                ->whereIn('id', $upgradeIds)
+                ->where('is_for_sale', true)
+                ->whereIn('type', ['cpu', 'gpu', 'ram', 'storage'])
+                ->where('stock_quantity', '>', 0)
+                ->get()
+                ->keyBy('id');
+
+            if ($upgrades->count() !== count($upgradeIds)
+                || $upgrades->pluck('type')->unique()->count() !== count($upgradeIds)) {
+                throw ValidationException::withMessages([
+                    'upgrade_ids' => 'Choose one available upgrade from each component category.',
+                ]);
+            }
+        }
+
         $cart[$product->id] = $quantity;
+        foreach ($upgrades as $upgrade) {
+            $upgradeQuantity = (int) ($cart[$upgrade->id] ?? 0) + $quantityToAdd;
+            if ($upgrade->stock_quantity < $upgradeQuantity) {
+                throw ValidationException::withMessages([
+                    'upgrade_ids' => "Only {$upgrade->stock_quantity} of {$upgrade->name} are currently in stock.",
+                ]);
+            }
+            $cart[$upgrade->id] = $upgradeQuantity;
+        }
         $request->session()->put(self::CART_KEY, $cart);
 
         if ($request->expectsJson()) {
@@ -1262,16 +1400,93 @@ class ShopController extends Controller
 
     private function validateProduct(Request $request, ?InventoryPart $product = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sku' => ['nullable', 'string', 'max:100', Rule::unique('inventory_parts', 'sku')->ignore($product?->id)],
             'type' => ['required', Rule::in(array_keys(InventoryPart::TYPES))],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['string', Rule::in($product?->images ?? [])],
+            'upgrade_option_ids' => ['nullable', 'array', 'max:20'],
+            'upgrade_option_ids.*' => ['required', 'integer', 'distinct', 'exists:inventory_parts,id'],
             'cost_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'selling_price' => ['required', 'numeric', 'min:0', 'max:99999999'],
             'stock_quantity' => [$product ? 'nullable' : 'required', 'integer', 'min:0', 'max:10000000'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:10000000'],
         ]);
+
+        $upgradeOptionIds = array_map('intval', $data['upgrade_option_ids'] ?? []);
+        if ($upgradeOptionIds !== []) {
+            if ($data['type'] !== 'ready_built_pc' || empty($data['supplier_id'])) {
+                throw ValidationException::withMessages([
+                    'upgrade_option_ids' => 'Upgrade options require a ready-built PC with a selected supplier.',
+                ]);
+            }
+
+            $eligibleUpgradeIds = InventoryPart::query()
+                ->whereIn('id', $upgradeOptionIds)
+                ->where('supplier_id', $data['supplier_id'])
+                ->where('is_for_sale', true)
+                ->where('stock_quantity', '>', 0)
+                ->whereIn('type', self::PRODUCT_UPGRADE_TYPES)
+                ->pluck('id')
+                ->map(fn (int $id): int => $id)
+                ->all();
+
+            if (count($eligibleUpgradeIds) !== count($upgradeOptionIds)) {
+                throw ValidationException::withMessages([
+                    'upgrade_option_ids' => 'Choose in-stock, for-sale upgrade parts linked to the selected supplier.',
+                ]);
+            }
+        }
+
+        $remainingImages = array_diff($product?->images ?? [], $data['remove_images'] ?? []);
+        if (count($remainingImages) + count($data['images'] ?? []) > 10) {
+            throw ValidationException::withMessages([
+                'images' => 'A product gallery can contain up to 10 photos.',
+            ]);
+        }
+
+        return $data;
+    }
+
+    private function selectedProductUpgradeOptions(Request $request, InventoryPart $product): \Illuminate\Database\Eloquent\Collection
+    {
+        $ids = $request->old(
+            'upgrade_option_ids',
+            $product->exists ? $product->upgradeOptions()->pluck('inventory_parts.id')->all() : [],
+        );
+
+        return InventoryPart::query()
+            ->whereIn('id', is_array($ids) ? $ids : [])
+            ->orderBy('name')
+            ->get(['id', 'name', 'sku', 'type', 'supplier_id']);
+    }
+
+    private function updateProductImages(InventoryPart $product, Request $request): void
+    {
+        $disk = Storage::disk('public');
+        $removeImages = $request->input('remove_images', []);
+        $images = array_values(array_diff($product->images ?? [], $removeImages));
+        $uploadedImages = (array) $request->file('images', []);
+        foreach ($removeImages as $path) {
+            if (! $disk->delete($path)) {
+                throw new RuntimeException("Unable to remove product image [{$path}].");
+            }
+        }
+
+        foreach ($uploadedImages as $image) {
+            $path = $image->store("products/{$product->id}", 'public');
+            if (! is_string($path)) {
+                throw new RuntimeException('Unable to store uploaded product image.');
+            }
+            $images[] = $path;
+        }
+
+        $product->update(['images' => $images]);
     }
 
     /**

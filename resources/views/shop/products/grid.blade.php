@@ -66,7 +66,11 @@
                         <article class="border rounded-1 h-100 d-flex flex-column justify-content-between pb-3">
                             <div class="overflow-hidden">
                                 <a class="d-flex align-items-center justify-content-center rounded-top bg-body-tertiary text-primary text-decoration-none" href="{{ route('shop.products.show', $product) }}" aria-label="View {{ $product->name }}" style="height: 12rem">
-                                    <i class="bi bi-box2 bi-3x" aria-hidden="true"></i>
+                                    @if (filled($product->images[0] ?? null))
+                                        <img class="w-100 h-100 object-fit-cover" src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->images[0]) }}" alt="{{ $product->name }}" loading="lazy">
+                                    @else
+                                        <i class="bi bi-box2 bi-3x" aria-hidden="true"></i>
+                                    @endif
                                 </a>
                                 @if ($product->stock_quantity <= $product->reorder_level)
                                     <span class="badge rounded-pill bg-warning text-dark position-relative ms-3 mt-n4">Low stock</span>

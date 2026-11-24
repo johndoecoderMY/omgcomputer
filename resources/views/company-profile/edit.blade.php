@@ -23,8 +23,8 @@
         @method('PUT')
         <div class="card p-2">
             <div class="card-header bg-body">
-                <h2 class="h5 mb-1">Legal and tax registration</h2>
-                <p class="small text-body-secondary mb-0">The SSM registration number appears in guest and signed-in footers. Tax identification and SST numbers are included on billing PDFs only.</p>
+                <h2 class="h5 mb-1">Business registration</h2>
+                <p class="small text-body-secondary mb-0">Manage the legal and tax details used across the public website and billing documents.</p>
             </div>
             <div class="card-body">
                 <div class="row g-3">
@@ -48,6 +48,14 @@
                         <label class="form-label" for="business-address">Business address</label>
                         <textarea class="form-control" id="business-address" name="address" rows="3" maxlength="2000">{{ old('address', $companyProfile->address) }}</textarea>
                     </div>
+                </div>
+            </div>
+            <div class="card-header bg-body border-top">
+                <h2 class="h5 mb-1">Contact and public links</h2>
+                <p class="small text-body-secondary mb-0">These details appear on customer-facing pages and can be reused in messages and templates.</p>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label" for="business-phone">Business phone</label>
                         <x-phone-input id="business-phone" name="phone" :value="old('phone', $companyProfile->phone)" maxlength="50" />
@@ -65,6 +73,16 @@
                         <label class="form-label" for="facebook-url">Facebook page URL</label>
                         <input class="form-control" id="facebook-url" name="facebook_url" type="url" maxlength="255" value="{{ old('facebook_url', $companyProfile->facebook_url) }}" placeholder="https://www.facebook.com/your-page">
                         <div class="form-text">Only Facebook page links from facebook.com or fb.me are accepted.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="instagram-url">Instagram profile URL</label>
+                        <input class="form-control" id="instagram-url" name="instagram_url" type="url" maxlength="255" value="{{ old('instagram_url', $companyProfile->instagram_url) }}" placeholder="https://www.instagram.com/your-profile/">
+                        <div class="form-text">Only Instagram profile links from instagram.com are accepted.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="tiktok-url">TikTok profile URL</label>
+                        <input class="form-control" id="tiktok-url" name="tiktok_url" type="url" maxlength="255" value="{{ old('tiktok_url', $companyProfile->tiktok_url) }}" placeholder="https://www.tiktok.com/@your-profile">
+                        <div class="form-text">Only TikTok profile links from tiktok.com are accepted.</div>
                     </div>
                 </div>
             </div>

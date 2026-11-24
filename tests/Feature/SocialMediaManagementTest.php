@@ -54,7 +54,8 @@ class SocialMediaManagementTest extends TestCase
 
         $this->actingAs($this->admin())->get(route('social-media.index'))
             ->assertOk()
-            ->assertSee('Website profile links')
+            ->assertSee('Public social profile links')
+            ->assertSee('Manage company profile')
             ->assertSee('class="btn btn-primary" href="'.route('meta-content.index').'"', false)
             ->assertSee('Facebook Page')
             ->assertSee('OMG Computer')

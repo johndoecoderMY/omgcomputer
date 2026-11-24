@@ -71,9 +71,31 @@ class AdminAccessAndProjectManagementTest extends TestCase
         $this->seed(PlannerRoleSeeder::class);
         $member->assignRole('member');
 
+        foreach ([
+            'booking_availability.manage',
+            'products.manage',
+            'flowcharts.manage',
+            'meta_content.manage',
+            'inventory.manage',
+            'billing.manage',
+            'reports.view',
+            'sops.manage',
+            'backups.manage',
+            'maintenance.manage',
+        ] as $permission) {
+            $this->assertTrue($member->hasPermissionTo($permission), "Member should have the {$permission} permission.");
+        }
+        foreach (['users.manage', 'integrations.manage'] as $permission) {
+            $this->assertFalse($member->hasPermissionTo($permission), "Member should not have the {$permission} permission.");
+        }
+
         $this->actingAs($member)->get(route('admin.access.index'))
             ->assertForbidden()
             ->assertSee('Access denied');
+
+        $this->get(route('products.index'))->assertOk();
+        $this->get(route('inventory.index'))->assertOk();
+        $this->get(route('reports.index'))->assertOk();
 
         $admin = User::factory()->create();
         $admin->assignRole('admin');

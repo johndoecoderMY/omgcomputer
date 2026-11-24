@@ -6,7 +6,8 @@
 @section('content')
     @php
         $whatsappContactUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I would like to ask about your services.');
-        $websiteQuoteUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I am interested in website design and development. I would like to discuss a project and get a quote.');
+        $websiteQuoteUrl = 'https://wa.me/60104224350?text=' . rawurlencode('Hi OMG Computer, I am interested in a custom website or online shop project. I would like to discuss the requirements and get a quote.');
+        $contactPhone = trim((string) $companyProfile->phone);
         $configuredContactEmail = config('mail.from.address');
         $contactEmail = is_string($companyProfile->email) && filter_var($companyProfile->email, FILTER_VALIDATE_EMAIL)
             ? $companyProfile->email
@@ -87,6 +88,7 @@
                     </span>
                     <h1 class="hero-title fw-bold mb-4">{{ __('Computer trouble?') }}<br><span>{{ __('We’ll fix it.') }}</span></h1>
                     <p class="hero-copy lead text-700 mb-4">{{ __('Reliable repairs, upgrades and custom websites — delivered with clear advice and friendly local support.') }}</p>
+                    <p class="small text-700 mb-4">{{ __('Online bookings are for computer troubleshooting and FYP consultations. Contact us about website, online shop, and other custom projects.') }}</p>
                     <div class="hero-actions row g-3">
                         <div class="col-12 col-md-6">
                             <a class="hero-primary-button btn btn-lg rounded-pill px-3 w-100" href="{{ route('bookings.create') }}">
@@ -275,7 +277,7 @@
                     <h2 class="fw-bold text-1000 mt-2">{{ __('Website packages tailored to your needs') }}</h2>
                     <p class="text-700 mb-0">{{ __('Tell us what you need and we’ll provide a quote based on your project scope before work begins.') }}</p>
                     <a class="btn btn-success rounded-pill px-4 mt-3" href="{{ $websiteQuoteUrl }}" target="_blank" rel="noopener noreferrer">
-                        <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Discuss a website project') }}
+                        <span class="bi bi-whatsapp me-2" aria-hidden="true"></span>{{ __('Discuss a website or online shop project') }}
                     </a>
                     <a class="btn btn-primary rounded-pill px-4 mt-3 ms-sm-2" href="{{ route('website-previews.index') }}">
                         <span class="bi bi-images me-2" aria-hidden="true"></span>{{ __('Browse website previews') }}

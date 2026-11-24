@@ -42,6 +42,21 @@ class CompanyProfileTest extends TestCase
         ]);
     }
 
+    public function test_guest_homepage_does_not_show_call_buttons(): void
+    {
+        CompanyProfile::query()->create([
+            'id' => 'primary',
+            'phone' => '0104224350',
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Discuss a website or online shop project')
+            ->assertDontSee('Call us')
+            ->assertSee('Browse website previews')
+            ->assertDontSee('href="tel:0104224350"', false);
+    }
+
     public function test_admin_can_manage_company_registration_tax_and_facebook_details(): void
     {
         $admin = $this->adminUser();
@@ -51,6 +66,8 @@ class CompanyProfileTest extends TestCase
             ->assertSee('SSM registration number')
             ->assertSee('Tax identification number (TIN)')
             ->assertSee('Facebook page URL')
+            ->assertSee('Instagram profile URL')
+            ->assertSee('TikTok profile URL')
             ->assertSee('Bank name')
             ->assertSee('Bank account number');
 
@@ -64,6 +81,8 @@ class CompanyProfileTest extends TestCase
             'email' => 'hello@omgcomputer.my',
             'website_url' => 'https://omgcomputer.my',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
+            'instagram_url' => 'https://www.instagram.com/omgcomputer/',
+            'tiktok_url' => 'https://www.tiktok.com/@omgcomputer',
             'bank_name' => 'Example Bank',
             'bank_account_number' => '1234567890',
         ])->assertRedirect(route('admin.company-profile.edit'))
@@ -76,6 +95,8 @@ class CompanyProfileTest extends TestCase
             'tax_identification_number' => 'C1234567890',
             'sst_registration_number' => 'B16-1234-12345678',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
+            'instagram_url' => 'https://www.instagram.com/omgcomputer/',
+            'tiktok_url' => 'https://www.tiktok.com/@omgcomputer',
             'bank_name' => 'Example Bank',
         ]);
         $profile = CompanyProfile::current();
@@ -145,6 +166,8 @@ class CompanyProfileTest extends TestCase
             'bank_name' => 'PRIVATE-BANK-NAME',
             'bank_account_number' => 'PRIVATE-BANK-ACCOUNT',
             'facebook_url' => 'https://www.facebook.com/omgcomputer',
+            'instagram_url' => 'https://www.instagram.com/omgcomputer/',
+            'tiktok_url' => 'https://www.tiktok.com/@omgcomputer',
         ]);
 
         $this->get('/')

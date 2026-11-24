@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', $customer->name)
+@section('title', $customer->name.($customer->nickname ? ' ('.$customer->nickname.')' : ''))
 
 @section('content')
 <div class="container-fluid py-3">
-    <x-page-header eyebrow="Customer profile" :title="$customer->name" :back-url="route('customers.index')" back-label="All customers">
+    <x-page-header eyebrow="Customer profile" :title="$customer->name.($customer->nickname ? ' ('.$customer->nickname.')' : '')" :back-url="route('customers.index')" back-label="All customers">
         <x-slot:actions>
             <a class="btn btn-outline-primary" href="{{ route('tickets.create', ['customer_id' => $customer->id, 'project_id' => $customer->project_id]) }}">
                 <span class="bi bi-ticket-perforated me-2" aria-hidden="true"></span>New repair ticket

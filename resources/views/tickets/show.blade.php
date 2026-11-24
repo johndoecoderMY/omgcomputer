@@ -16,9 +16,15 @@
                     <a href="{{ route('tickets.index') }}">
                         <span class="bi bi-arrow-left me-2" aria-hidden="true"></span>All tickets
                     </a>
-                    <a href="{{ route('customers.show', $ticket->customer) }}">
-                        <span class="bi bi-person me-2" aria-hidden="true"></span>Customer profile
-                    </a>
+                    @if ($ticket->customer)
+                        <a href="{{ route('customers.show', $ticket->customer) }}">
+                            <span class="bi bi-person me-2" aria-hidden="true"></span>Customer profile
+                        </a>
+                    @elseif (! $ticket->customer_id)
+                        <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-create-customer-modal">
+                            <span class="bi bi-person-plus me-2" aria-hidden="true"></span>Create customer record
+                        </button>
+                    @endif
                     <button type="button" data-bs-toggle="modal" data-bs-target="#ticket-workflow-modal">
                         <span class="bi bi-sliders me-2" aria-hidden="true"></span>
                         {{ $ticket->status === 'closed' ? 'Update status' : 'Edit workflow' }}
@@ -44,7 +50,7 @@
         </div>
 
         @unless (auth()->user()->hasRole('customer'))
-            @if ($ticket->customer->warning)
+            @if ($ticket->customer?->warning)
                 <div class="alert alert-warning" role="alert">
                     <div class="fw-semibold"><span class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></span>Important customer warning</div>
                     <div class="text-pre-line mt-1">{{ $ticket->customer->warning }}</div>
@@ -61,11 +67,26 @@
                             <div class="col-md-4">
                                 <div class="small text-body-secondary">Customer</div>
                                 @unless (auth()->user()->hasRole('customer'))
-                                    <a href="{{ route('customers.show', $ticket->customer) }}">{{ $ticket->customer->name }}</a>
+                                    @if ($ticket->customer)
+                                        <a href="{{ route('customers.show', $ticket->customer) }}">
+                                            {{ $ticket->customer->name }}{{ $ticket->customer->nickname ? ' ('.$ticket->customer->nickname.')' : '' }}
+                                        </a>
+                                    @else
+                                        {{ $ticket->face_to_face_name ?: 'Face-to-face customer' }}{{ $ticket->face_to_face_nickname ? ' ('.$ticket->face_to_face_nickname.')' : '' }}
+                                    @endif
                                 @else
-                                    {{ $ticket->customer->name }}
+                                    {{ $ticket->customer?->name ?: $ticket->face_to_face_name ?: 'Face-to-face customer' }}
                                 @endunless
                             </div>
+                            @if (! $ticket->customer_id)
+                                <div class="col-md-4">
+                                    <div class="small text-body-secondary">Face-to-face contact</div>
+                                    {{ $ticket->face_to_face_phone ?: $ticket->face_to_face_email ?: '—' }}
+                                    @if ($ticket->face_to_face_phone && $ticket->face_to_face_email)
+                                        <div class="small">{{ $ticket->face_to_face_email }}</div>
+                                    @endif
+                                </div>
+                            @endif
                             <div class="col-md-4">
                                 <div class="small text-body-secondary">Device</div>
                                 {{ $ticket->device_type ?: 'Device' }} <span id="ticket-device-model">{{ $ticket->device_model }}</span>
@@ -74,18 +95,16 @@
                                 <div class="small text-body-secondary">Serial number</div>
                                 <span id="ticket-serial-number">{{ $ticket->serial_number ?: '—' }}</span>
                             </div>
-                            <div class="col-md-6">
-                                <div class="small text-body-secondary">Project</div>
-                                @if ($ticket->project)
+                            @if ($ticket->project)
+                                <div class="col-md-6">
+                                    <div class="small text-body-secondary">Project</div>
                                     @unless (auth()->user()->hasRole('customer'))
                                         <a href="{{ route('projects.show', $ticket->project) }}">{{ $ticket->project->name }}</a>
                                     @else
                                         {{ $ticket->project->name }}
                                     @endunless
-                                @else
-                                    —
-                                @endif
-                            </div>
+                                </div>
+                            @endif
                             <div class="col-md-6">
                                 <div class="small text-body-secondary">Received</div>
                                 {{ $ticket->received_at->format('M j, Y g:i A') }}
@@ -94,7 +113,7 @@
                         <div class="small text-body-secondary">Reported issue</div>
                         <div class="text-pre-line mb-0">{!! app(\App\Support\RepairTicketIssueSanitizer::class)->sanitize($ticket->issue_description) !!}</div>
                         @unless (auth()->user()->hasRole('customer'))
-                            @if ($ticket->customer->notes)
+                            @if ($ticket->customer?->notes)
                                 <hr>
                                 <div class="small text-body-secondary">Internal customer notes</div>
                                 <div class="text-pre-line">{{ $ticket->customer->notes }}</div>
@@ -242,6 +261,55 @@
         </div>
 
     @unless (auth()->user()->hasRole('customer'))
+        @if (! $ticket->customer_id)
+        <div class="modal fade" id="ticket-create-customer-modal" tabindex="-1"
+            aria-labelledby="ticket-create-customer-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('tickets.customer.store', $ticket) }}">
+                        @csrf
+                        <div class="modal-header">
+                            <h2 class="modal-title fs-5" id="ticket-create-customer-title">Create customer record</h2>
+                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="ticket-customer-name">Customer name</label>
+                                    <input class="form-control" id="ticket-customer-name" name="name" maxlength="255" required
+                                        value="{{ old('name', $ticket->face_to_face_name) }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="ticket-customer-nickname">Nickname <span class="text-body-secondary">(optional)</span></label>
+                                    <input class="form-control" id="ticket-customer-nickname" name="nickname" maxlength="255"
+                                        value="{{ old('nickname', $ticket->face_to_face_nickname) }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="ticket-customer-phone">Contact number</label>
+                                    <x-phone-input id="ticket-customer-phone" name="phone"
+                                        :value="old('phone', $ticket->face_to_face_phone)" maxlength="64" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="ticket-customer-email">Email</label>
+                                    <input class="form-control" id="ticket-customer-email" name="email" type="email" maxlength="191"
+                                        value="{{ old('email', $ticket->face_to_face_email) }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="ticket-customer-company">Company <span class="text-body-secondary">(optional)</span></label>
+                                    <input class="form-control" id="ticket-customer-company" name="company" maxlength="255"
+                                        value="{{ old('company') }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-end">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-primary" type="submit">Create and link</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
         <div class="modal fade" id="ticket-workflow-modal" tabindex="-1" aria-labelledby="ticket-workflow-title" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
                 <div class="modal-content">
@@ -346,7 +414,7 @@
                                 @endif
                             </div>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer justify-content-end">
                             <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                             <button class="btn btn-primary" type="submit">
                                 {{ $ticket->status === 'closed' ? 'Update status' : 'Save workflow' }}
@@ -401,7 +469,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer justify-content-end">
                         <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                         <button class="btn btn-primary" type="submit">Add repair step</button>
                     </div>
@@ -433,7 +501,7 @@
                             Enter a caption for this photo.
                         </div>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-footer justify-content-end">
                         <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
                         <button class="btn btn-primary" type="button" data-ticket-photo-caption-save>Save caption</button>
                     </div>

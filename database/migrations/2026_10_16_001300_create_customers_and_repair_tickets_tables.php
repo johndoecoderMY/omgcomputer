@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('project_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
-            $table->string('email')->nullable()->index();
+            $table->string('email', 191)->nullable()->index();
             $table->string('phone', 64)->nullable();
             $table->string('company')->nullable();
             $table->text('address')->nullable();

@@ -47,7 +47,8 @@
 
     <div class="modal fade" id="table-export-modal" tabindex="-1" aria-labelledby="table-export-modal-title" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <form class="modal-content" method="POST" action="{{ route('admin.backups.export-tables') }}">
+            <form class="modal-content" method="POST" action="{{ route('admin.backups.export-tables') }}"
+                data-native-download>
                 @csrf
                 <div class="modal-header">
                     <h2 class="modal-title fs-5" id="table-export-modal-title">Export database tables</h2>

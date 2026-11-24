@@ -4,12 +4,26 @@ import Alpine from 'alpinejs';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import * as PusherPushNotifications from '@pusher/push-notifications-web';
+import GLightbox from 'glightbox';
+import 'glightbox/dist/css/glightbox.css';
 import './booking-phone';
 
 window.Alpine = Alpine;
 window.Pusher = Pusher;
 
 Alpine.start();
+
+const initializeProductImageLightbox = () => {
+    if (document.querySelector('.glightbox')) {
+        GLightbox({ selector: '.glightbox' });
+    }
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeProductImageLightbox, { once: true });
+} else {
+    initializeProductImageLightbox();
+}
 
 const initializeActiveSidebarLink = () => {
     const sidebar = document.getElementById('navbarVerticalNav');
@@ -73,6 +87,31 @@ const initializeActiveSidebarLink = () => {
 };
 
 initializeActiveSidebarLink();
+
+document.addEventListener('click', (event) => {
+    const addButton = event.target.closest('[data-add-payment-row]');
+    if (addButton) {
+        const group = addButton.closest('[data-invoice-payment-splits]');
+        const rows = group.querySelector('[data-payment-rows]');
+        if (rows.children.length >= 10) {
+            return;
+        }
+
+        const template = group.querySelector('[data-payment-row-template]');
+        const index = Number(group.dataset.nextPaymentIndex || rows.children.length);
+        const markup = template.innerHTML
+            .replaceAll('__INDEX__', String(index))
+            .replaceAll('__NUMBER__', String(index + 1));
+        rows.insertAdjacentHTML('beforeend', markup);
+        group.dataset.nextPaymentIndex = String(index + 1);
+        return;
+    }
+
+    const removeButton = event.target.closest('[data-remove-payment-row]');
+    if (removeButton) {
+        removeButton.closest('[data-payment-row]').remove();
+    }
+});
 
 const modalTriggers = new WeakMap();
 

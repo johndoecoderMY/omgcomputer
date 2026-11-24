@@ -132,7 +132,7 @@ class AdminUserController extends Controller
                 'string',
                 'lowercase',
                 'email',
-                'max:255',
+                'max:191',
                 Rule::unique('users', 'email'),
                 function (string $attribute, mixed $value, \Closure $fail) use ($request, $cpanelEnabled, $skipMailbox): void {
                     $mailboxUsername = trim((string) $request->input('mailbox_username'));
@@ -402,7 +402,7 @@ class AdminUserController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:191', Rule::unique('users')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:2000'],
             'team_ids' => ['nullable', 'array'],

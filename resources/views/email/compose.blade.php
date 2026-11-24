@@ -76,6 +76,10 @@
                 <div class="border-top border-200 px-x1 py-3">
                     <div class="small text-body-secondary mb-2">Your signature will be added when you send:</div>
                     <div class="small" style="white-space: pre-wrap;">--&#10;{{ $mailbox->signature }}</div>
+                    <img src="{{ asset('assets/img/omg/banner/omg-computer-banner-preview.png') }}"
+                        alt="OMG Computer - Repair, Support, Web"
+                        class="d-block img-fluid rounded border mt-2"
+                        style="max-width:600px;">
                     <a class="small d-inline-block mt-2" href="{{ route('email.mailbox-settings') }}">Edit signature</a>
                 </div>
             @else

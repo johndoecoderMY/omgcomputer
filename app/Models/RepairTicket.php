@@ -35,6 +35,10 @@ class RepairTicket extends Model
     protected $fillable = [
         'ticket_number',
         'customer_id',
+        'face_to_face_name',
+        'face_to_face_nickname',
+        'face_to_face_email',
+        'face_to_face_phone',
         'project_id',
         'assigned_to',
         'created_by_user_id',

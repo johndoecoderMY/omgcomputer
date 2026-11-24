@@ -64,7 +64,7 @@
             <div class="row g-0">
                 <div class="col-lg-6 bg-body-tertiary p-3 p-lg-5">
                     <div class="d-flex align-items-center justify-content-center rounded-4 bg-white text-primary overflow-hidden" style="height: clamp(16rem, 45vw, 30rem)">
-                        @include('shop.public.products._stock-image', ['product' => $product, 'class' => 'w-100 h-100 rounded-4 object-fit-cover'])
+                        @include('shop.public.products._gallery', ['product' => $product, 'class' => 'w-100 h-100 rounded-4 object-fit-cover'])
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -78,6 +78,21 @@
                         </div>
                         <p class="text-700 mb-4 text-pre-line">{{ $product->description ?: __('Contact us for more information about this product.') }}</p>
 
+                        @if ($upgradeOptions->isNotEmpty() && (! auth()->check() || ! auth()->user()->hasRole('customer')))
+                            <section class="mb-4" aria-labelledby="upgrade-options-title">
+                                <h2 class="h5 text-1000" id="upgrade-options-title">{{ __('Upgrade options') }}</h2>
+                                <p class="small text-body-secondary">{{ __('Choose from this PC supplier’s available CPU, GPU, RAM, and storage upgrades. Each selected component is added to the cart as a separately priced item.') }}</p>
+                                @foreach ($upgradeOptions as $type => $options)
+                                    <h3 class="h6 mb-1">{{ __(':category upgrades', ['category' => strtolower(__($types[$type] ?? $type))]) }}</h3>
+                                    <ul class="small mb-2">
+                                        @foreach ($options as $option)
+                                            <li>{{ $option->name }} — RM {{ number_format((float) $option->selling_price, 2) }}</li>
+                                        @endforeach
+                                    </ul>
+                                @endforeach
+                            </section>
+                        @endif
+
                         <div class="border-top pt-4 mt-auto">
                             <p class="small text-body-secondary mb-3">{{ __('Availability and pricing may change.') }}</p>
                             @guest
@@ -86,6 +101,21 @@
                                 <form class="js-add-to-cart mb-2" action="{{ route('shop.cart.add', $product) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="quantity" value="1">
+                                    @if ($upgradeOptions->isNotEmpty())
+                                        <fieldset class="mb-3">
+                                            <legend class="h5 text-1000">{{ __('Upgrade options') }}</legend>
+                                            <p class="small text-body-secondary">{{ __('Choose from the upgrades configured for this PC. Selected components are added to the cart at their listed prices.') }}</p>
+                                            @foreach ($upgradeOptions as $type => $options)
+                                                <label class="form-label" for="upgrade-{{ $type }}">{{ __(':category upgrade', ['category' => __($types[$type] ?? $type)]) }}</label>
+                                                <select class="form-select mb-3" id="upgrade-{{ $type }}" name="upgrade_ids[{{ $type }}]">
+                                                    <option value="">{{ __('Keep current configuration') }}</option>
+                                                    @foreach ($options as $option)
+                                                        <option value="{{ $option->id }}">{{ $option->name }} — RM {{ number_format((float) $option->selling_price, 2) }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @endforeach
+                                        </fieldset>
+                                    @endif
                                     <button class="btn btn-primary btn-lg rounded-pill w-100" type="submit"><i class="bi bi-cart-plus me-2" aria-hidden="true"></i><span>{{ __('Add to cart') }}</span></button>
                                 </form>
                                 <a class="btn btn-primary rounded-pill w-100" href="{{ route('shop.cart') }}"><i class="bi bi-cart3 me-2" aria-hidden="true"></i>{{ __('View cart') }}</a>

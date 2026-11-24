@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class BillingPayment extends Model
 {
+    public const METHODS = ['cash', 'card', 'bank_transfer', 'online', 'duitnow', 'spaylater', 'other'];
+
     protected $fillable = [
         'billing_document_id', 'user_id', 'amount', 'method', 'reference', 'paid_at', 'notes', 'receipt_emailed_at',
     ];

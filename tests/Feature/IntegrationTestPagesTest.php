@@ -166,6 +166,40 @@ class IntegrationTestPagesTest extends TestCase
         $this->actingAs($member)->post(route('reports.integrations.chip.mode'), ['test_mode' => '1'])->assertForbidden();
     }
 
+    public function test_members_cannot_access_integration_tests_or_email_server_settings(): void
+    {
+        Role::findOrCreate('member', 'web');
+        $member = User::factory()->create();
+        $member->assignRole('member');
+        $this->actingAs($member);
+
+        foreach ([
+            'reports.integrations.tracking',
+            'reports.integrations.chip',
+            'reports.integrations.notifications',
+            'reports.integrations.cpanel',
+            'reports.integrations.whatsapp',
+            'email.settings',
+        ] as $route) {
+            $this->get(route($route))->assertForbidden();
+        }
+
+        foreach ([
+            'reports.integrations.tracking.lookup' => [],
+            'reports.integrations.chip.check' => [],
+            'reports.integrations.chip.mode' => ['test_mode' => '1'],
+            'reports.integrations.notifications.send' => [],
+            'reports.integrations.email.send' => [],
+            'reports.integrations.cpanel.check' => [],
+            'reports.integrations.whatsapp.check' => [],
+            'email.settings.test-smtp' => [],
+            'email.settings.test-imap' => [],
+        ] as $route => $data) {
+            $this->post(route($route), $data)->assertForbidden();
+        }
+        $this->put(route('email.settings.update'), [])->assertForbidden();
+    }
+
     use RefreshDatabase;
 
     public function test_admin_can_test_cpanel_connection_without_exposing_the_api_token(): void

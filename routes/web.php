@@ -35,6 +35,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectEventController;
 use App\Http\Controllers\ProjectExportController;
 use App\Http\Controllers\ProjectLogoController;
+use App\Http\Controllers\ProjectEnhancementController;
 use App\Http\Controllers\ProjectPlanningController;
 use App\Http\Controllers\ProjectTechnologyController;
 use App\Http\Controllers\RepairTicketController;
@@ -317,13 +318,13 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::put('/{user}', 'update')->name('update');
         Route::delete('/{user}', 'destroy')->name('destroy');
     });
-    Route::prefix('admin/backups')->name('admin.backups.')->middleware('role:admin')->controller(AdminBackupController::class)->group(function (): void {
+    Route::prefix('admin/backups')->name('admin.backups.')->controller(AdminBackupController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/run', 'run')->name('run');
         Route::post('/export-tables', 'exportTables')->middleware('throttle:5,1')->name('export-tables');
         Route::get('/{disk}/{backup}/download', 'download')->name('download');
     });
-    Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('role:admin')->controller(AdminMaintenanceController::class)->group(function (): void {
+    Route::prefix('admin/maintenance')->name('admin.maintenance.')->controller(AdminMaintenanceController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
         Route::post('/migrate', 'migrate')->middleware('throttle:10,1')->name('migrate');
         Route::post('/seed', 'seedSelected')->middleware('throttle:5,1')->name('seed');
@@ -390,6 +391,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/create', [RepairTicketController::class, 'create'])->name('create');
         Route::post('/customers', [CustomerController::class, 'quickStore'])->name('customers.store');
         Route::post('/', [RepairTicketController::class, 'store'])->name('store');
+        Route::post('/{ticket}/customer', [RepairTicketController::class, 'createCustomerFromTicket'])->name('customer.store');
         Route::post('/{ticket}/attachments', [AttachmentController::class, 'storeTicket'])->name('attachments.store');
         Route::post('/{ticket}/steps', [RepairTicketController::class, 'storeUpdate'])->name('steps.store');
         Route::post('/{ticket}/steps/{update}/attachments', [AttachmentController::class, 'storeTicketUpdate'])->name('steps.attachments.store');
@@ -412,6 +414,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::get('/products', 'products')->name('products.index');
         Route::get('/products/datatable', 'productsDatatable')->name('products.datatable');
         Route::get('/products/grid', 'productsGrid')->name('products.grid');
+        Route::get('/products/upgrade-options', 'productUpgradeOptions')->name('products.upgrade-options');
         Route::get('/custom-pc-builder', 'customPcBuilder')->name('custom-pc-builder');
         Route::get('/custom-pc-builder/drafts', 'customPcBuilderDrafts')->name('custom-pc-builder.drafts.index');
         Route::post('/custom-pc-builder/drafts', 'storeCustomPcBuilderDraft')->name('custom-pc-builder.drafts.store');
@@ -424,6 +427,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::put('/custom-pc-builder/components/{part}', 'updateCustomPcBuilderComponent')->name('custom-pc-builder.components.update');
         Route::delete('/custom-pc-builder/components/{part}', 'destroyCustomPcBuilderComponent')->name('custom-pc-builder.components.destroy');
         Route::post('/custom-pc-builder/components/{part}/supplier', 'storeCustomPcBuilderSupplier')->name('custom-pc-builder.components.supplier');
+        Route::post('/custom-pc-builder/components/{part}/marketplace-link', 'storeCustomPcBuilderMarketplaceLink')->name('custom-pc-builder.components.marketplace-link');
         Route::get('/products/create', 'createProduct')->name('products.create');
         Route::post('/products', 'storeProduct')->name('products.store');
         Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');
@@ -660,6 +664,38 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
     Route::prefix('projects')->name('projects.')->group(function (): void {
         Route::get('/datatable', [ProjectController::class, 'datatable'])->name('datatable');
         Route::get('/{project}/logo', [ProjectLogoController::class, 'show'])->name('logo');
+        Route::get('/{project}/enhancements', [ProjectEnhancementController::class, 'show'])
+            ->middleware('not-customer')->name('enhancements');
+        Route::post('/{project}/enhancement/approvals', [ProjectEnhancementController::class, 'storeApproval'])
+            ->middleware('not-customer')->name('enhancements.approvals.store');
+        Route::patch('/{project}/enhancement/approvals/{approval}/respond', [ProjectEnhancementController::class, 'respondToApproval'])
+            ->name('enhancements.approvals.respond');
+        Route::post('/{project}/enhancement/documents', [ProjectEnhancementController::class, 'storeDocument'])
+            ->middleware('not-customer')->name('enhancements.documents.store');
+        Route::get('/{project}/enhancement/documents/{document}/download', [ProjectEnhancementController::class, 'downloadDocument'])
+            ->name('enhancements.documents.download');
+        Route::post('/{project}/enhancement/checklists', [ProjectEnhancementController::class, 'storeChecklist'])
+            ->middleware('not-customer')->name('enhancements.checklists.store');
+        Route::patch('/{project}/enhancement/checklists/items/{item}/toggle', [ProjectEnhancementController::class, 'toggleChecklistItem'])
+            ->middleware('not-customer')->name('enhancements.checklists.toggle');
+        Route::post('/{project}/enhancement/risks', [ProjectEnhancementController::class, 'storeRisk'])
+            ->middleware('not-customer')->name('enhancements.risks.store');
+        Route::patch('/{project}/enhancement/risks/{risk}', [ProjectEnhancementController::class, 'updateRisk'])
+            ->middleware('not-customer')->name('enhancements.risks.update');
+        Route::put('/{project}/enhancement/retention', [ProjectEnhancementController::class, 'updateRetention'])
+            ->middleware('not-customer')->name('enhancements.retention.update');
+        Route::post('/{project}/enhancement/time-entries', [ProjectEnhancementController::class, 'storeTimeEntry'])
+            ->middleware('not-customer')->name('enhancements.time.store');
+        Route::post('/{project}/enhancement/cost-entries', [ProjectEnhancementController::class, 'storeCostEntry'])
+            ->middleware('not-customer')->name('enhancements.cost.store');
+        Route::delete('/{project}/enhancement/cost-entries/{entry}', [ProjectEnhancementController::class, 'destroyCostEntry'])
+            ->middleware('not-customer')->name('enhancements.cost.destroy');
+        Route::post('/{project}/enhancement/templates/{template}/apply', [ProjectEnhancementController::class, 'applyTemplate'])
+            ->middleware('not-customer')->name('enhancements.templates.apply');
+        Route::post('/enhancement/templates', [ProjectEnhancementController::class, 'storeTemplate'])
+            ->middleware('not-customer')->name('enhancements.templates.store');
+        Route::post('/{project}/enhancement/feedback', [ProjectEnhancementController::class, 'storeFeedback'])
+            ->name('enhancements.feedback.store');
         Route::middleware('not-customer')->group(function (): void {
             Route::get('/{project}/planning', [ProjectPlanningController::class, 'show'])->name('planning');
             Route::put('/{project}/planning/overview', [ProjectPlanningController::class, 'updateOverview'])->name('planning.overview.update');

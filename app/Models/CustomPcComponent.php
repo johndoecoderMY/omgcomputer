@@ -42,6 +42,11 @@ class CustomPcComponent extends Model
             ->withTimestamps();
     }
 
+    public function marketplaceLinks(): HasMany
+    {
+        return $this->hasMany(CustomPcMarketplaceLink::class)->orderBy('id');
+    }
+
     public function billingItems(): HasMany
     {
         return $this->hasMany(BillingDocumentItem::class);

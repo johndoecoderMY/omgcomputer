@@ -7,6 +7,7 @@ use App\Models\RepairTicket;
 use App\Models\RepairTicketUpdate;
 use App\Models\User;
 use App\Services\GitPullService;
+use Database\Seeders\PlannerRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Process;
@@ -19,23 +20,12 @@ class AdminMaintenanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_administrators_can_access_system_maintenance(): void
+    public function test_administrators_can_access_system_maintenance(): void
     {
         Role::findOrCreate('member', 'web');
         Role::findOrCreate('admin', 'web');
         $member = User::factory()->create();
         $member->assignRole('member');
-
-        $this->actingAs($member)->get(route('admin.maintenance.index'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.migrate'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.seed'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.migrate.fresh-seed'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.optimize-clear'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.storage-link'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.clear-repair-ticket-photos'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.build-assets'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.composer-install'))->assertForbidden();
-        $this->actingAs($member)->post(route('admin.maintenance.git-pull'))->assertForbidden();
 
         $admin = User::factory()->create();
         $admin->assignRole('admin');
@@ -54,6 +44,29 @@ class AdminMaintenanceTest extends TestCase
             ->assertSee('Cafe POS project')
             ->assertSee('Install Composer dependencies')
             ->assertSee('Git pull');
+    }
+
+    public function test_members_can_view_and_run_system_maintenance(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $member = User::factory()->create();
+        $member->assignRole('member');
+
+        $this->actingAs($member)->get(route('admin.maintenance.index'))
+            ->assertOk()
+            ->assertSee('System maintenance')
+            ->assertSee(route('admin.backups.index'));
+
+        Artisan::shouldReceive('call')
+            ->once()
+            ->with('optimize:clear', [])
+            ->andReturn(0);
+        Artisan::shouldReceive('output')->once()->andReturn('Cached events cleared.');
+
+        $this->post(route('admin.maintenance.optimize-clear'))
+            ->assertRedirect(route('admin.maintenance.index'))
+            ->assertSessionHas('maintenance_success', 'Laravel optimization caches cleared.')
+            ->assertSessionHas('maintenance_output', 'Cached events cleared.');
     }
 
     public function test_administrator_can_pull_configured_git_branch(): void

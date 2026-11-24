@@ -248,40 +248,14 @@
         </div>
     </div>
 
-    <div class="card p-2 mt-3">
-        <div class="card-header bg-body">
-            <h2 class="h5 mb-1">Website profile links</h2>
-            <p class="small text-body-secondary mb-0">These links appear in the public footer; they do not edit the connected platform profiles.</p>
+    <div class="alert alert-light border d-flex align-items-center justify-content-between gap-3 mt-3">
+        <div>
+            <span class="fw-semibold">Public social profile links</span>
+            <div class="small text-body-secondary">Manage Facebook, Instagram and TikTok links from the company profile.</div>
         </div>
-        <form method="POST" action="{{ route('social-media.profiles.update') }}">
-            @csrf
-            @method('PUT')
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label" for="facebook-url">Facebook link</label>
-                        <input class="form-control" id="facebook-url" name="facebook_url" type="url" maxlength="255"
-                            value="{{ old('facebook_url', $companyProfile->facebook_url) }}" placeholder="https://www.facebook.com/your-page">
-                        @error('facebook_url')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="instagram-url">Instagram link</label>
-                        <input class="form-control" id="instagram-url" name="instagram_url" type="url" maxlength="255"
-                            value="{{ old('instagram_url', $companyProfile->instagram_url) }}" placeholder="https://www.instagram.com/your-profile/">
-                        @error('instagram_url')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="tiktok-url">TikTok link</label>
-                        <input class="form-control" id="tiktok-url" name="tiktok_url" type="url" maxlength="255"
-                            value="{{ old('tiktok_url', $companyProfile->tiktok_url) }}" placeholder="https://www.tiktok.com/@your-profile">
-                        @error('tiktok_url')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
-                    </div>
-                </div>
-            </div>
-            <div class="card-footer bg-body text-end">
-                <button class="btn btn-outline-primary" type="submit"><span class="bi bi-save me-2" aria-hidden="true"></span>Save website links</button>
-            </div>
-        </form>
+        <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.company-profile.edit') }}">
+            <span class="bi bi-building me-1" aria-hidden="true"></span>Manage company profile
+        </a>
     </div>
 </div>
 @endsection

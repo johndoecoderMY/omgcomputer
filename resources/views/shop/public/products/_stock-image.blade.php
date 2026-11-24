@@ -8,6 +8,15 @@
         default => 'assets/img/omg/computer-repair-placeholder.svg',
     };
 @endphp
+@if (filled($product->images[0] ?? null))
+    <img
+        class="{{ $class ?? 'w-100 h-100 object-fit-cover' }}"
+        src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($product->images[0]) }}"
+        alt="{{ $product->name }}"
+        loading="lazy"
+        decoding="async"
+    >
+@else
 <img
     class="{{ $class ?? 'w-100 h-100 object-fit-cover' }}"
     src="{{ asset($imagePath) }}"
@@ -15,3 +24,4 @@
     loading="lazy"
     decoding="async"
 >
+@endif

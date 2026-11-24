@@ -158,6 +158,7 @@
             <a href="{{ route('projects.calendar', $project) }}"><i class="bi bi-calendar3 bi-fw me-2"></i>Project calendar</a>
             <a href="#project-schedule"><i class="bi bi-calendar-plus bi-fw me-2"></i>Schedule event</a>
             <a href="{{ route('projects.planning', $project) }}"><i class="bi bi-diagram-3 bi-fw me-2"></i>Planning workspace</a>
+            <a href="{{ route('projects.enhancements', $project) }}"><i class="bi bi-kanban bi-fw me-2"></i>Project workspace</a>
             <a href="{{ route('projects.tasks.create', $project) }}" data-project-ajax-modal><i class="bi bi-plus bi-fw me-2"></i>Add task</a>
             <a href="{{ route('customers.create', ['project_id' => $project->id]) }}"><i class="bi bi-person-plus bi-fw me-2"></i>Add customer</a>
         </x-slot:actions>

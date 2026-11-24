@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('custom_pc_build_drafts')) {
+            return;
+        }
+
         Schema::create('custom_pc_build_drafts', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
@@ -16,7 +20,6 @@ return new class extends Migration
             $table->string('customer_name')->nullable();
             $table->json('form_data');
             $table->timestamps();
-            $table->index(['customer_name', 'updated_at']);
         });
     }
 

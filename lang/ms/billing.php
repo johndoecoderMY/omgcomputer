@@ -95,6 +95,8 @@ return [
         'payment_method_card' => 'Kad',
         'payment_method_bank_transfer' => 'Pindahan bank',
         'payment_method_online' => 'Dalam talian',
+        'payment_method_duitnow' => 'DuitNow',
+        'payment_method_spaylater' => 'SPayLater',
         'payment_method_other' => 'Lain-lain',
     ],
     'project_terms' => [

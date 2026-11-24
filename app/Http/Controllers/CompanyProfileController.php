@@ -82,8 +82,6 @@ class CompanyProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'website_url' => ['nullable', 'url:http,https', 'max:255'],
-            'bank_name' => ['nullable', 'string', 'max:255'],
-            'bank_account_number' => ['nullable', 'string', 'max:100'],
             'facebook_url' => [
                 'nullable',
                 'url:http,https',
@@ -92,13 +90,42 @@ class CompanyProfileController extends Controller
                     if ($value === null || $value === '') {
                         return;
                     }
-
                     $host = strtolower((string) parse_url((string) $value, PHP_URL_HOST));
                     if (! in_array($host, ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.me'], true)) {
                         $fail('The Facebook page URL must use facebook.com or fb.me.');
                     }
                 },
             ],
+            'instagram_url' => [
+                'nullable',
+                'url:http,https',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $host = strtolower((string) parse_url((string) $value, PHP_URL_HOST));
+                    if (! in_array($host, ['instagram.com', 'www.instagram.com'], true)) {
+                        $fail('The Instagram profile URL must use instagram.com.');
+                    }
+                },
+            ],
+            'tiktok_url' => [
+                'nullable',
+                'url:http,https',
+                'max:255',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $host = strtolower((string) parse_url((string) $value, PHP_URL_HOST));
+                    if (! in_array($host, ['tiktok.com', 'www.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com'], true)) {
+                        $fail('The TikTok profile URL must use tiktok.com.');
+                    }
+                },
+            ],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bank_account_number' => ['nullable', 'string', 'max:100'],
         ]);
 
         $profile = CompanyProfile::query()->firstOrNew(['id' => 'primary']);
