@@ -29,6 +29,8 @@ class ProfileTest extends TestCase
             ->assertSee('Overview')
             ->assertSee('Edit profile')
             ->assertSee('Take photo')
+            ->assertDontSee('class="form-control is-invalid"', false)
+            ->assertDontSee('@error', false)
             ->assertSee('Security')
             ->assertSee('Settings')
             ->assertSee('Activity')

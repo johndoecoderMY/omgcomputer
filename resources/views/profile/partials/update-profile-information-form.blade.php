@@ -5,7 +5,8 @@
     <div class="row g-3">
         <div class="col-12">
             <label class="form-label" for="photo">Profile photo</label>
-            <x-image-upload-input id="photo" name="photo" :multiple="false" :required="false" input-class="@error('photo') is-invalid @enderror" />
+            <x-image-upload-input id="photo" name="photo" :multiple="false" :required="false"
+                :input-class="$errors->has('photo') ? 'is-invalid' : ''" />
             <div class="form-text">Upload a JPG, PNG, or WebP image up to 10 MB.</div>
             @error('photo')<div class="invalid-feedback">{{ $message }}</div>@enderror
             @if ($user->profile_photo_path)
@@ -29,7 +30,7 @@
         </div>
         <div class="col-md-6">
             <label class="form-label" for="phone">Phone number</label>
-            <x-phone-input class="@error('phone') is-invalid @enderror" id="phone" name="phone"
+            <x-phone-input :class="$errors->has('phone') ? 'is-invalid' : ''" id="phone" name="phone"
                 :value="old('phone', $user->phone)" maxlength="50" />
             @error('phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>

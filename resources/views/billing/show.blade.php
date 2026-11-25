@@ -237,29 +237,29 @@
                         <div class="card-header fw-semibold">Related records</div>
                         <div class="list-group list-group-flush">
                             @if ($relatedProject)
-                                <a class="list-group-item list-group-item-action" href="{{ route('projects.show', $relatedProject) }}">
+                                <a class="list-group-item list-group-item-action fw-semibold text-primary" href="{{ route('projects.show', $relatedProject) }}">
                                     <span class="bi bi-kanban me-2" aria-hidden="true"></span>Project: {{ $relatedProject->name }}
                                 </a>
                             @endif
                             @if ($document->repairTicket)
-                                <a class="list-group-item list-group-item-action" href="{{ route('tickets.show', $document->repairTicket) }}">
+                                <a class="list-group-item list-group-item-action fw-semibold text-primary" href="{{ route('tickets.show', $document->repairTicket) }}">
                                     <span class="bi bi-ticket-perforated me-2" aria-hidden="true"></span>Repair ticket: {{ $document->repairTicket->ticket_number }}
                                 </a>
                             @endif
                             @unless (auth()->user()->hasRole('customer'))
                                 @if ($customerRecord)
-                                    <a class="list-group-item list-group-item-action" href="{{ route('customers.show', $customerRecord) }}">
+                                    <a class="list-group-item list-group-item-action fw-semibold text-primary" href="{{ route('customers.show', $customerRecord) }}">
                                         <span class="bi bi-person-lines-fill me-2" aria-hidden="true"></span>Customer record: {{ $customerRecord->name }}
                                     </a>
                                 @endif
                                 @if ($customerAccount)
-                                    <a class="list-group-item list-group-item-action" href="{{ route('members.show', $customerAccount) }}">
+                                    <a class="list-group-item list-group-item-action fw-semibold text-primary" href="{{ route('members.show', $customerAccount) }}">
                                         <span class="bi bi-person-badge me-2" aria-hidden="true"></span>Customer account: {{ $customerAccount->name }}
                                     </a>
                                 @endif
                             @endunless
                             @foreach ($relatedBookings as $booking)
-                                <a class="list-group-item list-group-item-action" href="{{ route('bookings.show', $booking) }}">
+                                <a class="list-group-item list-group-item-action fw-semibold text-primary" href="{{ route('bookings.show', $booking) }}">
                                     <span class="bi bi-calendar-event me-2" aria-hidden="true"></span>
                                     Booking: {{ $booking->reference }} · {{ $booking->starts_at->format('M j, Y g:i A') }}
                                 </a>

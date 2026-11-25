@@ -1601,6 +1601,7 @@ class BillingInventoryReportsTest extends TestCase
             ->assertSee(route('bookings.show', $booking), false)
             ->assertSee(route('customers.show', $customerRecord), false)
             ->assertSee(route('members.show', $account), false)
+            ->assertSee('fw-semibold text-primary', false)
             ->assertSee(route('billing.documents.show', $quotation), false)
             ->assertSee($quotation->number)
             ->assertSee($invoice->number)
