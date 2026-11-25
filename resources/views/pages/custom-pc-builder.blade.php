@@ -13,6 +13,12 @@
                 linear-gradient(180deg, #fff 0%, #fffaf7 100%);
         }
 
+        [data-bs-theme="dark"] .pc-builder-hero {
+            background:
+                radial-gradient(circle at 85% 20%, rgba(243, 67, 3, .16), transparent 28rem),
+                linear-gradient(180deg, #0d1523 0%, #17110f 100%);
+        }
+
         .pc-builder-kicker {
             color: #b83400;
             letter-spacing: .12em;
@@ -128,6 +134,24 @@
             background: rgba(243, 67, 3, .1);
             color: #b83400;
             font-size: 1.25rem;
+        }
+
+        [data-bs-theme="dark"] .pc-builder-kicker,
+        [data-bs-theme="dark"] .pc-builder-feature-icon {
+            color: #ff9a62;
+        }
+
+        [data-bs-theme="dark"] .pc-builder-feature-icon {
+            background: rgba(243, 67, 3, .16);
+        }
+
+        [data-bs-theme="dark"] #build-process {
+            background: #111827 !important;
+        }
+
+        [data-bs-theme="dark"] .pc-builder-scene {
+            border-color: rgba(255, 255, 255, .1);
+            box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, .38);
         }
 
         @media (max-width: 575.98px) {

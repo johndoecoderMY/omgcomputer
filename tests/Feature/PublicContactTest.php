@@ -239,6 +239,8 @@ class PublicContactTest extends TestCase
         $this->get(route('custom-pc-builder.public'))
             ->assertOk()
             ->assertSee('<title>Custom PC Builder | OMG Computer</title>', false)
+            ->assertSee('[data-bs-theme="dark"] .pc-builder-hero', false)
+            ->assertSee('[data-bs-theme="dark"] #build-process', false)
             ->assertSee('Preview your PC style. We’ll help plan the build.')
             ->assertSee('visual sample, not a live part selector')
             ->assertSee('No component knowledge is needed.')
