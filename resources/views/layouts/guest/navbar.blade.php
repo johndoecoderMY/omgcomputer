@@ -16,10 +16,11 @@
                         <span class="bi bi-shop me-1" aria-hidden="true"></span>{{ __('Shop') }}
                     </a>
                 </li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#services">{{ __('Services') }}</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#website-pricing">{{ __('Website') }}</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#faq">{{ __('Q&A') }}</a></li>
-                <li class="nav-item"><a class="nav-link px-lg-2" href="{{ url('/') }}#contact">{{ __('Contact Us') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2 text-center text-lg-start" href="{{ route('about') }}">{{ __('About us') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2 text-center text-lg-start" href="{{ url('/') }}#services">{{ __('Services') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2 text-center text-lg-start" href="{{ url('/') }}#website-pricing">{{ __('Website') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2 text-center text-lg-start" href="{{ url('/') }}#faq">{{ __('Q&A') }}</a></li>
+                <li class="nav-item"><a class="nav-link px-lg-2 text-center text-lg-start" href="{{ url('/') }}#contact">{{ __('Contact Us') }}</a></li>
                 <li class="nav-item my-2 my-lg-0 ms-lg-4"><a class="btn btn-primary btn-sm rounded-pill px-3 py-1" href="{{ route('bookings.create') }}">{{ __('Book a service') }}</a></li>
                 <li class="nav-item dropdown my-2 my-lg-0 ms-lg-2">
                     <button class="nav-link dropdown-toggle border-0 bg-transparent" id="guest-settings-menu" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="{{ __('Settings') }}">

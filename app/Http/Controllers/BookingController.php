@@ -253,7 +253,7 @@ class BookingController extends Controller
         $time = $request->validate([
             'start_time' => [
                 'required',
-                Rule::in($this->availableSlots($bookingDate)),
+                'date_format:H:i',
             ],
         ]);
         $data = [...$data, ...$time];
@@ -266,7 +266,7 @@ class BookingController extends Controller
             throw ValidationException::withMessages(['start_time' => 'Choose a future appointment during business hours.']);
         }
         if (! in_array($data['start_time'], $this->availableSlots($start), true)) {
-            throw ValidationException::withMessages(['start_time' => 'That appointment has just been taken. Choose another time.']);
+            throw ValidationException::withMessages(['start_time' => 'That appointment is no longer available. Choose another time.']);
         }
 
         $service = ProductService::query()
@@ -311,7 +311,7 @@ class BookingController extends Controller
             });
         } catch (QueryException $exception) {
             if (Booking::query()->where('starts_at', $start->copy()->setTimezone('UTC'))->exists()) {
-                throw ValidationException::withMessages(['start_time' => 'That appointment has just been taken. Choose another time.']);
+                throw ValidationException::withMessages(['start_time' => 'That appointment is no longer available. Choose another time.']);
             }
 
             throw $exception;

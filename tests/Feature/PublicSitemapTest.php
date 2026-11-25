@@ -48,6 +48,7 @@ class PublicSitemapTest extends TestCase
             ->assertHeader('content-type', 'application/xml; charset=UTF-8')
             ->assertSee('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">', false)
             ->assertSee('<loc>'.url('/').'</loc>', false)
+            ->assertSee('<loc>'.route('about').'</loc>', false)
             ->assertSee('<loc>'.route('shop.public').'</loc>', false)
             ->assertSee('<loc>'.route('website-previews.index').'</loc>', false)
             ->assertSee(route('website-previews.concepts.show', 'landing-page'), false)

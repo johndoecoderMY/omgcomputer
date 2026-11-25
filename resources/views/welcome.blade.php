@@ -254,6 +254,7 @@
                 <div class="col-lg-10 border-top pt-4 text-center">
                     <span class="text-primary fw-bold text-uppercase fs-10">{{ __('About OMG Computer') }}</span>
                     <p class="text-700 mt-2 mb-0">{{ __('Friendly local support for home and business users, with honest recommendations and practical solutions—without the jargon or pressure.') }}</p>
+                    <a class="btn btn-outline-primary rounded-pill px-4 mt-3" href="{{ route('about') }}">{{ __('Get to know us') }} <span class="bi bi-arrow-right ms-1" aria-hidden="true"></span></a>
                 </div>
             </div>
         </div>

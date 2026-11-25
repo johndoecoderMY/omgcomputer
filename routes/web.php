@@ -106,6 +106,7 @@ Route::post('/track-repair', [RepairTicketController::class, 'track'])
 Route::get('/sitemap.xml', function () {
     $urls = collect([
         ['loc' => url('/')],
+        ['loc' => route('about')],
         ['loc' => route('bookings.create')],
         ['loc' => route('shop.public')],
         ['loc' => route('custom-pc-builder.public')],
@@ -143,7 +144,9 @@ Route::get('/sitemap.xml', function () {
         'Content-Type' => 'application/xml; charset=UTF-8',
     ]);
 })->name('sitemap');
-Route::redirect('/about', '/#about')->name('about');
+Route::view('/about', 'pages.about')
+    ->middleware(SetPublicLocale::class)
+    ->name('about');
 Route::redirect('/help', '/#help')->name('help');
 Route::redirect('/contact', '/#contact')->name('contact');
 Route::view('/privacy', 'pages.privacy')->middleware(SetPublicLocale::class)->name('privacy');

@@ -379,7 +379,9 @@ class BookingTest extends TestCase
 
         $this->from(route('bookings.create', ['date' => $dateString]))
             ->post(route('bookings.store'), $data)
-            ->assertSessionHasErrors('start_time');
+            ->assertSessionHasErrors([
+                'start_time' => 'That appointment is no longer available. Choose another time.',
+            ]);
         $this->assertDatabaseCount('bookings', 1);
 
         $this->seed(PlannerRoleSeeder::class);

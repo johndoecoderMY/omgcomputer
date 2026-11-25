@@ -47,7 +47,7 @@
                     <div class="col-6 col-md-3">
                         <h2 class="h6 text-uppercase text-white opacity-85 mb-3">{{ __('Company') }}</h2>
                         <ul class="list-unstyled mb-0">
-                            <li class="mb-2"><a class="link-600" href="{{ url('/') }}#about">{{ __('About us') }}</a></li>
+                            <li class="mb-2"><a class="link-600" href="{{ route('about') }}">{{ __('About us') }}</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#contact">{{ __('Contact') }}</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#help">{{ __('Help center') }}</a></li>
                             <li class="mb-2"><a class="link-600" href="{{ url('/') }}#faq">{{ __('Frequently asked questions') }}</a></li>
