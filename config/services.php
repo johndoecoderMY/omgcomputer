@@ -95,6 +95,10 @@ return [
             && (filled(env('CHIP_BRAND_ID')) || filled(env('CHIP_BRAND_ID_TEST'))),
     ],
 
+    'shop' => [
+        'maintenance' => env('SHOP_MAINTENANCE', false),
+    ],
+
     'marketplaces' => [
         'shopee' => [
             'partner_id' => env('SHOPEE_PARTNER_ID'),

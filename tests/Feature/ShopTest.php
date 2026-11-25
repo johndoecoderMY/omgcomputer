@@ -30,6 +30,53 @@ class ShopTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('services.shop.maintenance', false);
+    }
+
+    public function test_shop_maintenance_blocks_public_and_customer_purchase_routes(): void
+    {
+        config()->set('services.shop.maintenance', true);
+
+        $this->get(route('shop.public'))
+            ->assertServiceUnavailable()
+            ->assertSee('Our shop is coming soon');
+
+        $this->seed(PlannerRoleSeeder::class);
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $this->actingAs($customer)
+            ->get(route('shop.cart'))
+            ->assertServiceUnavailable()
+            ->assertSee('Our shop is coming soon');
+    }
+
+    public function test_staff_can_delete_a_shop_product(): void
+    {
+        $staff = $this->staffUser();
+        $product = InventoryPart::query()->create([
+            'name' => 'Product to delete',
+            'sku' => 'DELETE-001',
+            'type' => 'other',
+            'description' => 'Temporary shop product.',
+            'selling_price' => 25,
+            'cost_price' => 10,
+            'stock_quantity' => 2,
+            'is_for_sale' => true,
+        ]);
+
+        $this->actingAs($staff)
+            ->delete(route('shop.products.destroy', $product))
+            ->assertRedirect(route('shop.products.index'))
+            ->assertSessionHas('success', 'Shop product Product to delete deleted.');
+
+        $this->assertSoftDeleted('inventory_parts', ['id' => $product->id]);
+        $this->assertNull(InventoryPart::query()->find($product->id));
+    }
+
     public function test_self_test_checklist_is_admin_only_and_covers_priority_journeys(): void
     {
         $this->get(route('self-test.index'))->assertRedirect(route('login'));
@@ -1519,6 +1566,7 @@ class ShopTest extends TestCase
         ])->assertRedirect(route('shop.products.index'));
 
         $product = InventoryPart::query()->firstOrFail();
+        $product->update(['images' => ['shop-products/test-product.jpg']]);
         $this->assertTrue($product->is_for_sale);
         $this->assertDatabaseHas('inventory_movements', [
             'inventory_part_id' => $product->id,
@@ -1554,6 +1602,7 @@ class ShopTest extends TestCase
         ]))->assertOk()
             ->assertJsonPath('recordsTotal', 1)
             ->assertJsonPath('data.0.sku', 'SHOP-SSD-01')
+            ->assertJsonPath('data.0.product', fn (string $product): bool => str_contains($product, '<img ') && str_contains($product, 'shop-products/test-product.jpg'))
             ->assertJsonPath('data.0.actions', fn (string $actions): bool => str_contains($actions, 'data-bs-target="#shop-stock-modal"'));
         $this->actingAs($user)->get(route('shop.products.grid'))
             ->assertOk()

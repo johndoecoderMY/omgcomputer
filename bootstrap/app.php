@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureNotCustomer;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureWorkspacePermission;
 use App\Http\Middleware\SetToastContext;
+use App\Http\Middleware\ShopMaintenance;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'shop.maintenance' => ShopMaintenance::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

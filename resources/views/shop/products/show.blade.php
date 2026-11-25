@@ -7,6 +7,12 @@
     <x-page-header eyebrow="E-commerce / Products" :title="$product->name" :back-url="route('shop.products.index')" back-label="Back to products">
         <x-slot name="actions">
             <a class="btn btn-outline-primary" href="{{ route('shop.products.edit', $product) }}"><i class="bi bi-pencil me-2"></i>Edit product</a>
+            <form method="POST" action="{{ route('shop.products.destroy', $product) }}"
+                onsubmit="return confirm('Delete {{ $product->name }}? It will be removed from the public shop.');">
+                @csrf
+                @method('DELETE')
+                <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash me-2"></i>Delete product</button>
+            </form>
         </x-slot>
     </x-page-header>
     <div class="row g-3">

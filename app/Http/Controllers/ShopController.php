@@ -584,12 +584,24 @@ class ShopController extends Controller
                 }),
             ],
         ))
-            ->addColumn('product', fn (InventoryPart $part): string => sprintf(
-                '<div class="d-flex align-items-center gap-3"><span class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary flex-shrink-0" style="width: 3.5rem; height: 3.5rem"><i class="bi bi-box2" aria-hidden="true"></i></span><div><a class="fw-semibold text-body text-decoration-none" href="%s">%s</a><div class="small text-body-secondary">%s</div></div></div>',
-                e(route('shop.products.show', $part)),
-                e($part->name),
-                e($part->sku ?: 'No SKU'),
-            ))
+            ->addColumn('product', function (InventoryPart $part): string {
+                $image = $part->images[0] ?? null;
+                $thumbnail = filled($image)
+                    ? sprintf(
+                        '<img class="rounded object-fit-cover" src="%s" alt="%s" style="width:3.5rem;height:3.5rem;" loading="lazy">',
+                        e(Storage::disk('public')->url($image)),
+                        e($part->name),
+                    )
+                    : '<span class="d-flex align-items-center justify-content-center rounded bg-body-tertiary text-primary flex-shrink-0" style="width:3.5rem;height:3.5rem"><i class="bi bi-box2" aria-hidden="true"></i></span>';
+
+                return sprintf(
+                    '<div class="d-flex align-items-center gap-3">%s<div><a class="fw-semibold text-body text-decoration-none" href="%s">%s</a><div class="small text-body-secondary">%s</div></div></div>',
+                    $thumbnail,
+                    e(route('shop.products.show', $part)),
+                    e($part->name),
+                    e($part->sku ?: 'No SKU'),
+                );
+            })
             ->addColumn('category', fn (InventoryPart $part): string => e(InventoryPart::TYPES[$part->type] ?? $part->type))
             ->editColumn('stock_quantity', fn (InventoryPart $part): string => sprintf(
                 '<span class="text-%s fw-semibold">%d</span>',
@@ -603,11 +615,14 @@ class ShopController extends Controller
                 $part->is_for_sale ? 'Listed' : 'Hidden',
             ))
             ->addColumn('actions', fn (InventoryPart $part): string => sprintf(
-                '<div class="d-flex flex-wrap gap-1"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shop-stock-modal" data-stock-action="%s" data-stock-name="%s" data-stock-current="%d"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Adjust stock</button><a class="btn btn-sm btn-falcon-default" href="%s" aria-label="Edit %s"><i class="bi bi-pencil" aria-hidden="true"></i></a></div>',
+                '<div class="d-flex flex-wrap gap-1"><button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#shop-stock-modal" data-stock-action="%s" data-stock-name="%s" data-stock-current="%d"><i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Adjust stock</button><a class="btn btn-sm btn-falcon-default" href="%s" aria-label="Edit %s"><i class="bi bi-pencil" aria-hidden="true"></i></a><form method="POST" action="%s" onsubmit="return confirm(\'Delete this shop product? This cannot be undone.\');" class="d-inline">%s<input type="hidden" name="_method" value="DELETE"><button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Delete %s"><i class="bi bi-trash" aria-hidden="true"></i></button></form></div>',
                 e(route('shop.products.stock', $part)),
                 e($part->name),
                 $part->stock_quantity,
                 e(route('shop.products.edit', $part)),
+                e($part->name),
+                e(route('shop.products.destroy', $part)),
+                csrf_field(),
                 e($part->name),
             ))
             ->rawColumns(['product', 'stock_quantity', 'sale_status', 'actions'])
@@ -778,6 +793,16 @@ class ShopController extends Controller
         $this->updateProductImages($product, $request);
 
         return redirect()->route('shop.products.show', $product)->with('success', 'Shop product updated.');
+    }
+
+    public function destroyProduct(InventoryPart $product): RedirectResponse
+    {
+        $name = $product->name;
+        $product->upgradeOptions()->detach();
+        $product->delete();
+
+        return redirect()->route('shop.products.index')
+            ->with('success', 'Shop product '.$name.' deleted.');
     }
 
     public function adjustProductStock(Request $request, InventoryPart $product, InventoryStock $stock): RedirectResponse

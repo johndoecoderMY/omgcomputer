@@ -94,6 +94,14 @@
                                         title="Adjust quantity" aria-label="Adjust stock for {{ $product->name }}">
                                         <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
                                     </button>
+                                    <form method="POST" action="{{ route('shop.products.destroy', $product) }}"
+                                        onsubmit="return confirm('Delete {{ $product->name }}? It will be removed from the public shop.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-sm btn-outline-danger" type="submit" title="Delete product" aria-label="Delete {{ $product->name }}">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </article>

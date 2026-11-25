@@ -240,7 +240,7 @@ Route::get('/shared/receipts/{payment}/pdf', [BillingController::class, 'guestRe
     ->middleware('throttle:30,1')
     ->name('billing.guest.receipts.pdf');
 
-Route::middleware(SetPublicLocale::class)->controller(ShopController::class)->group(function (): void {
+Route::middleware([SetPublicLocale::class, 'shop.maintenance'])->controller(ShopController::class)->group(function (): void {
     Route::get('/shop', 'publicProductsGrid')->name('shop.public');
     Route::get('/shop/item/{product}', 'publicProductDetails')->name('shop.public.products.show');
 });
@@ -440,6 +440,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/products/{product}/stock', 'adjustProductStock')->name('products.stock');
         Route::get('/products/{product}/edit', 'editProduct')->name('products.edit');
         Route::put('/products/{product}', 'updateProduct')->name('products.update');
+        Route::delete('/products/{product}', 'destroyProduct')->name('products.destroy');
         Route::get('/products/{product}', 'showProduct')->name('products.show');
         Route::get('/orders', 'orders')->name('orders.index');
         Route::get('/orders/datatable', 'ordersDatatable')->name('orders.datatable');
@@ -453,17 +454,17 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
 
     Route::get('/shop/chip-return/{uuid}', [ShopController::class, 'chipReturn'])->name('shop.chip.return');
     Route::middleware('role:customer')->controller(ShopController::class)->group(function (): void {
-        Route::get('/panel/shop', 'publicProductsGrid')->name('shop.panel');
-        Route::get('/panel/shop/products/{product}', 'publicProductDetails')->name('shop.panel.products.show');
+        Route::get('/panel/shop', 'publicProductsGrid')->middleware('shop.maintenance')->name('shop.panel');
+        Route::get('/panel/shop/products/{product}', 'publicProductDetails')->middleware('shop.maintenance')->name('shop.panel.products.show');
     });
     Route::prefix('shop')->name('shop.')->middleware('role:customer')->controller(ShopController::class)->group(function (): void {
-        Route::get('/products/{product}/purchase', 'beginProductPurchase')->name('products.purchase');
-        Route::get('/cart', 'cart')->name('cart');
-        Route::post('/cart/items/{product}', 'addToCart')->name('cart.add');
-        Route::put('/cart', 'updateCart')->name('cart.update');
-        Route::delete('/cart/items/{product}', 'removeFromCart')->name('cart.remove');
-        Route::get('/checkout', 'checkout')->name('checkout');
-        Route::post('/checkout', 'placeOrder')->name('checkout.place');
+        Route::get('/products/{product}/purchase', 'beginProductPurchase')->middleware('shop.maintenance')->name('products.purchase');
+        Route::get('/cart', 'cart')->middleware('shop.maintenance')->name('cart');
+        Route::post('/cart/items/{product}', 'addToCart')->middleware('shop.maintenance')->name('cart.add');
+        Route::put('/cart', 'updateCart')->middleware('shop.maintenance')->name('cart.update');
+        Route::delete('/cart/items/{product}', 'removeFromCart')->middleware('shop.maintenance')->name('cart.remove');
+        Route::get('/checkout', 'checkout')->middleware('shop.maintenance')->name('checkout');
+        Route::post('/checkout', 'placeOrder')->middleware('shop.maintenance')->name('checkout.place');
         Route::get('/tracking', 'customerTracking')->name('tracking');
         Route::get('/my-orders', 'customerOrders')->name('my-orders.index');
         Route::get('/my-orders/{order}', 'customerOrder')->name('my-orders.show');
