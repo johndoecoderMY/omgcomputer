@@ -440,9 +440,9 @@
                         <div class="alert alert-danger d-none" role="alert" data-ticket-form-error></div>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label" for="step-title">Step performed</label>
+                                <label class="form-label" for="step-title">Step performed <span class="text-body-secondary">(optional)</span></label>
                                 <input class="form-control" id="step-title" name="title" maxlength="180"
-                                    placeholder="Example: Inspect charging port" required>
+                                    placeholder="Example: Inspect charging port">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="step-status">Ticket status after step</label>

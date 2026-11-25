@@ -34,7 +34,7 @@
                 </td>
             </tr>
         </table>
-        <h2 style="margin:24px 0 10px;font-size:18px;color:#12263f;">{{ __('billing.pdf.invoice_items') }}</h2>
+        <h2 style="margin:24px 0 10px;font-size:18px;color:#12263f;">{{ __('billing.pdf.items') }}</h2>
         <table role="table" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;font-size:14px;">
             <thead>
                 <tr style="background:#f1f5f9;color:#475569;text-align:left;">

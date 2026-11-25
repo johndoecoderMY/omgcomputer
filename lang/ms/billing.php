@@ -75,7 +75,7 @@ return [
         'payment_method' => 'Kaedah pembayaran',
         'payment_reference' => 'Rujukan pembayaran',
         'payment_date' => 'Tarikh pembayaran',
-        'invoice_items' => 'Item invois',
+        'items' => 'Item',
         'invoice_subtotal' => 'Jumlah kecil invois',
         'invoice_total' => 'Jumlah invois',
         'computer_generated_receipt' => 'Resit ini mengesahkan pembayaran yang direkodkan untuk invois di atas. Ini ialah resit yang dijana oleh komputer.',

@@ -537,7 +537,7 @@ class BillingInventoryReportsTest extends TestCase
         );
     }
 
-    public function test_receipt_email_preview_and_pdf_include_invoice_items_and_keep_payment_amount_distinct(): void
+    public function test_receipt_email_preview_and_pdf_include_items_and_keep_payment_amount_distinct(): void
     {
         $staff = $this->adminUser();
         $document = $this->createIssuedInvoice(

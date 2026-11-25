@@ -740,7 +740,7 @@ class RepairTicketController extends Controller
         abort_if($ticket->status === 'closed', 409, 'Closed repair tickets can only have their status changed.');
 
         $data = $request->validate([
-            'title' => ['required', 'string', 'max:180'],
+            'title' => ['nullable', 'string', 'max:180'],
             'status' => ['required', Rule::in(array_keys(RepairTicket::STATUSES))],
             'notes' => ['nullable', 'string', 'max:5000'],
             'customer_details' => ['nullable', 'string', 'max:5000'],
@@ -762,7 +762,9 @@ class RepairTicketController extends Controller
             collect([$ticket->creator])->merge($ticket->assignees),
             $request->user(),
             'Repair ticket update',
-            sprintf('Repair ticket %s: %s.', $ticket->ticket_number, $update->title),
+            $update->title
+                ? sprintf('Repair ticket %s: %s.', $ticket->ticket_number, $update->title)
+                : sprintf('Repair ticket %s: work step updated.', $ticket->ticket_number),
             route('tickets.show', $ticket),
         );
 

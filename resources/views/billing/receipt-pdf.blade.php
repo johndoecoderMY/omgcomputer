@@ -60,7 +60,7 @@
         </tr>
     </table>
 
-    <h2 style="font-size:13pt;margin:24px 0 8px;color:#145b73">{{ __('billing.pdf.invoice_items') }}</h2>
+    <h2 style="font-size:13pt;margin:24px 0 8px;color:#145b73">{{ __('billing.pdf.items') }}</h2>
     <table class="items">
         <thead>
             <tr>

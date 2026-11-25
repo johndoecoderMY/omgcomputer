@@ -403,6 +403,37 @@ class RepairTicketTest extends TestCase
         $this->assertEquals([$replacement->id], $ticket->fresh()->assignees()->pluck('users.id')->all());
     }
 
+    public function test_repair_step_title_is_optional(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $staff = User::factory()->create();
+        $staff->assignRole('admin');
+        $customer = Customer::query()->create([
+            'name' => 'Optional Step Customer',
+            'email' => 'optional-step@example.test',
+        ]);
+
+        $this->actingAs($staff)->post(route('tickets.store'), [
+            'customer_id' => $customer->id,
+            'device_type' => 'Laptop',
+            'issue_description' => 'No title should be required for this work step.',
+            'priority' => 'normal',
+        ])->assertSessionHasNoErrors();
+
+        $ticket = RepairTicket::query()->firstOrFail();
+        $this->actingAs($staff)->postJson(route('tickets.steps.store', $ticket), [
+            'title' => '',
+            'status' => 'diagnosing',
+            'notes' => 'Checked the power supply.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'diagnosing');
+
+        $step = $ticket->updates()->latest('id')->firstOrFail();
+        $this->assertNull($step->title);
+        $this->assertSame('Checked the power supply.', $step->notes);
+    }
+
     public function test_ticket_photos_and_customer_history_are_saved_and_accessible(): void
     {
         Storage::fake('local');

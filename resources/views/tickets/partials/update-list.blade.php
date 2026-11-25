@@ -3,7 +3,9 @@
         <article class="list-group-item p-3">
             <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
-                    <h3 class="h6 mb-1">{{ $update->title }}</h3>
+                    @if ($update->title)
+                        <h3 class="h6 mb-1">{{ $update->title }}</h3>
+                    @endif
                     <x-status-badge :status="$update->status"
                         :label="$statuses[$update->status] ?? ucfirst($update->status)" />
                 </div>
@@ -14,7 +16,7 @@
                     @unless (auth()->user()->hasRole('customer'))
                         <button class="btn btn-sm btn-outline-primary text-nowrap" type="button"
                             data-bs-toggle="modal" data-bs-target="#ticket-step-photo-modal-{{ $update->id }}"
-                            aria-label="Add photo to {{ $update->title }}">
+                            aria-label="Add photo to {{ $update->title ?: 'repair step' }}">
                             <span class="bi bi-camera me-1" aria-hidden="true"></span>Add photo
                         </button>
                     @endunless
