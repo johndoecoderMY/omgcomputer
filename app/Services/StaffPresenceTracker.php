@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 class StaffPresenceTracker
 {
-    private const ONLINE_WINDOW_SECONDS = 150;
+    private const ONLINE_WINDOW_SECONDS = 300;
 
     public function update(User $user, string $clientId, bool $isActive, bool $realtimeReady): void
     {

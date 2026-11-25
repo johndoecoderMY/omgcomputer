@@ -111,7 +111,7 @@ class StaffPresenceTest extends TestCase
 
         $presence->update($staff, $clientId, true, true);
         $staff->presenceSessions()->firstOrFail()->update([
-            'last_seen_at' => now()->subSeconds(151),
+            'last_seen_at' => now()->subSeconds(301),
         ]);
 
         $this->assertFalse($presence->isActivelyViewing($staff));
