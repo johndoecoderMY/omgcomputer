@@ -1014,7 +1014,10 @@ class ShopController extends Controller
 
         try {
             $response = $chip->createPurchase([
-                'client' => ['email' => $order->customer_email],
+                'client' => [
+                    'email' => $order->customer_email,
+                    'full_name' => $order->customer_name,
+                ],
                 'purchase' => [
                     'currency' => $order->currency,
                     'products' => $order->items->map(fn ($item): array => [

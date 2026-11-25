@@ -213,6 +213,11 @@ class EnsureWorkspacePermission
         if (str_starts_with($name, 'reports.integrations.') || str_starts_with($name, 'marketplace-shops.')) {
             return 'integrations.manage';
         }
+        if (str_starts_with($name, 'admin.company-profile.')) {
+            return $name === 'admin.company-profile.edit'
+                ? 'company_profile.view'
+                : 'company_profile.manage';
+        }
         if (str_starts_with($name, 'expenses.')) {
             return match ($request->route('category')) {
                 'rental' => 'rental.manage',

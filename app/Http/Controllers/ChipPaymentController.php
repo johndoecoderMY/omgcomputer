@@ -226,7 +226,10 @@ class ChipPaymentController extends Controller
 
         try {
             $response = $chip->createPurchase([
-                'client' => ['email' => $clientEmail],
+                'client' => [
+                    'email' => $clientEmail,
+                    'full_name' => $document->customer_name,
+                ],
                 'purchase' => [
                     'currency' => config('services.chip.currency', 'MYR'),
                     'products' => [[

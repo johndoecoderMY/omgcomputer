@@ -383,6 +383,9 @@ class BookingTest extends TestCase
                 'start_time' => 'That appointment is no longer available. Choose another time.',
             ]);
         $this->assertDatabaseCount('bookings', 1);
+        $availability = $this->getJson(route('bookings.availability', ['date' => $dateString]))
+            ->assertOk();
+        $this->assertNotContains('11:00', $availability->json('slots'));
 
         $this->seed(PlannerRoleSeeder::class);
         $staff = User::factory()->create();
@@ -996,6 +999,10 @@ class BookingTest extends TestCase
             ->assertSee('Confirm your booking')
             ->assertSee('Edit details')
             ->assertSee('Confirm booking')
+            ->assertSee('id="booking-confirm-spinner"', false)
+            ->assertSee('let bookingSubmissionInProgress = false;', false)
+            ->assertSee('confirmBookingButton.disabled = true;', false)
+            ->assertSee('if (bookingSubmissionInProgress)', false)
             ->assertSee('bookingConfirmationModal.show()', false)
             ->assertSee('confirmationMap.fitBounds', false)
             ->assertSee('bookingForm.requestSubmit()', false);
@@ -1036,6 +1043,9 @@ class BookingTest extends TestCase
             ->assertSee('availabilityUrl + "?date="', false)
             ->assertSee('timesModal.show()', false)
             ->assertSee('button.className = "btn btn-outline-primary btn-lg"', false)
+            ->assertSee('Checking this time is still available...', false)
+            ->assertSee('That time was just booked. Please choose another available time.', false)
+            ->assertSee('if (!data.slots.includes(slot))', false)
             ->assertSee('bookingTime.value = slot', false)
             ->assertSee('id="booking-date"', false)
             ->assertSee('id="booking-time"', false)

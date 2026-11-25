@@ -230,6 +230,76 @@
                 </div>
             @endif
         </div>
+        @if ($document->type === 'invoice')
+            <div class="row g-3 mb-3">
+                <div class="col-lg-5">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Related records</div>
+                        <div class="list-group list-group-flush">
+                            @if ($relatedProject)
+                                <a class="list-group-item list-group-item-action" href="{{ route('projects.show', $relatedProject) }}">
+                                    <span class="bi bi-kanban me-2" aria-hidden="true"></span>Project: {{ $relatedProject->name }}
+                                </a>
+                            @endif
+                            @if ($document->repairTicket)
+                                <a class="list-group-item list-group-item-action" href="{{ route('tickets.show', $document->repairTicket) }}">
+                                    <span class="bi bi-ticket-perforated me-2" aria-hidden="true"></span>Repair ticket: {{ $document->repairTicket->ticket_number }}
+                                </a>
+                            @endif
+                            @unless (auth()->user()->hasRole('customer'))
+                                @if ($customerRecord)
+                                    <a class="list-group-item list-group-item-action" href="{{ route('customers.show', $customerRecord) }}">
+                                        <span class="bi bi-person-lines-fill me-2" aria-hidden="true"></span>Customer record: {{ $customerRecord->name }}
+                                    </a>
+                                @endif
+                                @if ($customerAccount)
+                                    <a class="list-group-item list-group-item-action" href="{{ route('members.show', $customerAccount) }}">
+                                        <span class="bi bi-person-badge me-2" aria-hidden="true"></span>Customer account: {{ $customerAccount->name }}
+                                    </a>
+                                @endif
+                            @endunless
+                            @foreach ($relatedBookings as $booking)
+                                <a class="list-group-item list-group-item-action" href="{{ route('bookings.show', $booking) }}">
+                                    <span class="bi bi-calendar-event me-2" aria-hidden="true"></span>
+                                    Booking: {{ $booking->reference }} · {{ $booking->starts_at->format('M j, Y g:i A') }}
+                                </a>
+                            @endforeach
+                            @if (! $relatedProject && ! $document->repairTicket && ! $customerRecord && ! $customerAccount && $relatedBookings->isEmpty())
+                                <div class="list-group-item text-body-secondary">No linked project, repair ticket, booking, or customer record.</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Quotation &amp; invoice history</div>
+                        <div class="table-responsive">
+                            <table class="table mb-0 table-bordered align-middle">
+                                <thead><tr><th>Document</th><th>Date</th><th>Status</th><th class="text-end">Total</th></tr></thead>
+                                <tbody>
+                                    @forelse ($relatedDocuments as $relatedDocument)
+                                        <tr>
+                                            <td>
+                                                <a href="{{ route('billing.documents.show', $relatedDocument) }}">{{ $relatedDocument->number }}</a>
+                                                <span class="small text-body-secondary">{{ ucfirst($relatedDocument->type) }}</span>
+                                                @if ($relatedDocument->id === $document->id)
+                                                    <span class="badge text-bg-light border">Current</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $relatedDocument->issue_date?->format('M j, Y') ?? '—' }}</td>
+                                            <td><x-status-badge :status="$relatedDocument->status" :label="str_replace('_', ' ', ucfirst($relatedDocument->status))" /></td>
+                                            <td class="text-end">RM {{ number_format((float) $relatedDocument->total, 2) }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr><td class="text-center text-body-secondary py-4" colspan="4">No related quotations or invoices.</td></tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
     @if ($document->type === 'invoice')
         <div class="row g-3 mb-3">
             @if (auth()->user()->hasRole('admin') && in_array($document->status, ['issued', 'partial', 'part_paid'], true))

@@ -316,7 +316,7 @@ class BookingController extends Controller
 
             throw $exception;
         }
-        $notifier->notifyAdmins(
+        $notifier->notifyStaff(
             null,
             'New booking received',
             sprintf('%s booked %s for %s MYT.', $booking->customer_name, $booking->service_name, $booking->starts_at->setTimezone(self::TIMEZONE)->format('M j, Y g:i A')),

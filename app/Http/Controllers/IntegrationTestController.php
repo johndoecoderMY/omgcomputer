@@ -177,7 +177,12 @@ class IntegrationTestController extends Controller
             'quotation' => [
                 'label' => 'Quotation',
                 'subject' => 'Quotation '.$document->number.' from OMG Computer',
-                'html' => view('emails.quotation', compact('document'))->render(),
+                'html' => view('emails.quotation', [
+                    'document' => $document,
+                    'preview' => true,
+                    'acceptUrl' => '#',
+                    'rejectUrl' => '#',
+                ])->render(),
             ],
             'booking_confirmation' => [
                 'label' => 'Booking confirmed (customer)',

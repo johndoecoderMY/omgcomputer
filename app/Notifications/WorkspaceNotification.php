@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\User;
 use App\Services\BeamsPushNotifier;
+use App\Services\StaffPresenceTracker;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -22,7 +23,8 @@ class WorkspaceNotification extends Notification
 
         if ($notifiable instanceof User
             && $notifiable->receivesPushNotifications()
-            && app(BeamsPushNotifier::class)->isConfigured()) {
+            && app(BeamsPushNotifier::class)->isConfigured()
+            && ! app(StaffPresenceTracker::class)->isActivelyViewing($notifiable)) {
             $channels[] = BeamsPushNotifier::class;
         }
 
@@ -60,5 +62,4 @@ class WorkspaceNotification extends Notification
                 'actionUrl' => $this->url,
             ]);
     }
-
 }

@@ -8,6 +8,7 @@ use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPayment;
 use App\Models\BillingPaymentAttempt;
+use App\Models\Booking;
 use App\Models\ChipSetting;
 use App\Models\Customer;
 use App\Models\InventoryMovement;
@@ -160,6 +161,8 @@ class BillingInventoryReportsTest extends TestCase
         $admin = $this->adminUser();
         $notifiedAdmin = User::factory()->create(['email' => 'billing-notifications@omgcomputer.my']);
         $notifiedAdmin->assignRole('admin');
+        $notifiedMember = User::factory()->create(['email' => 'billing-member@omgcomputer.my']);
+        $notifiedMember->assignRole('member');
         $document = $this->createIssuedInvoice(Project::query()->create(['name' => 'Split payment project']), 1200);
 
         $this->actingAs($admin)->get(route('billing.documents.show', $document))
@@ -206,10 +209,15 @@ class BillingInventoryReportsTest extends TestCase
         Notification::assertSentTo(
             $notifiedAdmin,
             WorkspaceNotification::class,
-            fn (WorkspaceNotification $notification): bool => $notification->title === 'Invoice payment received'
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'Invoice paid'
                 && str_contains($notification->message, 'RM 1,200.00')
                 && str_contains($notification->message, 'Cash, DuitNow, SPayLater')
                 && in_array('mail', $notification->via($notifiedAdmin), true),
+        );
+        Notification::assertSentTo(
+            $notifiedMember,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'Invoice paid',
         );
     }
 
@@ -989,7 +997,12 @@ class BillingInventoryReportsTest extends TestCase
     public function test_customer_acceptance_from_their_account_automatically_creates_and_emails_an_invoice(): void
     {
         Mail::fake();
+        Notification::fake();
         $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $member = User::factory()->create();
+        $member->assignRole('member');
         $customer = User::factory()->create(['email' => 'account-customer@example.test']);
         $customer->assignRole('customer');
         $project = Project::query()->create([
@@ -1013,6 +1026,19 @@ class BillingInventoryReportsTest extends TestCase
         $invoice = $document->fresh();
         $this->assertSame('invoice', $invoice->type);
         $this->assertSame('issued', $invoice->status);
+        Notification::assertSentTo(
+            $admin,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'Quotation accepted'
+                && str_contains($notification->message, 'was accepted')
+                && str_contains($notification->message, $invoice->number),
+        );
+        Notification::assertSentTo(
+            $member,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'Quotation accepted'
+                && str_contains($notification->message, $invoice->number),
+        );
         Mail::assertSent(
             InvoiceMail::class,
             fn (InvoiceMail $mail): bool => $mail->hasTo($customer->email),
@@ -1265,6 +1291,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame(0.0, (float) $document->fresh()->paid_amount);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
             && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
+            && $request['client']['full_name'] === $document->customer_name
             && $request['purchase']['currency'] === 'MYR'
             && $request['brand_id'] === 'test-brand'
             && $request['purchase']['products'][0]['price'] === 2550
@@ -1347,6 +1374,7 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertNull($attempt->user_id);
         $this->assertSame('pending', $attempt->status);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
+            && $request['client']['full_name'] === $document->customer_name
             && $request['success_redirect'] === route('billing.guest.chip.return', $attempt->uuid)
             && $request['success_callback'] === route('webhooks.chip.collect', $attempt->uuid));
 
@@ -1524,6 +1552,60 @@ class BillingInventoryReportsTest extends TestCase
         $this->assertSame('issued', $quotation->fresh()->status);
         $this->assertStringStartsWith('INV-', $quotation->fresh()->number);
         Mail::assertSent(InvoiceMail::class);
+    }
+
+    public function test_invoice_show_links_related_documents_and_customer_records(): void
+    {
+        $admin = $this->adminUser();
+        $account = User::factory()->create(['email' => 'history-customer@example.test']);
+        $account->assignRole('customer');
+        $project = Project::query()->create([
+            'name' => 'Invoice history project',
+            'customer_user_id' => $account->id,
+        ]);
+        $customerRecord = Customer::query()->create([
+            'project_id' => $project->id,
+            'name' => 'History customer',
+            'email' => $account->email,
+        ]);
+        $ticket = RepairTicket::query()->create([
+            'ticket_number' => 'TKT-HISTORY-001',
+            'customer_id' => $customerRecord->id,
+            'project_id' => $project->id,
+            'issue_description' => 'Invoice history test repair.',
+            'status' => 'new',
+            'priority' => 'normal',
+            'received_at' => now(),
+        ]);
+        $booking = Booking::query()->create([
+            'reference' => 'BK-HISTORY-001',
+            'customer_id' => $customerRecord->id,
+            'repair_ticket_id' => $ticket->id,
+            'customer_name' => $customerRecord->name,
+            'customer_email' => $customerRecord->email,
+            'service_id' => 'repair',
+            'service_name' => 'Computer repair',
+            'starts_at' => now()->addDay(),
+            'duration_minutes' => 60,
+            'status' => 'confirmed',
+        ]);
+        $invoice = $this->createIssuedInvoice($project, 120, customerEmail: $account->email, customerName: $customerRecord->name);
+        $invoice->update(['repair_ticket_id' => $ticket->id, 'project_id' => null]);
+        $quotation = $this->createIssuedInvoice($project, 120, 'quotation', $account->email, $customerRecord->name);
+        $draft = $this->createDraftQuotation($project, $account->email);
+
+        $this->actingAs($admin)->get(route('billing.documents.show', $invoice))
+            ->assertOk()
+            ->assertSee(route('projects.show', $project), false)
+            ->assertSee(route('tickets.show', $ticket), false)
+            ->assertSee(route('bookings.show', $booking), false)
+            ->assertSee(route('customers.show', $customerRecord), false)
+            ->assertSee(route('members.show', $account), false)
+            ->assertSee(route('billing.documents.show', $quotation), false)
+            ->assertSee($quotation->number)
+            ->assertSee($invoice->number)
+            ->assertDontSee($draft->number)
+            ->assertSee('Quotation & invoice history');
     }
 
     public function test_chip_callback_records_payment_idempotently_after_signature_and_status_verification(): void

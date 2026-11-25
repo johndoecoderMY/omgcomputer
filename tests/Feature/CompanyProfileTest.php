@@ -7,6 +7,7 @@ use App\Models\CompanyProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Database\Seeders\CompanyProfileSeeder;
+use Database\Seeders\PlannerRoleSeeder;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -107,13 +108,17 @@ class CompanyProfileTest extends TestCase
         );
     }
 
-    public function test_company_profile_settings_are_admin_only(): void
+    public function test_member_can_read_but_cannot_update_company_profile(): void
     {
+        $this->seed(PlannerRoleSeeder::class);
         $user = User::factory()->create();
-        Role::findOrCreate('member', 'web');
         $user->assignRole('member');
 
-        $this->actingAs($user)->get(route('admin.company-profile.edit'))->assertForbidden();
+        $this->actingAs($user)->get(route('admin.company-profile.edit'))
+            ->assertOk()
+            ->assertSee('SSM registration number')
+            ->assertSee('readonly', false)
+            ->assertDontSee('Save company profile');
         $this->actingAs($user)->put(route('admin.company-profile.update'), [])->assertForbidden();
     }
 

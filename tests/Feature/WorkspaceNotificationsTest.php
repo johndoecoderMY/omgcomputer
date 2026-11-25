@@ -329,7 +329,7 @@ class WorkspaceNotificationsTest extends TestCase
         Notification::assertNotSentTo($actor, WorkspaceNotification::class);
     }
 
-    public function test_new_booking_notification_uses_beams_for_push_enabled_admins(): void
+    public function test_new_booking_notification_uses_beams_for_push_enabled_staff(): void
     {
         $this->seed(PlannerRoleSeeder::class);
         config([
@@ -341,6 +341,8 @@ class WorkspaceNotificationsTest extends TestCase
 
         $admin = User::factory()->create(['email' => 'admin@omgcomputer.my']);
         $admin->assignRole('admin');
+        $member = User::factory()->create(['email' => 'member@omgcomputer.my']);
+        $member->assignRole('member');
         $date = Carbon::now('Asia/Kuala_Lumpur')->addDays(4);
         while ($date->isSunday()) {
             $date->addDay();
@@ -360,6 +362,11 @@ class WorkspaceNotificationsTest extends TestCase
             WorkspaceNotification::class,
             fn (WorkspaceNotification $notification): bool => $notification->title === 'New booking received'
                 && in_array(BeamsPushNotifier::class, $notification->via($admin), true),
+        );
+        Notification::assertSentTo(
+            $member,
+            WorkspaceNotification::class,
+            fn (WorkspaceNotification $notification): bool => $notification->title === 'New booking received',
         );
     }
 

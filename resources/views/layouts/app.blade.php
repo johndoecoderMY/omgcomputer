@@ -9,6 +9,7 @@
         data-notifications-user="{{ auth()->id() }}"
         data-staff-pwa="{{ auth()->user()->hasAnyRole(['admin', 'member']) ? 'true' : 'false' }}"
         data-beams-push-enabled="{{ auth()->user()->receivesPushNotifications() ? 'true' : 'false' }}"
+        data-staff-presence-url="{{ route('staff.presence.update', [], false) }}"
     @endauth
     data-beams-instance-id="{{ config('services.beams.enabled') ? config('services.beams.instance_id') : '' }}"
     data-beams-auth-url="{{ route('beams.auth', [], false) }}"

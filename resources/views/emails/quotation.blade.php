@@ -37,8 +37,8 @@
         <div style="margin-bottom:14px;font-size:16px;font-weight:bold;color:#12263f;">{{ __('billing.email.proceed_prompt') }}</div>
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
             <tr>
-                <td class="email-button-cell" width="50%" style="padding-right:6px;"><a class="email-button" href="{{ $preview ? '#' : $acceptUrl }}" @if ($preview) aria-disabled="true" @endif style="display:block;padding:14px 10px;background:#16805b;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:15px;font-weight:bold;">✓ {{ __('billing.email.accept_quotation') }}</a></td>
-                <td class="email-button-cell" width="50%" style="padding-left:6px;"><a class="email-button" href="{{ $preview ? '#' : $rejectUrl }}" @if ($preview) aria-disabled="true" @endif style="display:block;padding:14px 10px;background:#fff;color:#b42318;text-align:center;text-decoration:none;border:1px solid #d92d20;border-radius:8px;font-size:15px;font-weight:bold;">× {{ __('billing.email.reject_quotation') }}</a></td>
+                <td class="email-button-cell" width="50%" style="padding-right:6px;"><a class="email-button" href="{{ ($preview ?? false) ? '#' : ($acceptUrl ?? '#') }}" @if ($preview ?? false) aria-disabled="true" @endif style="display:block;padding:14px 10px;background:#16805b;color:#fff;text-align:center;text-decoration:none;border-radius:8px;font-size:15px;font-weight:bold;">✓ {{ __('billing.email.accept_quotation') }}</a></td>
+                <td class="email-button-cell" width="50%" style="padding-left:6px;"><a class="email-button" href="{{ ($preview ?? false) ? '#' : ($rejectUrl ?? '#') }}" @if ($preview ?? false) aria-disabled="true" @endif style="display:block;padding:14px 10px;background:#fff;color:#b42318;text-align:center;text-decoration:none;border:1px solid #d92d20;border-radius:8px;font-size:15px;font-weight:bold;">× {{ __('billing.email.reject_quotation') }}</a></td>
             </tr>
         </table>
     </td>

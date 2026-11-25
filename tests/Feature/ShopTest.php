@@ -1643,6 +1643,7 @@ class ShopTest extends TestCase
         $this->assertSame('1 Main Street', $order->customer_address);
         Http::assertSent(fn ($request): bool => $request->url() === 'https://gate.chip-in.asia/api/v1/purchases/'
             && str_contains($request->header('Authorization')[0] ?? '', 'test-secret')
+            && $request['client']['full_name'] === $order->customer_name
             && $request['brand_id'] === 'test-brand');
         $this->assertDatabaseHas('inventory_movements', [
             'inventory_part_id' => $product->id,

@@ -7,6 +7,7 @@ use App\Mail\InvoiceMail;
 use App\Mail\QuotationMail;
 use App\Models\BillingDocument;
 use App\Models\BillingPayment;
+use App\Models\Booking;
 use App\Models\CompanyProfile;
 use App\Models\Customer;
 use App\Models\CustomerMessageTemplate;
@@ -783,8 +784,15 @@ class BillingController extends Controller
             'items.part',
             'payments' => fn ($query) => $query->latest('paid_at'),
             'project.customers',
+            'project.customerAccount',
+            'project.repairTickets.booking',
+            'project.billingDocuments',
             'repairTicket.customer',
             'repairTicket.project.customers',
+            'repairTicket.project.customerAccount',
+            'repairTicket.project.repairTickets.booking',
+            'repairTicket.booking',
+            'repairTicket.billingDocuments',
         ]);
         $guestDocumentUrls = [];
         $guestReceiptUrls = [];
@@ -832,10 +840,61 @@ class BillingController extends Controller
                 : null;
             $customerRecord ??= $projectCustomers->count() === 1 ? $projectCustomers->first() : null;
         }
+        $customerEmail = strtolower(trim((string) $document->customer_email));
+        $customerAccount = ! $request->user()->hasRole('customer') && $customerEmail !== ''
+            ? User::role('customer')->whereRaw('LOWER(TRIM(email)) = ?', [$customerEmail])->first()
+            : null;
+        if (! $request->user()->hasRole('customer') && ! $customerAccount && $project?->customerAccount
+            && ($customerEmail === '' || strtolower(trim((string) $project->customerAccount->email)) === $customerEmail)) {
+            $customerAccount = $project->customerAccount;
+        }
+
+        $relatedDocuments = collect([$document])
+            ->merge($project?->billingDocuments ?? collect())
+            ->merge($document->repairTicket?->billingDocuments ?? collect())
+            ->filter(function (BillingDocument $relatedDocument) use ($customerEmail, $document): bool {
+                if ($relatedDocument->id !== $document->id) {
+                    $sameCustomer = $customerEmail !== ''
+                        ? strtolower(trim((string) $relatedDocument->customer_email)) === $customerEmail
+                        : strtolower(trim((string) $relatedDocument->customer_name)) === strtolower(trim((string) $document->customer_name));
+                    if (! $sameCustomer) {
+                        return false;
+                    }
+                }
+
+                return $relatedDocument->status !== 'draft';
+            })
+            ->unique('id')
+            ->sortByDesc(fn (BillingDocument $relatedDocument) => $relatedDocument->issue_date?->timestamp ?? $relatedDocument->created_at?->timestamp)
+            ->values();
+
+        $relatedBookings = collect([
+            $document->repairTicket?->booking,
+            ...($project?->repairTickets->pluck('booking')->all() ?? []),
+        ]);
+        if ($customerEmail !== '') {
+            $relatedBookings = $relatedBookings->merge(
+                Booking::query()
+                    ->whereRaw('LOWER(TRIM(customer_email)) = ?', [$customerEmail])
+                    ->latest('starts_at')
+                    ->limit(5)
+                    ->get(),
+            );
+        }
+        $relatedBookings = $relatedBookings
+            ->filter()
+            ->unique('id')
+            ->sortByDesc(fn (Booking $booking) => $booking->starts_at?->timestamp)
+            ->take(5)
+            ->values();
 
         return view('billing.show', [
             'document' => $document,
             'customerRecord' => $customerRecord,
+            'customerAccount' => $customerAccount,
+            'relatedProject' => $project,
+            'relatedDocuments' => $relatedDocuments,
+            'relatedBookings' => $relatedBookings,
             'chipEnabled' => $chip->isConfigured(),
             'guestDocumentUrls' => $guestDocumentUrls,
             'guestReceiptUrls' => $guestReceiptUrls,
@@ -942,8 +1001,10 @@ class BillingController extends Controller
         InventoryStock $stock,
         ChipCollect $chip,
         GuestInvoicePaymentLinkService $paymentLinks,
+        WorkspaceNotifier $notifier,
     ): RedirectResponse {
         $user = $request->user();
+        $quotationNumber = $document->number;
         if ($user->hasRole('customer')) {
             abort_unless(in_array($dataStatus = $request->input('status'), ['accepted', 'rejected'], true), 403);
             abort_unless($document->status === 'sent' && $document->type === 'quotation', 422);
@@ -983,6 +1044,13 @@ class BillingController extends Controller
         });
 
         if ($invoice !== null) {
+            $notifier->notifyStaff(
+                $user,
+                'Quotation accepted',
+                sprintf('Quotation %s was accepted and converted into invoice %s.', $quotationNumber, $invoice->number),
+                route('billing.documents.show', $invoice),
+            );
+
             $emailSent = $this->sendBillingDocumentEmail(
                 $invoice,
                 $invoice->customer_email,
@@ -1018,10 +1086,12 @@ class BillingController extends Controller
         InventoryStock $stock,
         ChipCollect $chip,
         GuestInvoicePaymentLinkService $paymentLinks,
+        WorkspaceNotifier $notifier,
     ): View {
         abort_unless($document->type === 'quotation', 404);
         abort_unless(in_array($status, ['accepted', 'rejected'], true), 404);
         abort_unless($document->status === 'sent', 422, 'This quotation has not been sent or has already been responded to.');
+        $quotationNumber = $document->number;
 
         if ($status === 'accepted') {
             $invoice = DB::transaction(function () use ($document, $stock): BillingDocument {
@@ -1041,6 +1111,12 @@ class BillingController extends Controller
                 $this->billingLocale($request),
                 $chip,
                 $paymentLinks,
+            );
+            $notifier->notifyStaff(
+                null,
+                'Quotation accepted',
+                sprintf('Quotation %s was accepted and converted into invoice %s.', $quotationNumber, $invoice->number),
+                route('billing.documents.show', $invoice),
             );
 
             return view('billing.quotation-response', [
@@ -1249,9 +1325,13 @@ class BillingController extends Controller
         $paymentMethods = $payments->pluck('method')->unique()->map(
             fn (string $method): string => __('billing.pdf.payment_method_'.$method),
         )->join(', ');
-        $notifier->notifyAdmins(
+        $document->refresh();
+        $paymentNotificationTitle = $document->status === 'paid'
+            ? 'Invoice paid'
+            : 'Invoice payment received';
+        $notifier->notifyStaff(
             $request->user(),
-            'Invoice payment received',
+            $paymentNotificationTitle,
             sprintf(
                 '%s received RM %s via %s.',
                 $document->number,

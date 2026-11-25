@@ -214,9 +214,111 @@ const pusherCluster = page.dataset.pusherCluster;
 const broadcastingAuthUrl = page.dataset.broadcastingAuthUrl || '/broadcasting/auth';
 const readPrefix = page.dataset.notificationReadPrefix;
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+const staffPresenceUrl = page.dataset.staffPresenceUrl;
 const beamsInstanceId = page.dataset.beamsInstanceId;
 const beamsAuthUrl = page.dataset.beamsAuthUrl;
 const beamsPushEnabled = page.dataset.beamsPushEnabled === 'true';
+let realtimeReady = false;
+let pusherConnected = false;
+let notificationChannelReady = false;
+let updateStaffPresence = () => {};
+
+if (page.dataset.staffPwa === 'true' && staffPresenceUrl && csrfToken) {
+    const roster = document.querySelector('[data-staff-online-roster]');
+    const count = document.querySelector('[data-staff-online-count]');
+    const createClientId = () => {
+        if (window.crypto?.randomUUID) {
+            return window.crypto.randomUUID();
+        }
+
+        const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+        const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    };
+    const clientId = createClientId();
+    let presenceUpdate = Promise.resolve();
+    let presenceInterval = null;
+    updateStaffPresence = (
+        active = document.visibilityState === 'visible' && document.hasFocus(),
+        keepalive = false,
+    ) => {
+        presenceUpdate = presenceUpdate.then(async () => {
+            const response = await fetch(staffPresenceUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    client_id: clientId,
+                    active,
+                    realtime_ready: active && realtimeReady,
+                    include_roster: Boolean(roster && count),
+                }),
+                keepalive,
+            });
+            if (!response.ok) {
+                throw new Error(`Presence update failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+            if (!roster || !count || !Array.isArray(payload.onlineStaff)) {
+                return;
+            }
+
+            roster.replaceChildren();
+            count.textContent = String(payload.onlineStaff.length);
+            if (payload.onlineStaff.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'list-group-item small text-body-secondary';
+                empty.textContent = 'No staff are currently viewing the website.';
+                roster.append(empty);
+                return;
+            }
+
+            payload.onlineStaff.forEach((staff) => {
+                const row = document.createElement('div');
+                row.className = 'list-group-item d-flex justify-content-between align-items-center';
+                const name = document.createElement('span');
+                name.textContent = staff.name;
+                const role = document.createElement('span');
+                role.className = 'small text-body-secondary';
+                role.textContent = staff.role;
+                row.append(name, role);
+                roster.append(row);
+            });
+        }).catch((error) => {
+            console.error('Could not update staff presence.', error);
+        });
+    };
+
+    const syncStaffPresence = () => {
+        const active = document.visibilityState === 'visible' && document.hasFocus();
+        updateStaffPresence(active);
+
+        if (active && presenceInterval === null) {
+            presenceInterval = window.setInterval(() => updateStaffPresence(true), 60000);
+        } else if (!active && presenceInterval !== null) {
+            window.clearInterval(presenceInterval);
+            presenceInterval = null;
+        }
+    };
+
+    syncStaffPresence();
+    window.addEventListener('focus', syncStaffPresence);
+    window.addEventListener('blur', syncStaffPresence);
+    document.addEventListener('visibilitychange', syncStaffPresence);
+    window.addEventListener('pagehide', () => {
+        if (presenceInterval !== null) {
+            window.clearInterval(presenceInterval);
+        }
+        updateStaffPresence(false, true);
+    });
+}
 const needsServiceWorker = userId && (beamsInstanceId || page.dataset.staffPwa === 'true');
 const serviceWorkerPath = beamsInstanceId ? '/service-worker.js' : '/staff-service-worker.js';
 const notificationSoundStorageKey = userId ? `omg-notification-sounds:${userId}` : null;
@@ -930,8 +1032,30 @@ if (userId && pusherKey && pusherCluster && csrfToken) {
         },
     });
 
+    const pusherConnection = window.Echo.connector.pusher.connection;
+    const updateRealtimePresence = () => {
+        realtimeReady = pusherConnected && notificationChannelReady;
+        if (page.dataset.staffPwa === 'true') {
+            updateStaffPresence();
+        }
+    };
+    pusherConnection.bind('state_change', ({ current }) => {
+        pusherConnected = current === 'connected';
+        if (!pusherConnected) {
+            notificationChannelReady = false;
+        }
+        updateRealtimePresence();
+    });
+    pusherConnected = pusherConnection.state === 'connected';
+
     const notificationsChannel = window.Echo.private(`App.Models.User.${userId}`);
+    notificationsChannel.subscribed(() => {
+        notificationChannelReady = true;
+        updateRealtimePresence();
+    });
     notificationsChannel.error((error) => {
+        notificationChannelReady = false;
+        updateRealtimePresence();
         console.error('Pusher notification channel subscription failed.', error);
     });
     notificationsChannel.notification((notification) => {

@@ -8,6 +8,7 @@ use App\Models\FlowChart;
 use App\Models\Project;
 use App\Models\RepairTicket;
 use App\Models\Task;
+use App\Services\StaffPresenceTracker;
 use App\Support\StatusBadge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request, StaffPresenceTracker $presence): View|RedirectResponse
     {
         if ($request->user()->hasRole('customer')) {
             $email = strtolower(trim($request->user()->email));
@@ -118,6 +119,7 @@ class DashboardController extends Controller
                 ->whereIn('category', array_keys(FlowChart::CATEGORIES))
                 ->latest('updated_at')->limit(6)->get(),
             'unreadNotificationCount' => auth()->user()->unreadNotifications()->count(),
+            'onlineStaff' => $presence->onlineStaff(),
         ]);
     }
 }

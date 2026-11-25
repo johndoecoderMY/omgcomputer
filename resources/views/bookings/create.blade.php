@@ -361,7 +361,10 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">{{ __('Edit details') }}</button>
-                                                <button class="btn btn-primary" id="booking-confirm-button" type="button">{{ __('Confirm booking') }}</button>
+                                                <button class="btn btn-primary" id="booking-confirm-button" type="button">
+                                                    <span id="booking-confirm-button-label">{{ __('Confirm booking') }}</span>
+                                                    <span class="spinner-border spinner-border-sm ms-2" id="booking-confirm-spinner" aria-hidden="true" hidden></span>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -576,6 +579,9 @@
                     const bookingConfirmationModalElement = document.getElementById("booking-confirmation-modal");
                     const bookingConfirmationDetails = document.getElementById("booking-confirmation-details");
                     const confirmBookingButton = document.getElementById("booking-confirm-button");
+                    const confirmBookingButtonLabel = document.getElementById("booking-confirm-button-label");
+                    const confirmBookingSpinner = document.getElementById("booking-confirm-spinner");
+                    const bookingSubmittingLabel = @json(__('Booking...'), JSON_UNESCAPED_UNICODE);
                     const bookingConfirmationDate = document.getElementById("booking-confirmation-date");
                     const bookingConfirmationTime = document.getElementById("booking-confirmation-time");
                     const bookingConfirmationLocationSection = document.getElementById("booking-confirmation-location-section");
@@ -1041,10 +1047,53 @@
                                 button.classList.add("active");
                             }
                             button.addEventListener("click", function () {
-                                bookingTime.value = slot;
-                                appointmentSelectionError.hidden = true;
-                                updateAppointmentSummary();
-                                timesModal.hide();
+                                const date = bookingDate.value;
+                                const request = ++availabilityRequest;
+                                availableTimes.querySelectorAll("button").forEach(function (timeButton) {
+                                    timeButton.disabled = true;
+                                });
+                                availabilityMessage.textContent = availabilityMessages.checking;
+
+                                fetch(availabilityUrl + "?date=" + encodeURIComponent(date), {
+                                    headers: { "Accept": "application/json" }
+                                })
+                                    .then(function (response) {
+                                        if (!response.ok) {
+                                            throw new Error(availabilityMessages.loadFailed);
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(function (data) {
+                                        if (request !== availabilityRequest || bookingDate.value !== date) {
+                                            return;
+                                        }
+
+                                        if (bookingTime.value && !data.slots.includes(bookingTime.value)) {
+                                            bookingTime.value = "";
+                                            updateAppointmentSummary();
+                                        }
+
+                                        if (!data.slots.includes(slot)) {
+                                            renderTimes(data.slots);
+                                            availabilityMessage.textContent = data.slots.length
+                                                ? availabilityMessages.taken
+                                                : availabilityMessages.none;
+                                            return;
+                                        }
+
+                                        bookingTime.value = slot;
+                                        appointmentSelectionError.hidden = true;
+                                        updateAppointmentSummary();
+                                        timesModal.hide();
+                                    })
+                                    .catch(function () {
+                                        if (request === availabilityRequest) {
+                                            availableTimes.querySelectorAll("button").forEach(function (timeButton) {
+                                                timeButton.disabled = false;
+                                            });
+                                            availabilityMessage.textContent = availabilityMessages.error;
+                                        }
+                                    });
                             });
                             availableTimes.append(button);
                         });
@@ -1052,9 +1101,11 @@
 
                     const availabilityMessages = {
                         loading: @json(__('Loading available times...'), JSON_UNESCAPED_UNICODE),
+                        checking: @json(__('Checking this time is still available...'), JSON_UNESCAPED_UNICODE),
                         loadFailed: @json(__('Availability could not be loaded.'), JSON_UNESCAPED_UNICODE),
                         choose: @json(__('Choose an available time.'), JSON_UNESCAPED_UNICODE),
                         none: @json(__('No times are available for this date.'), JSON_UNESCAPED_UNICODE),
+                        taken: @json(__('That time was just booked. Please choose another available time.'), JSON_UNESCAPED_UNICODE),
                         error: @json(__('Unable to load available times. Please try again.'), JSON_UNESCAPED_UNICODE),
                     };
                     const calendarMessages = {
@@ -1258,6 +1309,7 @@
                     let availableAppointmentDates = new Set();
                     let calendarAvailabilityFailed = false;
                     let bookingConfirmationAccepted = false;
+                    let bookingSubmissionInProgress = false;
                     const calendar = new FullCalendar.Calendar(calendarEl, {
                         locale: calendarLocale,
                         timeZone: "UTC",
@@ -1397,8 +1449,17 @@
                         }
                     });
                     bookingForm.addEventListener("submit", function (event) {
+                        if (bookingSubmissionInProgress && !bookingConfirmationAccepted) {
+                            event.preventDefault();
+                            return;
+                        }
+
                         if (bookingConfirmationAccepted) {
                             bookingConfirmationAccepted = false;
+                            bookingSubmissionInProgress = true;
+                            confirmBookingButton.disabled = true;
+                            confirmBookingButtonLabel.textContent = bookingSubmittingLabel;
+                            confirmBookingSpinner.hidden = false;
                             return;
                         }
 
@@ -1433,6 +1494,10 @@
                         }
                     });
                     confirmBookingButton.addEventListener("click", function () {
+                        if (bookingSubmissionInProgress) {
+                            return;
+                        }
+
                         bookingConfirmationAccepted = true;
                         bookingForm.requestSubmit();
                         bookingConfirmationAccepted = false;

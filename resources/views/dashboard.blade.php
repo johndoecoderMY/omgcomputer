@@ -111,6 +111,26 @@
             </div>
         </div>
 
+        <div class="card mb-4" data-staff-online-card>
+            <div class="card-header bg-body d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="h5 mb-1 text-primary">Staff currently viewing</h2>
+                    <p class="small text-body-secondary mb-0">Only active, visible staff browser tabs are shown.</p>
+                </div>
+                <span class="badge rounded-pill text-bg-success" data-staff-online-count>{{ $onlineStaff->count() }}</span>
+            </div>
+            <div class="list-group list-group-flush" data-staff-online-roster>
+                @forelse ($onlineStaff as $staff)
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ $staff->name }}</span>
+                        <span class="small text-body-secondary">{{ $staff->hasRole('admin') ? 'Admin' : 'Staff' }}</span>
+                    </div>
+                @empty
+                    <div class="list-group-item small text-body-secondary">No staff are currently viewing the website.</div>
+                @endforelse
+            </div>
+        </div>
+
         <div class="row g-3 mb-4">
             <div class="col-12 col-lg-4">
                 <div class="card h-100 p-2">

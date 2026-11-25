@@ -42,6 +42,7 @@ use App\Http\Controllers\RepairTicketController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SocialMediaController;
+use App\Http\Controllers\StaffPresenceController;
 use App\Http\Controllers\StaffPwaController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TaskController;
@@ -177,6 +178,9 @@ Route::get('/staff.webmanifest', [StaffPwaController::class, 'manifest'])->name(
 
 Route::middleware(['auth', 'password.changed', 'verified', 'role:admin|member'])->group(function (): void {
     Route::get('/staff-service-worker.js', [StaffPwaController::class, 'serviceWorker'])->name('staff-pwa.service-worker');
+    Route::post('/staff/presence', [StaffPresenceController::class, 'update'])
+        ->middleware('throttle:30,1')
+        ->name('staff.presence.update');
     Route::view('/generate-qr-with-logo', 'pages.generate-qr-with-logo')->name('tools.qr-logo');
     Route::view('/qr-generator', 'pages.generate-qr-with-logo')->name('tools.qr-generator');
     Route::get('/reports/teams', [ReportsController::class, 'teams'])->name('reports.teams');
@@ -288,7 +292,7 @@ Route::middleware(['auth', 'password.changed', 'verified', 'workspace.access'])-
         Route::post('/settings/test-smtp', [EmailServerSettingsController::class, 'sendTest'])->name('settings.test-smtp');
         Route::post('/settings/test-imap', [EmailServerSettingsController::class, 'testImap'])->name('settings.test-imap');
     });
-    Route::prefix('admin/company-profile')->name('admin.company-profile.')->middleware('role:admin')->controller(CompanyProfileController::class)->group(function (): void {
+    Route::prefix('admin/company-profile')->name('admin.company-profile.')->controller(CompanyProfileController::class)->group(function (): void {
         Route::get('/', 'edit')->name('edit');
         Route::put('/', 'update')->name('update');
     });

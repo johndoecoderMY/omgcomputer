@@ -134,4 +134,9 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(UserEmailMailbox::class);
     }
+
+    public function presenceSessions(): HasMany
+    {
+        return $this->hasMany(StaffPresenceSession::class);
+    }
 }
