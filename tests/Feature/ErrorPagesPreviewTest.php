@@ -57,4 +57,23 @@ class ErrorPagesPreviewTest extends TestCase
             ->assertSee('Page not found')
             ->assertDontSee('Error page previews');
     }
+
+    public function test_error_pages_follow_the_selected_public_locale(): void
+    {
+        $this->seed(PlannerRoleSeeder::class);
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $this->actingAs($admin)
+            ->withSession(['public_locale' => 'ms'])
+            ->get(route('error-pages.preview', '404'))
+            ->assertNotFound()
+            ->assertSee('Halaman tidak dijumpai');
+
+        $this->actingAs($admin)
+            ->withSession(['public_locale' => 'zh_CN'])
+            ->get(route('error-pages.preview', '403'))
+            ->assertForbidden()
+            ->assertSee('拒绝访问');
+    }
 }

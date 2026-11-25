@@ -18,7 +18,7 @@
                         <div class="card-body text-start">
                             <h2 class="h6 text-primary">Error page previews</h2>
                             <nav class="nav flex-column">
-                                @foreach (['403' => 'Forbidden', '404' => 'Not found', '419' => 'Session expired', '429' => 'Too many requests', '500' => 'Server error', '503' => 'Unavailable'] as $code => $label)
+                                @foreach (['403' => __('Forbidden'), '404' => __('Not found'), '419' => __('Session expired'), '429' => __('Too many requests'), '500' => __('Server error'), '503' => __('Unavailable')] as $code => $label)
                                     <a class="nav-link px-0" href="{{ route('error-pages.preview', $code) }}">{{ $code }} · {{ $label }}</a>
                                 @endforeach
                             </nav>
@@ -38,9 +38,9 @@
                     <h1 class="lead mt-4 text-800 font-sans-serif fw-semi-bold">{{ trim($__env->yieldContent('heading')) }}</h1>
                     <p class="mt-3">{{ trim($__env->yieldContent('message')) }}</p>
                     <hr>
-                    <p>If you need help, <a href="{{ route('contact') }}">contact us</a>.</p>
+                    <p>{{ __('If you need help') }}, <a href="{{ route('contact') }}">{{ __('contact us') }}</a>.</p>
                     <a class="btn btn-primary btn-sm mt-3" href="{{ url('/') }}">
-                        <i class="bi bi-house me-2" aria-hidden="true"></i>Take me home
+                        <i class="bi bi-house me-2" aria-hidden="true"></i>{{ __('Take me home') }}
                     </a>
                 </div>
             </div>

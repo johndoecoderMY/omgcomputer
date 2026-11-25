@@ -1,6 +1,6 @@
 @extends('errors.layout')
 
-@section('title', 'Page expired')
+@section('title', __('Page expired'))
 @section('code', '419')
-@section('heading', 'Page expired')
-@section('message', 'Your session has expired. Return to the page and try again.')
+@section('heading', __('Page expired'))
+@section('message', __('Your session has expired. Return to the page and try again.'))

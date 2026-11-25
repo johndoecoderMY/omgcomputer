@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsureWorkspacePermission;
 use App\Http\Middleware\SetToastContext;
 use App\Http\Middleware\ShopMaintenance;
+use App\Http\Middleware\SetPublicLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SetToastContext::class,
+            SetPublicLocale::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
