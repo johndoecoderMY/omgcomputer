@@ -2,6 +2,7 @@
 
 @section('title', 'Computer Repair, Website Design & Development | OMG Computer')
 @section('meta_description', 'Computer repair, upgrades, custom PCs, and website design in Malaysia. Get practical technology support and book a service with OMG Computer.')
+@section('meta_robots', 'index,follow')
 
 @section('content')
     @php

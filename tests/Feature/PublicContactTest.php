@@ -17,17 +17,17 @@ class PublicContactTest extends TestCase
         $this->assertStringContainsString('Sitemap: https://omgcomputer.my/sitemap.xml', $robots);
     }
 
-    public function test_public_pages_are_hidden_from_search_by_default_and_can_be_reenabled(): void
+    public function test_homepage_is_always_indexable_and_other_public_pages_follow_the_global_setting(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('<meta name="robots" content="noindex,follow">', false);
-
-        config(['seo.indexing_enabled' => true]);
-
-        $this->get('/')
-            ->assertOk()
             ->assertSee('<meta name="robots" content="index,follow">', false);
+
+        config(['seo.indexing_enabled' => false]);
+
+        $this->get(route('about'))
+            ->assertOk()
+            ->assertSee('<meta name="robots" content="noindex,follow">', false);
     }
 
     public function test_public_contact_section_shows_configured_email_as_a_mailto_link(): void
@@ -324,6 +324,7 @@ class PublicContactTest extends TestCase
 
         $this->get(route('terms'))
             ->assertOk()
+            ->assertSee('<meta name="robots" content="index,follow">', false)
             ->assertSee('A booking is a request')
             ->assertSee('Online shop payments are processed through CHiP')
             ->assertSee('Website previews are examples of design work')

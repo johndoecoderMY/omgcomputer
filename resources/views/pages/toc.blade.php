@@ -1,6 +1,9 @@
 @extends('layouts.guest')
 
 @section('title', 'Terms & Conditions')
+@if (request()->routeIs('terms'))
+    @section('meta_robots', 'index,follow')
+@endif
 
 @section('content')
     @include('pages.partials.hero', [

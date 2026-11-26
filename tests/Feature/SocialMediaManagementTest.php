@@ -268,7 +268,7 @@ class SocialMediaManagementTest extends TestCase
                     'open_id' => 'user-open-id',
                     'access_token' => 'tiktok-access-token',
                     'refresh_token' => 'tiktok-refresh-token',
-                    'scope' => 'user.info.basic,user.info.profile,user.info.stats',
+                    'scope' => 'user.info.profile,user.info.stats',
                     'expires_in' => 7200,
                     'refresh_expires_in' => 15552000,
                 ]);
@@ -296,7 +296,7 @@ class SocialMediaManagementTest extends TestCase
         $connectResponse = $this->actingAs($admin)->get(route('social-media.tiktok.connect'));
         $connectResponse->assertRedirectContains('https://www.tiktok.com/v2/auth/authorize/');
         parse_str((string) parse_url($connectResponse->headers->get('Location'), PHP_URL_QUERY), $query);
-        $this->assertSame('user.info.basic,user.info.profile,user.info.stats', $query['scope'] ?? null);
+        $this->assertSame('user.info.profile,user.info.stats', $query['scope'] ?? null);
         $this->assertSame(session('social_media_tiktok_state'), $query['state'] ?? null);
 
         $this->get(route('social-media.tiktok.callback', [
@@ -350,7 +350,7 @@ class SocialMediaManagementTest extends TestCase
                     'open_id' => 'user-open-id',
                     'access_token' => 'rotated-access-token',
                     'refresh_token' => 'rotated-refresh-token',
-                    'scope' => 'user.info.basic,user.info.profile,user.info.stats',
+                    'scope' => 'user.info.profile,user.info.stats',
                     'expires_in' => 7200,
                     'refresh_expires_in' => 15552000,
                 ]);

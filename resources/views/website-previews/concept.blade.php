@@ -3,6 +3,9 @@
 @section('title', $concept['brand'].' — Website concept')
 @section('meta_description', $concept['intro'].' View this Bootstrap-based website design concept by OMG Computer.')
 @section('og_type', 'website')
+@if (request()->route('concept') === 'landing-page')
+    @section('meta_robots', 'index,follow')
+@endif
 
 @section('content')
 <style>

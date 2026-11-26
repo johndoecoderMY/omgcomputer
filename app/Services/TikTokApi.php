@@ -22,7 +22,7 @@ class TikTokApi
         return 'https://www.tiktok.com/v2/auth/authorize/?'.http_build_query([
             'client_key' => config('services.tiktok.client_key'),
             'response_type' => 'code',
-            'scope' => 'user.info.basic,user.info.profile,user.info.stats',
+            'scope' => 'user.info.profile,user.info.stats',
             'redirect_uri' => $redirectUri,
             'state' => $state,
         ]);

@@ -75,6 +75,7 @@ class WebsitePreviewTest extends TestCase
             ->assertSee('Message us on WhatsApp')
             ->assertSee('not completed client projects')
             ->assertSee('<meta name="description" content="Explore responsive website demos for cafes, shops, events, and more.', false)
+            ->assertSee('<meta name="robots" content="index,follow">', false)
             ->assertSee('<link rel="canonical" href="'.route('website-previews.index').'">', false);
 
         $this->withSession(['public_locale' => 'ms'])
@@ -111,6 +112,8 @@ class WebsitePreviewTest extends TestCase
                 $response->assertSee('Revenue overview')
                     ->assertSee('aria-label="Revenue trend line chart"', false)
                     ->assertSee('Sales by channel');
+            } elseif ($slug === 'landing-page') {
+                $response->assertSee('<meta name="robots" content="index,follow">', false);
             } elseif ($slug === 'pos-catalogue') {
                 $response->assertSee('Current sale')
                     ->assertSee('All products')
